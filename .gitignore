@@ -1,0 +1,5 @@
+node_modules/
+dist/
+.angular/
+.claude/settings.local.json
+.claude
