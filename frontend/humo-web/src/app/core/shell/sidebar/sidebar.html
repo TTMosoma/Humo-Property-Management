@@ -1,0 +1,120 @@
+<div class="brand">
+  <ui-logo [size]="30" />
+  @if (!collapsed()) {
+    <div class="brand-text">
+      <span class="brand-name">Humo</span>
+      <span class="brand-tag">Property Management</span>
+    </div>
+  }
+</div>
+
+<nav class="nav" aria-label="Main">
+  @for (section of mainSections(); track section.id) {
+    @if (section.label && !collapsed()) {
+      <div class="section-label">{{ section.label }}</div>
+    } @else if (section.label) {
+      <div class="section-rule"></div>
+    }
+    <ul class="list">
+      @for (node of section.nodes; track node.id) {
+        <ng-container *ngTemplateOutlet="nodeTpl; context: { $implicit: node }" />
+      }
+    </ul>
+  }
+</nav>
+
+<div class="footer">
+  <ul class="list">
+    @for (node of footerNodes(); track node.id) {
+      <ng-container *ngTemplateOutlet="nodeTpl; context: { $implicit: node }" />
+    }
+  </ul>
+  @if (canCollapse()) {
+    <button
+      type="button"
+      class="item collapse-toggle"
+      (click)="toggleCollapse.emit()"
+      [attr.aria-label]="collapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+      [attr.title]="collapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+    >
+      <ion-icon [name]="collapsed() ? 'chevron-forward-outline' : 'chevron-back-outline'" aria-hidden="true" />
+      @if (!collapsed()) {
+        <span class="item-label">Collapse</span>
+      }
+    </button>
+  }
+</div>
+
+<ng-template #nodeTpl let-node>
+  @if (isGroup(node)) {
+    @let group = asGroup(node);
+    @let open = nav.isExpanded(group.id) && !collapsed();
+    <li>
+      <button
+        type="button"
+        class="item"
+        [class.has-active]="nav.activeGroupId() === group.id"
+        [attr.aria-expanded]="collapsed() ? null : open"
+        [attr.title]="collapsed() ? group.label : null"
+        (click)="onGroupClick(group)"
+      >
+        <ion-icon [name]="group.icon" aria-hidden="true" />
+        @if (!collapsed()) {
+          <span class="item-label">{{ group.label }}</span>
+          @if (!open && groupHasBadge(group)) {
+            <span class="dot" aria-hidden="true"></span>
+          }
+          <ion-icon class="chevron" [class.open]="open" name="chevron-down-outline" aria-hidden="true" />
+        } @else if (groupHasBadge(group)) {
+          <span class="rail-dot" aria-hidden="true"></span>
+        }
+      </button>
+      @if (open) {
+        <ul class="sub">
+          @for (child of group.children; track child.id) {
+            <li>
+              <a
+                class="sub-item"
+                [routerLink]="child.route"
+                [class.active]="nav.isActive(child)"
+                [attr.aria-current]="nav.isActive(child) ? 'page' : null"
+                (click)="navigated.emit()"
+              >
+                <span class="item-label">{{ child.label }}</span>
+                @if (child.badge) {
+                  <span class="badge" [class.attention]="child.badge.tone === 'attention'" [attr.aria-label]="child.badge.label">
+                    {{ child.badge.count }}
+                  </span>
+                }
+              </a>
+            </li>
+          }
+        </ul>
+      }
+    </li>
+  } @else {
+    @let link = asLink(node);
+    <li>
+      <a
+        class="item"
+        [routerLink]="link.route"
+        [class.active]="nav.isActive(link)"
+        [attr.aria-current]="nav.isActive(link) ? 'page' : null"
+        [attr.title]="collapsed() ? link.label : null"
+        (click)="navigated.emit()"
+      >
+        <ion-icon [name]="link.icon ?? 'ellipsis-horizontal-outline'" aria-hidden="true" />
+        @if (!collapsed()) {
+          <span class="item-label">{{ link.label }}</span>
+          @if (link.badge) {
+            <span class="badge" [class.attention]="link.badge.tone === 'attention'" [attr.aria-label]="link.badge.label">
+              {{ link.badge.count }}
+            </span>
+          }
+        } @else if (link.badge) {
+          <span class="rail-dot" [class.neutral]="link.badge.tone !== 'attention'" aria-hidden="true"></span>
+        }
+      </a>
+    </li>
+  }
+</ng-template>

@@ -1,0 +1,29 @@
+// Ionic: only the core stylesheet. We deliberately skip Ionic's typography,
+// normalize and utility CSS so Humo's own design system stays in control.
+@use '@ionic/angular/css/core.css';
+@use '@angular/cdk/overlay-prebuilt.css';
+
+@use 'styles/tokens';
+@use 'styles/base';
+
+// Bridge Humo tokens into Ionic so its mobile components match the brand.
+:root {
+  --ion-font-family: var(--font-sans);
+  --ion-background-color: var(--c-bg);
+  --ion-text-color: var(--c-text);
+  --ion-color-primary: var(--c-primary);
+  --ion-color-primary-contrast: var(--c-on-primary);
+  --ion-color-primary-shade: var(--c-primary-hover);
+  --ion-color-primary-tint: var(--c-primary-hover);
+  --ion-tab-bar-background: var(--c-surface);
+  --ion-tab-bar-border-color: var(--c-border);
+  --ion-tab-bar-color: var(--c-text-muted);
+  --ion-tab-bar-color-selected: var(--c-primary);
+  --ion-toast-background: var(--c-text);
+  --ion-toast-color: var(--c-surface);
+}
+
+// CDK dialog backdrop (command palette)
+.cdk-overlay-dark-backdrop {
+  background: rgba(8, 18, 18, 0.42);
+}

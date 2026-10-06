@@ -1,0 +1,167 @@
+@let persona = session.persona();
+
+<div class="left">
+  @if (showMenuButton()) {
+    <button type="button" class="btn btn-ghost btn-icon" (click)="openMenu.emit()" aria-label="Open navigation">
+      <ion-icon name="menu-outline" aria-hidden="true" />
+    </button>
+  }
+
+  @if (session.isResident()) {
+    <div class="context static">
+      <span class="context-name">{{ residentScheme()?.name }}</span>
+      <span class="context-sub">{{ persona.unitLabel }}</span>
+    </div>
+  } @else if (session.role() === 'trustee') {
+    <div class="context static">
+      <span class="context-name">{{ residentScheme()?.name }}</span>
+      <span class="context-sub">Managed by {{ session.agency()?.shortName }}</span>
+    </div>
+  } @else if (session.role() === 'system-admin') {
+    <button type="button" class="context" [cdkMenuTriggerFor]="agencyMenu" aria-label="Switch agency">
+      <span class="context-label">Viewing agency</span>
+      <span class="context-name">{{ session.agency()?.shortName }}</span>
+      <ion-icon name="chevron-down-outline" aria-hidden="true" />
+    </button>
+  } @else {
+    <div class="context static">
+      <span class="context-name">{{ session.agency()?.shortName }}</span>
+      <span class="context-sub">{{ session.agency()?.city }}</span>
+    </div>
+  }
+</div>
+
+<button type="button" class="search" (click)="openPalette.emit()" aria-label="Search or jump to (Ctrl K)">
+  <ion-icon name="search-outline" aria-hidden="true" />
+  <span class="search-text">Search schemes, units, people…</span>
+  <span class="search-keys"><kbd>Ctrl</kbd><kbd>K</kbd></span>
+</button>
+
+<div class="right">
+  @if (quickActions().length) {
+    <button type="button" class="btn btn-primary new-btn" [cdkMenuTriggerFor]="createMenu">
+      <ion-icon name="add-outline" aria-hidden="true" />
+      <span class="new-label">New</span>
+    </button>
+  }
+  @if (session.isResident()) {
+    <button type="button" class="btn btn-primary new-btn" (click)="go('/my/requests/new')">
+      <ion-icon name="construct-outline" aria-hidden="true" />
+      <span class="new-label">Report a problem</span>
+    </button>
+  }
+
+  <button
+    type="button"
+    class="btn btn-ghost btn-icon bell"
+    [cdkMenuTriggerFor]="notificationsMenu"
+    [attr.aria-label]="unread() ? 'Notifications, ' + unread() + ' unread' : 'Notifications'"
+  >
+    <ion-icon name="notifications-outline" aria-hidden="true" />
+    @if (unread()) {
+      <span class="bell-count">{{ unread() }}</span>
+    }
+  </button>
+
+  <button type="button" class="avatar-btn" [cdkMenuTriggerFor]="userMenu" aria-label="Account menu">
+    <span class="avatar">{{ persona.initials }}</span>
+  </button>
+</div>
+
+<!-- ===== Menus ===== -->
+
+<ng-template #agencyMenu>
+  <div class="menu-panel" cdkMenu>
+    <div class="menu-section-label label-caps">Agencies on Humo</div>
+    @for (a of session.agencies; track a.id) {
+      <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="session.viewAgency(a.id)">
+        <ion-icon name="business-outline" aria-hidden="true" />
+        <span>{{ a.shortName }}</span>
+        <span class="menu-item-meta">{{ a.city }}</span>
+      </button>
+    }
+  </div>
+</ng-template>
+
+<ng-template #createMenu>
+  <div class="menu-panel" cdkMenu>
+    <div class="menu-section-label label-caps">Create</div>
+    @for (a of quickActions(); track a.route) {
+      <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="go(a.route)">
+        <ion-icon [name]="a.icon" aria-hidden="true" />
+        <span>{{ a.label }}</span>
+      </button>
+    }
+  </div>
+</ng-template>
+
+<ng-template #notificationsMenu>
+  <div class="menu-panel notif-panel" cdkMenu>
+    <div class="notif-head">
+      <span class="notif-title">Notifications</span>
+      @if (unread()) {
+        <button type="button" class="link-btn" cdkMenuItem (cdkMenuItemTriggered)="markAllRead()">Mark all read</button>
+      }
+    </div>
+    @for (n of visibleNotifications(); track n.id) {
+      <button type="button" class="notif" [class.unread]="!n.read" cdkMenuItem (cdkMenuItemTriggered)="openNotification(n)">
+        <span class="notif-icon"><ion-icon [name]="kindIcon[n.kind]" aria-hidden="true" /></span>
+        <span class="notif-body">
+          <span class="notif-line">
+            <span class="notif-name">{{ n.title }}</span>
+            <span class="notif-time">{{ relativeTime(n.at) }}</span>
+          </span>
+          <span class="notif-detail">{{ n.detail }}</span>
+          @if (n.schemeName) {
+            <span class="notif-scheme">{{ n.schemeName }}</span>
+          }
+        </span>
+      </button>
+    } @empty {
+      <div class="notif-empty">You’re all caught up.</div>
+    }
+  </div>
+</ng-template>
+
+<ng-template #userMenu>
+  <div class="menu-panel user-panel" cdkMenu>
+    <div class="user-head">
+      <span class="avatar lg">{{ persona.initials }}</span>
+      <span class="user-text">
+        <span class="user-name">{{ persona.name }}</span>
+        <span class="user-sub">{{ persona.email }}</span>
+        <span class="user-role">{{ roleLabels[persona.role] }}</span>
+      </span>
+    </div>
+    <div class="menu-divider"></div>
+    <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="go('/settings/profile')">
+      <ion-icon name="person-circle-outline" aria-hidden="true" />
+      <span>My profile</span>
+    </button>
+    <div class="menu-divider"></div>
+    <div class="menu-section-label label-caps">Appearance</div>
+    <div cdkMenuGroup>
+      @for (t of themes; track t.value) {
+        <button
+          type="button"
+          class="menu-item"
+          cdkMenuItemRadio
+          [cdkMenuItemChecked]="proto.theme() === t.value"
+          (cdkMenuItemTriggered)="proto.theme.set(t.value)"
+        >
+          <ion-icon [name]="t.icon" aria-hidden="true" />
+          <span>{{ t.label }}</span>
+          @if (proto.theme() === t.value) {
+            <ion-icon class="menu-item-meta check" name="checkmark-outline" aria-hidden="true" />
+          }
+        </button>
+      }
+    </div>
+    <div class="menu-divider"></div>
+    <button type="button" class="menu-item" cdkMenuItem [cdkMenuItemDisabled]="true" title="No authentication in the prototype">
+      <ion-icon name="log-out-outline" aria-hidden="true" />
+      <span>Sign out</span>
+      <span class="menu-item-meta">Prototype</span>
+    </button>
+  </div>
+</ng-template>

@@ -1,0 +1,53 @@
+import { AppNotification } from '../../domain';
+
+export const NOTIFICATIONS: AppNotification[] = [
+  {
+    id: 'n1',
+    kind: 'maintenance',
+    title: 'Quote received — geyser replacement',
+    detail: 'Rand Plumbing & Drainage quoted R 14 850.00 for Unit 23.',
+    schemeName: 'The Willows',
+    at: '2026-10-06T07:42:00+02:00',
+    read: false,
+    link: '/maintenance',
+  },
+  {
+    id: 'n2',
+    kind: 'finance',
+    title: '17 receipts could not be auto-allocated',
+    detail: 'From this morning’s bank statement import (FNB business account).',
+    at: '2026-10-06T06:15:00+02:00',
+    read: false,
+    link: '/finance/receipts',
+  },
+  {
+    id: 'n3',
+    kind: 'compliance',
+    title: 'Insurance renewal due in 14 days',
+    detail: 'Building policy renewal for Jacaranda Heights.',
+    schemeName: 'Jacaranda Heights',
+    at: '2026-10-05T16:20:00+02:00',
+    read: false,
+    link: '/compliance',
+  },
+  {
+    id: 'n4',
+    kind: 'governance',
+    title: 'Trustee approved invoice INV-20931',
+    detail: 'Sipho Khumalo approved R 6 420.00 to Secure-Rite Security.',
+    schemeName: 'Kingfisher Court',
+    at: '2026-10-05T11:03:00+02:00',
+    read: true,
+    link: '/finance/supplier-invoices',
+  },
+  {
+    id: 'n5',
+    kind: 'communication',
+    title: 'New message from owner, Unit 8',
+    detail: '“Please confirm when the lift will be repaired…”',
+    schemeName: 'Rosebank Terraces',
+    at: '2026-10-04T18:47:00+02:00',
+    read: true,
+    link: '/communications',
+  },
+];

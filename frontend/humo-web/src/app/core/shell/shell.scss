@@ -1,0 +1,49 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+ion-split-pane {
+  --side-width: var(--sidebar-w);
+  --side-min-width: var(--sidebar-w);
+  --side-max-width: var(--sidebar-w);
+  --border: 0;
+
+  &.rail {
+    --side-width: var(--sidebar-w-collapsed);
+    --side-min-width: var(--sidebar-w-collapsed);
+    --side-max-width: var(--sidebar-w-collapsed);
+  }
+}
+
+ion-menu {
+  --width: 288px;
+  --background: var(--c-nav-bg);
+}
+
+app-sidebar {
+  height: 100%;
+}
+
+#main-content {
+  background: var(--c-bg);
+}
+
+.content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.content-inner {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: var(--s-6) var(--gutter) var(--s-12);
+}
+
+@media (max-width: 767px) {
+  .content-inner {
+    padding: var(--s-4) var(--s-4) 96px;
+  }
+}

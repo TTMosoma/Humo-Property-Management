@@ -1,0 +1,25 @@
+<ion-split-pane contentId="main-content" when="lg" [class.rail]="railCollapsed()">
+  <ion-menu contentId="main-content" menuId="main" type="overlay">
+    <app-sidebar
+      [collapsed]="railCollapsed()"
+      [canCollapse]="isDesktop()"
+      (toggleCollapse)="toggleCollapse()"
+      (navigated)="closeMenu()"
+    />
+  </ion-menu>
+
+  <div class="ion-page" id="main-content">
+    <app-topbar [showMenuButton]="!isDesktop()" (openMenu)="openMenu()" (openPalette)="openPalette()" />
+    <main class="content" #scroller>
+      <div class="content-inner">
+        <app-breadcrumbs />
+        <router-outlet />
+      </div>
+    </main>
+    @if (showTabBar()) {
+      <app-mobile-tab-bar (more)="openMenu()" />
+    }
+  </div>
+</ion-split-pane>
+
+<app-prototype-toolbar />

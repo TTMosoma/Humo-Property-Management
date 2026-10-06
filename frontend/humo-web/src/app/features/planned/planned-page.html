@@ -1,0 +1,75 @@
+<ui-page-header
+  [eyebrow]="scheme() ? scheme()!.name : section()"
+  [title]="title()"
+  [subtitle]="meta()?.job"
+>
+  @if (meta()) {
+    <span class="checkpoint">Checkpoint {{ meta()!.checkpoint }} · {{ checkpointName() }}</span>
+  }
+</ui-page-header>
+
+@switch (status()) {
+  @case ('loading') {
+    <ui-skeleton variant="tiles" [count]="4" />
+    <div class="gap"></div>
+    <ui-skeleton [count]="6" />
+  }
+  @case ('error') {
+    <div class="surface">
+      <ui-error-state (retry)="load()" />
+    </div>
+  }
+  @default {
+    @if (viewState() === 'empty') {
+      <div class="surface">
+        <ui-empty-state
+          icon="file-tray-outline"
+          title="Nothing here yet"
+          message="This is how an empty list will look: it explains why it’s empty and offers the next step."
+        >
+          <button type="button" class="btn btn-primary">
+            <ion-icon name="add-outline" aria-hidden="true" /> Add the first item
+          </button>
+        </ui-empty-state>
+      </div>
+    } @else {
+      <div class="plan">
+        <section class="surface plan-main">
+          <div class="plan-head">
+            <ion-icon name="layers-outline" aria-hidden="true" />
+            <div>
+              <h2>Planned screen</h2>
+              <p class="text-muted">This page is a placeholder in the navigation review. It will be built in checkpoint {{ meta()?.checkpoint }}.</p>
+            </div>
+          </div>
+          @if (meta()?.planned?.length) {
+            <ul class="planned">
+              @for (item of meta()!.planned; track item) {
+                <li><ion-icon name="checkmark-outline" aria-hidden="true" /> {{ item }}</li>
+              }
+            </ul>
+          }
+        </section>
+        <aside class="surface plan-side">
+          <div class="label-caps">Who can access this</div>
+          <ul class="roles">
+            @for (r of roles(); track r) {
+              <li>{{ r }}</li>
+            } @empty {
+              <li>Everyone signed in</li>
+            }
+          </ul>
+          @if (scheme()) {
+            <div class="label-caps side-gap">Scheme context</div>
+            <dl>
+              <dt>Scheme</dt><dd>{{ scheme()!.name }}</dd>
+              <dt>Type</dt><dd>{{ scheme()!.type }}</dd>
+              <dt>Location</dt><dd>{{ scheme()!.suburb }}, {{ scheme()!.city }}</dd>
+              <dt>Units</dt><dd class="num">{{ scheme()!.unitCount }}</dd>
+            </dl>
+          }
+        </aside>
+      </div>
+    }
+  }
+}
