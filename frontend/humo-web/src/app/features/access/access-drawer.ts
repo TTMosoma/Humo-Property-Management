@@ -116,7 +116,7 @@ export class AccessDrawer {
         next: () => {
           this.busy.set(false);
           this.adding.set(false);
-          this.feedback.success(`${name} is now also ${ROLE_LABELS[a.role]} (${a.label}). They’ll see it in Switch role next time they open Humo.`);
+          this.feedback.success(`${name} is now also ${ROLE_LABELS[a.role]} (${a.label}). They’ll see it in Switch role next time they open Humo Property Management.`);
         },
         error: () => {
           this.busy.set(false);

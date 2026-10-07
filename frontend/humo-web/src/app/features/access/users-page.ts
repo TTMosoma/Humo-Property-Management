@@ -18,7 +18,7 @@ import { AccessDrawer } from './access-drawer';
 import { FAMILY_LABELS, familyOf, roleColor } from './access-view';
 
 /**
- * Settings › Users & access. Every person with access to the agency on Humo,
+ * Settings › Users & access. Every person with access to the agency in Humo Property Management,
  * one row per identity (never per role), with the roles they hold and where.
  */
 @Component({

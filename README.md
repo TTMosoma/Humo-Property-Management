@@ -1,14 +1,47 @@
 # Humo Property Management
 
 **One platform. Every scheme. Everything managed.**
-The operating system for community-scheme management.
+The operating system for community-scheme management, built for professional managing agents.
+
+## Humo and its products
+
+**Humo** is the product family and platform: one Humo identity, security, audit, notifications, billing and subscriptions, and the Humo company behind them. **This repository is one Humo product: Humo Property Management** ("Humo PM" where space is short).
+
+```
+Humo — property technology platform
+├── Humo Property Management   ← this application
+├── Humo Valuations            (future, separate product)
+├── Humo Contractor            (future, separate product; its portal is prototyped here at /contractor
+│                               behind its own shell to prove the boundary)
+└── future Humo products
+```
+
+**Keep the layers apart:**
+
+| Layer | Example |
+|---|---|
+| Product family | Humo |
+| Application | Humo Property Management |
+| Organisation | Tshikrand |
+| User | Sarah Jacobs |
+| Role | Portfolio Manager |
+| Scope | Oakwood Estate |
+| Package | Humo Professional |
+| Feature entitlement | Governance |
+
+**Naming rules:**
+- Say "Humo Property Management" (or "Humo PM") for this application, e.g. "the Humo PM dashboard" or "Humo PM Finance". Avoid a bare "Humo" for things that belong to this app.
+- Keep "Humo" for genuinely platform-level things: Humo System Administrator, Humo Account Manager, Humo Support and Humo Executive, the Humo identity, Humo security, Humo Mobile, and the Humo platform.
+- Humo Valuations and Humo Contractor are never modules in Humo PM's navigation. A future product switcher would sit outside each application, reading `core/product/product.ts`.
+
+See `docs/07-brand-architecture.md`.
 
 ## Repository layout
 
 | Path | What |
 |---|---|
 | `frontend/humo-web` | Angular 22 + Ionic 8 UI prototype (mock data, no backend) |
-| `backend/` | .NET Clean Architecture API — *later phase* |
+| `backend/` | .NET Clean Architecture API — *later phase*, planned as `Humo.PropertyManagement.*` (`.Api`, `.Application`, `.Domain`, `.Infrastructure`), leaving room for `Humo.Valuations.*` and `Humo.Contractor.*` |
 | `docs/` | Information architecture and product decisions |
 
 ## Run the prototype
@@ -21,7 +54,7 @@ npm --prefix frontend/humo-web start -- --port 4310
 Open http://localhost:4310. (Port 4200 is avoided because Docker Desktop commonly holds it.)
 
 Use the dashed **Prototype** button (bottom-right) to:
-- view the app as any of the 7 roles
+- sign in as any demo identity (and switch role from your name in the top bar)
 - force pages into *loading / empty / error* states
 - turn simulated network latency on or off
 

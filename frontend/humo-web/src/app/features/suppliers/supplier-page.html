@@ -97,7 +97,7 @@
                 <textarea rows="2" [value]="endorseNote()" (input)="endorseNote.set($any($event.target).value)" placeholder="e.g. Reliable on after-hours call-outs; quotes match invoices."></textarea>
               </label>
               <div class="btns">
-                <button type="button" class="btn btn-primary btn-sm" [disabled]="endorseNote().trim().length < 10" (click)="endorse()">Endorse on Humo</button>
+                <button type="button" class="btn btn-primary btn-sm" [disabled]="endorseNote().trim().length < 10" (click)="endorse()">Endorse on Humo Contractor</button>
                 <button type="button" class="btn btn-ghost btn-sm" (click)="endorsing.set(false)">Cancel</button>
               </div>
             } @else {

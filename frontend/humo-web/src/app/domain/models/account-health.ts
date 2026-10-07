@@ -1,7 +1,8 @@
 import { EntitlementSet, FeatureModule, MODULE_KEY_FEATURE } from './entitlement';
 
 /**
- * Account Health: how well a customer is getting value from Humo.
+ * Account Health: how well a customer is getting value from Humo Property Management
+ * (the same model can serve other Humo products later).
  *
  * Raw usage (a UsageSnapshot, produced later by the analytics pipeline) goes in;
  * an explainable score comes out. Every signal shows its own value, weight and

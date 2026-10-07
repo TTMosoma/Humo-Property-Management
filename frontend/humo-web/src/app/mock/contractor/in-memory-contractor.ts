@@ -68,7 +68,7 @@ export class InMemoryContractorNetwork extends ContractorNetwork {
 
   createQuoteRequest(input: NewQuoteRequest): Observable<string> {
     const by = this.session.persona().name;
-    return this.gateway.command({ action: `Requested quotes through Humo: ${input.title}`, resource: 'Quote request', permission: 'Maintenance.Manage' }, () => {
+    return this.gateway.command({ action: `Requested quotes through Humo Contractor: ${input.title}`, resource: 'Quote request', permission: 'Maintenance.Manage' }, () => {
       const id = this.store.nextId('QR');
       const now = new Date().toISOString();
       const { invite, ...rest } = input;
@@ -126,7 +126,7 @@ export class InMemoryContractorNetwork extends ContractorNetwork {
   endorse(partyId: string, customerId: string, customerName: string, note: string, completedJobs: number): Observable<void> {
     const by = this.session.persona().name;
     return this.gateway
-      .command({ action: 'Endorsed a contractor on Humo', resource: 'Contractor', resourceId: partyId, permission: 'Suppliers.Manage' }, () => {
+      .command({ action: 'Endorsed a contractor on Humo Contractor', resource: 'Contractor', resourceId: partyId, permission: 'Suppliers.Manage' }, () => {
         // The rule that makes endorsements meaningful: a real relationship, once per customer.
         if (completedJobs < 1) throw new PolicyError('forbidden', 'Only customers who have completed work with a contractor can endorse them');
         if (this.store.endorsements().some((e) => e.partyId === partyId && e.fromCustomerId === customerId)) throw new PolicyError('forbidden', 'Already endorsed');

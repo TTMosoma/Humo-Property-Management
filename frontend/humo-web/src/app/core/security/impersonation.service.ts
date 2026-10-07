@@ -19,7 +19,7 @@ export interface StartImpersonation {
 /**
  * Impersonation is NOT role switching:
  *   Role switch   — "I am Sarah, operating as Finance User."
- *   Impersonation — "I am Terry, viewing Humo as Sarah."
+ *   Impersonation — "I am Terry, viewing Humo Property Management as Sarah."
  *
  * Only identities individually granted System.Impersonate can start it. Every
  * start, end and action is audited with both identities. Act mode needs a

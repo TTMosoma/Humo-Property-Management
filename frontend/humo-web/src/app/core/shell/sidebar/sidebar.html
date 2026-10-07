@@ -1,9 +1,10 @@
-<div class="brand">
+<!-- The product, not the family: "Humo" + "Property Management" reads as Humo Property Management. -->
+<div class="brand" role="img" [attr.aria-label]="product.name" [attr.title]="product.name + ' — ' + tagline">
   @if (collapsed()) {
     <ui-logo variant="mark" [reverse]="true" [height]="30" />
   } @else {
     <ui-logo variant="wordmark" [reverse]="true" [height]="26" />
-    <span class="brand-tag">Property<br />Management</span>
+    <span class="brand-tag" aria-hidden="true">Property<br />Management</span>
   }
 </div>
 

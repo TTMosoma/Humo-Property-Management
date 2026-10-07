@@ -1,4 +1,4 @@
-# Humo — UX Review after Checkpoint 1
+# Humo Property Management — UX Review after Checkpoint 1
 
 > Reviewer stance: senior SaaS product designer. Date: 2026-10-06.
 > Scope: everything in PR #1 — the information architecture (doc 01), the shell, navigation, roles, search, notifications and system states — plus the *plans* for each module expressed in the routes.
@@ -267,7 +267,7 @@ Severity key: **P0** fix before building more screens · **P1** fix in the slice
 
 ---
 
-## 2. Is Humo becoming CRUD?
+## 2. Is Humo PM becoming CRUD?
 
 Today: **at risk, not yet**. Every planned route is either a *list* or a *detail*, and each module owns its own lists. The three journeys in the brief cut across four or five modules each. Under the current plan, each journey would be stitched together with links between unrelated pages.
 

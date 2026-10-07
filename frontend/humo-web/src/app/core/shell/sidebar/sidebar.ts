@@ -10,6 +10,7 @@ import { NavGroup, NavLink, NavNode, isGroup } from '../../navigation/nav.model'
 import { ScopeService } from '../../scope/scope.service';
 
 import { ContextCard } from '../context-card/context-card';
+import { PRODUCT, PRODUCT_TAGLINE } from '../../product/product';
 @Component({
   selector: 'app-sidebar',
   imports: [ContextCard, RouterLink, NgTemplateOutlet, IonIcon, Logo, CdkMenu, CdkMenuItem, CdkMenuTrigger],
@@ -20,6 +21,8 @@ import { ContextCard } from '../context-card/context-card';
 })
 export class Sidebar {
   protected readonly nav = inject(NavService);
+  protected readonly product = PRODUCT;
+  protected readonly tagline = PRODUCT_TAGLINE;
   protected readonly scope = inject(ScopeService);
 
   readonly collapsed = input(false);

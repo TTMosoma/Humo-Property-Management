@@ -19,7 +19,7 @@ const DEFAULT_REQUIREMENTS: Record<string, string[]> = {
 };
 
 /**
- * Request quotes through Humo: describe the work once, choose which of your
+ * Request quotes through Humo Contractor: describe the work once, choose which of your
  * suppliers to invite, and they quote in Humo Contractor. Not a marketplace —
  * only contractors you invite see the request.
  */

@@ -57,7 +57,7 @@ export interface RoleMeta {
 export const ROLE_META: Record<Role, RoleMeta> = {
   'agency-admin': {
     role: 'agency-admin', family: 'agency', icon: 'key-outline', scopeKind: 'agency', grantedBy: 'agency-admin', privileged: true,
-    summary: 'Runs the agency on Humo: people, access, settings and every scheme.',
+    summary: 'Runs the agency in Humo Property Management: people, access, settings and every scheme.',
   },
   'portfolio-manager': {
     role: 'portfolio-manager', family: 'agency', icon: 'briefcase-outline', scopeKind: 'schemes', grantedBy: 'agency-admin', privileged: false,

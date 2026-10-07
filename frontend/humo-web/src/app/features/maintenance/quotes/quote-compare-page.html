@@ -4,7 +4,7 @@
   <ui-skeleton variant="tiles" [count]="4" />
 } @else if (!job() || !qr()) {
   <div class="surface">
-    <ui-empty-state illustration="not-found" title="No Humo quote request for this job">
+    <ui-empty-state illustration="not-found" title="No Humo Contractor quote request for this job">
       <a class="btn btn-primary" [routerLink]="['/maintenance', ref()]">Back to the job</a>
     </ui-empty-state>
   </div>
@@ -74,7 +74,7 @@
     <section class="compare">
       <div class="compare-head">
         <h2>Compare quotes</h2>
-        <span class="muted small">Humo shows the facts side by side. The choice is yours.</span>
+        <span class="muted small">The facts, side by side. The choice is yours — not Humo’s.</span>
       </div>
 
       @if (!offers().length) {
@@ -127,7 +127,7 @@
                 }
               </tr>
               <tr>
-                <th scope="row">Reputation on Humo</th>
+                <th scope="row">Reputation on Humo Contractor</th>
                 @for (o of offers(); track o.q.id) {
                   <td><ct-reputation [profile]="o.profile" [compact]="true" /></td>
                 }

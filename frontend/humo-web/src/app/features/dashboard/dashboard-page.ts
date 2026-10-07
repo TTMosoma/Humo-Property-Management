@@ -18,6 +18,7 @@ import {
   urgencyOf,
 } from '../../domain';
 import { AttentionService } from '../../core/attention/attention.service';
+import { PRODUCT } from '../../core/product/product';
 import { pageState } from '../../core/prototype/page-state';
 import { ScopeService } from '../../core/scope/scope.service';
 import { SessionService } from '../../core/session/session.service';
@@ -210,6 +211,7 @@ export class DashboardPage {
     return h ? { h, scheme: this.scope.findScheme(h.schemeId) } : null;
   });
 
+  protected readonly productName = PRODUCT.name;
   protected readonly today = new Date().toLocaleDateString('en-ZA', { weekday: 'long', day: 'numeric', month: 'long' });
   protected readonly workLabel = WORK_TYPE_LABELS;
   protected readonly dueLabel = dueLabel;

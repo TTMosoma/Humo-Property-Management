@@ -23,7 +23,7 @@ interface Step {
 }
 
 /**
- * Compare quotes from a Humo quote request. Humo lays the offers side by side —
+ * Compare quotes from a Humo Contractor quote request. Humo lays the offers side by side —
  * price, reputation, compliance, proposed work, timing — and the agent decides.
  * There is no automated selection and no "best" badge from Humo.
  */

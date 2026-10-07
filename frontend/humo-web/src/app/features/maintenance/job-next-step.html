@@ -48,7 +48,7 @@
         </ul>
         <a class="humo-quotes" [routerLink]="['/maintenance', job.ref, 'quote-request']">
           <ion-icon name="hammer-outline" aria-hidden="true" />
-          <span><strong>Request quotes through Humo</strong> — your suppliers quote in Humo Contractor and you compare offers side by side.</span>
+          <span><strong>Request quotes through Humo Contractor</strong> — your suppliers quote in Humo Contractor and you compare offers side by side.</span>
           <ion-icon name="chevron-forward-outline" aria-hidden="true" />
         </a>
         <div class="actions">
@@ -68,7 +68,7 @@
         <a class="humo-quotes on" [routerLink]="['/maintenance', job.ref, 'quotes']">
           <ion-icon name="hammer-outline" aria-hidden="true" />
           <span>
-            <strong>Humo quote request {{ nr.request.id }}</strong> — {{ nr.quotes.length }} of {{ nr.request.invitations.length }} contractors have quoted · closes {{ formatDate(nr.request.deadline, true) }}
+            <strong>Humo Contractor quote request {{ nr.request.id }}</strong> — {{ nr.quotes.length }} of {{ nr.request.invitations.length }} contractors have quoted · closes {{ formatDate(nr.request.deadline, true) }}
           </span>
           <span class="btn btn-primary btn-sm">Compare quotes</span>
         </a>

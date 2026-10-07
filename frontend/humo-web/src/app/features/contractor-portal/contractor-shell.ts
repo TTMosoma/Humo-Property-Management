@@ -1,9 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { CdkMenu, CdkMenuItem, CdkMenuTrigger } from '@angular/cdk/menu';
 import { IonIcon } from '@ionic/angular/standalone';
 import { PrototypeToolbar } from '../../core/prototype/prototype-toolbar';
 import { ImpersonationBanner } from '../../core/security/impersonation-banner';
 import { SessionService } from '../../core/session/session.service';
+import { SignOutService } from '../../core/session/sign-out.service';
 import { Logo } from '../../ui/brand/logo';
 
 /**
@@ -14,7 +16,7 @@ import { Logo } from '../../ui/brand/logo';
  */
 @Component({
   selector: 'app-contractor-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, IonIcon, Logo, PrototypeToolbar, ImpersonationBanner],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, IonIcon, Logo, PrototypeToolbar, ImpersonationBanner, CdkMenu, CdkMenuItem, CdkMenuTrigger],
   changeDetection: ChangeDetectionStrategy.OnPush,
   // Impersonation looks the same in every Humo product: red banner and frame, always visible.
   host: { '[class.impersonating]': 'session.isImpersonating()' },
@@ -34,9 +36,35 @@ import { Logo } from '../../ui/brand/logo';
       </nav>
       <div class="who">
         <span class="biz">{{ business() }}</span>
-        <span class="avatar" [title]="session.persona().name">{{ session.persona().initials }}</span>
+        <button type="button" class="avatar" [cdkMenuTriggerFor]="account" [attr.aria-label]="session.persona().name + ', ' + business() + '. Account menu'">
+          {{ session.persona().initials }}
+        </button>
       </div>
     </header>
+
+    <ng-template #account>
+      <div class="menu-panel account" cdkMenu>
+        <div class="acc-head">
+          <strong>{{ session.persona().name }}</strong>
+          <span>{{ session.persona().email }}</span>
+          <span class="acc-biz">{{ business() }} · Humo Contractor</span>
+        </div>
+        <div class="menu-divider"></div>
+        <a class="menu-item" cdkMenuItem routerLink="/contractor/profile">
+          <ion-icon name="business-outline" aria-hidden="true" /><span>Business profile</span>
+        </a>
+        <a class="menu-item" cdkMenuItem routerLink="/settings/security">
+          <ion-icon name="lock-closed-outline" aria-hidden="true" /><span>Security</span><span class="menu-item-meta">Your Humo sign-in</span>
+        </a>
+        <div class="menu-divider"></div>
+        <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="signOut.signOut('contractor')">
+          <ion-icon name="log-out-outline" aria-hidden="true" /><span>Sign out of Humo</span>
+          @if (session.isImpersonating()) {
+            <span class="menu-item-meta">Ends impersonation</span>
+          }
+        </button>
+      </div>
+    </ng-template>
     <main class="content">
       <div class="inner"><router-outlet /></div>
     </main>
@@ -68,7 +96,12 @@ import { Logo } from '../../ui/brand/logo';
     .top-nav a.on { color: #fff; background: var(--ct-ink-2); box-shadow: inset 0 -2px 0 var(--ct-accent-2); }
     .who { display: flex; gap: var(--s-3); align-items: center; margin-left: auto; }
     .biz { font-size: var(--fs-sm); color: #a9bccb; }
-    .avatar { display: grid; place-items: center; width: 32px; height: 32px; font-size: var(--fs-xs); font-weight: var(--fw-semibold); color: var(--ct-ink); background: var(--ct-accent-2); border-radius: 50%; }
+    .avatar { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; font: inherit; font-size: var(--fs-xs); font-weight: var(--fw-semibold); color: var(--ct-ink); background: var(--ct-accent-2); border: 2px solid transparent; border-radius: 50%; cursor: pointer; }
+    .avatar:hover, .avatar[aria-expanded='true'] { border-color: #fff; }
+    .account { width: 260px; }
+    .acc-head { display: flex; flex-direction: column; gap: 2px; padding: var(--s-3); line-height: 1.35; }
+    .acc-head span { font-size: var(--fs-xs); color: var(--c-text-muted); }
+    .acc-biz { color: var(--c-text-2) !important; }
     .content { flex: 1; min-height: 0; overflow-y: auto; }
     .inner { max-width: 1180px; margin: 0 auto; padding: var(--s-6) var(--s-5) var(--s-12); }
     .tabs { display: none; }
@@ -85,6 +118,7 @@ import { Logo } from '../../ui/brand/logo';
 })
 export class ContractorShell {
   protected readonly session = inject(SessionService);
+  protected readonly signOut = inject(SignOutService);
   protected readonly business = computed(() => this.session.membership().label);
   protected readonly links = [
     { label: 'Dashboard', route: '/contractor', icon: 'speedometer-outline', exact: true },

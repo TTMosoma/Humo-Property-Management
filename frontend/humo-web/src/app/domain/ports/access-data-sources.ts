@@ -38,6 +38,8 @@ export abstract class AccessDataSource {
   abstract revoke(identityId: string, assignmentId: string): Observable<void>;
   /** The API validates the identity holds the assignment and issues a token for it. */
   abstract switchRole(assignmentId: string): Observable<void>;
+  /** Ends the Humo session server-side (all products) and records it. */
+  abstract signOut(fromProduct: string): Observable<void>;
   abstract startImpersonation(input: {
     targetId: string;
     targetAssignmentId: string;

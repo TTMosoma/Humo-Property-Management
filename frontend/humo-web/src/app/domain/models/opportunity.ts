@@ -2,7 +2,7 @@ import { AccountHealth, UsageSnapshot } from './account-health';
 import { AddOnId, EntitlementSet, PackageId, Subscription } from './entitlement';
 
 /**
- * Opportunities: evidence that a customer would get more value from Humo.
+ * Opportunities: evidence that a customer would get more value from Humo Property Management.
  *
  * One set of rules feeds two audiences:
  *  - Account Managers see opportunities with their reasons (a reason to call).
@@ -77,7 +77,7 @@ export const OPPORTUNITY_RULES: OpportunityRule[] = [
       if (subscription.packageId !== 'essentials' || s.units < 600) return null;
       return {
         kind: 'package', title: 'Humo Professional', target: { package: 'professional' }, strength: s.units > 1000 ? 'high' : 'medium',
-        reasons: [`${s.units.toLocaleString('en-ZA')} units on Essentials`, `${s.receiptsAllocated30d} receipts handled outside Humo`],
+        reasons: [`${s.units.toLocaleString('en-ZA')} units on Essentials`, `${s.receiptsAllocated30d} receipts handled outside Humo PM`],
         potentialMrr: Math.round(s.units * 4.5),
       };
     },

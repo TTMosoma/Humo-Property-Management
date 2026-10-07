@@ -39,7 +39,7 @@ Sarah Jacobs has **one** identity with four assignments:
 - **Server:** the API confirms she holds the assignment (`AccessDataSource.switchRole`) and records a security event.
 - **App:** navigation, queues, quick actions, available actions, scope and the home route all follow the new role.
 - **Acknowledgement:** a calm strip in the role's accent colour says "You're now working as Finance User · All schemes in Acacia… You're still signed in as Sarah Jacobs."
-- **Wording:** we say "Switch role", never "Switch account". Each role has a quiet accent: agency blue, governance violet, resident green, supplier brown and Humo teal. Red and orange are reserved for impersonation.
+- **Wording:** we say "Switch role", never "Switch account". Every role uses the same brand accent; roles differ by label, context and navigation (see `docs/06-experience-review.md`). Red is reserved for impersonation.
 
 ### Roles
 
@@ -104,7 +104,7 @@ Sarah Jacobs has **one** identity with four assignments:
 
 | | Role switching | Impersonation |
 |---|---|---|
-| Meaning | "I am Sarah, operating as Finance User." | "I am Terry, viewing Humo as Sarah." |
+| Meaning | "I am Sarah, operating as Finance User." | "I am Terry, viewing Humo Property Management as Sarah." |
 | Who | Anyone with more than one role | Only identities granted `System.Impersonate` |
 | Visual | Quiet role accent | Orange banner, orange frame around the whole app, "Impersonating" badge, Exit button |
 

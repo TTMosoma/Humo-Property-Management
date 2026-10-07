@@ -432,7 +432,7 @@ function history(job: Job, suppliers: Supplier[]): JobEvent[] {
   const ev: JobEvent[] = [];
   const add = (at: string, kind: JobEvent['kind'], text: string, by: string) => ev.push({ id: `${job.ref}-e${ev.length + 1}`, at, kind, text, by });
   add(job.reportedAt, 'stage', `Reported by ${job.reportedBy.name}${job.reportedBy.role !== 'staff' ? ` (${job.reportedBy.role})` : ''}`, job.reportedBy.name);
-  if (job.assigneeId) add(new Date(new Date(job.reportedAt).getTime() + 3_600_000).toISOString(), 'stage', `Assigned to ${personName(job.assigneeId)}`, 'Humo');
+  if (job.assigneeId) add(new Date(new Date(job.reportedAt).getTime() + 3_600_000).toISOString(), 'stage', `Assigned to ${personName(job.assigneeId)}`, 'Humo PM');
   for (const q of job.quotes) {
     add(new Date(new Date(job.reportedAt).getTime() + 7_200_000).toISOString(), 'quote', `Quote requested from ${name(q.supplierId)}`, personName(job.assigneeId));
     if (q.status === 'received' && q.receivedAt) add(q.receivedAt, 'quote', `Quote received from ${name(q.supplierId)}: ${formatRand(q.amount)}`, name(q.supplierId));
@@ -444,7 +444,7 @@ function history(job: Job, suppliers: Supplier[]): JobEvent[] {
   if (job.completion) add(job.completion.completedAt, 'stage', `Completed: ${job.completion.notes}`, name(job.supplierId));
   if (job.verification) add(job.verification.at, 'stage', `Verified as fixed by ${job.verification.by}`, job.verification.by);
   if (job.invoiceId) add(new Date(new Date(job.verification?.at ?? job.reportedAt).getTime() + 86_400_000).toISOString(), 'invoice', `Invoice ${job.invoiceId} received`, name(job.supplierId));
-  if (job.stage === 'closed') add(new Date(new Date(job.reportedAt).getTime() + 20 * 86_400_000).toISOString(), 'payment', 'Paid and closed', 'Humo');
+  if (job.stage === 'closed') add(new Date(new Date(job.reportedAt).getTime() + 20 * 86_400_000).toISOString(), 'payment', 'Paid and closed', 'Humo PM');
   return ev.sort((a, b) => b.at.localeCompare(a.at));
 }
 

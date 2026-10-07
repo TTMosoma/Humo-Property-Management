@@ -1,7 +1,7 @@
 import { Role } from './role';
 
 /**
- * The Attention model: every actionable thing in Humo is a WorkItem.
+ * The Attention model: every actionable thing in Humo Property Management is a WorkItem.
  * Tasks, Approvals, Inbox, sidebar badges, notifications and the dashboard's
  * "Today" list are all views over the same items, so they can never disagree.
  */
@@ -74,7 +74,7 @@ export const WORK_TYPE_LABELS: Record<WorkItemType, string> = {
   'owner-message': 'Message',
 };
 
-/** Which part of Humo a work item belongs to (used for grouping and filters). */
+/** Which part of Humo Property Management a work item belongs to (used for grouping and filters). */
 export const WORK_TYPE_AREA: Record<WorkItemType, 'Finance' | 'Maintenance' | 'Governance' | 'Compliance' | 'Communication'> = {
   'receipt-allocation': 'Finance',
   'debtor-follow-up': 'Finance',

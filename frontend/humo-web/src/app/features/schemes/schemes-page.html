@@ -25,7 +25,7 @@
             <button type="button" class="btn btn-secondary" (click)="patch({ view: 'all' })">Browse all schemes</button>
           </ui-empty-state>
         } @else if (allRows().length === 0 || page.forceEmpty()) {
-          <ui-empty-state kind="first-use" illustration="building" title="Add your first scheme" message="Bring in a scheme with its units and owners — from a spreadsheet or your previous system — and Humo builds the rest.">
+          <ui-empty-state kind="first-use" illustration="building" title="Add your first scheme" message="Bring in a scheme with its units and owners — from a spreadsheet or your previous system — and Humo Property Management builds the rest.">
             <button type="button" class="btn btn-primary" disabled title="Arrives with onboarding">Import schemes</button>
           </ui-empty-state>
         } @else {

@@ -62,7 +62,7 @@ Humo Platform
 Maintenance request → Contractors chosen → Quote request → Quotes → Approval → Scheduled → Work started → Completed → Invoice
 ```
 
-1. **Request quotes through Humo.** This starts on the job (reported stage) at `/maintenance/:ref/quote-request`:
+1. **Request quotes through Humo Contractor.** This starts on the job (reported stage) at `/maintenance/:ref/quote-request`:
    - Describe the work and list the requirements; the job's photos are shared.
    - Set a deadline.
    - Invite **your own suppliers** for the trade, shown with their Humo reputation, verification and compliance.

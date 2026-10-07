@@ -3,7 +3,7 @@
  *
  *   Customer → Subscription → Package → Base entitlements → Add-ons / Overrides → Effective entitlements
  *
- * Nothing in Humo asks "is this customer Enterprise?". Code asks one question —
+ * Nothing in Humo Property Management asks "is this customer Enterprise?". Code asks one question —
  * `entitlements.has('governance')` — and never needs to know whether the
  * feature came from the package, an add-on or a trial override.
  *
@@ -117,7 +117,7 @@ export const FEATURES: FeatureDef[] = [
   { key: 'analytics-advanced', module: 'reporting', label: 'Advanced analytics', description: 'Portfolio trends and benchmarks.' },
   { key: 'permissions-advanced', module: 'platform', label: 'Advanced permissions', description: 'Custom roles and fine-grained access.' },
   { key: 'integrations', module: 'platform', label: 'Integrations', description: 'Accounting and banking connectors.' },
-  { key: 'api', module: 'platform', label: 'API access', description: 'Programmatic access to Humo data.' },
+  { key: 'api', module: 'platform', label: 'API access', description: 'Programmatic access to Humo Property Management data.' },
   { key: 'automation', module: 'platform', label: 'Automation', description: 'Rules that create tasks and send reminders.' },
   { key: 'automation-advanced', module: 'platform', label: 'Advanced automation', description: 'Multi-step automated workflows.' },
   { key: 'audit-log', module: 'platform', label: 'Audit log', description: 'Every action, recorded and exportable.', baseline: true },
@@ -135,6 +135,8 @@ export type PackageId = 'essentials' | 'professional' | 'enterprise';
 /** A named collection of features. Packages may build on another package. */
 export interface Package {
   id: PackageId;
+  /** Packages belong to one Humo product; Humo Valuations or Humo Contractor will have their own. */
+  product: 'property-management';
   name: string;
   tagline: string;
   extends?: PackageId;
@@ -145,6 +147,7 @@ export interface Package {
 export const PACKAGES: Package[] = [
   {
     id: 'essentials',
+    product: 'property-management',
     name: 'Humo Essentials',
     tagline: 'For smaller agencies getting their portfolio in order.',
     features: [
@@ -154,6 +157,7 @@ export const PACKAGES: Package[] = [
   },
   {
     id: 'professional',
+    product: 'property-management',
     name: 'Humo Professional',
     tagline: 'Full financial and maintenance operations.',
     extends: 'essentials',
@@ -164,6 +168,7 @@ export const PACKAGES: Package[] = [
   },
   {
     id: 'enterprise',
+    product: 'property-management',
     name: 'Humo Enterprise',
     tagline: 'Governance, compliance and scale.',
     extends: 'professional',
@@ -188,7 +193,7 @@ export const ADD_ONS: AddOn[] = [
   { id: 'governance', name: 'Governance', description: 'Trustee boards, meetings, AGMs and resolutions.', features: ['governance', 'trustee-management', 'meetings', 'agm-sgm'] },
   { id: 'advanced-reporting', name: 'Advanced Reporting', description: 'Custom and scheduled reports, analytics.', features: ['reporting-advanced', 'analytics-advanced'] },
   { id: 'storage', name: 'Additional Storage', description: 'More space for documents and photos.', features: ['storage-extra'] },
-  { id: 'api-access', name: 'API Access', description: 'Programmatic access to Humo data.', features: ['api'] },
+  { id: 'api-access', name: 'API Access', description: 'Programmatic access to Humo Property Management data.', features: ['api'] },
   { id: 'whatsapp', name: 'WhatsApp', description: 'Notices and reminders on WhatsApp.', features: ['whatsapp'] },
   { id: 'advanced-automation', name: 'Advanced Automation', description: 'Automated multi-step workflows.', features: ['automation', 'automation-advanced'] },
   { id: 'integrations', name: 'Integrations', description: 'Accounting and banking connectors.', features: ['integrations'] },

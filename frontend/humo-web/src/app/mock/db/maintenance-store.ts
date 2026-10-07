@@ -308,10 +308,10 @@ export class MaintenanceStore {
         const quoteId = `${ref}-q${job.quotes.length + 1}`;
         job.quotes.push({
           id: quoteId, supplierId: action.supplierId, amount: action.amount, status: 'received', receivedAt: new Date().toISOString(),
-          guaranteeMonths: action.guaranteeMonths, notes: `Via Humo quote request ${action.quoteRequestId} · complete by ${fmtDay(action.completeBy)}`,
+          guaranteeMonths: action.guaranteeMonths, notes: `Via Humo Contractor quote request ${action.quoteRequestId} · complete by ${fmtDay(action.completeBy)}`,
         });
         job.networkQuotes = { quoteRequestId: action.quoteRequestId, compared: action.compared };
-        this.log(job, 'quote', `Chose ${this.supplier(action.supplierId)?.name} (${formatRand(action.amount)}) from ${action.compared} quotes in Humo quote request ${action.quoteRequestId}`, by);
+        this.log(job, 'quote', `Chose ${this.supplier(action.supplierId)?.name} (${formatRand(action.amount)}) from ${action.compared} quotes in Humo Contractor quote request ${action.quoteRequestId}`, by);
         return this.act(ref, action.amount <= DELEGATED_LIMIT ? { type: 'approve-within-delegation', quoteId } : { type: 'send-for-approval', quoteId }, by);
       }
 
@@ -352,7 +352,7 @@ export class MaintenanceStore {
         job.stage = 'scheduled';
         job.dueAt = new Date(new Date(action.scheduledFor).getTime() + 8 * 3_600_000).toISOString();
         this.log(job, 'stage', `Work order issued to ${this.supplier(job.supplierId)?.name} for ${fmtDay(action.scheduledFor)}`, by);
-        if (job.reportedBy.role !== 'staff') this.log(job, 'message', `${job.reportedBy.name} notified of the booking`, 'Humo');
+        if (job.reportedBy.role !== 'staff') this.log(job, 'message', `${job.reportedBy.name} notified of the booking`, 'Humo PM');
         break;
 
       case 'start-work':
@@ -366,7 +366,7 @@ export class MaintenanceStore {
         job.photos.push({ id: `${ref}-c${job.photos.length + 1}`, caption: 'Completed work', takenAt: job.completion.completedAt, by: this.supplier(job.supplierId)?.name ?? 'Supplier', stage: 'completion' });
         job.stage = 'completed';
         this.log(job, 'stage', `Completed: ${action.notes}`, by);
-        if (job.reportedBy.role !== 'staff') this.log(job, 'message', `Asked ${job.reportedBy.name} to confirm it’s fixed`, 'Humo');
+        if (job.reportedBy.role !== 'staff') this.log(job, 'message', `Asked ${job.reportedBy.name} to confirm it’s fixed`, 'Humo PM');
         this.db.resolveWork(ref, ['maintenance-overdue'], by);
         break;
 

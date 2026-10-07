@@ -301,10 +301,12 @@
       }
     </div>
     <div class="menu-divider"></div>
-    <button type="button" class="menu-item" cdkMenuItem [cdkMenuItemDisabled]="true" title="No authentication in the prototype">
+    <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="signOut.signOut('property-management')">
       <ion-icon name="log-out-outline" aria-hidden="true" />
-      <span>Sign out</span>
-      <span class="menu-item-meta">Prototype</span>
+      <span>Sign out of Humo</span>
+      @if (session.isImpersonating()) {
+        <span class="menu-item-meta">Ends impersonation</span>
+      }
     </button>
   </div>
 </ng-template>

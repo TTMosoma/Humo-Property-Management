@@ -9,6 +9,7 @@ import { PrototypeStateService, ThemePref } from '../../prototype/prototype-stat
 import { ScopeService } from '../../scope/scope.service';
 import { ImpersonationService } from '../../security/impersonation.service';
 import { RoleSwitcher } from '../../session/role-switcher';
+import { SignOutService } from '../../session/sign-out.service';
 import { SessionService } from '../../session/session.service';
 
 interface QuickAction {
@@ -51,6 +52,7 @@ export class Topbar {
   protected readonly scope = inject(ScopeService);
   protected readonly proto = inject(PrototypeStateService);
   protected readonly switcher = inject(RoleSwitcher);
+  protected readonly signOut = inject(SignOutService);
   protected readonly impersonation = inject(ImpersonationService);
   private readonly router = inject(Router);
 

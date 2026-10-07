@@ -47,6 +47,9 @@ export class SessionService {
   readonly personas = computed(() => this.store.identities().filter((i) => i.demo));
 
   private readonly signedInId = signal(this.initial('humo.persona', 'p-sarah'));
+
+  /** One Humo session covers every Humo product; signing out of one signs out of all. */
+  readonly signedIn = signal(safeStorage.get('humo.signedOut') !== '1');
   private readonly membershipId = signal<string | null>(safeStorage.get('humo.membership'));
 
   /** Active impersonation (set only through ImpersonationService). */
@@ -130,6 +133,7 @@ export class SessionService {
 
   constructor() {
     effect(() => safeStorage.set('humo.persona', this.signedInId()));
+    effect(() => safeStorage.set('humo.signedOut', this.signedIn() ? '0' : '1'));
     effect(() => safeStorage.set('humo.membership', this.membership().id));
     effect(() => safeStorage.set('humo.impersonation', JSON.stringify(this.impersonation())));
   }
@@ -170,7 +174,23 @@ export class SessionService {
   }
 
   /** Prototype: sign in as a different identity. Ends any impersonation. */
+  /** End the Humo session: impersonation and any step-up proof go with it. Call through SignOutService. */
+  signOut(): void {
+    this.impersonation.set(null);
+    this.stepUpProof.set(null);
+    this.supportAgencyId.set(null);
+    this.membershipId.set(null);
+    this.signedIn.set(false);
+  }
+
+  /** Prototype sign-in: the real identity provider (passkey / Humo Mobile) replaces this. */
+  signIn(id?: string): void {
+    if (id) this.switchPersona(id);
+    this.signedIn.set(true);
+  }
+
   switchPersona(id: string): void {
+    this.signedIn.set(true);
     this.signedInId.set(id);
     this.membershipId.set(null);
     this.supportAgencyId.set(null);

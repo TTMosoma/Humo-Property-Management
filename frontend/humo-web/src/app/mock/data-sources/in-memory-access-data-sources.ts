@@ -101,6 +101,22 @@ export class InMemoryAccessDataSource extends AccessDataSource {
       .pipe(map(() => undefined));
   }
 
+  signOut(fromProduct: string): Observable<void> {
+    const imp = this.session.isImpersonating();
+    return this.gateway
+      .command(
+        {
+          action: imp ? `Signed out of Humo from ${fromProduct} (impersonation ended)` : `Signed out of Humo from ${fromProduct}`,
+          resource: 'Session',
+          resourceId: 's-current',
+          category: 'security',
+          allowedWhileObserving: true,
+        },
+        () => undefined,
+      )
+      .pipe(map(() => undefined));
+  }
+
   startImpersonation(input: Parameters<AccessDataSource['startImpersonation']>[0]): Observable<ImpersonationSession> {
     const actor = this.session.actor();
     const target = this.store.identity(input.targetId);

@@ -597,7 +597,7 @@ export class MockDb {
         payer: `${holder.firstName[0]} ${holder.lastName}`.toUpperCase(),
         status: 'allocated',
         allocations: [{ accountId: account.id, amount: -payment.amount }],
-        allocatedBy: 'Humo (automatic match)',
+        allocatedBy: 'Humo PM (automatic match)',
         autoMatched: true,
       };
       payment.receiptId = receipt.id;

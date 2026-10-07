@@ -1,6 +1,7 @@
 import { inject } from '@angular/core';
 import { ActivatedRouteSnapshot, Route, Routes } from '@angular/router';
 import { roleGuard } from './core/access/role.guard';
+import { signedInGuard, signedOutGuard } from './core/access/signed-in.guard';
 import { SessionService } from './core/session/session.service';
 import type { BreadcrumbData } from './core/shell/breadcrumbs/breadcrumbs';
 import { Shell } from './core/shell/shell';
@@ -51,40 +52,49 @@ function planned(
 const schemeName = (d: Record<string, unknown>) => (d['scheme'] as Scheme | undefined)?.name ?? 'Scheme';
 
 export const routes: Routes = [
-  // ---------------- Humo Contractor (its own product shell) ----------------
+  // ---------------- Humo identity: shared by every Humo product ----------------
+  {
+    path: 'signed-out',
+    title: 'Signed out',
+    canActivate: [signedOutGuard],
+    loadComponent: () => import('./features/access/signed-out-page').then((m) => m.SignedOutPage),
+  },
+
+  // ---------------- Humo Contractor (a separate Humo product, prototyped here behind its own shell) ----------------
   {
     path: 'contractor',
     loadComponent: () => import('./features/contractor-portal/contractor-shell').then((m) => m.ContractorShell),
+    canActivate: [signedInGuard],
     canActivateChild: [roleGuard],
     data: { section: 'Humo Contractor' },
     children: [
       {
         path: '',
-        title: 'Humo Contractor',
+        title: 'Dashboard',
         data: { roles: ['supplier'], view: 'dashboard' },
         loadComponent: () => import('./features/contractor-portal/contractor-home-page').then((m) => m.ContractorHomePage),
       },
       {
         path: 'requests',
-        title: 'Quote requests · Humo Contractor',
+        title: 'Quote requests',
         data: { roles: ['supplier'], view: 'requests' },
         loadComponent: () => import('./features/contractor-portal/contractor-home-page').then((m) => m.ContractorHomePage),
       },
       {
         path: 'requests/:id',
-        title: 'Quote request · Humo Contractor',
+        title: 'Quote request',
         data: { roles: ['supplier'] },
         loadComponent: () => import('./features/contractor-portal/contractor-request-page').then((m) => m.ContractorRequestPage),
       },
       {
         path: 'jobs',
-        title: 'Jobs · Humo Contractor',
+        title: 'Jobs',
         data: { roles: ['supplier'], view: 'jobs' },
         loadComponent: () => import('./features/contractor-portal/contractor-home-page').then((m) => m.ContractorHomePage),
       },
       {
         path: 'profile',
-        title: 'Profile · Humo Contractor',
+        title: 'Profile',
         data: { roles: ['supplier'] },
         loadComponent: () => import('./features/contractor-portal/contractor-profile-page').then((m) => m.ContractorProfilePage),
       },
@@ -93,6 +103,7 @@ export const routes: Routes = [
   {
     path: '',
     component: Shell,
+    canActivate: [signedInGuard],
     canActivateChild: [roleGuard],
     children: [
       { path: '', pathMatch: 'full', redirectTo: () => inject(SessionService).homeRoute() },
@@ -376,7 +387,7 @@ export const routes: Routes = [
         data: { section: 'Documents' },
         children: [
           planned('', 'Documents', STAFF_AND_TRUSTEE, 7, 'Quickly find the right document for the right scheme.', [
-            'A search over every attachment in Humo, with facets: scheme, category, date, related record, uploader',
+            'A search over every attachment in Humo Property Management, with facets: scheme, category, date, related record, uploader',
             'Visibility per document (staff · trustees · owners · one unit) and expiry dates that feed Compliance',
           ], false),
         ],

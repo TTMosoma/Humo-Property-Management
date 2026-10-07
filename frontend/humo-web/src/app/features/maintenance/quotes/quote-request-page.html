@@ -2,7 +2,7 @@
 
 <ui-page-header
   [eyebrow]="'Job ' + ref()"
-  title="Request quotes through Humo"
+  title="Request quotes through Humo Contractor"
   subtitle="Describe the work once. The contractors you invite quote in Humo Contractor, and you compare their offers side by side. Only the businesses you invite see this request."
 />
 
@@ -44,7 +44,7 @@
 
     <section class="surface pick">
       <h2>Invite contractors</h2>
-      <p class="muted small">Your {{ d.job.category.toLowerCase() }} suppliers for {{ d.scheme.name }}, with their reputation on Humo.</p>
+      <p class="muted small">Your {{ d.job.category.toLowerCase() }} suppliers for {{ d.scheme.name }}, with their reputation on Humo Contractor.</p>
       <ul>
         @for (c of candidates(); track c.profile.party.id) {
           <li [class.on]="chosen().includes(c.profile.party.id)">
