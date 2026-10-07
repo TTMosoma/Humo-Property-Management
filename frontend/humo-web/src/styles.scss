@@ -57,3 +57,36 @@ ion-toast.humo-toast-danger {
 ion-toast.humo-toast {
   z-index: 2000;
 }
+
+// Printing (statements): only the page content, no app chrome.
+@media print {
+  ion-menu,
+  app-sidebar,
+  app-topbar,
+  app-breadcrumbs,
+  app-prototype-toolbar,
+  app-mobile-tab-bar,
+  .support-banner,
+  .no-print {
+    display: none !important;
+  }
+
+  ion-app,
+  ion-split-pane,
+  .ion-page,
+  main.content {
+    position: static !important;
+    display: block !important;
+    overflow: visible !important;
+    contain: none !important;
+  }
+
+  .content-inner {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  body {
+    background: #fff !important;
+  }
+}

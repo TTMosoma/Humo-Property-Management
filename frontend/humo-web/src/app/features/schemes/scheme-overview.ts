@@ -1,9 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute } from '@angular/router';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { catchError, map, of } from 'rxjs';
-import { Scheme, SchemeDataSource, SchemeHealth, Urgency, WorkItem, urgencyOf } from '../../domain';
+import { catchError, map, of, switchMap } from 'rxjs';
+import { Scheme, SchemeDataSource, SchemeHealth, UnitDataSource, UnitSummary, Urgency, WorkItem, urgencyOf } from '../../domain';
+import { SessionService } from '../../core/session/session.service';
 import { AttentionService } from '../../core/attention/attention.service';
 import { pageState } from '../../core/prototype/page-state';
 import { DrawerService } from '../../ui/drawer/drawer.service';
@@ -22,7 +23,7 @@ import { COMPLIANCE, collectionTone } from './scheme-view';
  */
 @Component({
   selector: 'app-scheme-overview',
-  imports: [IonIcon, StatusPill, EmptyState, ErrorState, Skeleton, RandPipe],
+  imports: [IonIcon, StatusPill, EmptyState, ErrorState, Skeleton, RandPipe, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './scheme-overview.html',
   styleUrl: './scheme-overview.scss',
@@ -33,6 +34,8 @@ export class SchemeOverview {
   private readonly attention = inject(AttentionService);
   private readonly drawer = inject(DrawerService);
   protected readonly page = pageState();
+  protected readonly session = inject(SessionService);
+  private readonly unitData = inject(UnitDataSource);
 
   protected readonly scheme = toSignal(this.route.data.pipe(map((d) => d['scheme'] as Scheme)), {
     initialValue: this.route.snapshot.data['scheme'] as Scheme,
@@ -42,6 +45,24 @@ export class SchemeOverview {
     initialValue: [] as SchemeHealth[],
   });
   protected readonly health = computed(() => this.allHealth().find((h) => h.schemeId === this.scheme()?.id));
+
+  private readonly unitRows = toSignal(
+    toObservable(computed(() => this.scheme()?.id)).pipe(
+      switchMap((id) => (id ? this.unitData.list([id]).pipe(catchError(() => of(null))) : of(null))),
+    ),
+  );
+
+  protected readonly units = computed(() => {
+    const rows = this.unitRows() as UnitSummary[] | null | undefined;
+    if (!rows) return null;
+    return {
+      total: rows.length,
+      owner: rows.filter((r) => r.unit.occupancy === 'owner-occupied').length,
+      tenanted: rows.filter((r) => r.unit.occupancy === 'tenanted').length,
+      vacant: rows.filter((r) => r.unit.occupancy === 'vacant').length,
+      arrears: rows.filter((r) => ['arrears', 'arrangement', 'handed-over'].includes(r.account.status)).length,
+    };
+  });
 
   protected readonly groups = computed(() => {
     if (this.page.forceEmpty()) return [];

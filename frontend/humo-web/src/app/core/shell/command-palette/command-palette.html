@@ -3,7 +3,7 @@
   <input
     #input
     type="text"
-    placeholder="Search pages, schemes, references (e.g. MR-1042)…"
+    placeholder="Search “KC 42”, a name or phone, a reference, a page…"
     aria-label="Search pages, schemes and work"
     role="combobox"
     aria-controls="palette-results"
@@ -41,7 +41,7 @@
   } @empty {
     <div class="empty">
       No pages, schemes or work items match “{{ query() }}”.
-      <span>Units, people and suppliers become searchable in Slice A.</span>
+      <span>Try a unit like “KC 42”, an owner’s surname, or a reference like “MR-1042”.</span>
     </div>
   }
   @if (schemesFailed()) {

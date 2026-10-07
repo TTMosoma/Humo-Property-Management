@@ -1,0 +1,72 @@
+@if (!fixedScheme()) {
+  <ui-page-header eyebrow="Portfolio" title="People" subtitle="Owners, tenants and trustees in one directory. One person can hold several roles — each role links to its unit or scheme." />
+  <app-scope-notice />
+}
+
+<ui-view-tabs label="People views" [tabs]="tabs()" [active]="state().role ?? 'all'" (activeChange)="patch({ role: $event })" />
+<ui-filter-bar
+  searchLabel="Name, phone, email, unit…"
+  [filters]="filters()"
+  [values]="{ scheme: state().scheme }"
+  (valuesChange)="patch({ scheme: $event['scheme'] ?? null })"
+  [search]="state().q ?? ''"
+  (searchChange)="patch({ q: $event })"
+/>
+
+@if (loading()) {
+  <ui-skeleton [count]="10" />
+} @else if (failed()) {
+  <div class="surface"><ui-error-state title="We couldn’t load people" (retry)="page.retry()" /></div>
+} @else if (filtered().length === 0) {
+  <div class="surface">
+    @if (state().q || state().scheme) {
+      <ui-empty-state kind="filtered" title="No one matches">
+        <button type="button" class="btn btn-secondary" (click)="patch({ q: '', scheme: null })">Clear filters</button>
+      </ui-empty-state>
+    } @else {
+      <ui-empty-state kind="first-use" title="No people yet" message="Owners and tenants arrive with the units you import; trustees are added from the trustee board." />
+    }
+  </div>
+} @else {
+  <ui-data-table caption="People" [rows]="rows()" [columns]="columns" [rowId]="rowId" [activeId]="activeId()" (rowClick)="open($event)">
+    <ng-template uiCell="name" let-p>
+      <div class="name">
+        <span class="avatar" [class.company]="p.person.kind !== 'individual'">{{ p.person.initials }}</span>
+        <div>
+          <div class="display">{{ p.person.displayName }}</div>
+          @if (p.person.kind !== 'individual') {
+            <div class="sub">{{ p.person.kind === 'company' ? 'Company' : 'Trust' }} · contact {{ p.person.firstName }} {{ p.person.lastName }}</div>
+          }
+        </div>
+      </div>
+    </ng-template>
+    <ng-template uiCell="roles" let-p>
+      <div class="chips">
+        @for (c of chips(p).slice(0, 3); track c.label) {
+          <a [class]="'chip ' + c.kind" [routerLink]="c.route" (click)="$event.stopPropagation()">{{ c.label }}</a>
+        }
+        @if (chips(p).length > 3) {
+          <span class="chip more">+{{ chips(p).length - 3 }}</span>
+        }
+      </div>
+    </ng-template>
+    <ng-template uiCell="contact" let-p>
+      <div>{{ p.person.phone }}</div>
+      <div class="sub">{{ p.person.email }}</div>
+    </ng-template>
+    <ng-template uiCell="balance" let-p>
+      @if (p.balance !== 0) {
+        <span class="money" [class.arrears]="p.balance > 0" [class.credit]="p.balance < 0">{{ p.balance | rand }}</span>
+      } @else if (p.relationships.some(hasOwner)) {
+        <span class="muted">Paid up</span>
+      }
+    </ng-template>
+  </ui-data-table>
+
+  @if (filtered().length > rows().length) {
+    <div class="more-row">
+      <span>Showing {{ rows().length }} of {{ filtered().length }}</span>
+      <button type="button" class="btn btn-secondary btn-sm" (click)="limit.set(limit() + 50)">Show 50 more</button>
+    </div>
+  }
+}

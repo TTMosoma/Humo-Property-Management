@@ -204,3 +204,44 @@
     grid-template-columns: 1fr;
   }
 }
+
+.occ {
+  display: flex;
+  gap: 2px;
+  height: 10px;
+  overflow: hidden;
+  border-radius: var(--r-pill);
+
+  span {
+    display: block;
+    min-width: 0;
+  }
+}
+
+.o {
+  background: var(--c-primary);
+}
+
+.t {
+  background: var(--c-accent);
+}
+
+.v {
+  background: var(--c-border-strong);
+}
+
+.k {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 2px;
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-4);
+  margin-top: var(--s-4);
+  font-size: var(--fs-sm);
+}

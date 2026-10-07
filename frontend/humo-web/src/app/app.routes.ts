@@ -4,7 +4,7 @@ import { roleGuard } from './core/access/role.guard';
 import { SessionService } from './core/session/session.service';
 import type { BreadcrumbData } from './core/shell/breadcrumbs/breadcrumbs';
 import { Shell } from './core/shell/shell';
-import { AGENCY_STAFF, EVERYONE, Role, STAFF_AND_TRUSTEE, Scheme } from './domain';
+import { AGENCY_STAFF, EVERYONE, Role, STAFF_AND_TRUSTEE, Scheme, periodLabel } from './domain';
 import type { PlannedMeta } from './features/planned/planned-page';
 import { schemeResolver } from './features/schemes/scheme.resolver';
 
@@ -112,18 +112,48 @@ export const routes: Routes = [
                 data: { breadcrumb: 'Overview' },
                 loadComponent: () => import('./features/schemes/scheme-overview').then((m) => m.SchemeOverview),
               },
-              planned('units', 'Units', STAFF, 3, 'Every unit with its owner, occupant, levy and balance.', [
-                'Unit list with owner, tenant, participation quota, monthly levy and balance',
-                'Click a unit: preview drawer; open: the unit record',
-              ]),
-              planned('units/:unitId', (r) => `Unit ${r.paramMap.get('unitId')}`, STAFF, 3, 'Everything about one unit: Scheme → Unit → Owner → Account.', [
-                'Relationship chain: Scheme › Unit › Owner › Account, every part clickable',
-                'Owner and tenant with preview drawers (no context lost)',
-                'Account balance, transactions and statements; maintenance; documents; timeline',
-              ], (_, p) => `Unit ${p['unitId']}`),
-              planned('units/:unitId/account', 'Account', STAFF, 3, 'An owner’s levy account: balance, transactions, arrangements, statements.', [], 'Account'),
-              planned('units/:unitId/account/statements/:period', (r) => `Statement ${r.paramMap.get('period')}`, STAFF, 3, 'One statement: opening balance, charges, payments, adjustments, interest, closing balance.', [], (_, p) => `Statement ${p['period']}`),
-              planned('people', 'People', STAFF, 3, 'Owners, tenants and trustees of this scheme — one person, many roles.'),
+              {
+                path: 'units',
+                title: 'Units',
+                data: { roles: STAFF, breadcrumb: 'Units' },
+                loadComponent: () => import('./features/units/units-page').then((m) => m.UnitsPage),
+              },
+              {
+                // A unit and its account are records in their own right: the workspace hides
+                // its header and tabs (data.record) and the unit's own header takes over.
+                path: 'units/:unitId',
+                data: { roles: STAFF, record: true, breadcrumb: (_: unknown, p: Record<string, string>) => `Unit ${p['unitId']}` },
+                children: [
+                  {
+                    path: '',
+                    title: (r: ActivatedRouteSnapshot) => `Unit ${r.paramMap.get('unitId')}`,
+                    loadComponent: () => import('./features/units/unit-page').then((m) => m.UnitPage),
+                  },
+                  {
+                    path: 'account',
+                    data: { breadcrumb: 'Account' },
+                    children: [
+                      {
+                        path: '',
+                        title: 'Account',
+                        loadComponent: () => import('./features/accounts/account-page').then((m) => m.AccountPage),
+                      },
+                      {
+                        path: 'statements/:period',
+                        title: (r: ActivatedRouteSnapshot) => `${periodLabel(r.paramMap.get('period')!)} statement`,
+                        data: { breadcrumb: (_: unknown, p: Record<string, string>) => periodLabel(p['period']) },
+                        loadComponent: () => import('./features/accounts/statement-page').then((m) => m.StatementPage),
+                      },
+                    ],
+                  },
+                ],
+              },
+              {
+                path: 'people',
+                title: 'People',
+                data: { roles: STAFF, breadcrumb: 'People' },
+                loadComponent: () => import('./features/people/people-page').then((m) => m.PeoplePage),
+              },
               planned('finance', 'Finance', STAFF_AND_TRUSTEE, 3, 'This scheme’s levy roll, receipts, credit control, payables and budget.'),
               planned('maintenance', 'Maintenance', STAFF_AND_TRUSTEE, 4, 'Jobs for this scheme from request to payment.'),
               planned('suppliers', 'Suppliers', STAFF_AND_TRUSTEE, 4, 'Suppliers serving this scheme, their documents and performance.'),
@@ -139,18 +169,32 @@ export const routes: Routes = [
       {
         path: 'units',
         data: { section: 'Portfolio' },
-        children: [planned('', 'Units', STAFF, 3, 'Find any unit across all schemes, e.g. “KC 42”.')],
+        children: [
+          {
+            path: '',
+            title: 'Units',
+            data: { roles: STAFF, breadcrumb: 'Units' },
+            loadComponent: () => import('./features/units/units-page').then((m) => m.UnitsPage),
+          },
+        ],
       },
       {
         path: 'people',
         data: { section: 'Portfolio', breadcrumb: 'People' },
         children: [
-          planned('', 'People', STAFF, 3, 'One directory of owners, tenants and trustees — one person can hold several roles.', [
-            'Tabs: All · Owners · Tenants · Trustees (filtered views of the same people)',
-            'Each person shows all their units, schemes and roles in a relationship header',
-          ], false),
+          {
+            path: '',
+            title: 'People',
+            data: { roles: STAFF },
+            loadComponent: () => import('./features/people/people-page').then((m) => m.PeoplePage),
+          },
           planned('new', 'Add person', ADMIN_PM, 3, 'Add an owner, tenant or trustee and link them to units.'),
-          planned(':personId', 'Person', STAFF, 3, 'Everything about one person across all their units and schemes.'),
+          {
+            path: ':personId',
+            title: 'Person',
+            data: { roles: STAFF, breadcrumb: 'Person' },
+            loadComponent: () => import('./features/people/person-page').then((m) => m.PersonPage),
+          },
         ],
       },
       {
@@ -179,10 +223,12 @@ export const routes: Routes = [
             'Scope → Period → Charges preview → Exceptions → Approval (Approvals) → Generate & send statements',
             'Posted runs are locked; corrections are journal adjustments',
           ]),
-          planned('receipts', 'Receipts', ADMIN_FINANCE, 3, 'Identify each incoming payment and allocate it to the right owner account.', [
-            'Split view: unallocated receipts and suggested matches with confidence and reasons',
-            '“Remember this payer” rules, split allocation, suspense account',
-          ]),
+          {
+            path: 'receipts',
+            title: 'Receipts',
+            data: { roles: ADMIN_FINANCE, breadcrumb: 'Receipts' },
+            loadComponent: () => import('./features/receipts/receipts-page').then((m) => m.ReceiptsPage),
+          },
           planned('credit-control', 'Credit control', STAFF, 6, 'Chase arrears in a structured, fair way.', [
             'Collection pipeline: Reminder → Final demand → Letter of demand → Handed over (+ Arrangement, Disputed)',
             'Ageing (Current · 30 · 60 · 90 · 120+) as a filter and chart',
@@ -314,12 +360,23 @@ export const routes: Routes = [
         children: [
           { path: '', pathMatch: 'full', redirectTo: 'home' },
           planned('home', 'Home', RESIDENT, 8, 'See my balance, open requests and latest notices at a glance.', [], false),
-          planned('account', 'My account', OWNER, 8, 'Know what I owe, how to pay, and what I’ve paid — statements included.'),
+          {
+            path: 'account',
+            title: 'My account',
+            data: { roles: OWNER },
+            loadComponent: () => import('./features/my/owner-account-page').then((m) => m.OwnerAccountPage),
+          },
+          {
+            path: 'statements/:period',
+            title: 'Statement',
+            data: { roles: OWNER },
+            loadComponent: () => import('./features/accounts/statement-page').then((m) => m.StatementPage),
+          },
           planned('requests', 'Maintenance', RESIDENT, 8, 'Report a problem and follow it until it’s fixed — then confirm it was.'),
           planned('requests/new', 'Report a problem', RESIDENT, 8, 'Report a problem with photos in under a minute.'),
           planned('documents', 'Documents', RESIDENT, 8, 'Rules, minutes and my own documents.'),
           planned('notices', 'Notices', RESIDENT, 8, 'Announcements from the managing agent and trustees.'),
-          { path: 'statements', redirectTo: 'account' },
+          { path: 'statements', pathMatch: 'full', redirectTo: 'account' },
         ],
       },
 

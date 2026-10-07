@@ -83,10 +83,28 @@
           <ui-error-state variant="inline" title="Health figures unavailable" message="The rest of the overview still works." (retry)="page.retry()" />
         }
 
-        <section class="surface panel next">
-          <h2 class="section-title">Coming in Slice A</h2>
-          <p class="muted">Units, owners and accounts for this scheme — with the Scheme → Unit → Owner → Account → Statement journey — plus recent transactions, communication and maintenance activity.</p>
-        </section>
+        @if (units(); as u) {
+          <section class="surface panel" aria-labelledby="units-title">
+            <h2 id="units-title" class="section-title">Units & occupancy</h2>
+            <div class="occ" role="img" [attr.aria-label]="u.owner + ' owner-occupied, ' + u.tenanted + ' tenanted, ' + u.vacant + ' vacant'">
+              <span class="o" [style.flex]="u.owner"></span>
+              <span class="t" [style.flex]="u.tenanted"></span>
+              <span class="v" [style.flex]="u.vacant || 0"></span>
+            </div>
+            <dl>
+              <dt><i class="k o"></i>Owner-occupied</dt><dd>{{ u.owner }}</dd>
+              <dt><i class="k t"></i>Tenanted</dt><dd>{{ u.tenanted }}</dd>
+              <dt><i class="k v"></i>Vacant</dt><dd>{{ u.vacant }}</dd>
+              <dt>Accounts in arrears</dt><dd [class.danger]="u.arrears > 0">{{ u.arrears }}</dd>
+            </dl>
+            @if (session.isStaff()) {
+              <div class="links">
+                <a [routerLink]="['/schemes', scheme().id, 'units']">All {{ u.total }} units</a>
+                <a [routerLink]="['/schemes', scheme().id, 'units']" [queryParams]="{ view: 'arrears' }">Units in arrears</a>
+              </div>
+            }
+          </section>
+        }
       </div>
     </div>
   }

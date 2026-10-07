@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterOutlet } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { catchError, map, of } from 'rxjs';
+import { catchError, filter, map, of, startWith } from 'rxjs';
 import { Scheme, SchemeDataSource, SchemeHealth } from '../../domain';
 import { AttentionService } from '../../core/attention/attention.service';
 import { ScopeService } from '../../core/scope/scope.service';
@@ -25,6 +25,7 @@ import { RATING, collectionTone } from './scheme-view';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (scheme(); as s) {
+      @if (!childIsRecord()) {
       <ui-record-header
         [eyebrow]="s.type + ' · ' + s.suburb + ', ' + s.city"
         [title]="s.name"
@@ -61,6 +62,7 @@ import { RATING, collectionTone } from './scheme-view';
       </ui-record-header>
 
       <ui-route-tabs label="Scheme sections" [base]="'/schemes/' + s.id" [tabs]="tabs()" />
+      }
       <router-outlet />
     }
   `,
@@ -84,6 +86,19 @@ export class SchemeWorkspace {
     initialValue: [] as SchemeHealth[],
   });
   private readonly health = computed(() => this.allHealth().find((h) => h.schemeId === this.scheme()?.id));
+
+  private readonly router = inject(Router);
+
+  /** Units and accounts are records with their own header; the scheme header steps aside. */
+  protected readonly childIsRecord = toSignal(
+    this.router.events.pipe(
+      filter((e) => e instanceof NavigationEnd),
+      startWith(null),
+      // The child's snapshot is only set once activation finishes, hence the optional chaining.
+      map(() => !!this.route.firstChild?.snapshot?.data?.['record']),
+    ),
+    { initialValue: false },
+  );
 
   protected readonly scoped = computed(() => this.scope.scopeId() === this.scheme()?.id);
 

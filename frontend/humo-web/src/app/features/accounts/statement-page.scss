@@ -1,0 +1,260 @@
+:host {
+  display: block;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-bottom: var(--s-5);
+}
+
+.actions {
+  display: flex;
+  gap: var(--s-2);
+}
+
+// The statement is always a white "paper" sheet, even in dark mode.
+.sheet {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: var(--s-10) var(--s-10) var(--s-8);
+  color: #0a1a33;
+  background: #fff;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-md);
+  font-size: var(--fs-sm);
+}
+
+.letterhead {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-6);
+  padding-bottom: var(--s-5);
+  border-bottom: 3px solid #041b40;
+}
+
+.agency {
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-medium);
+  color: #041b40;
+}
+
+.agency-sub {
+  color: #5b6a82;
+}
+
+.doc {
+  text-align: right;
+}
+
+.doc-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #5b6a82;
+}
+
+.doc-period {
+  font-family: var(--font-display);
+  font-size: var(--fs-2xl);
+  color: #041b40;
+}
+
+.parties {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-6);
+  margin: var(--s-6) 0;
+}
+
+.label {
+  margin-bottom: 2px;
+  font-family: var(--font-display);
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #5b6a82;
+}
+
+.strong {
+  font-weight: var(--fw-semibold);
+}
+
+.refs {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 2px var(--s-4);
+  margin: 0;
+
+  dt {
+    color: #5b6a82;
+  }
+
+  dd {
+    margin: 0;
+    text-align: right;
+    font-weight: var(--fw-medium);
+  }
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  border: 1px solid #e0e6ee;
+  border-radius: var(--r);
+  overflow: hidden;
+}
+
+.box {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--s-3);
+  border-right: 1px solid #e0e6ee;
+
+  &:last-child {
+    border-right: 0;
+  }
+
+  span {
+    font-size: var(--fs-xs);
+    color: #5b6a82;
+  }
+
+  strong {
+    font-size: var(--fs-md);
+  }
+
+  &.total {
+    color: #fff;
+    background: #041b40;
+
+    span {
+      color: #b6c3d9;
+    }
+  }
+}
+
+.lines {
+  width: 100%;
+  margin: var(--s-6) 0;
+  border-collapse: collapse;
+
+  th {
+    padding: var(--s-2);
+    font-family: var(--font-display);
+    font-size: var(--fs-2xs);
+    font-weight: var(--fw-medium);
+    letter-spacing: 0.1em;
+    text-align: left;
+    text-transform: uppercase;
+    color: #5b6a82;
+    border-bottom: 1px solid #c7d1de;
+  }
+
+  td {
+    padding: var(--s-2);
+    border-bottom: 1px solid #edf1f6;
+    vertical-align: top;
+  }
+
+  .end {
+    text-align: right;
+  }
+
+  .bf td {
+    color: #5b6a82;
+  }
+
+  .ref {
+    color: #8b97ab;
+  }
+
+  tfoot td {
+    font-weight: var(--fw-semibold);
+    border-top: 2px solid #041b40;
+    border-bottom: 0;
+  }
+}
+
+.pay {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-6);
+  padding: var(--s-4);
+  background: #f4f6f9;
+  border-radius: var(--r);
+}
+
+.due {
+  flex: none;
+  text-align: right;
+
+  &.ok {
+    align-self: center;
+    font-weight: var(--fw-semibold);
+    color: #1d7a52;
+  }
+}
+
+.due-amount {
+  font-family: var(--font-display);
+  font-size: var(--fs-2xl);
+  color: #041b40;
+}
+
+.foot {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-4);
+  margin-top: var(--s-6);
+  font-size: var(--fs-xs);
+  color: #8b97ab;
+}
+
+.powered {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+}
+
+@media (max-width: 760px) {
+  .sheet {
+    padding: var(--s-5);
+  }
+
+  .letterhead,
+  .parties,
+  .pay {
+    flex-direction: column;
+  }
+
+  .doc,
+  .due {
+    text-align: left;
+  }
+
+  .summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .lines {
+    font-size: var(--fs-xs);
+  }
+}
+
+@media print {
+  .sheet {
+    max-width: none;
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+  }
+}

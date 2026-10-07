@@ -1,17 +1,17 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, map, tap } from 'rxjs';
+import { Injectable, inject } from '@angular/core';
+import { Observable, map, tap } from 'rxjs';
 import { WorkItem, WorkItemDataSource } from '../../domain';
-import { createWorkItems } from '../fixtures/work-items';
+import { MockDb } from '../db/mock-db';
 import { mockResponder } from '../mock-latency';
 
-/** In-memory Attention store. Changes are kept for the browser session only. */
+/** In-memory Attention store, backed by MockDb so other commands (e.g. allocations) can update work. */
 @Injectable()
 export class InMemoryWorkItemDataSource extends WorkItemDataSource {
+  private readonly db = inject(MockDb);
   private readonly respond = mockResponder();
-  private readonly items$ = new BehaviorSubject<WorkItem[]>(createWorkItems());
 
   watch(): Observable<WorkItem[]> {
-    return this.items$.asObservable();
+    return this.db.changes$.pipe(map(() => this.db.workItems));
   }
 
   complete(ids: string[], by: string): Observable<void> {
@@ -32,9 +32,8 @@ export class InMemoryWorkItemDataSource extends WorkItemDataSource {
 
   /** Applies a change only after the simulated request succeeds (so error mode leaves data untouched). */
   private mutate(ids: string[], change: (w: WorkItem) => WorkItem): Observable<void> {
-    const set = new Set(ids);
     return this.respond(null).pipe(
-      tap(() => this.items$.next(this.items$.value.map((w) => (set.has(w.id) ? change(w) : w)))),
+      tap(() => this.db.updateWork(ids, change)),
       map(() => undefined),
     );
   }

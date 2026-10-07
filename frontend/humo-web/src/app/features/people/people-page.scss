@@ -1,0 +1,94 @@
+:host {
+  display: block;
+}
+
+.name {
+  display: flex;
+  gap: var(--s-3);
+  align-items: center;
+}
+
+.avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semibold);
+  color: var(--c-primary-text);
+  background: var(--c-primary-soft);
+  border-radius: 50%;
+
+  &.company {
+    border-radius: var(--r);
+  }
+}
+
+.display {
+  font-weight: var(--fw-medium);
+  color: var(--c-text);
+}
+
+.sub,
+.muted {
+  font-size: var(--fs-xs);
+  color: var(--c-text-muted);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+  border-radius: var(--r-pill);
+
+  &:hover {
+    text-decoration: none;
+    filter: brightness(0.96);
+  }
+
+  &.owner {
+    color: var(--c-primary-text);
+    background: var(--c-primary-soft);
+  }
+
+  &.tenant {
+    color: var(--c-accent-strong);
+    background: var(--c-accent-soft);
+  }
+
+  &.trustee {
+    color: var(--c-warning);
+    background: var(--c-warning-soft);
+  }
+
+  &.more {
+    color: var(--c-text-muted);
+    background: var(--c-surface-sunken);
+  }
+}
+
+.money.arrears {
+  color: var(--c-danger);
+  font-weight: var(--fw-semibold);
+}
+
+.more-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-4);
+  margin-top: var(--s-4);
+  font-size: var(--fs-sm);
+  color: var(--c-text-muted);
+}

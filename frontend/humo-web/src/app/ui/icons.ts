@@ -61,6 +61,13 @@ import {
   closeCircleOutline,
   informationCircleOutline,
   eyeOutline,
+  callOutline,
+  createOutline,
+  flagOutline,
+  sparklesOutline,
+  archiveOutline,
+  gitBranchOutline,
+  printOutline,
 } from 'ionicons/icons';
 
 /** Registers every icon the app uses (tree-shaken, no runtime fetches). */
@@ -127,5 +134,12 @@ export function registerIcons(): void {
     'close-circle-outline': closeCircleOutline,
     'information-circle-outline': informationCircleOutline,
     'eye-outline': eyeOutline,
+    'call-outline': callOutline,
+    'create-outline': createOutline,
+    'flag-outline': flagOutline,
+    'sparkles-outline': sparklesOutline,
+    'archive-outline': archiveOutline,
+    'git-branch-outline': gitBranchOutline,
+    'print-outline': printOutline,
   });
 }

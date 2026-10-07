@@ -1,18 +1,19 @@
 import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, signal, viewChild } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { DialogRef } from '@angular/cdk/dialog';
 import { IonIcon } from '@ionic/angular/standalone';
-import { catchError, map, of } from 'rxjs';
-import { Scheme, SchemeDataSource } from '../../../domain';
+import { catchError, map, of, switchMap } from 'rxjs';
+import { PersonDataSource, PersonSummary, Scheme, SchemeDataSource, UnitDataSource, UnitSummary } from '../../../domain';
 import { AttentionService } from '../../attention/attention.service';
+import { formatRand } from '../../../ui/format/money';
 import { NavService } from '../../navigation/nav.service';
 import { ScopeService } from '../../scope/scope.service';
 import { SessionService } from '../../session/session.service';
 
 interface PaletteItem {
   id: string;
-  kind: 'Work' | 'Pages' | 'Schemes' | 'Actions';
+  kind: 'Units' | 'People' | 'Work' | 'Pages' | 'Schemes' | 'Actions';
   label: string;
   hint: string;
   icon: string;
@@ -36,6 +37,8 @@ export class CommandPalette {
   private readonly scope = inject(ScopeService);
   private readonly attention = inject(AttentionService);
   private readonly schemeData = inject(SchemeDataSource);
+  private readonly unitData = inject(UnitDataSource);
+  private readonly personData = inject(PersonDataSource);
 
   private readonly input = viewChild.required<ElementRef<HTMLInputElement>>('input');
   private readonly list = viewChild<ElementRef<HTMLElement>>('list');
@@ -100,6 +103,50 @@ export class CommandPalette {
     return [...pages, ...schemes, ...work, ...actions];
   });
 
+  /** Units ("KC 42", "kingfisher 42") and people (name, phone) — staff only, within the scope. */
+  private readonly unitHits = toSignal(
+    toObservable(this.query).pipe(
+      switchMap((q) =>
+        this.session.isStaff() && /\d/.test(q)
+          ? this.unitData.search(q, this.scope.effectiveIds(), 5).pipe(catchError(() => of([] as UnitSummary[])))
+          : of([] as UnitSummary[]),
+      ),
+    ),
+    { initialValue: [] as UnitSummary[] },
+  );
+
+  private readonly peopleHits = toSignal(
+    toObservable(this.query).pipe(
+      switchMap((q) =>
+        this.session.isStaff() && q.trim().length >= 3
+          ? this.personData.search(q, this.scope.effectiveIds(), 5).pipe(catchError(() => of([] as PersonSummary[])))
+          : of([] as PersonSummary[]),
+      ),
+    ),
+    { initialValue: [] as PersonSummary[] },
+  );
+
+  private readonly recordItems = computed<PaletteItem[]>(() => [
+    ...this.unitHits().map((u) => ({
+      id: 'unit-' + u.unit.id,
+      kind: 'Units' as const,
+      label: `${u.scheme.code} ${u.unit.number} · ${u.scheme.name}`,
+      hint: `${u.owners[0]?.displayName ?? ''} · balance ${formatRand(u.account.balance)}`,
+      icon: 'home-outline',
+      route: `/schemes/${u.scheme.id}/units/${u.unit.number}`,
+      haystack: '',
+    })),
+    ...this.peopleHits().map((p) => ({
+      id: 'person-' + p.person.id,
+      kind: 'People' as const,
+      label: p.person.displayName,
+      hint: p.relationships.map((r) => (r.unit ? `${r.relationship.type} ${r.scheme.code} ${r.unit.number}` : `${r.relationship.portfolio} ${r.scheme.code}`)).join(' · '),
+      icon: 'person-outline',
+      route: `/people/${p.person.id}`,
+      haystack: '',
+    })),
+  ]);
+
   protected readonly results = computed(() => {
     const terms = this.query().toLowerCase().trim().split(/\s+/).filter(Boolean);
     const all = this.items();
@@ -109,7 +156,7 @@ export class CommandPalette {
       const firstSchemes = [...schemes.filter((i) => pinned.has(i.id.slice(7))), ...schemes.filter((i) => !pinned.has(i.id.slice(7)))].slice(0, 5);
       return [...all.filter((i) => i.kind === 'Pages').slice(0, 6), ...firstSchemes];
     }
-    return all.filter((i) => terms.every((t) => i.haystack.includes(t))).slice(0, 20);
+    return [...this.recordItems(), ...all.filter((i) => terms.every((t) => i.haystack.includes(t)))].slice(0, 24);
   });
 
   protected readonly groups = computed(() => {

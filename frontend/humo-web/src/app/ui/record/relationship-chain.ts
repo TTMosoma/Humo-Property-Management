@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 
@@ -20,12 +20,13 @@ export interface ChainLink {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ol aria-label="Related records">
-      @for (l of links(); track $index; let last = $last) {
+      @for (l of links(); track $index; let last = $last; let i = $index) {
+        @let isCurrent = i === currentIndex();
         <li>
-          @if (l.route && !last) {
+          @if (l.route && !isCurrent) {
             <a [routerLink]="l.route"><span class="kind">{{ l.kind }}</span>{{ l.label }}</a>
           } @else {
-            <span class="node" [class.current]="last"><span class="kind">{{ l.kind }}</span>{{ l.label }}</span>
+            <span class="node" [class.current]="isCurrent" [attr.aria-current]="isCurrent ? 'page' : null"><span class="kind">{{ l.kind }}</span>{{ l.label }}</span>
           }
           @if (!last) {
             <ion-icon name="chevron-forward-outline" aria-hidden="true" />
@@ -50,4 +51,7 @@ export interface ChainLink {
 })
 export class RelationshipChain {
   readonly links = input.required<ChainLink[]>();
+  /** Which link is the record being viewed (rendered as text). Defaults to the last. */
+  readonly current = input<number | null>(null);
+  protected readonly currentIndex = computed(() => this.current() ?? this.links().length - 1);
 }

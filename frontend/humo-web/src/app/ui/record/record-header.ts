@@ -27,7 +27,7 @@ export interface KeyFact {
     <div class="art"><ng-content select="[recordArt]" /></div>
     <div class="main">
       @if (chain().length) {
-        <ui-relationship-chain [links]="chain()" />
+        <ui-relationship-chain [links]="chain()" [current]="chainCurrent()" />
       }
       <div class="title-row">
         <div class="title-text">
@@ -95,4 +95,6 @@ export class RecordHeader {
   readonly status = input<{ label: string; tone: Tone } | null>(null);
   readonly facts = input<KeyFact[]>([]);
   readonly chain = input<ChainLink[]>([]);
+  /** Index of this record in the chain (defaults to the last link). */
+  readonly chainCurrent = input<number | null>(null);
 }

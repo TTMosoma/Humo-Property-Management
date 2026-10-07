@@ -1,0 +1,142 @@
+@if (page.status() === 'loading' || summary() === undefined) {
+  <ui-skeleton variant="tiles" [count]="5" />
+  <div class="gap"></div>
+  <ui-skeleton [count]="6" />
+} @else if (page.status() === 'error' || summary() === null) {
+  <div class="surface"><ui-error-state title="We couldn’t load this unit" (retry)="page.retry()" /></div>
+} @else if (summary() === false) {
+  <div class="surface">
+    <ui-empty-state illustration="not-found" title="We couldn’t find that unit" message="Check the unit number, or search for it with Ctrl K (e.g. “KC 42”)." />
+  </div>
+} @else {
+  @let s = unit()!;
+  <ui-record-header
+    [eyebrow]="s.unit.description + (s.unit.block ? ' · Block ' + s.unit.block + ', floor ' + s.unit.floor : '')"
+    [title]="'Unit ' + s.unit.number"
+    [status]="status(s)"
+    [facts]="facts()"
+    [chain]="chain()"
+    [chainCurrent]="1"
+  >
+    <a recordActions class="btn btn-primary" [routerLink]="links.account(s.scheme, s.unit)">
+      <ion-icon name="wallet-outline" aria-hidden="true" /> Account & statements
+    </a>
+  </ui-record-header>
+
+  <div class="grid">
+    <div class="main">
+      <!-- Account -->
+      <section class="surface panel">
+        <header class="panel-head">
+          <h2 class="section-title">Levy account <span class="muted">{{ s.account.accountNo }}</span></h2>
+          <a [routerLink]="links.account(s.scheme, s.unit)">Open account</a>
+        </header>
+        <div class="balance-row">
+          <div>
+            <div class="label">Balance</div>
+            <div class="amount money" [class.warning]="s.account.balance > 0 && s.account.status === 'up-to-date'" [class.danger]="s.account.status === 'arrears' || s.account.status === 'handed-over'" [class.credit]="s.account.balance < 0">
+              {{ s.account.balance | rand }}
+            </div>
+          </div>
+          <dl class="mini">
+            <dt>Last payment</dt>
+            <dd>
+              @if (detail()?.lastPayment; as p) {
+                {{ -p.amount | rand }} · {{ formatDate(p.date) }}
+              } @else {
+                <span class="muted">—</span>
+              }
+            </dd>
+            <dt>Pays by</dt>
+            <dd>{{ s.account.debitOrder ? 'Debit order' : 'EFT' }}</dd>
+            <dt>Statements</dt>
+            <dd>{{ s.account.statementBy === 'email' ? 'By email' : s.account.statementBy === 'post' ? 'By post' : 'Owner portal' }}</dd>
+          </dl>
+        </div>
+        @if (s.account.balance > 0) {
+          <ui-ageing-bar [ageing]="s.account.ageing" />
+        }
+        @if (detail()?.statementPeriods?.length) {
+          <div class="statements">
+            <span class="label">Statements</span>
+            @for (p of detail()!.statementPeriods.slice(0, 3); track p) {
+              <a [routerLink]="links.statement(s.scheme, s.unit, p)">{{ periodLabel(p) }}</a>
+            }
+          </div>
+        }
+      </section>
+
+      <!-- People -->
+      <section class="surface panel">
+        <h2 class="section-title">People</h2>
+        @for (o of s.owners; track o.id) {
+          <a class="person" [routerLink]="links.person(o)">
+            <span class="avatar">{{ o.initials }}</span>
+            <span class="p-text">
+              <span class="p-name">{{ o.displayName }} <span class="role">{{ o.kind === 'company' ? 'Owner (company)' : 'Owner' }}</span></span>
+              <span class="p-contact">{{ o.phone }} · {{ o.email }}</span>
+              @for (r of otherRoles(o.id); track r) {
+                <span class="also">Also {{ r }}</span>
+              }
+            </span>
+            <ion-icon name="chevron-forward-outline" aria-hidden="true" />
+          </a>
+        }
+        @if (s.tenant; as t) {
+          <a class="person" [routerLink]="links.person(t)">
+            <span class="avatar tenant">{{ t.initials }}</span>
+            <span class="p-text">
+              <span class="p-name">{{ t.displayName }} <span class="role">Tenant</span></span>
+              <span class="p-contact">{{ t.phone }} · {{ t.email }}</span>
+            </span>
+            <ion-icon name="chevron-forward-outline" aria-hidden="true" />
+          </a>
+        } @else if (s.unit.occupancy === 'vacant') {
+          <p class="muted small">The unit is currently vacant.</p>
+        }
+      </section>
+
+      <!-- Open work -->
+      <section class="surface panel">
+        <h2 class="section-title">Open work for this unit</h2>
+        @for (w of openWork(); track w.id) {
+          <button type="button" class="work" (click)="openWorkItem(w.id, w.title)">
+            <ui-status-pill [label]="work(w).due" [tone]="work(w).tone" />
+            <span class="work-title">{{ w.title }}</span>
+            <span class="muted small">{{ w.ref }}</span>
+          </button>
+        } @empty {
+          <p class="muted small">No open tasks, approvals or messages for this unit.</p>
+        }
+      </section>
+
+      <!-- Property -->
+      <section class="surface panel">
+        <h2 class="section-title">Property</h2>
+        <dl class="props">
+          <dt>Description</dt><dd>{{ s.unit.description }}</dd>
+          @if (s.unit.block) { <dt>Block / floor</dt><dd>Block {{ s.unit.block }}, floor {{ s.unit.floor }}</dd> }
+          <dt>Size</dt><dd>{{ s.unit.sizeM2 }} m²</dd>
+          <dt>Participation quota</dt><dd>{{ s.unit.participationQuota.toFixed(4) }}%</dd>
+          <dt>Parking</dt><dd>{{ s.unit.parkingBays.join(', ') || '—' }}</dd>
+          <dt>Account number</dt><dd>{{ s.unit.accountNo }}</dd>
+        </dl>
+      </section>
+    </div>
+
+    <!-- Activity -->
+    <aside class="surface panel activity">
+      <h2 class="section-title">Activity</h2>
+      <app-log-note [unitId]="s.unit.id" [personId]="s.owners[0]?.id" />
+      <div class="tl">
+        @if (timeline() === null) {
+          <ui-error-state variant="inline" title="Activity unavailable" message="The rest of the page still works." (retry)="page.retry()" />
+        } @else if (timeline() === undefined) {
+          <ui-skeleton [count]="4" />
+        } @else {
+          <ui-timeline [events]="timelineEvents()" />
+        }
+      </div>
+    </aside>
+  </div>
+}

@@ -83,8 +83,8 @@ export const NOTIFICATIONS: AppNotification[] = [
   {
     id: 'r1',
     kind: 'finance',
-    title: 'Payment received — thank you',
-    detail: 'R 3 480.00 was allocated to your levy account.',
+    title: 'Your October statement is ready',
+    detail: 'Amount due R 4 812.50 by 7 October.',
     schemeId: 'kingfisher-court',
     audience: ['owner'],
     unitLabel: 'Unit 42',

@@ -54,13 +54,29 @@ In-app imagery is drawn as code, so it follows the theme:
 - spot illustrations: `ui/illustration/illustration.ts`
 - per-scheme architectural artwork: `ui/illustration/scheme-art.ts`
 
+## Demo: “An owner calls about their balance” (Slice A)
+
+1. As **Agency Administrator**, press **Ctrl K** and type `KC 42`, `kingfisher 42`, `mthembu` or `082 418`.
+2. **Unit 42** shows the chain Scheme › Unit › Owner › Account, the R 4 812.50 balance, open work and the timeline. Log the call in **Activity**.
+3. Open **Account & statements**:
+   - “Why the balance is R 4 812.50” breaks down the charges.
+   - A banner says a R 3 480.00 payment with reference “ANELE M” is waiting.
+4. **Allocate** it from the banner. The balance drops to R 1 332.50, which is the special levy plus water she didn't know about. The ledger, timeline, Receipts and badges all update. The confirmation offers Undo.
+5. Or work the queue in **Finance › Receipts**:
+   - suggestions come with reasons
+   - ↑/↓ moves between receipts and **Enter** accepts the top match
+   - you can split, remember a payer, or move a receipt to suspense
+6. Switch to **Owner (Anele)**. **My account** shows the same numbers, how to pay, and statements for both of her units.
+
+All data is generated in `mock/db/` (1 284 units, owners, tenants, trustees, six-month ledgers and bank receipts). It is consistent across screens and resets on reload.
+
 ## Progress
 
 Build order follows workflow slices (see `docs/02-ux-review.md` §4.2).
 
 - [x] Checkpoint 1 — Shell, navigation, roles, design tokens
 - [x] Checkpoint 2 — Foundations: brand, Attention model (Tasks, Approvals, live badges), scheme scope and pinned schemes, multi-role memberships, record page, data table, preview drawer, typed empty/error/loading states, schemes list and scheme workspace
-- [ ] Checkpoint 3 — Slice A: Owner calls about their balance (Scheme → Unit → Owner → Account → Statement, receipts)
+- [x] Checkpoint 3 — Slice A: Owner calls about their balance (Scheme → Unit → Owner → Account → Statement, receipts, people, owner portal account)
 - [ ] Checkpoint 4 — Slice B: Fix the leaking geyser (Job → Quote → Approval → Invoice → Payment, suppliers)
 - [ ] Checkpoint 5 — Slice C: Run the trustee meeting (Meeting → Resolution → Action → Completion)
 - [ ] Checkpoint 6 — Credit control & billing run
