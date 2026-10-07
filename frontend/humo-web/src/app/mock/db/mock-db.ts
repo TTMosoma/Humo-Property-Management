@@ -472,10 +472,33 @@ export class MockDb {
 
   // ---- Work items (Attention model store) ----
 
+  /** Other stores react to decisions made anywhere (e.g. approving a quote moves its job on). */
+  readonly workHooks: ((before: WorkItem, after: WorkItem) => void)[] = [];
+
   updateWork(ids: string[], change: (w: WorkItem) => WorkItem): void {
     const set = new Set(ids);
-    this.workItems = this.workItems.map((w) => (set.has(w.id) ? change(w) : w));
+    const changed: [WorkItem, WorkItem][] = [];
+    this.workItems = this.workItems.map((w) => {
+      if (!set.has(w.id)) return w;
+      const next = change(w);
+      changed.push([w, next]);
+      return next;
+    });
+    for (const [before, after] of changed) {
+      if (before.status !== after.status) this.workHooks.forEach((h) => h(before, after));
+    }
     this.touch();
+  }
+
+  addWork(item: WorkItem): void {
+    this.workItems = [...this.workItems.filter((w) => w.id !== item.id), item];
+  }
+
+  /** Marks open work items for a reference as done (e.g. the job moved on, so "overdue" no longer applies). */
+  resolveWork(ref: string, types: WorkItem['type'][], by: string): void {
+    this.workItems = this.workItems.map((w) =>
+      w.ref === ref && types.includes(w.type) && w.status === 'open' ? { ...w, status: 'done', decidedBy: by, decidedAt: new Date().toISOString() } : w,
+    );
   }
 
   // =====================================================================

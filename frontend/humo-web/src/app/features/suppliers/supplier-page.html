@@ -1,0 +1,97 @@
+@if (page.status() === 'loading' || result() === undefined) {
+  <ui-skeleton variant="tiles" [count]="5" />
+} @else if (page.status() === 'error' || result() === null) {
+  <div class="surface"><ui-error-state title="We couldn’t load this supplier" (retry)="page.retry()" /></div>
+} @else if (result() === false) {
+  <div class="surface"><ui-empty-state illustration="not-found" title="We couldn’t find that supplier"><a class="btn btn-primary" routerLink="/suppliers">All suppliers</a></ui-empty-state></div>
+} @else {
+  @let d = detail()!;
+  <ui-record-header [eyebrow]="d.supplier.trades.join(' · ')" [title]="d.supplier.name" [subtitle]="d.supplier.contactName + ' · ' + d.supplier.phone + ' · ' + d.supplier.email" [status]="status()" [facts]="facts()" />
+
+  <div class="grid">
+    <div class="main">
+      <section class="surface panel">
+        <h2 class="section-title">Vetting documents</h2>
+        <p class="muted small">Work orders warn (and need an explicit override) when a site-work document is expired or missing.</p>
+        <ul class="docs">
+          @for (doc of d.supplier.documents; track doc.type) {
+            @let st = docState(doc);
+            <li>
+              <ion-icon name="document-text-outline" aria-hidden="true" />
+              <span class="doc-name">{{ doc.type }}</span>
+              <span class="doc-note">{{ st.note }}</span>
+              <ui-status-pill [label]="st.label" [tone]="st.tone" />
+              @if (st.tone !== 'success' && session.isStaff()) {
+                <button type="button" class="btn btn-ghost btn-sm" (click)="request(doc)">Request</button>
+              }
+            </li>
+          }
+        </ul>
+      </section>
+
+      <section class="surface panel">
+        <h2 class="section-title">Open jobs <span class="muted">{{ openJobs().length }}</span></h2>
+        @for (j of openJobs(); track j.job.id) {
+          <a class="job" [routerLink]="['/maintenance', j.job.ref]">
+            <span class="ref">{{ j.job.ref }}</span>
+            <span class="title">{{ j.job.title }} <span class="muted">· {{ j.scheme.code }}</span></span>
+            <ui-status-pill [label]="stageLabel[j.job.stage]" [tone]="stageTone[j.job.stage]" />
+          </a>
+        } @empty {
+          <p class="muted small">No open jobs.</p>
+        }
+        @if (pastJobs().length) {
+          <h3 class="sub">Recent history</h3>
+          @for (j of pastJobs(); track j.job.id) {
+            <a class="job past" [routerLink]="['/maintenance', j.job.ref]">
+              <span class="ref">{{ j.job.ref }}</span>
+              <span class="title">{{ j.job.title }} <span class="muted">· {{ j.scheme.code }}</span></span>
+              <span class="muted small">{{ formatDate(j.job.reportedAt, true) }}</span>
+            </a>
+          }
+        }
+      </section>
+
+      <section class="surface panel">
+        <h2 class="section-title">Invoices & payments</h2>
+        <table class="inv">
+          <thead><tr><th>Invoice</th><th>Scheme</th><th class="end">Amount</th><th>Status</th></tr></thead>
+          <tbody>
+            @for (iv of d.invoices.slice(0, 12); track iv.invoice.id) {
+              <tr>
+                <td>{{ iv.invoice.id }}<div class="muted small">{{ iv.invoice.description }}</div></td>
+                <td>{{ iv.scheme.code }}</td>
+                <td class="end money">{{ iv.invoice.amount | rand }}</td>
+                <td>{{ iv.invoice.status === 'paid' ? 'Paid ' + formatDate(iv.invoice.paidAt, true) : iv.invoice.status.replace('-', ' ') }}</td>
+              </tr>
+            } @empty {
+              <tr><td colspan="4" class="muted">No invoices yet.</td></tr>
+            }
+          </tbody>
+        </table>
+      </section>
+    </div>
+
+    <aside class="side">
+      <section class="surface panel">
+        <h2 class="section-title">Banking</h2>
+        <p class="bank">{{ d.supplier.bankAccount }}</p>
+        @if (d.supplier.bankVerified) {
+          <p class="ok"><ion-icon name="shield-checkmark-outline" aria-hidden="true" /> Verified against a bank confirmation letter</p>
+        } @else {
+          <p class="warn"><ion-icon name="alert-circle-outline" aria-hidden="true" /> Not verified — payments are held until a bank confirmation letter is on file.</p>
+        }
+        <p class="muted small">Changes to bank details are verified by phone with the supplier and approved by a second person before any payment — a common fraud route.</p>
+      </section>
+      <section class="surface panel">
+        <h2 class="section-title">Schemes served</h2>
+        <div class="chips">
+          @for (s of d.schemes; track s.id) {
+            <a class="chip" [routerLink]="['/schemes', s.id, 'overview']">{{ s.code }}</a>
+          }
+        </div>
+        <p class="muted small">B-BBEE level {{ d.supplier.bbbeeLevel }}</p>
+      </section>
+    </aside>
+  </div>
+}

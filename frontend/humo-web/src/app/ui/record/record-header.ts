@@ -49,7 +49,7 @@ export interface KeyFact {
       @if (facts().length) {
         <dl class="facts">
           @for (f of facts(); track f.label) {
-            <div class="fact" [attr.title]="f.hint ?? null">
+            <div class="fact" [attr.title]="f.hint ? f.value + ' — ' + f.hint : f.value">
               <dt>{{ f.label }}</dt>
               <dd [class]="'tone-' + (f.tone ?? 'default')">{{ f.value }}</dd>
             </div>
@@ -77,7 +77,7 @@ export interface KeyFact {
     }
     .fact { min-width: 0; }
     dt { font-size: var(--fs-xs); color: var(--c-text-muted); }
-    dd { margin: 2px 0 0; font-family: var(--font-display); font-size: var(--fs-xl); font-weight: var(--fw-medium); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    dd { margin: 2px 0 0; overflow: hidden; font-family: var(--font-display); font-size: var(--fs-xl); font-weight: var(--fw-medium); font-variant-numeric: tabular-nums; white-space: nowrap; text-overflow: ellipsis; }
     .tone-danger { color: var(--c-danger); }
     .tone-warning { color: var(--c-warning); }
     .tone-success { color: var(--c-success); }

@@ -70,6 +70,22 @@ In-app imagery is drawn as code, so it follows the theme:
 
 All data is generated in `mock/db/` (1 284 units, owners, tenants, trustees, six-month ledgers and bank receipts). It is consistent across screens and resets on reload.
 
+## Demo: “Fix the leaking geyser” (Slice B)
+
+1. As **Portfolio Manager (Johan)**, open **Maintenance › Jobs** in list or board view, then **MR-1012**.
+   - The tracker shows the job stuck at *Booked*.
+   - **Next step** says the plumber missed the 1 October booking and gives his number.
+2. Work the job through **Supplier is on site → Record completion → Confirmed fixed → Capture invoice**. The invoice is matched to the approved quote automatically.
+3. As **Finance (Priya)**, open **Finance › Payables › Ready to pay**, select the invoice and choose **Create payment batch**.
+4. As **Trustee (Sipho)**, approve the batch in **Approvals**. This is the second authoriser.
+5. As Priya, choose **Release EFT batch**. The job moves to *Paid*, and Johan closes it.
+
+Other things to try:
+- **MR-1042** (roof): approve it as a trustee in Approvals and the job moves to *Approved — issue work order*.
+- **Log request**: logging a new request takes you through triage, quotes and approval. Quotes up to **R 5 000** can be approved under delegated authority (an assumption to confirm).
+- **Tenant (Ruan)**: answer “Was it fixed?” for MR-1033, then use **Report a problem**. The request lands in the team’s triage queue.
+- **Suppliers**: Bright Spark’s expired liability insurance is flagged, and a work order for them needs an explicit override.
+
 ## Progress
 
 Build order follows workflow slices (see `docs/02-ux-review.md` §4.2).
@@ -77,7 +93,7 @@ Build order follows workflow slices (see `docs/02-ux-review.md` §4.2).
 - [x] Checkpoint 1 — Shell, navigation, roles, design tokens
 - [x] Checkpoint 2 — Foundations: brand, Attention model (Tasks, Approvals, live badges), scheme scope and pinned schemes, multi-role memberships, record page, data table, preview drawer, typed empty/error/loading states, schemes list and scheme workspace
 - [x] Checkpoint 3 — Slice A: Owner calls about their balance (Scheme → Unit → Owner → Account → Statement, receipts, people, owner portal account)
-- [ ] Checkpoint 4 — Slice B: Fix the leaking geyser (Job → Quote → Approval → Invoice → Payment, suppliers)
+- [x] Checkpoint 4 — Slice B: Fix the leaking geyser (Job → Quote → Approval → Work order → Verification → Invoice → Payment, suppliers, resident requests)
 - [ ] Checkpoint 5 — Slice C: Run the trustee meeting (Meeting → Resolution → Action → Completion)
 - [ ] Checkpoint 6 — Credit control & billing run
 - [ ] Checkpoint 7 — Dashboard, Compliance & Documents

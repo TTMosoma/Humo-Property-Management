@@ -1,0 +1,126 @@
+@if (page.status() === 'loading' || result() === undefined) {
+  <ui-skeleton variant="tiles" [count]="5" />
+  <div class="gap"></div>
+  <ui-skeleton [count]="6" />
+} @else if (page.status() === 'error' || result() === null) {
+  <div class="surface"><ui-error-state title="We couldn’t load this job" (retry)="page.retry()" /></div>
+} @else if (result() === false) {
+  <div class="surface">
+    <ui-empty-state illustration="not-found" title="We couldn’t find that job" message="Check the reference (e.g. MR-1042), or search for it with Ctrl K.">
+      <a class="btn btn-primary" routerLink="/maintenance">All jobs</a>
+    </ui-empty-state>
+  </div>
+} @else {
+  @let d = detail()!;
+  <ui-record-header
+    [eyebrow]="d.job.ref + ' · ' + d.job.category + ' · ' + priorityLabel(d.job.priority) + ' priority'"
+    [title]="d.job.title"
+    [subtitle]="d.job.location"
+    [status]="status()"
+    [facts]="facts()"
+    [chain]="chain()"
+  />
+
+  <div class="tracker surface">
+    <ui-stage-tracker [stages]="stages" [current]="d.job.stage === 'cancelled' ? 'reported' : d.job.stage" [alert]="overdue()" label="Job progress" />
+  </div>
+
+  <div class="grid">
+    <div class="main">
+      <app-job-next-step [detail]="d" />
+
+      <!-- Quotes -->
+      @if (d.job.quotes.length) {
+        <section class="surface panel">
+          <h2 class="section-title">Quotes</h2>
+          <table class="quotes">
+            <thead>
+              <tr><th>Supplier</th><th>Status</th><th class="end">Amount</th><th>Guarantee</th><th></th></tr>
+            </thead>
+            <tbody>
+              @for (q of d.job.quotes; track q.id) {
+                <tr [class.rec]="q.recommended">
+                  <td>
+                    <a [routerLink]="['/suppliers', q.supplierId]">{{ d.suppliers[q.supplierId]?.name }}</a>
+                    @if (compliance(q.supplierId); as c) { <ui-status-pill class="pill" [label]="c.label" [tone]="c.tone" /> }
+                  </td>
+                  <td>{{ q.status === 'received' ? 'Received ' + formatDate(q.receivedAt, true) : q.status === 'requested' ? 'Requested' : 'Declined' }}</td>
+                  <td class="end money">{{ q.status === 'received' ? (q.amount | rand) : '—' }}</td>
+                  <td>{{ q.guaranteeMonths ? q.guaranteeMonths + ' months' : '—' }}</td>
+                  <td>@if (q.recommended) { <ui-status-pill [label]="d.job.approval?.status === 'approved' ? 'Approved' : 'Recommended'" [tone]="d.job.approval?.status === 'approved' ? 'success' : 'accent'" /> }</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </section>
+      }
+
+      <!-- Money: three-way match -->
+      @if (money(); as m) {
+        @if (m.quote !== undefined) {
+          <section class="surface panel">
+            <h2 class="section-title">Cost</h2>
+            <div class="three">
+              <div class="step done">
+                <span class="label">Approved quote</span>
+                <span class="money amt">{{ m.quote | rand }}</span>
+                <span class="sub">{{ d.job.approval?.withinDelegation ? 'Within delegated authority' : 'Approved by ' + d.job.approval?.decidedBy }}</span>
+              </div>
+              <ion-icon name="chevron-forward-outline" aria-hidden="true" />
+              <div class="step" [class.done]="m.invoice !== undefined" [class.warn]="m.variance !== null && m.variance > 0">
+                <span class="label">Invoice</span>
+                <span class="money amt">{{ m.invoice !== undefined ? (m.invoice | rand) : '—' }}</span>
+                <span class="sub">
+                  @if (m.variance === null || m.invoice === undefined) { Not received yet }
+                  @else if (m.variance > 0) { R {{ m.variance.toFixed(2) }} over quote }
+                  @else { Matches quote }
+                </span>
+              </div>
+              <ion-icon name="chevron-forward-outline" aria-hidden="true" />
+              <div class="step" [class.done]="m.paid !== undefined">
+                <span class="label">Paid</span>
+                <span class="money amt">{{ m.paid !== undefined ? (m.paid | rand) : '—' }}</span>
+                <span class="sub">{{ m.paid !== undefined ? 'Paid ' + formatDate(d.invoice?.invoice?.paidAt, true) : m.invoiceStatus === 'in-batch' ? 'In batch ' + d.invoice?.invoice?.batchId : 'Not yet' }}</span>
+              </div>
+            </div>
+          </section>
+        }
+      }
+
+      <!-- Details & photos -->
+      <section class="surface panel">
+        <h2 class="section-title">Details</h2>
+        <p class="desc">{{ d.job.description }}</p>
+        <dl class="props">
+          <dt>Reported by</dt><dd>{{ d.job.reportedBy.name }} ({{ d.job.reportedBy.role }}) · {{ formatDate(d.job.reportedAt) }}</dd>
+          <dt>Budget line</dt><dd>{{ d.job.budgetCategory }}</dd>
+          @if (d.job.workOrder) {
+            <dt>Work order</dt><dd>Issued {{ formatDate(d.job.workOrder.issuedAt) }} for {{ formatDate(d.job.workOrder.scheduledFor) }}</dd>
+            @if (d.job.workOrder.accessNotes) { <dt>Access</dt><dd>{{ d.job.workOrder.accessNotes }}</dd> }
+          }
+          @if (d.job.completion) { <dt>Completion</dt><dd>{{ d.job.completion.notes }}</dd> }
+          @if (d.job.verification) { <dt>Verified</dt><dd>{{ d.job.verification.outcome === 'fixed' ? 'Fixed' : 'Not fixed' }} — {{ d.job.verification.by }}, {{ formatDate(d.job.verification.at) }}</dd> }
+        </dl>
+        @if (d.job.photos.length) {
+          <div class="photos">
+            @for (p of d.job.photos; track p.id) {
+              <ui-photo-tile [caption]="p.caption" [seed]="d.job.ref" [badge]="p.stage === 'completion' ? 'After' : 'Before'" />
+            }
+          </div>
+        }
+      </section>
+    </div>
+
+    <aside class="surface panel activity">
+      <h2 class="section-title">Activity</h2>
+      @if (session.isStaff()) {
+        <div class="comment">
+          <label class="visually-hidden" for="job-comment">Add a comment</label>
+          <textarea id="job-comment" rows="2" placeholder="Add a comment for the team…" [value]="comment()" (input)="comment.set($any($event.target).value)"></textarea>
+          <button type="button" class="btn btn-secondary btn-sm" [disabled]="!comment().trim()" (click)="addComment()">Add comment</button>
+        </div>
+      }
+      <ui-timeline [events]="events()" [initial]="15" />
+    </aside>
+  </div>
+}

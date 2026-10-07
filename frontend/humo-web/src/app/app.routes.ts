@@ -155,8 +155,18 @@ export const routes: Routes = [
                 loadComponent: () => import('./features/people/people-page').then((m) => m.PeoplePage),
               },
               planned('finance', 'Finance', STAFF_AND_TRUSTEE, 3, 'This scheme’s levy roll, receipts, credit control, payables and budget.'),
-              planned('maintenance', 'Maintenance', STAFF_AND_TRUSTEE, 4, 'Jobs for this scheme from request to payment.'),
-              planned('suppliers', 'Suppliers', STAFF_AND_TRUSTEE, 4, 'Suppliers serving this scheme, their documents and performance.'),
+              {
+                path: 'maintenance',
+                title: 'Maintenance',
+                data: { roles: STAFF_AND_TRUSTEE, breadcrumb: 'Maintenance' },
+                loadComponent: () => import('./features/maintenance/jobs-page').then((m) => m.JobsPage),
+              },
+              {
+                path: 'suppliers',
+                title: 'Suppliers',
+                data: { roles: STAFF_AND_TRUSTEE, breadcrumb: 'Suppliers' },
+                loadComponent: () => import('./features/suppliers/suppliers-page').then((m) => m.SuppliersPage),
+              },
               planned('documents', 'Documents', STAFF_AND_TRUSTEE, 7, 'This scheme’s documents, filtered from the library.'),
               planned('communications', 'Communications', STAFF, 6, 'Everything sent to and received from this scheme’s people.'),
               planned('meetings', 'Meetings', STAFF_AND_TRUSTEE, 5, 'Trustee meetings, AGMs and SGMs, with resolutions and actions.'),
@@ -234,10 +244,12 @@ export const routes: Routes = [
             'Ageing (Current · 30 · 60 · 90 · 120+) as a filter and chart',
             'Bulk reminders through Compose',
           ]),
-          planned('payables', 'Payables', STAFF_AND_TRUSTEE, 4, 'Capture, match, approve and pay supplier invoices.', [
-            'Invoices matched to jobs and approved quotes, with variance flags',
-            'Payment batches with dual authorisation via Approvals; remittances',
-          ]),
+          {
+            path: 'payables',
+            title: 'Payables',
+            data: { roles: STAFF_AND_TRUSTEE, breadcrumb: 'Payables' },
+            loadComponent: () => import('./features/finance/payables-page').then((m) => m.PayablesPage),
+          },
           planned('budgets', 'Budgets', STAFF_AND_TRUSTEE, 5, 'Prepare budgets and track budget vs actual.', [
             'Budget vs Actual vs Variance by category with visual comparison',
             'Budget approval at the AGM links to Meetings',
@@ -251,25 +263,45 @@ export const routes: Routes = [
       // ---------------- Maintenance & Suppliers ----------------
       {
         path: 'maintenance',
-        data: { section: 'Maintenance' },
+        data: { section: 'Maintenance', breadcrumb: 'Jobs' },
         children: [
-          planned('', 'Jobs', STAFF_AND_TRUSTEE, 4, 'Take every maintenance problem from reported → resolved → paid.', [
-            'One Job record: Request → Quotes → Approval → Work order → Scheduled → Completed → Verified → Invoice → Paid',
-            'List and board views; closed jobs are a filter (history)',
-          ]),
-          planned('new', 'Log request', STAFF, 4, 'Capture a problem quickly with the right unit, category and priority.'),
-          planned(':requestId', (r) => `Job ${r.paramMap.get('requestId')}`, STAFF_AND_TRUSTEE, 4, 'Work one job end to end: stage tracker, quotes, approval, supplier, invoice, payment, timeline.', [], (_, p) => p['requestId']),
+          {
+            path: '',
+            title: 'Jobs',
+            data: { roles: STAFF_AND_TRUSTEE },
+            loadComponent: () => import('./features/maintenance/jobs-page').then((m) => m.JobsPage),
+          },
+          {
+            path: 'new',
+            title: 'Log request',
+            data: { roles: STAFF, breadcrumb: 'Log request', mode: 'staff' },
+            loadComponent: () => import('./features/maintenance/request-form').then((m) => m.RequestForm),
+          },
+          { path: 'quotes', redirectTo: '/approvals' },
+          {
+            path: ':requestId',
+            title: (r: ActivatedRouteSnapshot) => `Job ${r.paramMap.get('requestId')}`,
+            data: { roles: STAFF_AND_TRUSTEE, breadcrumb: (_: unknown, p: Record<string, string>) => p['requestId'] },
+            loadComponent: () => import('./features/maintenance/job-page').then((m) => m.JobPage),
+          },
         ],
       },
       {
         path: 'suppliers',
-        data: { section: 'Maintenance' },
+        data: { section: 'Maintenance', breadcrumb: 'Suppliers' },
         children: [
-          planned('', 'Suppliers', STAFF_AND_TRUSTEE, 4, 'Find the right, compliant supplier for the job.', [
-            'Vetting documents with expiry (COIDA, liability insurance, tax, B-BBEE, bank confirmation)',
-            'Performance: on-time %, quote vs invoice variance, resident verification rate',
-          ]),
-          planned(':supplierId', 'Supplier', STAFF_AND_TRUSTEE, 4, 'One supplier: services, schemes, jobs, quotes, invoices & payments, documents, performance.'),
+          {
+            path: '',
+            title: 'Suppliers',
+            data: { roles: STAFF_AND_TRUSTEE },
+            loadComponent: () => import('./features/suppliers/suppliers-page').then((m) => m.SuppliersPage),
+          },
+          {
+            path: ':supplierId',
+            title: 'Supplier',
+            data: { roles: STAFF_AND_TRUSTEE, breadcrumb: 'Supplier' },
+            loadComponent: () => import('./features/suppliers/supplier-page').then((m) => m.SupplierPage),
+          },
         ],
       },
 
@@ -372,8 +404,18 @@ export const routes: Routes = [
             data: { roles: OWNER },
             loadComponent: () => import('./features/accounts/statement-page').then((m) => m.StatementPage),
           },
-          planned('requests', 'Maintenance', RESIDENT, 8, 'Report a problem and follow it until it’s fixed — then confirm it was.'),
-          planned('requests/new', 'Report a problem', RESIDENT, 8, 'Report a problem with photos in under a minute.'),
+          {
+            path: 'requests',
+            title: 'My requests',
+            data: { roles: RESIDENT },
+            loadComponent: () => import('./features/my/my-requests-page').then((m) => m.MyRequestsPage),
+          },
+          {
+            path: 'requests/new',
+            title: 'Report a problem',
+            data: { roles: RESIDENT, mode: 'resident' },
+            loadComponent: () => import('./features/maintenance/request-form').then((m) => m.RequestForm),
+          },
           planned('documents', 'Documents', RESIDENT, 8, 'Rules, minutes and my own documents.'),
           planned('notices', 'Notices', RESIDENT, 8, 'Announcements from the managing agent and trustees.'),
           { path: 'statements', pathMatch: 'full', redirectTo: 'account' },

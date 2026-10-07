@@ -68,6 +68,19 @@ import {
   archiveOutline,
   gitBranchOutline,
   printOutline,
+  listOutline,
+  arrowForwardCircleOutline,
+  sendOutline,
+  imageOutline,
+  cameraOutline,
+  waterOutline,
+  flashOutline,
+  umbrellaOutline,
+  shieldOutline,
+  carOutline,
+  swapVerticalOutline,
+  leafOutline,
+  bugOutline,
 } from 'ionicons/icons';
 
 /** Registers every icon the app uses (tree-shaken, no runtime fetches). */
@@ -141,5 +154,18 @@ export function registerIcons(): void {
     'archive-outline': archiveOutline,
     'git-branch-outline': gitBranchOutline,
     'print-outline': printOutline,
+    'list-outline': listOutline,
+    'arrow-forward-circle-outline': arrowForwardCircleOutline,
+    'send-outline': sendOutline,
+    'image-outline': imageOutline,
+    'camera-outline': cameraOutline,
+    'water-outline': waterOutline,
+    'flash-outline': flashOutline,
+    'umbrella-outline': umbrellaOutline,
+    'shield-outline': shieldOutline,
+    'car-outline': carOutline,
+    'swap-vertical-outline': swapVerticalOutline,
+    'leaf-outline': leafOutline,
+    'bug-outline': bugOutline,
   });
 }

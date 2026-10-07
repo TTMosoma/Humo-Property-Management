@@ -1,0 +1,307 @@
+@let d = detail();
+@let job = d.job;
+
+<section class="next surface" aria-labelledby="next-title">
+  <header class="head">
+    <ion-icon name="arrow-forward-circle-outline" aria-hidden="true" />
+    <h2 id="next-title" class="section-title">Next step</h2>
+  </header>
+
+  @switch (job.stage) {
+    <!-- ============================== REPORTED ============================== -->
+    @case ('reported') {
+      <p class="lead">Check the request, set the priority, and ask suppliers to quote.</p>
+      @if (canAct()) {
+        <div class="form-grid">
+          <label>Assigned to
+            <select [value]="assignee()" (change)="assignee.set($any($event.target).value)">
+              @for (s of staff; track s.id) { <option [value]="s.id">{{ s.name }}</option> }
+            </select>
+          </label>
+          <label>Priority
+            <select [value]="priority()" (change)="priority.set($any($event.target).value)">
+              @for (p of priorities; track p) { <option [value]="p">{{ priorityLabel[p] }}</option> }
+            </select>
+          </label>
+          <label>Trade
+            <select [value]="category()" (change)="category.set($any($event.target).value)">
+              @for (t of trades; track t) { <option [value]="t">{{ t }}</option> }
+            </select>
+          </label>
+        </div>
+        <h3 class="sub">Ask for quotes</h3>
+        <ul class="suppliers">
+          @for (s of d.candidates; track s.id) {
+            @let c = compliance(s);
+            <li>
+              <label class="check">
+                <input type="checkbox" [checked]="chosenSuppliers().includes(s.id)" (change)="toggleSupplier(s.id)" [disabled]="s.status !== 'active'" />
+                <span class="s-name">{{ s.name }}</span>
+              </label>
+              <ui-status-pill [label]="s.status === 'active' ? c.label : 'On hold'" [tone]="s.status === 'active' ? c.tone : 'neutral'" />
+              <span class="perf">{{ s.performance.onTimeRate }}% on time</span>
+            </li>
+            @for (i of issues(s); track i) { <li class="issue"><ion-icon name="alert-circle-outline" aria-hidden="true" />{{ i }}</li> }
+          } @empty {
+            <li class="muted">No suppliers for {{ job.category }} serve this scheme yet. <a routerLink="/suppliers">Add one in Suppliers</a>.</li>
+          }
+        </ul>
+        <div class="actions">
+          <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="triageAndRequest()">
+            {{ chosenSuppliers().length ? 'Save & request ' + chosenSuppliers().length + ' quote' + (chosenSuppliers().length > 1 ? 's' : '') : 'Save triage' }}
+          </button>
+          <button type="button" class="btn btn-ghost" (click)="showCancel.set(!showCancel())">Not a valid request…</button>
+        </div>
+      } @else {
+        <p class="muted">Waiting for the managing agent to review this request.</p>
+      }
+    }
+
+    <!-- ============================== QUOTING ============================== -->
+    @case ('quoting') {
+      @if (job.approval?.status === 'rejected') {
+        <div class="note warn">
+          <ion-icon name="close-circle-outline" aria-hidden="true" />
+          <span>The previous recommendation was rejected by {{ job.approval.decidedBy }}@if (job.approval.comment) {: “{{ job.approval.comment }}”}.</span>
+        </div>
+      }
+      <p class="lead">
+        {{ received().length }} of {{ job.quotes.length }} quotes received.
+        @if (received().length) { Choose the one to recommend. } @else { Record quotes as suppliers send them. }
+      </p>
+      @if (canAct()) {
+        @for (q of requested(); track q.id) {
+          <div class="record">
+            <span class="r-name">{{ supplierName(q.supplierId) }}</span>
+            <label class="visually-hidden" [for]="'amt-' + q.id">Quote amount</label>
+            <span class="rand-input"><span>R</span><input [id]="'amt-' + q.id" type="number" min="0" step="0.01" placeholder="Amount" [value]="quoteDrafts()[q.id]?.amount ?? ''" (input)="setDraft(q.id, 'amount', $any($event.target).value)" /></span>
+            <label class="visually-hidden" [for]="'g-' + q.id">Guarantee (months)</label>
+            <input class="g" [id]="'g-' + q.id" type="number" min="0" placeholder="Guarantee (months)" [value]="quoteDrafts()[q.id]?.guarantee ?? ''" (input)="setDraft(q.id, 'guarantee', $any($event.target).value)" />
+            <button type="button" class="btn btn-secondary btn-sm" [disabled]="busy() || !quoteDrafts()[q.id]?.amount" (click)="recordQuote(q.id)">Record quote</button>
+          </div>
+        }
+        @if (received().length) {
+          <h3 class="sub">Recommend</h3>
+          <div class="choices" role="radiogroup" aria-label="Recommended quote">
+            @for (q of received(); track q.id) {
+              <label class="choice" [class.on]="recommendedQuote()?.id === q.id">
+                <input type="radio" name="rec" [checked]="recommendedQuote()?.id === q.id" (change)="recommended.set(q.id)" />
+                <span class="c-name">{{ supplierName(q.supplierId) }}</span>
+                <span class="money c-amt">{{ q.amount | rand }}</span>
+                @if (q.guaranteeMonths) { <span class="muted small">{{ q.guaranteeMonths }}-month guarantee</span> }
+              </label>
+            }
+          </div>
+          @if (recommendedQuote(); as rq) {
+            <div class="actions">
+              @if (rq.amount <= limit) {
+                <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="approveDelegated()">Approve {{ rq.amount | rand }} (within your {{ limit | rand: 'whole' }} authority)</button>
+                <button type="button" class="btn btn-secondary" [disabled]="busy()" (click)="sendForApproval()">Send for approval instead</button>
+              } @else {
+                <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="sendForApproval()">Send {{ rq.amount | rand }} to the trustees</button>
+                <span class="muted small">Above the {{ limit | rand: 'whole' }} delegated limit — trustees decide.</span>
+              }
+            </div>
+          }
+        }
+        @if (notYetAsked().length) {
+          <details class="more">
+            <summary>Ask another supplier</summary>
+            <ul class="suppliers">
+              @for (s of notYetAsked(); track s.id) {
+                <li>
+                  <span class="s-name">{{ s.name }}</span>
+                  <ui-status-pill [label]="compliance(s).label" [tone]="compliance(s).tone" />
+                  <button type="button" class="btn btn-ghost btn-sm" [disabled]="busy()" (click)="requestMore(s.id)">Request quote</button>
+                </li>
+              }
+            </ul>
+          </details>
+        }
+      } @else {
+        <p class="muted">The managing agent is collecting quotes.</p>
+      }
+    }
+
+    <!-- ============================== APPROVAL ============================== -->
+    @case ('approval') {
+      @if (d.approvalItem; as item) {
+        <p class="lead">Recommended quote is waiting for a decision. It’s also in <a routerLink="/approvals">Approvals</a>.</p>
+        <app-approval-card [item]="item" [compact]="true" />
+      } @else {
+        <p class="muted">Waiting for approval.</p>
+      }
+    }
+
+    <!-- ============================== APPROVED ============================== -->
+    @case ('approved') {
+      <p class="lead">Approved {{ approvedAmount() | rand }} — book {{ supplier()?.name }}.</p>
+      @if (supplierWarnings().length) {
+        <div class="note warn">
+          <ion-icon name="time-outline" aria-hidden="true" />
+          <span>Heads-up: {{ supplierWarnings().join('; ') }}. Ask {{ supplier()?.contactName }} for an updated copy.</span>
+        </div>
+      }
+      @if (supplierIssues().length) {
+        <div class="note danger" role="alert">
+          <ion-icon name="alert-circle-outline" aria-hidden="true" />
+          <div>
+            <strong>{{ supplier()?.name }} isn’t fully vetted:</strong>
+            <ul>@for (i of supplierIssues(); track i) { <li>{{ i }}</li> }</ul>
+            @if (canAct()) {
+              <label class="check"><input type="checkbox" [checked]="overrideCompliance()" (change)="overrideCompliance.set(!overrideCompliance())" /> Proceed anyway — I’ll get the documents (recorded on the job)</label>
+            }
+          </div>
+        </div>
+      }
+      @if (canAct()) {
+        <div class="form-grid">
+          <label>Booked for
+            <input type="date" [value]="scheduleDate()" (input)="scheduleDate.set($any($event.target).value)" />
+          </label>
+          <label class="wide">Access notes for the supplier
+            <input type="text" [value]="accessNotes()" (input)="accessNotes.set($any($event.target).value)" />
+          </label>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn btn-primary" [disabled]="busy() || (supplierIssues().length > 0 && !overrideCompliance())" (click)="issueWorkOrder()">
+            <ion-icon name="send-outline" aria-hidden="true" /> Issue work order
+          </button>
+          <span class="muted small">The supplier gets the order; {{ job.reportedBy.role !== 'staff' ? job.reportedBy.name + ' is told when to expect them.' : 'the team is notified.' }}</span>
+        </div>
+      }
+    }
+
+    <!-- ============================== SCHEDULED / IN PROGRESS ============================== -->
+    @case ('scheduled') {
+      @let late = job.dueAt && job.dueAt < now;
+      @if (late) {
+        <div class="note danger" role="alert">
+          <ion-icon name="alert-circle-outline" aria-hidden="true" />
+          <span><strong>{{ supplier()?.name }} was booked for {{ formatDate(job.workOrder?.scheduledFor) }}</strong> and there’s no completion report yet. Call {{ supplier()?.contactName }} on {{ supplier()?.phone }}.</span>
+        </div>
+      } @else {
+        <p class="lead">{{ supplier()?.name }} is booked for {{ formatDate(job.workOrder?.scheduledFor) }}.</p>
+      }
+      @if (canAct()) {
+        <div class="actions">
+          <button type="button" class="btn btn-secondary" [disabled]="busy()" (click)="start()">Supplier is on site</button>
+        </div>
+        <label class="block">What was done?
+          <textarea rows="2" placeholder="e.g. Replaced pressure valve and drip tray; tested." [value]="completionNotes()" (input)="completionNotes.set($any($event.target).value)"></textarea>
+        </label>
+        <div class="actions">
+          <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="complete()">Record completion</button>
+        </div>
+      }
+    }
+    @case ('in-progress') {
+      <p class="lead">{{ supplier()?.name }} is working on it.</p>
+      @if (canAct()) {
+        <label class="block">What was done?
+          <textarea rows="2" placeholder="e.g. Replaced pump; pool chemically balanced." [value]="completionNotes()" (input)="completionNotes.set($any($event.target).value)"></textarea>
+        </label>
+        <div class="actions">
+          <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="complete()">Record completion</button>
+        </div>
+      }
+    }
+
+    <!-- ============================== COMPLETED → VERIFY ============================== -->
+    @case ('completed') {
+      <p class="lead">
+        @if (job.reportedBy.role !== 'staff') {
+          {{ job.reportedBy.name }} has been asked “Was it fixed?”. They can answer in the portal — or you can confirm on their behalf.
+        } @else {
+          Check the work, then confirm it’s fixed.
+        }
+      </p>
+      @if (canAct()) {
+        <div class="actions">
+          <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="verify('fixed')"><ion-icon name="checkmark-outline" aria-hidden="true" /> Confirmed fixed</button>
+          <button type="button" class="btn btn-secondary" (click)="showNotFixed.set(!showNotFixed())">Not fixed…</button>
+        </div>
+        @if (showNotFixed()) {
+          <label class="block">What’s still wrong?
+            <textarea rows="2" [value]="notFixedComment()" (input)="notFixedComment.set($any($event.target).value)"></textarea>
+          </label>
+          <button type="button" class="btn btn-danger btn-sm" [disabled]="busy()" (click)="verify('not-fixed')">Send supplier back</button>
+        }
+      }
+    }
+
+    <!-- ============================== VERIFIED → INVOICE ============================== -->
+    @case ('verified') {
+      <p class="lead">Fixed and confirmed. Capture {{ supplier()?.name }}’s invoice — it’s matched against the approved quote automatically.</p>
+      @if (canAct() || isFinance()) {
+        <div class="form-grid">
+          <label>Invoice number
+            <input type="text" [value]="invoiceNo()" (input)="invoiceNo.set($any($event.target).value)" />
+          </label>
+          <label>Amount (incl. VAT)
+            <span class="rand-input"><span>R</span><input type="number" min="0" step="0.01" [value]="invoiceAmount()" (input)="invoiceAmount.set($any($event.target).value)" /></span>
+          </label>
+        </div>
+        @if (variance() !== null) {
+          <div class="match" [class.over]="variance()! > 0">
+            <span>Approved quote <strong class="money">{{ approvedAmount() | rand }}</strong></span>
+            <span>Invoice <strong class="money">{{ invoiceAmountNum() | rand }}</strong></span>
+            <span>
+              @if (variance()! > 0) { <ion-icon name="alert-circle-outline" aria-hidden="true" /> R {{ variance()!.toFixed(2) }} over — needs re-approval }
+              @else { <ion-icon name="checkmark-circle-outline" aria-hidden="true" /> Matches — ready to pay }
+            </span>
+          </div>
+        }
+        <div class="actions">
+          <button type="button" class="btn btn-primary" [disabled]="busy() || !invoiceAmount()" (click)="captureInvoice()">Capture invoice</button>
+        </div>
+      }
+    }
+
+    <!-- ============================== INVOICED ============================== -->
+    @case ('invoiced') {
+      @if (d.invoice; as iv) {
+        @switch (iv.invoice.status) {
+          @case ('awaiting-approval') {
+            <p class="lead">Invoice {{ iv.invoice.id }} needs approval{{ iv.variance && iv.variance > 0 ? ' because it’s over the approved quote' : '' }}.</p>
+            @if (d.invoiceApprovalItem; as item) { <app-approval-card [item]="item" [compact]="true" /> }
+          }
+          @case ('approved') {
+            <p class="lead">Invoice {{ iv.invoice.id }} is approved and ready to pay.</p>
+            <a class="btn btn-primary" routerLink="/finance/payables" [queryParams]="{ view: 'ready' }">Add to a payment batch in Payables</a>
+          }
+          @case ('in-batch') {
+            <p class="lead">In payment batch {{ iv.invoice.batchId }} — {{ d.batch?.status === 'approved' ? 'approved, ready to release' : 'awaiting the second authoriser' }}.</p>
+            <a class="btn btn-secondary" routerLink="/finance/payables" [queryParams]="{ view: 'batches' }">Open Payables</a>
+          }
+          @case ('rejected') {
+            <div class="note warn"><ion-icon name="close-circle-outline" aria-hidden="true" /><span>Invoice {{ iv.invoice.id }} was rejected. Ask the supplier for a corrected invoice.</span></div>
+          }
+        }
+      }
+    }
+
+    <!-- ============================== PAID / CLOSED ============================== -->
+    @case ('paid') {
+      <p class="lead">Paid {{ d.invoice?.invoice?.amount | rand }} to {{ supplier()?.name }}. Nothing left to do but close it.</p>
+      @if (canAct()) {
+        <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="close()">Close job</button>
+      }
+    }
+    @case ('closed') {
+      <div class="note ok"><ion-icon name="checkmark-circle-outline" aria-hidden="true" /><span>This job is closed. Its history stays with the {{ d.unit ? 'unit' : 'scheme' }} and the supplier.</span></div>
+    }
+    @case ('cancelled') {
+      <div class="note"><ion-icon name="close-circle-outline" aria-hidden="true" /><span>Cancelled.</span></div>
+    }
+  }
+
+  @if (showCancel()) {
+    <div class="cancel">
+      <label class="block">Why isn’t this a valid request?
+        <input type="text" placeholder="e.g. Owner’s responsibility (inside the unit), duplicate of MR-1061" [value]="cancelReason()" (input)="cancelReason.set($any($event.target).value)" />
+      </label>
+      <button type="button" class="btn btn-danger btn-sm" [disabled]="busy() || !cancelReason().trim()" (click)="cancel()">Cancel job</button>
+    </div>
+  }
+</section>

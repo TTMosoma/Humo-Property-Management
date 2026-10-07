@@ -1,0 +1,96 @@
+@if (!fixedScheme()) {
+  <ui-page-header eyebrow="Maintenance" title="Jobs" subtitle="Every problem from report to payment — one record per job.">
+    <div class="mode" role="radiogroup" aria-label="Layout">
+      <button type="button" role="radio" [attr.aria-checked]="state().mode !== 'board'" (click)="patch({ mode: 'list' })"><ion-icon name="list-outline" aria-hidden="true" /> List</button>
+      <button type="button" role="radio" [attr.aria-checked]="state().mode === 'board'" (click)="patch({ mode: 'board' })"><ion-icon name="grid-outline" aria-hidden="true" /> Board</button>
+    </div>
+    @if (canLog()) {
+      <a class="btn btn-primary" routerLink="/maintenance/new"><ion-icon name="add-outline" aria-hidden="true" /> Log request</a>
+    }
+  </ui-page-header>
+  <app-scope-notice />
+} @else {
+  <div class="tab-actions">
+    <div class="mode" role="radiogroup" aria-label="Layout">
+      <button type="button" role="radio" [attr.aria-checked]="state().mode !== 'board'" (click)="patch({ mode: 'list' })"><ion-icon name="list-outline" aria-hidden="true" /> List</button>
+      <button type="button" role="radio" [attr.aria-checked]="state().mode === 'board'" (click)="patch({ mode: 'board' })"><ion-icon name="grid-outline" aria-hidden="true" /> Board</button>
+    </div>
+    @if (canLog()) {
+      <a class="btn btn-primary btn-sm" routerLink="/maintenance/new" [queryParams]="{ scheme: fixedScheme()!.id }"><ion-icon name="add-outline" aria-hidden="true" /> Log request</a>
+    }
+  </div>
+}
+
+<ui-view-tabs label="Job views" [tabs]="tabs()" [active]="state().view ?? 'open'" (activeChange)="patch({ view: $event })" />
+<ui-filter-bar
+  searchLabel="Reference, title, unit, supplier…"
+  [filters]="filters()"
+  [values]="{ priority: state().priority, category: state().category, scheme: state().scheme }"
+  (valuesChange)="setFilters($event)"
+  [search]="state().q ?? ''"
+  (searchChange)="patch({ q: $event })"
+/>
+
+@if (loading()) {
+  <ui-skeleton [count]="8" />
+} @else if (failed()) {
+  <div class="surface"><ui-error-state title="We couldn’t load jobs" (retry)="page.retry()" /></div>
+} @else if (rows().length === 0) {
+  <div class="surface">
+    @if (state().q || state().priority || state().category || state().scheme) {
+      <ui-empty-state kind="filtered" title="No jobs match">
+        <button type="button" class="btn btn-secondary" (click)="patch({ q: '', priority: null, category: null, scheme: null })">Clear filters</button>
+      </ui-empty-state>
+    } @else if (state().view === 'overdue') {
+      <ui-empty-state kind="done" title="Nothing overdue" message="Every booked job is on time." />
+    } @else {
+      <ui-empty-state kind="first-use" illustration="empty-tray" title="No open maintenance" message="When an owner, tenant or staff member reports a problem, it starts here and is tracked until it’s paid." />
+    }
+  </div>
+} @else if (state().mode === 'board' && state().view !== 'closed') {
+  <div class="board">
+    @for (c of board(); track c.id) {
+      <section class="col" [attr.aria-label]="c.label">
+        <header><span>{{ c.label }}</span><span class="count">{{ c.rows.length }}</span></header>
+        @for (r of c.rows; track r.job.id) {
+          <button type="button" class="card" [class.active]="activeId() === r.job.id" [class.late]="overdue(r)" (click)="open(r)">
+            <span class="card-top">
+              <span class="ref">{{ r.job.ref }}</span>
+              @if (r.job.priority === 'urgent' || r.job.priority === 'high') {
+                <ui-status-pill [label]="priorityLabel(r)" [tone]="priorityTone(r)" />
+              }
+            </span>
+            <span class="card-title">{{ r.job.title }}</span>
+            <span class="card-sub">{{ r.scheme.code }} · {{ r.job.location }}</span>
+            <span class="card-foot">
+              <span>{{ stageLabel(r) }}</span>
+              @if (overdue(r)) { <span class="late-label">Overdue</span> } @else { <span>{{ age(r) }}d</span> }
+            </span>
+          </button>
+        } @empty {
+          <p class="none">Nothing here.</p>
+        }
+      </section>
+    }
+  </div>
+} @else {
+  <ui-data-table caption="Jobs" [rows]="rows()" [columns]="columns()" [rowId]="rowId" [activeId]="activeId()" (rowClick)="open($event)">
+    <ng-template uiCell="job" let-r>
+      <div class="job">
+        <span class="ref">{{ r.job.ref }}</span>
+        <div>
+          <div class="title">{{ r.job.title }}</div>
+          <div class="sub">{{ r.job.location }} · {{ r.job.category }}</div>
+        </div>
+      </div>
+    </ng-template>
+    <ng-template uiCell="scheme" let-r>{{ r.scheme.name }}</ng-template>
+    <ng-template uiCell="stage" let-r>
+      <ui-status-pill [label]="stageLabel(r)" [tone]="stageTone(r)" />
+      @if (overdue(r)) { <div class="late-label">Overdue</div> }
+    </ng-template>
+    <ng-template uiCell="priority" let-r><ui-status-pill [label]="priorityLabel(r)" [tone]="priorityTone(r)" /></ng-template>
+    <ng-template uiCell="supplier" let-r>{{ r.supplier?.name ?? '—' }}</ng-template>
+    <ng-template uiCell="age" let-r><span class="num">{{ age(r) }}d</span></ng-template>
+  </ui-data-table>
+}

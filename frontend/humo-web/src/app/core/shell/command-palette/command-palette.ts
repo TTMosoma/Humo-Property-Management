@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { DialogRef } from '@angular/cdk/dialog';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, map, of, switchMap } from 'rxjs';
-import { PersonDataSource, PersonSummary, Scheme, SchemeDataSource, UnitDataSource, UnitSummary } from '../../../domain';
+import { JobDataSource, JobSummary, PersonDataSource, PersonSummary, Scheme, SchemeDataSource, SupplierDataSource, SupplierSummary, UnitDataSource, UnitSummary } from '../../../domain';
 import { AttentionService } from '../../attention/attention.service';
 import { formatRand } from '../../../ui/format/money';
 import { NavService } from '../../navigation/nav.service';
@@ -13,7 +13,7 @@ import { SessionService } from '../../session/session.service';
 
 interface PaletteItem {
   id: string;
-  kind: 'Units' | 'People' | 'Work' | 'Pages' | 'Schemes' | 'Actions';
+  kind: 'Units' | 'People' | 'Jobs' | 'Suppliers' | 'Work' | 'Pages' | 'Schemes' | 'Actions';
   label: string;
   hint: string;
   icon: string;
@@ -39,6 +39,8 @@ export class CommandPalette {
   private readonly schemeData = inject(SchemeDataSource);
   private readonly unitData = inject(UnitDataSource);
   private readonly personData = inject(PersonDataSource);
+  private readonly jobData = inject(JobDataSource);
+  private readonly supplierData = inject(SupplierDataSource);
 
   private readonly input = viewChild.required<ElementRef<HTMLInputElement>>('input');
   private readonly list = viewChild<ElementRef<HTMLElement>>('list');
@@ -126,7 +128,45 @@ export class CommandPalette {
     { initialValue: [] as PersonSummary[] },
   );
 
+  private readonly jobHits = toSignal(
+    toObservable(this.query).pipe(
+      switchMap((q) =>
+        (this.session.isStaff() || this.session.role() === 'trustee') && q.trim().length >= 2
+          ? this.jobData.search(q, this.scope.effectiveIds(), 4).pipe(catchError(() => of([] as JobSummary[])))
+          : of([] as JobSummary[]),
+      ),
+    ),
+    { initialValue: [] as JobSummary[] },
+  );
+
+  private readonly supplierHits = toSignal(
+    toObservable(this.query).pipe(
+      switchMap((q) =>
+        this.session.isStaff() && q.trim().length >= 3 ? this.supplierData.search(q, 3).pipe(catchError(() => of([] as SupplierSummary[]))) : of([] as SupplierSummary[]),
+      ),
+    ),
+    { initialValue: [] as SupplierSummary[] },
+  );
+
   private readonly recordItems = computed<PaletteItem[]>(() => [
+    ...this.jobHits().map((j) => ({
+      id: 'job-' + j.job.id,
+      kind: 'Jobs' as const,
+      label: `${j.job.ref} · ${j.job.title}`,
+      hint: `${j.scheme.code} · ${j.job.location}`,
+      icon: 'construct-outline',
+      route: `/maintenance/${j.job.ref}`,
+      haystack: '',
+    })),
+    ...this.supplierHits().map((s) => ({
+      id: 'supplier-' + s.supplier.id,
+      kind: 'Suppliers' as const,
+      label: s.supplier.name,
+      hint: s.supplier.trades.join(' · '),
+      icon: 'hammer-outline',
+      route: `/suppliers/${s.supplier.id}`,
+      haystack: '',
+    })),
     ...this.unitHits().map((u) => ({
       id: 'unit-' + u.unit.id,
       kind: 'Units' as const,

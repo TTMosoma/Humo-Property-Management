@@ -64,6 +64,7 @@ export const PERSONAS: Persona[] = [
     name: 'Sipho Khumalo',
     initials: 'SK',
     email: 'sipho.khumalo@mail.example',
+    personId: 'per-sipho',
     memberships: [
       { id: 'm-sipho-trustee', role: 'trustee', agencyId: 'acacia', schemeIds: [KC], label: 'Chairperson · Kingfisher Court' },
       { id: 'm-sipho-owner', role: 'owner', agencyId: 'acacia', schemeIds: [KC], unitLabel: 'Unit 12', label: 'Owner · Unit 12, Kingfisher Court' },
@@ -75,6 +76,7 @@ export const PERSONAS: Persona[] = [
     name: 'Anele Mthembu',
     initials: 'AM',
     email: 'anele.m@mail.example',
+    personId: 'per-anele',
     memberships: [
       { id: 'm-anele-kc', role: 'owner', agencyId: 'acacia', schemeIds: [KC], unitLabel: 'Unit 42', label: 'Owner · Unit 42, Kingfisher Court' },
       { id: 'm-anele-de', role: 'owner', agencyId: 'acacia', schemeIds: ['stellenbosch-oaks'], unitLabel: 'Unit 7', label: 'Owner · Unit 7, Die Eike' },
@@ -85,6 +87,7 @@ export const PERSONAS: Persona[] = [
     name: 'Ruan Botha',
     initials: 'RB',
     email: 'ruan.botha@mail.example',
+    personId: 'per-ruan',
     memberships: [
       { id: 'm-ruan', role: 'tenant', agencyId: 'acacia', schemeIds: [KC], unitLabel: 'Unit 17', label: 'Tenant · Unit 17, Kingfisher Court' },
     ],

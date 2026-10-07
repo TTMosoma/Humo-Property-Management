@@ -15,3 +15,6 @@ export * from './models/timeline';
 export * from './models/read-models';
 export * from './ports/portfolio-data-sources';
 export * from './models/period';
+export * from './models/supplier';
+export * from './models/job';
+export * from './ports/maintenance-data-sources';

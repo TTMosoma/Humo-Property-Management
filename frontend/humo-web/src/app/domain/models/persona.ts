@@ -29,5 +29,7 @@ export interface Persona {
   email: string;
   /** Matches Scheme.portfolioManagerId / work item assignees for agency staff. */
   staffId?: string;
+  /** For owners, tenants and trustees: their record in the People directory. */
+  personId?: string;
   memberships: Membership[];
 }
