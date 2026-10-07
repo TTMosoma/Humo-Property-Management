@@ -13,6 +13,8 @@ export const STAFF: StaffMember[] = [
   { id: 'staff-kabelo', name: 'Kabelo Molefe', initials: 'KM', title: 'Portfolio Manager' },
   { id: 'staff-priya', name: 'Priya Naidoo', initials: 'PN', title: 'Senior Accountant' },
   { id: 'staff-zanele', name: 'Zanele Dlamini', initials: 'ZD', title: 'Credit Controller' },
+  { id: 'staff-sarah', name: 'Sarah Jacobs', initials: 'SJ', title: 'Operations Director' },
+  { id: 'staff-bongani', name: 'Bongani Ndlovu', initials: 'BN', title: 'Maintenance Coordinator' },
 ];
 
 const OTHERS: Record<string, string> = { 'p-sipho': 'Sipho Khumalo (trustee)' };

@@ -113,7 +113,7 @@
 
     <aside class="surface panel activity">
       <h2 class="section-title">Activity</h2>
-      @if (session.isStaff()) {
+      @if (session.isStaff() && session.can('Notes.Add')) {
         <div class="comment">
           <label class="visually-hidden" for="job-comment">Add a comment</label>
           <textarea id="job-comment" rows="2" placeholder="Add a comment for the team…" [value]="comment()" (input)="comment.set($any($event.target).value)"></textarea>

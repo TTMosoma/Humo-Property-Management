@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { ToastController } from '@ionic/angular/standalone';
+import { PolicyNotices } from '../security/policy-notices';
 
 /**
  * Brief confirmations after an action, with an optional Undo.
@@ -8,13 +9,15 @@ import { ToastController } from '@ionic/angular/standalone';
 @Injectable({ providedIn: 'root' })
 export class FeedbackService {
   private readonly toasts = inject(ToastController);
+  private readonly policy = inject(PolicyNotices);
 
   async success(message: string, undo?: () => void): Promise<void> {
     await this.show(message, 'success', undo);
   }
 
+  /** If the API refused on policy grounds, its reason replaces the generic message. */
   async error(message: string): Promise<void> {
-    await this.show(message, 'danger');
+    await this.show(this.policy.consume() ?? message, 'danger');
   }
 
   async info(message: string): Promise<void> {

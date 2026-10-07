@@ -10,25 +10,29 @@
       </button>
     </header>
 
-    <div class="label-caps group-label" id="proto-persona">View as</div>
+    <div class="label-caps group-label" id="proto-persona">Sign in as</div>
+    <p class="hint">One identity per person. People with several roles switch between them from their name in the top bar.</p>
     <div class="personas" role="radiogroup" aria-labelledby="proto-persona">
-      @for (p of session.personas; track p.id) {
+      @for (p of session.personas(); track p.id) {
         <button
           type="button"
           role="radio"
           class="persona"
-          [attr.aria-checked]="session.persona().id === p.id"
+          [attr.aria-checked]="session.actor().id === p.id"
           (click)="choosePersona(p.id)"
         >
-          <span class="avatar">{{ p.initials }}</span>
+          <span class="avatar" [class.humo]="p.kind === 'humo'">{{ p.initials }}</span>
           <span class="persona-text">
             <span class="role">
-              {{ roleLabels[p.memberships[0].role] }}
+              {{ p.name }}
+              @if (p.kind === 'humo') {
+                <span class="multi humo">Humo</span>
+              }
               @if (p.memberships.length > 1) {
-                <span class="multi">+{{ p.memberships.length - 1 }} role</span>
+                <span class="multi">{{ p.memberships.length }} roles</span>
               }
             </span>
-            <span class="who">{{ p.name }} · {{ p.memberships[0].label }}</span>
+            <span class="who">{{ rolesOf(p) }}</span>
           </span>
         </button>
       }
@@ -48,6 +52,8 @@
       }
     </div>
 
+    <button type="button" class="btn btn-ghost btn-sm reset" (click)="resetNudges()">Reset Smart Nudges</button>
+
     <label class="toggle">
       <input type="checkbox" [checked]="proto.latency()" (change)="proto.latency.set(!proto.latency())" />
       Simulate network latency
@@ -66,7 +72,7 @@
   <ion-icon name="flask-outline" aria-hidden="true" />
   <span class="fab-text">
     <span class="fab-label">Prototype</span>
-    <span class="fab-role">{{ roleLabels[session.role()] }}</span>
+    <span class="fab-role">{{ session.actor().name }}</span>
   </span>
   @if (proto.viewState() !== 'live') {
     <span class="fab-state">{{ proto.viewState() }}</span>

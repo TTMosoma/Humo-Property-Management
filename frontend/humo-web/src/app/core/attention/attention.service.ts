@@ -23,6 +23,7 @@ const FINANCE_TYPES: WorkItemType[] = [
   'payment-batch-approval',
   'billing-run-approval',
 ];
+const OPERATIONS_TYPES: WorkItemType[] = ['maintenance-triage', 'maintenance-overdue', 'document-expiry'];
 const NOT_FOR_PORTFOLIO_MANAGERS: WorkItemType[] = ['receipt-allocation', 'payment-batch-approval', 'billing-run-approval'];
 
 /**
@@ -58,6 +59,8 @@ export class AttentionService {
           return m.schemeIds.includes(w.schemeId) || mine(w);
         case 'finance':
           return FINANCE_TYPES.includes(w.type) || mine(w);
+        case 'operations':
+          return OPERATIONS_TYPES.includes(w.type) || mine(w);
         case 'trustee':
           return (w.kind === 'approval' && !!w.approverRoles?.includes('trustee')) || mine(w);
         default:

@@ -119,6 +119,20 @@
   --c-nav-border: rgba(255, 255, 255, 0.08);
   --c-nav-attention: #f0b44c;
 
+  /* Role accents: a quiet cue for "which hat am I wearing". Never red/orange —
+     those are reserved for impersonation. */
+  --role-agency: #1f4f9c;
+  --role-governance: #6d48a8;
+  --role-resident: #1d7a52;
+  --role-supplier: #85561a;
+  --role-humo: #0d6b77;
+
+  /* Impersonation: loud on purpose. Used nowhere else. */
+  --c-imp: #c2410c;
+  --c-imp-strong: #9a3412;
+  --c-imp-soft: #fff1e8;
+  --c-on-imp: #ffffff;
+
   // Illustration palette (used by ui-illustration and ui-scheme-art)
   --c-illo-ink: var(--brand-navy-900);
   --c-illo-fill: #e7edf6;
@@ -173,6 +187,17 @@
 
   --c-nav-bg: var(--brand-navy-950);
   --c-nav-bg-2: #071631;
+
+  --role-agency: #82aaf5;
+  --role-governance: #c3a3f0;
+  --role-resident: #6cd3a0;
+  --role-supplier: #e0b070;
+  --role-humo: #6fd0d8;
+
+  --c-imp: #f26b2f;
+  --c-imp-strong: #ff8a50;
+  --c-imp-soft: rgba(242, 107, 47, 0.14);
+  --c-on-imp: #1a0a02;
 
   --c-illo-ink: #c3cee1;
   --c-illo-fill: #13254a;

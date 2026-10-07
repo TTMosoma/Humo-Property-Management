@@ -1,0 +1,120 @@
+<ui-page-header
+  eyebrow="Settings"
+  title="Roles & permissions"
+  subtitle="How access works on Humo, what each role can do, and what your plan includes. Role determines what someone can do; assignment determines what they can see."
+>
+  <a class="btn btn-primary" routerLink="/settings/users">
+    <ion-icon name="people-outline" aria-hidden="true" />
+    Manage people’s access
+  </a>
+</ui-page-header>
+
+<!-- The access model, in the order Humo's servers apply it. -->
+<section class="model surface" aria-labelledby="model-title">
+  <h2 id="model-title">How Humo decides what someone can do</h2>
+  <ol class="chain">
+    @for (c of chain; track c.title; let last = $last) {
+      <li>
+        <span class="c-icon"><ion-icon [name]="c.icon" aria-hidden="true" /></span>
+        <span class="c-title">{{ c.title }}</span>
+        <span class="c-q">{{ c.q }}</span>
+        <span class="c-a">{{ c.a }}</span>
+      </li>
+    }
+  </ol>
+  <p class="boundary">
+    <ion-icon name="server-outline" aria-hidden="true" />
+    Humo hides what you can’t use, but that isn’t what protects your data: Humo’s servers check role, scope, plan and verification again on every request.
+  </p>
+</section>
+
+<!-- Role catalogue -->
+<h2 class="section-title">Roles you can give people</h2>
+<div class="roles">
+  @for (r of roles; track r) {
+    <article class="role surface" [style.--role-c]="roleColor(r)">
+      <header>
+        <span class="r-icon"><ion-icon [name]="roleMeta[r].icon" aria-hidden="true" /></span>
+        <div>
+          <h3>{{ roleLabels[r] }}</h3>
+          <span class="holders">{{ holders().get(r) ?? 0 }} {{ (holders().get(r) ?? 0) === 1 ? 'person' : 'people' }}</span>
+        </div>
+      </header>
+      <p>{{ roleMeta[r].summary }}</p>
+      <dl>
+        <div><dt>Applies to</dt><dd>{{ scopeText[roleMeta[r].scopeKind] }}</dd></div>
+        <div><dt>Granted by</dt><dd>{{ roleLabels[roleMeta[r].grantedBy] }}{{ roleMeta[r].privileged ? ' · with verification' : '' }}</dd></div>
+      </dl>
+      @if (roleMeta[r].experiencePlanned) {
+        <span class="planned">Portal coming soon</span>
+      }
+    </article>
+  }
+</div>
+
+<!-- Permission matrix -->
+<h2 class="section-title">What each role can do</h2>
+<div class="matrix-wrap surface">
+  <table class="matrix">
+    <caption class="sr-only">Default permissions by role</caption>
+    <thead>
+      <tr>
+        <th scope="col">Permission</th>
+        @for (r of roles; track r) {
+          <th scope="col" [style.--role-c]="roleColor(r)"><span class="th-role">{{ roleLabels[r] }}</span></th>
+        }
+      </tr>
+    </thead>
+    @for (g of matrix; track g.area) {
+      <tbody>
+        <tr class="area">
+          <th scope="rowgroup" [attr.colspan]="roles.length + 1">{{ g.area }}</th>
+        </tr>
+        @for (p of g.permissions; track p.id) {
+          <tr>
+            <th scope="row">
+              <span class="p-label">{{ p.label }}</span>
+              <span class="p-meta">
+                <code>{{ p.id }}</code>
+                @if (p.stepUp) {
+                  <span class="stepup"><ion-icon name="finger-print-outline" aria-hidden="true" /> Verification</span>
+                }
+              </span>
+            </th>
+            @for (r of roles; track r) {
+              <td>
+                @if (has(r, p.id)) {
+                  <ion-icon class="yes" name="checkmark-circle" [attr.aria-label]="roleLabels[r] + ': yes'" />
+                } @else {
+                  <span class="no" [attr.aria-label]="roleLabels[r] + ': no'">—</span>
+                }
+              </td>
+            }
+          </tr>
+        }
+      </tbody>
+    }
+  </table>
+</div>
+<p class="foot">
+  Approvals also follow each approval’s own rules — for example, quotes above the delegated limit go to trustees.
+  @if (included('permissions-advanced')) {
+    Your plan includes custom roles.
+  } @else {
+    Custom roles are available on the Enterprise plan.
+  }
+</p>
+
+<!-- Entitlements -->
+<h2 class="section-title">Your plan: {{ plan() }} <a routerLink="/settings/plan" class="plan-link">Plan & features</a></h2>
+<div class="plan surface">
+  @for (f of features; track f.id) {
+    <div class="feature" [class.off]="!included(f.id)">
+      <ion-icon [name]="included(f.id) ? 'checkmark-circle' : 'remove-circle-outline'" aria-hidden="true" />
+      <span>{{ f.label }}</span>
+      @if (!included(f.id)) {
+        <span class="not">Not included</span>
+      }
+    </div>
+  }
+</div>

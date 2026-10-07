@@ -1,0 +1,56 @@
+<ui-page-header
+  eyebrow="Humo platform"
+  title="Customers"
+  [subtitle]="
+    revenue()
+      ? rows().length + ' customers · ' + num(totals().units) + ' units · ' + rand(totals().mrr) + ' MRR'
+      : rows().length + ' customers · ' + num(totals().units) + ' units'
+  "
+/>
+
+<ui-view-tabs [tabs]="tabs()" [active]="state().view ?? 'all'" (activeChange)="set('view', $event)" label="Account health" />
+
+<div class="toolbar">
+  <label class="search">
+    <ion-icon name="search-outline" aria-hidden="true" />
+    <input type="search" placeholder="Customer, city, account manager…" [value]="state().q ?? ''" (input)="set('q', $any($event.target).value)" aria-label="Search customers" />
+  </label>
+  <select [value]="state().pkg ?? ''" (change)="set('pkg', $any($event.target).value)" aria-label="Package">
+    <option value="">All packages</option>
+    <option value="essentials">Essentials</option>
+    <option value="professional">Professional</option>
+    <option value="enterprise">Enterprise</option>
+  </select>
+</div>
+
+@if (failed()) {
+  <ui-error-state (retry)="page.retry()" />
+} @else if (loading()) {
+  <ui-skeleton [count]="8" />
+} @else if (!rows().length) {
+  <div class="surface"><ui-empty-state kind="filtered" title="No customers match" message="Try another tab or clear the search." /></div>
+} @else {
+  <ui-data-table [rows]="rows()" [columns]="columns()" [rowId]="rowId" caption="Customers" (rowClick)="open($event)">
+    <ng-template uiCell="customer" let-r>
+      <div class="name">{{ r.name }}</div>
+      <div class="sub">{{ r.city }} · <code>{{ r.agencyId }}</code></div>
+    </ng-template>
+    <ng-template uiCell="package" let-r>
+      <div class="pkg" [attr.data-pkg]="r.subscription.packageId">{{ shortPackage(r.subscription.packageId) }}</div>
+      @if (r.subscription.addOns.length) {
+        <div class="sub">+ {{ r.subscription.addOns.length === 1 ? addOnName(r.subscription.addOns[0].addOnId) : r.subscription.addOns.length + ' add-ons' }}</div>
+      }
+    </ng-template>
+    <ng-template uiCell="health" let-r>
+      <span class="score" [attr.data-band]="r.health.band">{{ r.health.score }}</span>
+      <ui-status-pill [label]="band(r).label" [tone]="band(r).tone" />
+    </ng-template>
+    <ng-template uiCell="size" let-r>{{ r.snapshot.schemes }} · {{ num(r.snapshot.units) }}</ng-template>
+    <ng-template uiCell="status" let-r>
+      <ui-status-pill [label]="status(r).label" [tone]="status(r).tone" />
+    </ng-template>
+    <ng-template uiCell="users" let-r>{{ r.snapshot.activeUsers30d }} / {{ r.snapshot.seats }}</ng-template>
+    <ng-template uiCell="am" let-r>{{ r.accountManager }}</ng-template>
+    <ng-template uiCell="mrr" let-r><span class="money">{{ rand(r.subscription.mrr) }}</span></ng-template>
+  </ui-data-table>
+}

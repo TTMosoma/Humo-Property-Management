@@ -25,16 +25,18 @@ export class NavService {
   readonly sections = computed<NavSection[]>(() => {
     const role = this.session.role();
     const ownScheme = this.session.membership().schemeIds[0];
+    // Role decides what's offered; the agency's plan can take features away.
+    const allowed = (l: NavLink) => l.roles.includes(role) && (!l.feature || this.session.hasFeature(l.feature));
     return NAV.map((section) => ({
       ...section,
       nodes: section.nodes
         .map((node): NavNode | null => {
           if (!isGroup(node)) {
-            if (!node.roles.includes(role)) return null;
+            if (!allowed(node)) return null;
             // A trustee's "My scheme" points at their own scheme.
             return node.id === 'my-scheme' && ownScheme ? { ...node, route: `/schemes/${ownScheme}` } : node;
           }
-          const children = node.children.filter((c) => c.roles.includes(role));
+          const children = node.children.filter(allowed);
           if (children.length === 0) return null;
           if (children.length === 1) {
             return { ...children[0], label: node.label, icon: node.icon };

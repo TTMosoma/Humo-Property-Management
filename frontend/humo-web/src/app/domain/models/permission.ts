@@ -1,0 +1,155 @@
+import { Role } from './role';
+
+/**
+ * What an identity may DO. A role carries a default set of permissions;
+ * the assignment decides WHERE (scope). Permission names are the contract with
+ * the future .NET authorisation policies — the API enforces them server-side.
+ * The UI only uses them to hide or disable what someone can't do.
+ */
+export type Permission =
+  // Work & approvals
+  | 'Work.Manage'
+  | 'Approvals.Decide'
+  // Portfolio
+  | 'Portfolio.View'
+  | 'Accounts.View'
+  | 'Notes.Add'
+  // Finance
+  | 'Receipts.Allocate'
+  | 'Payables.Prepare'
+  | 'Payables.Release'
+  | 'Finance.Export'
+  // Maintenance
+  | 'Maintenance.Log'
+  | 'Maintenance.Manage'
+  | 'Suppliers.Manage'
+  | 'Suppliers.ChangeBankDetails'
+  // Residents
+  | 'Resident.Requests'
+  // Agency administration
+  | 'Users.Manage'
+  | 'Users.ManageAdmins'
+  | 'Audit.View'
+  | 'Security.ManageOwn'
+  // The customer's own subscription
+  | 'Subscription.View'
+  | 'Subscription.Request'
+  // Humo platform
+  | 'Platform.View'
+  | 'Platform.Customers.View'
+  | 'Platform.Customers.Manage'
+  | 'Platform.Customers.Users'
+  | 'Platform.Subscriptions.View'
+  | 'Platform.Subscriptions.Manage'
+  | 'Platform.Packages.Manage'
+  | 'Platform.Health.View'
+  | 'Platform.Revenue.View'
+  | 'Platform.Insights.View'
+  | 'Platform.Opportunities.Manage'
+  | 'Platform.Support.Assist'
+  | 'Platform.Config.Manage'
+  | 'Platform.ManageHumoRoles'
+  | 'Platform.Audit'
+  | 'System.Impersonate';
+
+export type PermissionArea = 'Work' | 'Portfolio' | 'Finance' | 'Maintenance' | 'Residents' | 'Administration' | 'Platform';
+
+export interface PermissionMeta {
+  id: Permission;
+  area: PermissionArea;
+  label: string;
+  /** Changes data. Blocked in Observe impersonation (UI hides it; the API rejects it). */
+  mutates: boolean;
+  /** Requires step-up verification at the moment it is used. */
+  stepUp?: boolean;
+}
+
+export const PERMISSIONS: PermissionMeta[] = [
+  { id: 'Work.Manage', area: 'Work', label: 'Complete, assign and reopen tasks', mutates: true },
+  { id: 'Approvals.Decide', area: 'Work', label: 'Approve or reject (within the approval’s rules)', mutates: true },
+  { id: 'Portfolio.View', area: 'Portfolio', label: 'View schemes, units and people', mutates: false },
+  { id: 'Accounts.View', area: 'Portfolio', label: 'View owner accounts and statements', mutates: false },
+  { id: 'Notes.Add', area: 'Portfolio', label: 'Log notes and calls on records', mutates: true },
+  { id: 'Receipts.Allocate', area: 'Finance', label: 'Allocate receipts to accounts', mutates: true },
+  { id: 'Payables.Prepare', area: 'Finance', label: 'Prepare supplier payment batches', mutates: true },
+  { id: 'Payables.Release', area: 'Finance', label: 'Release payments from trust accounts', mutates: true, stepUp: true },
+  { id: 'Finance.Export', area: 'Finance', label: 'Export financial and personal data', mutates: false, stepUp: true },
+  { id: 'Maintenance.Log', area: 'Maintenance', label: 'Log maintenance requests', mutates: true },
+  { id: 'Maintenance.Manage', area: 'Maintenance', label: 'Run jobs: quotes, work orders, invoices', mutates: true },
+  { id: 'Suppliers.Manage', area: 'Maintenance', label: 'Manage suppliers and vetting documents', mutates: true },
+  { id: 'Suppliers.ChangeBankDetails', area: 'Maintenance', label: 'Change supplier banking details', mutates: true, stepUp: true },
+  { id: 'Resident.Requests', area: 'Residents', label: 'Report problems and confirm fixes', mutates: true },
+  { id: 'Users.Manage', area: 'Administration', label: 'Assign customer roles and scope', mutates: true, stepUp: true },
+  { id: 'Users.ManageAdmins', area: 'Administration', label: 'Add or remove Agency Administrators', mutates: true, stepUp: true },
+  { id: 'Audit.View', area: 'Administration', label: 'View the agency’s audit log', mutates: false },
+  { id: 'Security.ManageOwn', area: 'Administration', label: 'Manage own passkeys, devices and sessions', mutates: true, stepUp: true },
+  { id: 'Subscription.View', area: 'Administration', label: 'See the agency’s package and features', mutates: false },
+  { id: 'Subscription.Request', area: 'Administration', label: 'Request a feature or upgrade from Humo', mutates: true },
+  { id: 'Platform.View', area: 'Platform', label: 'Use the Humo platform console', mutates: false },
+  { id: 'Platform.Customers.View', area: 'Platform', label: 'View customer organisations', mutates: false },
+  { id: 'Platform.Customers.Manage', area: 'Platform', label: 'Onboard and configure customer accounts', mutates: true },
+  { id: 'Platform.Customers.Users', area: 'Platform', label: 'See and assist customer users', mutates: false },
+  { id: 'Platform.Subscriptions.View', area: 'Platform', label: 'View subscriptions and entitlements', mutates: false },
+  { id: 'Platform.Subscriptions.Manage', area: 'Platform', label: 'Change packages, add-ons and feature overrides', mutates: true, stepUp: true },
+  { id: 'Platform.Packages.Manage', area: 'Platform', label: 'Define packages, add-ons and the feature catalogue', mutates: true, stepUp: true },
+  { id: 'Platform.Health.View', area: 'Platform', label: 'View account health and adoption', mutates: false },
+  { id: 'Platform.Revenue.View', area: 'Platform', label: 'View MRR, ARR and contract values', mutates: false },
+  { id: 'Platform.Insights.View', area: 'Platform', label: 'View company-wide business insights', mutates: false },
+  { id: 'Platform.Opportunities.Manage', area: 'Platform', label: 'Work opportunities and upgrade requests', mutates: true },
+  { id: 'Platform.Support.Assist', area: 'Platform', label: 'Assist with customer users, recovery and escalation', mutates: true },
+  { id: 'Platform.Config.Manage', area: 'Platform', label: 'Platform configuration, feature flags and integrations', mutates: true, stepUp: true },
+  { id: 'Platform.ManageHumoRoles', area: 'Platform', label: 'Grant Humo internal roles', mutates: true, stepUp: true },
+  { id: 'Platform.Audit', area: 'Platform', label: 'View the platform-wide audit log', mutates: false },
+  { id: 'System.Impersonate', area: 'Platform', label: 'Impersonate a customer user (granted individually)', mutates: false },
+];
+
+export const PERMISSION_META: Record<Permission, PermissionMeta> = Object.fromEntries(PERMISSIONS.map((p) => [p.id, p])) as Record<
+  Permission,
+  PermissionMeta
+>;
+
+const STAFF_BASE: Permission[] = ['Work.Manage', 'Portfolio.View', 'Notes.Add', 'Maintenance.Log', 'Security.ManageOwn'];
+
+/**
+ * Default permissions per role. Prototype assumption: fixed roles first;
+ * custom roles (an agency editing these) are a later, Enterprise-plan feature.
+ *
+ * System.Impersonate is deliberately absent from every role — it is granted to
+ * named individuals only (see RoleAssignment.grants).
+ */
+export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
+  'agency-admin': [
+    ...STAFF_BASE, 'Approvals.Decide', 'Accounts.View', 'Receipts.Allocate', 'Payables.Prepare', 'Payables.Release', 'Finance.Export',
+    'Maintenance.Manage', 'Suppliers.Manage', 'Suppliers.ChangeBankDetails', 'Users.Manage', 'Users.ManageAdmins', 'Audit.View',
+    'Subscription.View', 'Subscription.Request',
+  ],
+  'portfolio-manager': [...STAFF_BASE, 'Approvals.Decide', 'Accounts.View', 'Maintenance.Manage', 'Suppliers.Manage'],
+  finance: [...STAFF_BASE, 'Approvals.Decide', 'Accounts.View', 'Receipts.Allocate', 'Payables.Prepare', 'Payables.Release', 'Finance.Export', 'Suppliers.ChangeBankDetails'],
+  operations: [...STAFF_BASE, 'Maintenance.Manage', 'Suppliers.Manage'],
+  trustee: ['Work.Manage', 'Approvals.Decide', 'Portfolio.View', 'Security.ManageOwn'],
+  owner: ['Accounts.View', 'Resident.Requests', 'Security.ManageOwn'],
+  tenant: ['Resident.Requests', 'Security.ManageOwn'],
+  supplier: ['Security.ManageOwn'],
+  // Highest operational authority — but impersonation is still an individual grant.
+  'system-admin': [
+    'Platform.View', 'Platform.Customers.View', 'Platform.Customers.Manage', 'Platform.Customers.Users', 'Platform.Subscriptions.View',
+    'Platform.Subscriptions.Manage', 'Platform.Packages.Manage', 'Platform.Health.View', 'Platform.Revenue.View', 'Platform.Insights.View',
+    'Platform.Support.Assist', 'Platform.Config.Manage', 'Platform.ManageHumoRoles', 'Platform.Audit', 'Security.ManageOwn',
+  ],
+  // The customer relationship: onboarding, adoption, health, subscriptions where authorised. No platform config, no Humo roles.
+  'humo-account-manager': [
+    'Platform.View', 'Platform.Customers.View', 'Platform.Customers.Manage', 'Platform.Customers.Users', 'Platform.Subscriptions.View',
+    'Platform.Subscriptions.Manage', 'Platform.Health.View', 'Platform.Revenue.View', 'Platform.Opportunities.Manage', 'Platform.Support.Assist',
+    'Security.ManageOwn',
+  ],
+  // Investigates and helps. Can't change packages, configuration, security policy or anyone's roles.
+  'humo-support': [
+    'Platform.View', 'Platform.Customers.View', 'Platform.Customers.Users', 'Platform.Subscriptions.View', 'Platform.Health.View',
+    'Platform.Support.Assist', 'Platform.Audit', 'Security.ManageOwn',
+  ],
+  // Business intelligence: aggregates, revenue and health. Read-only; no customer users or audit detail.
+  'humo-executive': [
+    'Platform.View', 'Platform.Customers.View', 'Platform.Subscriptions.View', 'Platform.Health.View', 'Platform.Revenue.View', 'Platform.Insights.View',
+    'Security.ManageOwn',
+  ],
+};

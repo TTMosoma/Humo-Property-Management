@@ -1,6 +1,13 @@
 import { EnvironmentProviders, inject, makeEnvironmentProviders, provideAppInitializer } from '@angular/core';
 import {
+  AccessDataSource,
   AccountDataSource,
+  AuditDataSource,
+  NudgeDataSource,
+  PlanDataSource,
+  PlatformDataSource,
+  SecurityDataSource,
+  StepUpAuthenticator,
   JobDataSource,
   PayablesDataSource,
   PersonDataSource,
@@ -23,6 +30,13 @@ import {
   InMemoryPayablesDataSource,
   InMemorySupplierDataSource,
 } from './data-sources/in-memory-maintenance-data-sources';
+import {
+  InMemoryAccessDataSource,
+  InMemoryAuditDataSource,
+  InMemorySecurityDataSource,
+  InMemoryStepUpAuthenticator,
+} from './data-sources/in-memory-access-data-sources';
+import { InMemoryNudgeDataSource, InMemoryPlanDataSource, InMemoryPlatformDataSource } from './data-sources/in-memory-platform-data-sources';
 import { InMemorySchemeDataSource } from './data-sources/in-memory-scheme-data-source';
 import { MaintenanceStore } from './db/maintenance-store';
 import { InMemoryWorkItemDataSource } from './data-sources/in-memory-work-item-data-source';
@@ -43,6 +57,13 @@ export function provideMockData(): EnvironmentProviders {
     { provide: JobDataSource, useClass: InMemoryJobDataSource },
     { provide: SupplierDataSource, useClass: InMemorySupplierDataSource },
     { provide: PayablesDataSource, useClass: InMemoryPayablesDataSource },
+    { provide: AccessDataSource, useClass: InMemoryAccessDataSource },
+    { provide: AuditDataSource, useClass: InMemoryAuditDataSource },
+    { provide: SecurityDataSource, useClass: InMemorySecurityDataSource },
+    { provide: StepUpAuthenticator, useClass: InMemoryStepUpAuthenticator },
+    { provide: PlatformDataSource, useClass: InMemoryPlatformDataSource },
+    { provide: PlanDataSource, useClass: InMemoryPlanDataSource },
+    { provide: NudgeDataSource, useClass: InMemoryNudgeDataSource },
     // Start the maintenance store eagerly so approvals decided anywhere update their jobs.
     provideAppInitializer(() => void inject(MaintenanceStore)),
   ]);

@@ -1,7 +1,7 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, of } from 'rxjs';
-import { Scheme, SchemeDataSource } from '../../domain';
+import { Scheme, SchemeDataSource, isHumoRole } from '../../domain';
 import { safeStorage } from '../prototype/safe-storage';
 import { SessionService } from '../session/session.service';
 
@@ -42,13 +42,16 @@ export class ScopeService {
     { initialValue: [] as Scheme[] },
   );
 
-  /** Schemes the current membership may see. */
+  /**
+   * Schemes the active assignment covers. "Role determines what someone can do;
+   * assignment determines what they can see." Covering for a colleague is an
+   * extra (temporary) assignment, not a wider role.
+   */
   readonly accessible = computed<Scheme[]>(() => {
     const m = this.session.membership();
-    if (m.role === 'system-admin') return [];
+    if (isHumoRole(m.role)) return [];
     const inAgency = this.allSchemes().filter((s) => s.agencyId === m.agencyId);
-    // Portfolio managers can see the whole agency (they cover for colleagues); others only their schemes.
-    if (m.schemeIds.length === 0 || m.role === 'portfolio-manager') return inAgency;
+    if (m.schemeIds.length === 0) return inAgency;
     return inAgency.filter((s) => m.schemeIds.includes(s.id));
   });
 
@@ -75,16 +78,16 @@ export class ScopeService {
     return id ? [id] : this.accessible().map((s) => s.id);
   });
 
-  // ---- Pinned schemes (per persona, persisted) ----
+  // ---- Pinned schemes (per role assignment, persisted) ----
   private readonly pinnedStore = signal<Record<string, string[]>>(this.readPins());
 
   readonly pinnedIds = computed<string[]>(() => {
-    const persona = this.session.persona();
-    const stored = this.pinnedStore()[persona.id];
+    // Pins belong to an assignment: Sarah's Portfolio Manager pins aren't her Finance pins.
+    const stored = this.pinnedStore()[this.session.membership().id];
     if (stored) return stored;
     // Sensible default: a portfolio manager's assigned schemes; otherwise the first few in the agency.
     const m = this.session.membership();
-    if (m.role === 'portfolio-manager') return m.schemeIds;
+    if (this.session.isStaff() && m.schemeIds.length <= 8) return m.schemeIds;
     return [];
   });
 
@@ -109,10 +112,10 @@ export class ScopeService {
   }
 
   togglePin(id: string): void {
-    const personaId = this.session.persona().id;
+    const key = this.session.membership().id;
     const current = this.pinnedIds();
     const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
-    this.pinnedStore.update((s) => ({ ...s, [personaId]: next }));
+    this.pinnedStore.update((s) => ({ ...s, [key]: next }));
   }
 
   findScheme(id: string | null | undefined): Scheme | undefined {

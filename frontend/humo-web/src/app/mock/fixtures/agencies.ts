@@ -10,7 +10,6 @@ export const AGENCIES: Agency[] = [
     province: 'Gauteng',
     schemeCount: 24,
     unitCount: 1284,
-    plan: 'Professional',
   },
   {
     id: 'fynbos',
@@ -20,7 +19,6 @@ export const AGENCIES: Agency[] = [
     province: 'Western Cape',
     schemeCount: 11,
     unitCount: 486,
-    plan: 'Starter',
   },
   {
     id: 'umgeni',
@@ -30,6 +28,15 @@ export const AGENCIES: Agency[] = [
     province: 'KwaZulu-Natal',
     schemeCount: 17,
     unitCount: 902,
-    plan: 'Professional',
+  },
+  {
+    // The launch customer — just another agency record, never special-cased in code.
+    id: 'tshikrand',
+    name: 'Tshikrand Property Management (Pty) Ltd',
+    shortName: 'Tshikrand',
+    city: 'Pretoria',
+    province: 'Gauteng',
+    schemeCount: 38,
+    unitCount: 2140,
   },
 ];

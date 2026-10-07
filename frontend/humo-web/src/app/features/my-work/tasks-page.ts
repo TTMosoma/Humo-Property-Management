@@ -28,9 +28,10 @@ import { WorkItemPreview } from './work-item-preview';
  * module, ordered by urgency. Built on the Attention model, so the numbers
  * here always match the sidebar badges and the scheme overviews.
  */
+import { SmartNudge } from '../shared/smart-nudge';
 @Component({
   selector: 'app-tasks-page',
-  imports: [
+  imports: [SmartNudge, 
     PageHeader, ViewTabs, FilterBar, DataTable, CellDef, BulkBar, StatusPill, EmptyState, ErrorState, Skeleton,
     ScopeNotice, IonIcon, CdkMenu, CdkMenuItem, CdkMenuTrigger,
   ],

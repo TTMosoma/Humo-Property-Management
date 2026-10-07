@@ -103,6 +103,8 @@ export abstract class SupplierDataSource {
   abstract get(id: string): Observable<SupplierDetail | undefined>;
   abstract search(query: string, limit?: number): Observable<SupplierSummary[]>;
   abstract requestDocument(supplierId: string, type: string): Observable<void>;
+  /** Sensitive: needs step-up; payments to the supplier are held until the new account is verified. */
+  abstract changeBankDetails(supplierId: string): Observable<void>;
 }
 
 export abstract class PayablesDataSource {

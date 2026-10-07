@@ -2,11 +2,13 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, output, si
 import { Router } from '@angular/router';
 import { CdkMenu, CdkMenuGroup, CdkMenuItem, CdkMenuItemRadio, CdkMenuTrigger } from '@angular/cdk/menu';
 import { IonIcon } from '@ionic/angular/standalone';
-import { AppNotification, NotificationKind, ROLE_LABELS, Role } from '../../../domain';
+import { AppNotification, NotificationKind, ROLE_LABELS, ROLE_META, Role, RoleAssignment } from '../../../domain';
 import { NOTIFICATIONS } from '../../../mock/fixtures/notifications';
 import { relativeTime } from '../../../ui/format/relative-time';
 import { PrototypeStateService, ThemePref } from '../../prototype/prototype-state.service';
 import { ScopeService } from '../../scope/scope.service';
+import { ImpersonationService } from '../../security/impersonation.service';
+import { RoleSwitcher } from '../../session/role-switcher';
 import { SessionService } from '../../session/session.service';
 
 interface QuickAction {
@@ -19,7 +21,7 @@ interface QuickAction {
 const STAFF: Role[] = ['agency-admin', 'portfolio-manager', 'finance'];
 
 const QUICK_ACTIONS: QuickAction[] = [
-  { label: 'Log maintenance request', icon: 'construct-outline', route: '/maintenance/new', roles: STAFF },
+  { label: 'Log maintenance request', icon: 'construct-outline', route: '/maintenance/new', roles: [...STAFF, 'operations'] },
   { label: 'Allocate receipts', icon: 'cash-outline', route: '/finance/receipts', roles: ['agency-admin', 'finance'] },
   { label: 'Start billing run', icon: 'receipt-outline', route: '/finance/billing/new', roles: ['agency-admin', 'finance'] },
   { label: 'Send a notice', icon: 'megaphone-outline', route: '/communications/compose', roles: STAFF },
@@ -42,11 +44,14 @@ const KIND_ICON: Record<NotificationKind, string> = {
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './topbar.html',
   styleUrl: './topbar.scss',
+  host: { '[class.tab-search]': 'tabBarHasSearch()' },
 })
 export class Topbar {
   protected readonly session = inject(SessionService);
   protected readonly scope = inject(ScopeService);
   protected readonly proto = inject(PrototypeStateService);
+  protected readonly switcher = inject(RoleSwitcher);
+  protected readonly impersonation = inject(ImpersonationService);
   private readonly router = inject(Router);
 
   readonly showMenuButton = input(false);
@@ -54,12 +59,24 @@ export class Topbar {
   readonly openPalette = output<void>();
 
   protected readonly roleLabels = ROLE_LABELS;
+  protected readonly roleMeta = ROLE_META;
   protected readonly kindIcon = KIND_ICON;
   protected readonly relativeTime = relativeTime;
 
+  // Nothing to create in Observe impersonation: it's read-only.
   protected readonly quickActions = computed(() =>
-    QUICK_ACTIONS.filter((a) => a.roles.includes(this.session.role())),
+    this.session.readOnly() ? [] : QUICK_ACTIONS.filter((a) => a.roles.includes(this.session.role())),
   );
+
+  /** The accent colour for a role family, e.g. var(--role-agency). */
+  protected roleColor(a: RoleAssignment): string {
+    return `var(--role-${ROLE_META[a.role].family})`;
+  }
+
+  /** Mirrors the mobile tab bar: staff and trustees have Search there. */
+  protected readonly tabBarHasSearch = computed(() => this.session.isStaff() || this.session.role() === 'trustee');
+
+  protected readonly firstName = computed(() => this.session.actor().name.split(' ')[0]);
 
   /** The scheme an owner, tenant or trustee belongs to. */
   protected readonly ownScheme = computed(() => this.scope.findScheme(this.session.membership().schemeIds[0]));
@@ -103,8 +120,7 @@ export class Topbar {
     this.readIds.set(new Set(this.notifications().map((n) => n.id)));
   }
 
-  protected switchContext(id: string): void {
-    this.session.switchMembership(id);
-    this.router.navigateByUrl(this.session.homeRoute());
+  protected switchRole(id: string): void {
+    this.switcher.switchTo(id);
   }
 }

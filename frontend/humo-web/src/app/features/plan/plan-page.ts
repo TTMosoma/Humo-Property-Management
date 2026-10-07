@@ -1,0 +1,110 @@
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute } from '@angular/router';
+import { IonIcon } from '@ionic/angular/standalone';
+import { catchError, map, of } from 'rxjs';
+import { ADD_ONS, AddOnId, CustomerPlan, FEATURE_META, Feature, PlanDataSource, UpgradeRequest, packageById, tierOf } from '../../domain';
+import { FeedbackService } from '../../core/feedback/feedback.service';
+import { pageState } from '../../core/prototype/page-state';
+import { SessionService } from '../../core/session/session.service';
+import { formatDate } from '../../ui/format/money';
+import { relativeTime } from '../../ui/format/relative-time';
+import { PageHeader } from '../../ui/page-header/page-header';
+import { ErrorState } from '../../ui/states/error-state';
+import { Skeleton } from '../../ui/states/skeleton';
+import { StatusPill } from '../../ui/status-pill/status-pill';
+import { STATUS_LABEL, STATUS_TONE, moduleRows } from '../platform/platform-view';
+
+/**
+ * Settings › Plan & features — the customer's own view. It shows what the
+ * agency has and where each feature comes from. Administrators can ask Humo
+ * about more; nobody on the customer side can switch paid features on.
+ */
+@Component({
+  selector: 'app-plan-page',
+  imports: [PageHeader, StatusPill, ErrorState, Skeleton, IonIcon],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './plan-page.html',
+  styleUrl: './plan-page.scss',
+})
+export class PlanPage {
+  private readonly data = inject(PlanDataSource);
+  private readonly feedback = inject(FeedbackService);
+  protected readonly session = inject(SessionService);
+  protected readonly page = pageState();
+
+  /** Arrived from a nudge or "Learn more": e.g. ?feature=governance. */
+  protected readonly focus = toSignal(inject(ActivatedRoute).queryParamMap.pipe(map((p) => p.get('feature') as Feature | null)), { initialValue: null });
+
+  private readonly result = toSignal(
+    this.data.mine(this.session.agency()?.id ?? '').pipe(
+      map((plan) => ({ plan, failed: false })),
+      catchError(() => of({ plan: undefined as CustomerPlan | undefined, failed: true })),
+    ),
+  );
+  protected readonly loading = computed(() => this.page.status() === 'loading' || this.result() === undefined);
+  protected readonly failed = computed(() => this.page.status() === 'error' || !!this.result()?.failed || (!this.loading() && !this.result()?.plan));
+  protected readonly plan = computed(() => this.result()?.plan);
+
+  protected readonly rows = computed(() => {
+    const p = this.plan();
+    return p ? moduleRows(p.entitlements).filter((r) => r.module !== 'platform') : [];
+  });
+  protected readonly focusModule = computed(() => {
+    const f = this.focus();
+    return f ? FEATURE_META[f]?.module : null;
+  });
+
+  protected readonly canRequest = computed(() => this.session.can('Subscription.Request'));
+  protected readonly asking = signal<string | null>(null);
+  protected readonly note = signal('');
+  protected readonly busy = signal(false);
+
+  protected readonly statusLabel = STATUS_LABEL;
+  protected readonly statusTone = STATUS_TONE;
+  protected readonly formatDate = formatDate;
+  protected readonly relativeTime = relativeTime;
+  protected readonly packageName = (id: CustomerPlan['packageId']) => packageById(id).name;
+  protected readonly addOnName = (id: AddOnId) => ADD_ONS.find((a) => a.id === id)?.name ?? id;
+
+  /** How a module could be added: as an add-on, or from a higher package. */
+  protected howToGet(module: string): { addOn?: AddOnId; label: string } {
+    const row = this.rows().find((r) => r.module === module);
+    const missing = row?.features.find((f) => !f.enabled)?.key as Feature | undefined;
+    if (!missing) return { label: '' };
+    const addOn = ADD_ONS.find((a) => a.features.includes(missing));
+    if (addOn) return { addOn: addOn.id, label: `Available as the ${addOn.name} add-on` };
+    const tier = tierOf(missing);
+    return { label: tier ? `Included in ${tier.name}` : '' };
+  }
+
+  protected requestLabel(r: UpgradeRequest): string {
+    return r.addOn ? `${this.addOnName(r.addOn)} add-on` : r.package ? packageById(r.package).name : 'Upgrade';
+  }
+
+  protected ask(module: string): void {
+    this.asking.set(module);
+    this.note.set('');
+  }
+
+  protected send(module: string): void {
+    const how = this.howToGet(module);
+    const p = this.plan();
+    if (!p) return;
+    this.busy.set(true);
+    const feature = this.rows().find((r) => r.module === module)?.features.find((f) => !f.enabled)?.key as Feature | undefined;
+    this.data
+      .requestUpgrade({ agencyId: p.agencyId, addOn: how.addOn, feature, note: this.note().trim() || undefined, source: this.focus() ? 'nudge' : 'plan-page' })
+      .subscribe({
+        next: () => {
+          this.busy.set(false);
+          this.asking.set(null);
+          this.feedback.success(`Sent to ${p.accountManager}, your Humo account manager. Nothing changes until you agree.`);
+        },
+        error: () => {
+          this.busy.set(false);
+          this.feedback.error('Your request didn’t send. Try again.');
+        },
+      });
+  }
+}

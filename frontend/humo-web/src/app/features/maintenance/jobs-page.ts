@@ -28,9 +28,10 @@ const PRIORITY_ORDER: Record<Priority, number> = { urgent: 0, high: 1, normal: 2
  * and move it on. List for scanning and sorting; board for the flow.
  * Reused as a scheme's Maintenance tab (decision D3).
  */
+import { SmartNudge } from '../shared/smart-nudge';
 @Component({
   selector: 'app-jobs-page',
-  imports: [PageHeader, ScopeNotice, ViewTabs, FilterBar, DataTable, CellDef, StatusPill, EmptyState, ErrorState, Skeleton, IonIcon, RouterLink],
+  imports: [SmartNudge, PageHeader, ScopeNotice, ViewTabs, FilterBar, DataTable, CellDef, StatusPill, EmptyState, ErrorState, Skeleton, IonIcon, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './jobs-page.html',
   styleUrl: './jobs-page.scss',
@@ -139,7 +140,7 @@ export class JobsPage {
   protected readonly priorityTone = (r: JobSummary) => PRIORITY_TONE[r.job.priority];
   protected readonly overdue = (r: JobSummary) => isOverdue(r.job);
   protected readonly age = (r: JobSummary) => daysOpen(r.job);
-  protected readonly canLog = computed(() => this.session.isStaff());
+  protected readonly canLog = computed(() => this.session.can('Maintenance.Log'));
 
   protected patch(change: Partial<Record<'view' | 'mode' | 'q' | 'priority' | 'category' | 'scheme', string | null>>): void {
     this.state.update((s) => ({ ...s, ...change }));

@@ -6,6 +6,7 @@ import { catchError, map, of, switchMap } from 'rxjs';
 import { SupplierDataSource, SupplierDocument, docStatus } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { pageState } from '../../core/prototype/page-state';
+import { StepUpService } from '../../core/security/step-up.service';
 import { SessionService } from '../../core/session/session.service';
 import { RandPipe, formatDate, formatRand } from '../../ui/format/money';
 import { KeyFact, RecordHeader } from '../../ui/record/record-header';
@@ -28,6 +29,7 @@ export class SupplierPage {
   private readonly route = inject(ActivatedRoute);
   private readonly data = inject(SupplierDataSource);
   private readonly feedback = inject(FeedbackService);
+  private readonly stepUp = inject(StepUpService);
   protected readonly session = inject(SessionService);
   protected readonly page = pageState();
 
@@ -82,6 +84,19 @@ export class SupplierPage {
       default:
         return { label: 'Valid', tone: 'success' as const, note: d.expires ? `Valid until ${formatDate(d.expires)}` : 'Does not expire' };
     }
+  }
+
+  /**
+   * Bank-detail changes are the classic invoice-fraud route: step-up first, then
+   * payments are held until the new account is confirmed with the bank.
+   */
+  protected changeBank(): void {
+    const s = this.detail()?.supplier;
+    if (!s) return;
+    this.stepUp.guard({ action: 'change-bank-details', detail: `Change the bank account ${s.name} is paid into` }, () => this.data.changeBankDetails(s.id)).subscribe({
+      next: () => this.feedback.success(`Recorded. Payments to ${s.name} are on hold until the new account is confirmed with the bank and a call-back to ${s.contactName}.`),
+      error: () => this.feedback.error('The banking details weren’t changed.'),
+    });
   }
 
   protected request(d: SupplierDocument): void {

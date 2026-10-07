@@ -54,7 +54,9 @@ import { workItemView } from './work-item-view';
 
         @if (w.kind !== 'approval') {
           <div drawerFooter class="footer">
-            @if (w.status === 'open') {
+            @if (!session.can('Work.Manage')) {
+              <span class="muted small">Read-only.</span>
+            } @else if (w.status === 'open') {
               <button type="button" class="btn btn-primary" (click)="complete()">
                 <ion-icon name="checkmark-outline" aria-hidden="true" /> Mark done
               </button>

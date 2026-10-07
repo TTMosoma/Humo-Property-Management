@@ -1,0 +1,93 @@
+<ui-page-header
+  eyebrow="Platform"
+  title="Users & impersonation"
+  subtitle="Find a customer user to help them. Impersonation is for support only: it’s fully recorded, and the customer’s administrators can see every session."
+>
+  <a class="btn btn-ghost" routerLink="/platform/audit" [queryParams]="{ view: 'impersonation' }">
+    <ion-icon name="document-lock-outline" aria-hidden="true" />
+    Impersonation history
+  </a>
+</ui-page-header>
+
+@if (!canImpersonate()) {
+  <div class="notice surface">
+    <ion-icon name="lock-closed-outline" aria-hidden="true" />
+    <span>
+      <strong>You can look people up, but not impersonate them.</strong>
+      Impersonation (System.Impersonate) is granted to named Humo System Administrators individually — not to a role.
+    </span>
+  </div>
+}
+
+<div class="layout">
+  <div class="main">
+    <ui-view-tabs [tabs]="tabs()" [active]="state().view ?? 'customers'" (activeChange)="set('view', $event)" label="User type" />
+    <label class="search">
+      <ion-icon name="search-outline" aria-hidden="true" />
+      <input type="search" placeholder="Name, email or agency…" [value]="state().q ?? ''" (input)="set('q', $any($event.target).value)" aria-label="Search users" />
+    </label>
+
+    @if (failed()) {
+      <ui-error-state (retry)="page.retry()" />
+    } @else if (loading()) {
+      <ui-skeleton [count]="6" />
+    } @else if (!rows().length) {
+      <div class="surface"><ui-empty-state kind="filtered" title="No one matches" message="Try a different name, email or agency." /></div>
+    } @else {
+      <ui-data-table [rows]="rows()" [columns]="columns()" [rowId]="rowId" caption="Users">
+        <ng-template uiCell="person" let-r>
+          <div class="person">
+            <span class="avatar" [class.humo]="r.kind === 'humo'">{{ r.initials }}</span>
+            <span class="p-text">
+              <span class="p-name">
+                {{ r.name }}
+                @if (r.id === session.actor().id) {
+                  <span class="you">You</span>
+                }
+              </span>
+              <span class="p-sub">{{ r.email }}</span>
+            </span>
+          </div>
+        </ng-template>
+        <ng-template uiCell="org" let-r>{{ agencyName(r.memberships[0]?.agencyId ?? null) }}</ng-template>
+        <ng-template uiCell="roles" let-r>
+          <div class="chips">
+            @for (m of r.memberships; track m.id) {
+              <span class="chip" [style.--role-c]="roleColor(m)"><span class="dot" aria-hidden="true"></span>{{ roleLabel(m) }}</span>
+            }
+          </div>
+        </ng-template>
+        <ng-template uiCell="action" let-r>
+          @if (r.kind === 'humo') {
+            @if (authorised(r)) {
+              <ui-status-pill label="Can impersonate" tone="warning" />
+            }
+          } @else if (canImpersonate()) {
+            <button type="button" class="btn btn-secondary btn-sm view-as" (click)="$event.stopPropagation(); impersonate(r)">
+              <ion-icon name="eye-outline" aria-hidden="true" /> View as…
+            </button>
+          }
+        </ng-template>
+      </ui-data-table>
+      @if (state().view === 'team') {
+        <p class="foot">Humo roles are granted only by Humo System Administrators and never appear in customer settings.</p>
+      }
+    }
+  </div>
+
+  <aside class="side surface">
+    <h2>Recent impersonation</h2>
+    <ul>
+      @for (e of recent(); track e.id) {
+        <li>
+          <span class="r-line"><strong>{{ e.actor.name }}</strong> as {{ e.actingAs?.name }}</span>
+          <span class="r-sub">
+            {{ e.impersonation?.mode === 'act' ? 'Act' : 'Observe' }} · {{ e.impersonation ? reasons[e.impersonation.reason] : '' }} · {{ relativeTime(e.at) }}
+          </span>
+        </li>
+      } @empty {
+        <li class="r-sub">No sessions yet.</li>
+      }
+    </ul>
+  </aside>
+</div>

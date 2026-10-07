@@ -1,0 +1,96 @@
+@let actor = session.actor();
+
+<div class="head">
+  <span class="seal" [class.ok]="phase() === 'verified'" [class.bad]="phase() === 'failed'" aria-hidden="true">
+    <ion-icon [name]="phase() === 'verified' ? 'checkmark-outline' : phase() === 'failed' ? 'alert-outline' : 'finger-print-outline'" />
+  </span>
+  <div>
+    <h2 class="title">
+      @switch (phase()) {
+        @case ('verified') { Verified }
+        @case ('failed') { We couldn’t verify you }
+        @default { Additional verification required }
+      }
+    </h2>
+    <p class="lede">
+      @switch (phase()) {
+        @case ('verified') { Thanks, {{ actor.name.split(' ')[0] }}. Continuing… }
+        @case ('failed') { Nothing was changed. Try again, or use your other method. }
+        @default { This action requires you to verify your identity. }
+      }
+    </p>
+  </div>
+</div>
+
+<div class="action">
+  <span class="label-caps">{{ actionLabel }}</span>
+  <span class="action-detail">{{ request.detail }}</span>
+  @if (session.isImpersonating()) {
+    <span class="imp-note">
+      <ion-icon name="eye-outline" aria-hidden="true" />
+      You’re verifying as <strong>{{ actor.name }}</strong>, not as {{ session.persona().name }}.
+    </span>
+  }
+</div>
+
+@switch (phase()) {
+  @case ('choose') {
+    @if (methods().length) {
+      <div class="methods">
+        @for (m of methods(); track m.method; let first = $first) {
+          <button type="button" class="method" [class.primary]="first" (click)="start(m.method)">
+            <span class="m-icon"><ion-icon [name]="m.method === 'passkey' ? 'finger-print-outline' : 'phone-portrait-outline'" aria-hidden="true" /></span>
+            <span class="m-text">
+              <span class="m-name">{{ m.method === 'passkey' ? 'Use passkey' : 'Approve in Humo Mobile' }}</span>
+              <span class="m-device">{{ m.device }}</span>
+            </span>
+            <ion-icon class="m-go" name="chevron-forward-outline" aria-hidden="true" />
+          </button>
+        }
+      </div>
+    } @else {
+      <div class="none">
+        <p>You don’t have a passkey or Humo Mobile set up yet, so Humo can’t verify you for this action.</p>
+        <button type="button" class="btn btn-primary" (click)="setUp()">Set up a passkey</button>
+      </div>
+    }
+  }
+  @case ('waiting') {
+    <div class="waiting" role="status">
+      <span class="spinner" aria-hidden="true"></span>
+      @if (method() === 'passkey') {
+        <div>
+          <div class="w-title">Waiting for your passkey…</div>
+          <div class="w-sub">Follow the prompt from {{ deviceFor('passkey') }} — fingerprint, face or PIN.</div>
+        </div>
+      } @else {
+        <div>
+          <div class="w-title">Check your phone</div>
+          <div class="w-sub">We sent a request to {{ deviceFor('mobile').replace('Humo Mobile · ', '') }}. Open Humo Mobile and tap the number below.</div>
+          <div class="match" aria-label="Number to match">{{ matchNumber }}</div>
+        </div>
+      }
+    </div>
+  }
+  @case ('verified') {
+    <div class="waiting ok" role="status">
+      <ion-icon name="shield-checkmark-outline" aria-hidden="true" />
+      <div class="w-sub">Verified with {{ deviceFor(method()!) }}. You won’t be asked again for 5 minutes.</div>
+    </div>
+  }
+  @case ('failed') {
+    <div class="methods">
+      <button type="button" class="btn btn-primary" (click)="start(method()!)">Try again</button>
+      @if (methods().length > 1) {
+        <button type="button" class="btn btn-secondary" (click)="retry()">Use another method</button>
+      }
+    </div>
+  }
+}
+
+<div class="foot">
+  <span class="why">Humo asks again for actions that move money, change access or expose personal data.</span>
+  @if (phase() !== 'verified') {
+    <button type="button" class="btn btn-ghost" (click)="cancel()">Cancel</button>
+  }
+</div>

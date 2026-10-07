@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, map, switchMap, tap } from 'rxjs';
+import { Observable, map, switchMap } from 'rxjs';
 import {
   AccountDataSource,
   AccountDetail,
@@ -18,6 +18,7 @@ import {
 import { SessionService } from '../../core/session/session.service';
 import { MockDb } from '../db/mock-db';
 import { mockResponder } from '../mock-latency';
+import { CommandSpec, MockGateway } from '../server/mock-gateway';
 
 /** Re-runs a query whenever the mock database changes, with simulated latency. */
 function live<T>(db: MockDb, respond: <V>(v: V) => Observable<V>, query: () => T): Observable<T> {
@@ -89,6 +90,7 @@ export class InMemoryAccountDataSource extends AccountDataSource {
 export class InMemoryReceiptDataSource extends ReceiptDataSource {
   private readonly db = inject(MockDb);
   private readonly session = inject(SessionService);
+  private readonly gateway = inject(MockGateway);
   private readonly respond = mockResponder();
 
   list(schemeIds: string[]): Observable<ReceiptView[]> {
@@ -104,23 +106,27 @@ export class InMemoryReceiptDataSource extends ReceiptDataSource {
   }
 
   allocate(receiptId: string, allocations: { accountId: string; amount: number }[], rememberPayer: boolean): Observable<void> {
-    return this.command(() => this.db.allocate(receiptId, allocations, rememberPayer, this.session.persona().name));
+    const amount = allocations.reduce((n, a) => n + a.amount, 0);
+    const to = allocations.map((a) => this.db.accounts.get(a.accountId)?.accountNo ?? a.accountId).join(', ');
+    return this.command({ action: `Allocated receipt to ${to}`, amount, ...this.receiptSpec(receiptId) }, () => this.db.allocate(receiptId, allocations, rememberPayer, this.session.persona().name));
   }
 
   unallocate(receiptId: string): Observable<void> {
-    return this.command(() => this.db.unallocate(receiptId));
+    return this.command({ action: 'Reversed receipt allocation', ...this.receiptSpec(receiptId) }, () => this.db.unallocate(receiptId));
   }
 
   moveToSuspense(receiptId: string): Observable<void> {
-    return this.command(() => this.db.moveToSuspense(receiptId, this.session.persona().name));
+    return this.command({ action: 'Moved receipt to suspense', ...this.receiptSpec(receiptId) }, () => this.db.moveToSuspense(receiptId, this.session.persona().name));
   }
 
-  /** Commands apply only after the simulated request succeeds. */
-  private command(apply: () => void): Observable<void> {
-    return this.respond(null).pipe(
-      tap(() => apply()),
-      map(() => undefined),
-    );
+  /** Commands apply only after the simulated request succeeds (and the API's policy allows them). */
+  private command(spec: CommandSpec, apply: () => void): Observable<void> {
+    return this.gateway.command(spec, apply).pipe(map(() => undefined));
+  }
+
+  private receiptSpec(receiptId: string): Omit<CommandSpec, 'action'> {
+    const r = this.db.receipts.find((x) => x.id === receiptId);
+    return { resource: 'Receipt', resourceId: receiptId, amount: r?.amount, schemeId: r?.schemeId, permission: 'Receipts.Allocate' };
   }
 }
 
@@ -128,6 +134,7 @@ export class InMemoryReceiptDataSource extends ReceiptDataSource {
 export class InMemoryTimelineDataSource extends TimelineDataSource {
   private readonly db = inject(MockDb);
   private readonly session = inject(SessionService);
+  private readonly gateway = inject(MockGateway);
   private readonly respond = mockResponder();
 
   forUnit(unitId: string): Observable<TimelineEvent[]> {
@@ -139,9 +146,8 @@ export class InMemoryTimelineDataSource extends TimelineDataSource {
   }
 
   addNote(note: Omit<Note, 'id' | 'at' | 'author'>): Observable<void> {
-    return this.respond(null).pipe(
-      tap(() => this.db.addNote(note, this.session.persona().name)),
-      map(() => undefined),
-    );
+    return this.gateway
+      .command({ action: 'Logged a note', resource: 'Note', permission: 'Notes.Add' }, () => this.db.addNote(note, this.session.persona().name))
+      .pipe(map(() => undefined));
   }
 }

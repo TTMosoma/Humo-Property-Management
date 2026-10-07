@@ -2,8 +2,8 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Route, Router, RouterLink } from '@angular/router';
 import { Location } from '@angular/common';
-import { map } from 'rxjs';
-import { ROLE_LABELS, Role } from '../../domain';
+import { FEATURE_META, Feature, ROLE_LABELS, Role } from '../../domain';
+import { RoleSwitcher } from '../../core/session/role-switcher';
 import { SessionService } from '../../core/session/session.service';
 import { EmptyState } from '../../ui/states/empty-state';
 
@@ -20,11 +20,11 @@ import { EmptyState } from '../../ui/states/empty-state';
     <div class="surface">
       <ui-empty-state
         illustration="no-access"
-        title="You don’t have access to this page"
+        [title]="planFeature() ? 'Not included in your plan' : 'You don’t have access to this page'"
         [message]="message()"
       >
         @if (alternative(); as m) {
-          <button type="button" class="btn btn-primary" (click)="switchTo(m.id)">Switch to {{ m.label }}</button>
+          <button type="button" class="btn btn-primary" (click)="switchTo(m.id)">Switch role to {{ roleLabels[m.role] }}</button>
         }
         <button type="button" class="btn btn-secondary" (click)="back()">Go back</button>
         <a class="btn btn-ghost" [routerLink]="session.homeRoute()">Go to home</a>
@@ -34,28 +34,37 @@ import { EmptyState } from '../../ui/states/empty-state';
 })
 export class NoAccessPage {
   protected readonly session = inject(SessionService);
+  private readonly switcher = inject(RoleSwitcher);
   private readonly router = inject(Router);
+  protected readonly roleLabels = ROLE_LABELS;
   private readonly location = inject(Location);
-  private readonly from = toSignal(inject(ActivatedRoute).queryParamMap.pipe(map((p) => p.get('from') ?? '')), {
-    initialValue: '',
-  });
+  private readonly params = toSignal(inject(ActivatedRoute).queryParamMap);
+  private readonly from = computed(() => this.params()?.get('from') ?? '');
+  protected readonly planFeature = computed(() => this.params()?.get('feature') as Feature | null);
 
   protected readonly message = computed(() => {
+    const feature = this.planFeature();
+    if (feature) {
+      return `${FEATURE_META[feature]?.label ?? feature} isn’t switched on for ${this.session.agency()?.shortName ?? 'your agency'}. Your agency administrator can ask Humo about it from Settings › Plan & features.`;
+    }
     const role = ROLE_LABELS[this.session.role()];
-    const admin = this.session.isResident() || this.session.role() === 'trustee' ? 'your managing agent' : 'your agency administrator';
+    const admin = this.session.isHumo()
+      ? 'a Humo System Administrator'
+      : this.session.isResident() || this.session.role() === 'trustee'
+        ? 'your managing agent'
+        : 'your agency administrator';
     return `As ${role}, this page isn’t available to you. If you need it for your work, ask ${admin} to change your access.`;
   });
 
   /** Another membership of the same person that is allowed to open the page. */
   protected readonly alternative = computed(() => {
     const allowed = this.rolesFor(this.from());
-    if (!allowed) return null;
+    if (!allowed || this.planFeature()) return null;
     return this.session.memberships().find((m) => m.id !== this.session.membership().id && allowed.includes(m.role)) ?? null;
   });
 
   protected switchTo(id: string): void {
-    this.session.switchMembership(id);
-    this.router.navigateByUrl(this.from() || this.session.homeRoute());
+    this.switcher.switchTo(id, this.from() || undefined);
   }
 
   protected back(): void {

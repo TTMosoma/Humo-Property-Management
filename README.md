@@ -78,13 +78,48 @@ All data is generated in `mock/db/` (1 284 units, owners, tenants, trustees, six
 2. Work the job through **Supplier is on site → Record completion → Confirmed fixed → Capture invoice**. The invoice is matched to the approved quote automatically.
 3. As **Finance (Priya)**, open **Finance › Payables › Ready to pay**, select the invoice and choose **Create payment batch**.
 4. As **Trustee (Sipho)**, approve the batch in **Approvals**. This is the second authoriser.
-5. As Priya, choose **Release EFT batch**. The job moves to *Paid*, and Johan closes it.
+5. As Priya, choose **Verify and release EFT batch** and confirm with a passkey or Humo Mobile (step-up). The job moves to *Paid*, and Johan closes it.
 
 Other things to try:
 - **MR-1042** (roof): approve it as a trustee in Approvals and the job moves to *Approved — issue work order*.
 - **Log request**: logging a new request takes you through triage, quotes and approval. Quotes up to **R 5 000** can be approved under delegated authority (an assumption to confirm).
 - **Tenant (Ruan)**: answer “Was it fixed?” for MR-1033, then use **Report a problem**. The request lands in the team’s triage queue.
 - **Suppliers**: Bright Spark’s expired liability insurance is flagged, and a work order for them needs an explicit override.
+
+## Demo: identity, roles and impersonation
+
+The model is described in `docs/03-identity-access.md`.
+
+1. In the prototype panel, sign in as **Sarah Jacobs**: one identity with four roles. Click her name in the top bar and choose **Switch role → Finance User**.
+   - Navigation, queues and scope change.
+   - A strip confirms "You're now working as Finance User"; she is still signed in as Sarah.
+2. Switch to **Agency Administrator**, then open **Settings › Users & access**.
+   - Give **Johan** the Trustee role for The Willows. This asks for step-up; choose **Approve in Humo Mobile** to see number matching.
+   - Open Sarah's own row: she can't change her own roles.
+3. Open **Settings › Roles & permissions**: the access model, the role catalogue, the permission matrix and the plan.
+4. Open **Settings › Audit log**: the role switches, the grant and the step-up are recorded. **Humo access** lists every time Humo staff impersonated someone in the agency.
+5. Sign in as **Terry Mosoma** (Humo System Administrator). Open **Platform › Users & impersonation**, then **View as… Sarah Jacobs**.
+   - Choose **Portfolio Manager**, **Observe** and a reason, tick the acknowledgement, and start.
+   - The orange banner and frame make impersonation unmistakable, and actions disappear.
+   - **Exit impersonation** returns you to Terry.
+6. Impersonate **Priya** in **Act** mode. This needs a case reference, a note and a passkey. Approve PB-0412 in **Approvals**, exit, then open **Platform › Audit log › Impersonation**: it shows *Terry Mosoma as Priya Naidoo · Approved payment batch · R 58 940.20*.
+7. Sign in as **Lerato** (Humo Support). She can find users but has no **View as…**, because impersonation is an individual grant.
+
+## Demo: the Humo platform (packages, health, nudges)
+
+The model is described in `docs/04-platform-commercial.md`.
+
+1. Sign in as **Nomsa Khoza** (Humo Executive). **Business overview** shows MRR, ARR, customers, schemes, units, active users and retention, plus the revenue, growth, health, adoption and expansion panels. It is read-only.
+2. Sign in as **Dumisani Ngcobo** (Humo Account Manager). **My accounts** lists customer requests and slipping accounts, then conversations worth having. Open **Tshikrand**:
+   - health 87, with each signal explained
+   - adoption by module
+   - Governance **HIGH** (8 trustees, 14 meetings a year) and Advanced Reporting **MEDIUM**
+3. As **Sarah** (Portfolio Manager, Acacia), open **Tasks**. A Smart Nudge suggests Governance, based on Acacia's own usage. Choose **Explore Governance**, switch role to **Agency Administrator**, and choose **Ask Humo about Governance**.
+4. Back as Dumisani, open **Customers › Acacia › Subscription & features › Manage features**. Give a reason, add the **Governance** add-on, and verify.
+5. As Sarah again: **Governance** now appears in the navigation, and the nudge has retired.
+6. Sign in as **Lerato** (Humo Support): no MRR, no subscription controls, no executive view.
+
+To see a nudge again, use **Prototype › Reset Smart Nudges**. Nudges follow their frequency rules, so a nudge that was shown once won't reappear for 30 days.
 
 ## Progress
 
@@ -94,6 +129,8 @@ Build order follows workflow slices (see `docs/02-ux-review.md` §4.2).
 - [x] Checkpoint 2 — Foundations: brand, Attention model (Tasks, Approvals, live badges), scheme scope and pinned schemes, multi-role memberships, record page, data table, preview drawer, typed empty/error/loading states, schemes list and scheme workspace
 - [x] Checkpoint 3 — Slice A: Owner calls about their balance (Scheme → Unit → Owner → Account → Statement, receipts, people, owner portal account)
 - [x] Checkpoint 4 — Slice B: Fix the leaking geyser (Job → Quote → Approval → Work order → Verification → Invoice → Payment, suppliers, resident requests)
+- [x] Identity & access — one identity with many roles, Switch role, permissions, scope by assignment, plan entitlements, step-up (passkey / Humo Mobile), impersonation (Observe/Act) and the audit log
+- [x] Humo platform layer — internal roles, packages/add-ons/overrides → effective entitlements, Account Health, opportunities, Smart Nudges, Executive dashboard, Account Manager home, customer 360
 - [ ] Checkpoint 5 — Slice C: Run the trustee meeting (Meeting → Resolution → Action → Completion)
 - [ ] Checkpoint 6 — Credit control & billing run
 - [ ] Checkpoint 7 — Dashboard, Compliance & Documents

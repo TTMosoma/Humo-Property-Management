@@ -79,6 +79,18 @@ export class MobileTabBar {
         more,
       ];
     }
+    if (role === 'operations') {
+      return [
+        { id: 'tasks', label: 'Tasks', icon: 'checkmark-done-outline', route: '/tasks', badge: 'tasks' },
+        { id: 'jobs', label: 'Jobs', icon: 'construct-outline', route: '/maintenance', badge: 'jobs' },
+        { id: 'search', label: 'Search', icon: 'search-outline', route: null },
+        { id: 'suppliers', label: 'Suppliers', icon: 'people-outline', route: '/suppliers' },
+        more,
+      ];
+    }
+    if (role === 'supplier') {
+      return [{ id: 'orders', label: 'Work orders', icon: 'hammer-outline', route: '/supplier' }, more];
+    }
     return [
       { id: 'tasks', label: 'Tasks', icon: 'checkmark-done-outline', route: '/tasks', badge: 'tasks' },
       { id: 'approvals', label: 'Approvals', icon: 'shield-checkmark-outline', route: '/approvals', badge: 'approvals' },

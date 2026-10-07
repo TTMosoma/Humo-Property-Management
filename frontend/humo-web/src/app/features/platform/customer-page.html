@@ -1,0 +1,208 @@
+@if (page.status() === 'loading' || result() === undefined) {
+  <ui-skeleton variant="tiles" [count]="4" />
+} @else if (page.status() === 'error' || result() === null) {
+  <div class="surface"><ui-error-state title="We couldn’t load this customer" (retry)="page.retry()" /></div>
+} @else if (result() === false) {
+  <div class="surface"><ui-empty-state illustration="not-found" title="We couldn’t find that customer"><a class="btn btn-primary" routerLink="/platform/customers">All customers</a></ui-empty-state></div>
+} @else {
+  @let cu = c()!;
+  <header class="head surface">
+    <ui-score-ring [score]="cu.health.score" label="Account health" />
+    <div class="h-text">
+      <div class="label-caps">Customer · {{ cu.city }}, {{ cu.province }}</div>
+      <h1>{{ cu.name }}</h1>
+      <div class="facts">
+        <span class="pkg">{{ packageName(cu.subscription.packageId) }}</span>
+        @for (a of cu.subscription.addOns; track a.addOnId) {
+          <span class="addon">+ {{ addOnName(a.addOnId) }}</span>
+        }
+        <ui-status-pill [label]="statusLabel[cu.subscription.status]" [tone]="statusTone[cu.subscription.status]" />
+        <ui-status-pill [label]="bandLabel[cu.health.band]" [tone]="bandTone[cu.health.band]" />
+      </div>
+      <div class="meta">
+        Account manager <strong>{{ cu.accountManager }}</strong> · customer since {{ formatDate(cu.customerSince) }} · renews {{ formatDate(cu.subscription.renewsAt) }}
+        · {{ cu.snapshot.schemes }} schemes · {{ cu.snapshot.units }} units
+        @if (revenue()) {
+          · <strong>{{ rand(cu.subscription.mrr) }}</strong> MRR
+        }
+      </div>
+    </div>
+    <div class="h-actions">
+      @if (session.can('Platform.Customers.Users')) {
+        <a class="btn btn-secondary btn-sm" routerLink="/platform/users" [queryParams]="{ q: cu.name }"><ion-icon name="people-outline" aria-hidden="true" /> Users</a>
+      }
+      @if (session.can('Platform.Audit')) {
+        <a class="btn btn-ghost btn-sm" routerLink="/platform/audit" [queryParams]="{ agency: cu.agencyId }"><ion-icon name="document-lock-outline" aria-hidden="true" /> Activity</a>
+      }
+    </div>
+  </header>
+
+  <ui-view-tabs [tabs]="tabs()" [active]="state().view ?? 'overview'" (activeChange)="setView($event)" label="Customer sections" />
+
+  @if (state().view !== 'subscription') {
+    <div class="grid">
+      <!-- Health, explained -->
+      <section class="surface panel">
+        <header class="p-head">
+          <div>
+            <h2>Account health</h2>
+            <p class="muted">How the score is made up — each signal from their usage over the last 30 days.</p>
+          </div>
+          <div class="trend">
+            <ui-sparkline [values]="cu.health.history" label="Health, last 12 weeks" />
+            <span class="muted small">12 weeks</span>
+          </div>
+        </header>
+        <table class="signals">
+          <caption class="sr-only">Health signals</caption>
+          <thead>
+            <tr><th scope="col">Signal</th><th scope="col">Score</th><th scope="col">Weight</th><th scope="col">Why</th></tr>
+          </thead>
+          <tbody>
+            @for (s of cu.health.signals; track s.key) {
+              <tr>
+                <th scope="row">{{ s.label }}</th>
+                <td>
+                  <span class="mini-bar" [attr.data-low]="s.score < 50"><span [style.width.%]="s.score"></span></span>
+                  <span class="num">{{ s.score }}</span>
+                </td>
+                <td class="num muted">{{ (s.weight * 100).toFixed(0) }}%</td>
+                <td class="muted">{{ s.detail }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Adoption -->
+      <section class="surface panel">
+        <h2>Adoption</h2>
+        <p class="muted">Activity in each area against what an agency of this size usually does.</p>
+        <ul class="adoption">
+          @for (m of adoption(); track m.module) {
+            <li [class.off]="!m.enabled">
+              <span class="a-name">{{ m.label }}</span>
+              <span class="a-bar"><span [style.width.%]="m.adoption"></span></span>
+              <span class="a-val">
+                @if (m.enabled) {
+                  {{ m.adoption }}%
+                } @else {
+                  <span class="not-on" [title]="'Related activity without the feature: ' + m.adoption + '%'">Not enabled · {{ m.adoption }}%</span>
+                }
+              </span>
+            </li>
+          }
+        </ul>
+        <p class="hint">For areas that aren’t enabled, the bar shows related activity elsewhere in Humo — a sign of demand.</p>
+      </section>
+    </div>
+
+    <!-- Opportunities -->
+    <section class="opps">
+      <h2 class="section-title">Opportunities <span class="muted">— a reason to talk, not a sales script</span></h2>
+      @if (opportunities().length || adoptionHelp().length) {
+        <div class="opp-grid">
+          @for (o of opportunities(); track o.id) {
+            <article class="opp surface" [attr.data-strength]="o.strength">
+              <header>
+                <span class="strength">{{ o.strength }}</span>
+                <h3>{{ o.title }}</h3>
+                @if (revenue() && o.potentialMrr) {
+                  <span class="potential">≈ {{ rand(o.potentialMrr) }}/mo</span>
+                }
+              </header>
+              <ul class="reasons">
+                @for (r of o.reasons; track r) {
+                  <li>{{ r }}</li>
+                }
+              </ul>
+              <p class="talk"><ion-icon name="chatbubble-ellipses-outline" aria-hidden="true" /> {{ talkingPoint(o, cu) }}</p>
+            </article>
+          }
+          @for (o of adoptionHelp(); track o.id) {
+            <article class="opp surface adoption-help">
+              <header>
+                <span class="strength">Customer success</span>
+                <h3>{{ o.title }}</h3>
+              </header>
+              <ul class="reasons">
+                @for (r of o.reasons; track r) {
+                  <li>{{ r }}</li>
+                }
+              </ul>
+              <p class="talk"><ion-icon name="school-outline" aria-hidden="true" /> They already pay for this. Offer a short training session.</p>
+            </article>
+          }
+        </div>
+      } @else {
+        <div class="surface"><ui-empty-state kind="done" title="Nothing to raise right now" message="They’re using what they have, and nothing suggests they need more." /></div>
+      }
+
+      @if (cu.requests.length) {
+        <h2 class="section-title">Asked by the customer</h2>
+        <ul class="requests surface">
+          @for (r of cu.requests; track r.id) {
+            <li>
+              <ion-icon name="hand-right-outline" aria-hidden="true" />
+              <span class="r-text">
+                <strong>{{ requestLabel(r) }}</strong> · {{ r.requestedBy }} · {{ relativeTime(r.at) }} · via {{ r.source === 'nudge' ? 'a Smart Nudge' : 'Plan & features' }}
+                @if (r.note) {
+                  <span class="r-note">“{{ r.note }}”</span>
+                }
+              </span>
+              <ui-status-pill [label]="r.status === 'new' ? 'New' : r.status === 'in-progress' ? 'In progress' : r.status === 'done' ? 'Done' : 'Declined'" [tone]="r.status === 'new' ? 'info' : r.status === 'done' ? 'success' : 'neutral'" />
+              @if (canWorkRequests() && r.status !== 'done') {
+                <button type="button" class="btn btn-ghost btn-sm" (click)="setRequest(r, r.status === 'new' ? 'in-progress' : 'done')">{{ r.status === 'new' ? 'Start' : 'Mark done' }}</button>
+              }
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  } @else {
+    <!-- Subscription & effective entitlements -->
+    <div class="sub-head surface">
+      <div>
+        <div class="label-caps">Subscription</div>
+        <h2>{{ packageName(cu.subscription.packageId) }}</h2>
+        <div class="muted small">
+          {{ statusLabel[cu.subscription.status] }} · started {{ formatDate(cu.subscription.startedAt, true) }} · renews {{ formatDate(cu.subscription.renewsAt, true) }} · {{ cu.subscription.seats }} seats
+          @if (revenue()) {
+            · {{ rand(cu.subscription.mrr) }} / month
+          }
+        </div>
+      </div>
+      @if (canManage()) {
+        <button type="button" class="btn btn-primary" (click)="manage()" [disabled]="!ownAccount()" [title]="ownAccount() ? '' : 'Only the account’s own Account Manager or a System Administrator can change it'">
+          <ion-icon name="options-outline" aria-hidden="true" /> Manage features
+        </button>
+      }
+    </div>
+
+    <div class="modules">
+      @for (row of modules(); track row.module) {
+        <details class="module surface" [class.on]="row.on">
+          <summary>
+            <span class="m-state" [class.on]="row.on">{{ row.on ? 'ON' : 'OFF' }}</span>
+            <span class="m-name">{{ row.label }}</span>
+            <span class="m-source">{{ row.on ? row.source : 'Not included' }}{{ row.partial ? ' · extras available' : '' }}</span>
+            <ion-icon class="chev" name="chevron-down-outline" aria-hidden="true" />
+          </summary>
+          <ul>
+            @for (f of row.features; track f.key) {
+              <li [class.off]="!f.enabled">
+                <ion-icon [name]="f.enabled ? 'checkmark-circle' : 'remove-circle-outline'" aria-hidden="true" />
+                <span class="f-name">{{ f.label }}</span>
+                <span class="f-src" [attr.data-kind]="f.sourceKind">{{ f.source }}</span>
+              </li>
+            }
+          </ul>
+        </details>
+      }
+    </div>
+    <p class="hint">
+      The app only ever asks “is this feature on?” — never which package a customer is on. Package, add-ons and overrides combine into these effective entitlements,
+      which the API checks on every request.
+    </p>
+  }
+}

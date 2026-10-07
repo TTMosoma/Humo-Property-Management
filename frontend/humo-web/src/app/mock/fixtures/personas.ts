@@ -1,16 +1,79 @@
-import { Persona } from '../../domain';
+import { Identity } from '../../domain';
 
 const KC = 'kingfisher-court';
+const JOHAN_SCHEMES = [
+  KC,
+  'the-willows',
+  'rosebank-terraces',
+  'midrand-crossing',
+  'northcliff-view',
+  'craighall-mews',
+  'lonehill-village',
+  'morningside-manor',
+];
 
-/** One persona per role (plus multi-role people), so every experience can be reviewed. */
-export const PERSONAS: Persona[] = [
+/**
+ * Humo identities: one per human. Each holds one or more role assignments.
+ * `demo: true` identities appear in the prototype toolbar's "Sign in as" list;
+ * the rest exist so Users & access and impersonation have a realistic directory.
+ */
+export const PERSONAS: Identity[] = [
+  // ---------------- Humo (internal) ----------------
+  {
+    id: 'p-terry',
+    name: 'Terry Mosoma',
+    initials: 'TM',
+    email: 'terry@humo.example',
+    kind: 'humo',
+    demo: true,
+    memberships: [
+      {
+        id: 'm-terry',
+        role: 'system-admin',
+        agencyId: null,
+        schemeIds: [],
+        label: 'Platform operations · impersonation authorised',
+        grants: ['System.Impersonate'],
+        grantedBy: 'Humo founders',
+        grantedAt: '2026-01-12T09:00:00+02:00',
+      },
+    ],
+  },
   {
     id: 'p-lerato',
     name: 'Lerato Dube',
     initials: 'LD',
     email: 'lerato.dube@humo.example',
+    kind: 'humo',
+    demo: true,
     memberships: [
-      { id: 'm-lerato', role: 'system-admin', agencyId: null, schemeIds: [], label: 'Humo platform operations' },
+      { id: 'm-lerato', role: 'humo-support', agencyId: null, schemeIds: [], label: 'Customer support', grantedBy: 'Terry Mosoma', grantedAt: '2026-03-02T09:00:00+02:00' },
+    ],
+  },
+
+  // ---------------- Acacia Managing Agents ----------------
+  {
+    // One identity, four roles — the reference case for role switching.
+    id: 'p-sarah',
+    name: 'Sarah Jacobs',
+    initials: 'SJ',
+    email: 'sarah.jacobs@acacia-ma.example',
+    kind: 'customer',
+    staffId: 'staff-sarah',
+    demo: true,
+    memberships: [
+      {
+        id: 'm-sarah-pm',
+        role: 'portfolio-manager',
+        agencyId: 'acacia',
+        schemeIds: ['protea-gardens', 'parkhurst-lofts', 'greenstone-commons'],
+        label: 'Protea Gardens, Parkhurst Lofts, Greenstone Commons',
+        grantedBy: 'Thandeka Mokoena',
+        grantedAt: '2025-08-01T09:00:00+02:00',
+      },
+      { id: 'm-sarah-finance', role: 'finance', agencyId: 'acacia', schemeIds: [], label: 'All schemes', grantedBy: 'Thandeka Mokoena', grantedAt: '2025-08-01T09:00:00+02:00' },
+      { id: 'm-sarah-admin', role: 'agency-admin', agencyId: 'acacia', schemeIds: [], label: 'Acacia Managing Agents', grantedBy: 'Thandeka Mokoena', grantedAt: '2026-02-14T09:00:00+02:00' },
+      { id: 'm-sarah-trustee', role: 'trustee', agencyId: 'acacia', schemeIds: [KC], label: 'Kingfisher Court', grantedBy: 'Thandeka Mokoena', grantedAt: '2026-04-20T09:00:00+02:00' },
     ],
   },
   {
@@ -18,9 +81,11 @@ export const PERSONAS: Persona[] = [
     name: 'Thandeka Mokoena',
     initials: 'TM',
     email: 'thandeka@acacia-ma.example',
+    kind: 'customer',
     staffId: 'staff-thandeka',
+    demo: true,
     memberships: [
-      { id: 'm-thandeka', role: 'agency-admin', agencyId: 'acacia', schemeIds: [], label: 'Director · Acacia Managing Agents' },
+      { id: 'm-thandeka', role: 'agency-admin', agencyId: 'acacia', schemeIds: [], label: 'Director · Acacia Managing Agents', grantedBy: 'Humo onboarding', grantedAt: '2025-06-01T09:00:00+02:00' },
     ],
   },
   {
@@ -28,24 +93,11 @@ export const PERSONAS: Persona[] = [
     name: 'Johan van der Merwe',
     initials: 'JM',
     email: 'johan@acacia-ma.example',
+    kind: 'customer',
     staffId: 'staff-johan',
+    demo: true,
     memberships: [
-      {
-        id: 'm-johan',
-        role: 'portfolio-manager',
-        agencyId: 'acacia',
-        schemeIds: [
-          KC,
-          'the-willows',
-          'rosebank-terraces',
-          'midrand-crossing',
-          'northcliff-view',
-          'craighall-mews',
-          'lonehill-village',
-          'morningside-manor',
-        ],
-        label: 'Portfolio Manager · 8 schemes',
-      },
+      { id: 'm-johan', role: 'portfolio-manager', agencyId: 'acacia', schemeIds: JOHAN_SCHEMES, label: '8 schemes', grantedBy: 'Thandeka Mokoena', grantedAt: '2025-06-03T09:00:00+02:00' },
     ],
   },
   {
@@ -53,9 +105,23 @@ export const PERSONAS: Persona[] = [
     name: 'Priya Naidoo',
     initials: 'PN',
     email: 'priya@acacia-ma.example',
+    kind: 'customer',
     staffId: 'staff-priya',
+    demo: true,
     memberships: [
-      { id: 'm-priya', role: 'finance', agencyId: 'acacia', schemeIds: [], label: 'Senior Accountant · Acacia Managing Agents' },
+      { id: 'm-priya', role: 'finance', agencyId: 'acacia', schemeIds: [], label: 'Senior Accountant · All schemes', grantedBy: 'Thandeka Mokoena', grantedAt: '2025-06-03T09:00:00+02:00' },
+    ],
+  },
+  {
+    id: 'p-bongani',
+    name: 'Bongani Ndlovu',
+    initials: 'BN',
+    email: 'bongani@acacia-ma.example',
+    kind: 'customer',
+    staffId: 'staff-bongani',
+    demo: true,
+    memberships: [
+      { id: 'm-bongani', role: 'operations', agencyId: 'acacia', schemeIds: JOHAN_SCHEMES, label: 'Maintenance Coordinator · 8 schemes', grantedBy: 'Thandeka Mokoena', grantedAt: '2026-05-11T09:00:00+02:00' },
     ],
   },
   {
@@ -64,10 +130,12 @@ export const PERSONAS: Persona[] = [
     name: 'Sipho Khumalo',
     initials: 'SK',
     email: 'sipho.khumalo@mail.example',
+    kind: 'customer',
     personId: 'per-sipho',
+    demo: true,
     memberships: [
-      { id: 'm-sipho-trustee', role: 'trustee', agencyId: 'acacia', schemeIds: [KC], label: 'Chairperson · Kingfisher Court' },
-      { id: 'm-sipho-owner', role: 'owner', agencyId: 'acacia', schemeIds: [KC], unitLabel: 'Unit 12', label: 'Owner · Unit 12, Kingfisher Court' },
+      { id: 'm-sipho-trustee', role: 'trustee', agencyId: 'acacia', schemeIds: [KC], label: 'Chairperson · Kingfisher Court', grantedBy: 'Johan van der Merwe', grantedAt: '2025-11-20T18:00:00+02:00' },
+      { id: 'm-sipho-owner', role: 'owner', agencyId: 'acacia', schemeIds: [KC], unitLabel: 'Unit 12', label: 'Unit 12, Kingfisher Court', grantedBy: 'Johan van der Merwe', grantedAt: '2025-06-10T09:00:00+02:00' },
     ],
   },
   {
@@ -76,10 +144,12 @@ export const PERSONAS: Persona[] = [
     name: 'Anele Mthembu',
     initials: 'AM',
     email: 'anele.m@mail.example',
+    kind: 'customer',
     personId: 'per-anele',
+    demo: true,
     memberships: [
-      { id: 'm-anele-kc', role: 'owner', agencyId: 'acacia', schemeIds: [KC], unitLabel: 'Unit 42', label: 'Owner · Unit 42, Kingfisher Court' },
-      { id: 'm-anele-de', role: 'owner', agencyId: 'acacia', schemeIds: ['stellenbosch-oaks'], unitLabel: 'Unit 7', label: 'Owner · Unit 7, Die Eike' },
+      { id: 'm-anele-kc', role: 'owner', agencyId: 'acacia', schemeIds: [KC], unitLabel: 'Unit 42', label: 'Unit 42, Kingfisher Court', grantedBy: 'Johan van der Merwe', grantedAt: '2025-06-10T09:00:00+02:00' },
+      { id: 'm-anele-de', role: 'owner', agencyId: 'acacia', schemeIds: ['stellenbosch-oaks'], unitLabel: 'Unit 7', label: 'Unit 7, Die Eike', grantedBy: 'Naledi Sithole', grantedAt: '2025-09-01T09:00:00+02:00' },
     ],
   },
   {
@@ -87,9 +157,115 @@ export const PERSONAS: Persona[] = [
     name: 'Ruan Botha',
     initials: 'RB',
     email: 'ruan.botha@mail.example',
+    kind: 'customer',
     personId: 'per-ruan',
+    demo: true,
     memberships: [
-      { id: 'm-ruan', role: 'tenant', agencyId: 'acacia', schemeIds: [KC], unitLabel: 'Unit 17', label: 'Tenant · Unit 17, Kingfisher Court' },
+      { id: 'm-ruan', role: 'tenant', agencyId: 'acacia', schemeIds: [KC], unitLabel: 'Unit 17', label: 'Unit 17, Kingfisher Court', grantedBy: 'Johan van der Merwe', grantedAt: '2026-02-01T09:00:00+02:00' },
+    ],
+  },
+
+  // ---------------- Directory only (not in the prototype's sign-in list) ----------------
+  {
+    id: 'p-naledi',
+    name: 'Naledi Sithole',
+    initials: 'NS',
+    email: 'naledi@acacia-ma.example',
+    kind: 'customer',
+    staffId: 'staff-naledi',
+    memberships: [
+      {
+        id: 'm-naledi',
+        role: 'portfolio-manager',
+        agencyId: 'acacia',
+        schemeIds: ['jacaranda-heights', 'waterkloof-ridge', 'silverlakes-manor', 'centurion-palms', 'linden-court', 'sea-point-atlantic', 'stellenbosch-oaks', 'durbanville-heights'],
+        label: '8 schemes',
+        grantedBy: 'Thandeka Mokoena',
+        grantedAt: '2025-06-03T09:00:00+02:00',
+      },
+    ],
+  },
+  {
+    id: 'p-kabelo',
+    name: 'Kabelo Molefe',
+    initials: 'KM',
+    email: 'kabelo@acacia-ma.example',
+    kind: 'customer',
+    staffId: 'staff-kabelo',
+    memberships: [
+      {
+        id: 'm-kabelo',
+        role: 'portfolio-manager',
+        agencyId: 'acacia',
+        schemeIds: ['protea-gardens', 'umhlanga-ridge', 'ballito-dunes', 'parkhurst-lofts', 'greenstone-commons', 'benoni-lakeside', 'bedfordview-place', 'kloof-forest'],
+        label: '8 schemes',
+        grantedBy: 'Thandeka Mokoena',
+        grantedAt: '2025-06-03T09:00:00+02:00',
+      },
+    ],
+  },
+  {
+    id: 'p-zanele',
+    name: 'Zanele Dlamini',
+    initials: 'ZD',
+    email: 'zanele@acacia-ma.example',
+    kind: 'customer',
+    staffId: 'staff-zanele',
+    memberships: [
+      { id: 'm-zanele', role: 'finance', agencyId: 'acacia', schemeIds: [], label: 'Credit Controller · All schemes', grantedBy: 'Thandeka Mokoena', grantedAt: '2025-07-15T09:00:00+02:00' },
+    ],
+  },
+  {
+    id: 'p-mpho',
+    name: 'Mpho Sebe',
+    initials: 'MS',
+    email: 'mpho.sebe@mail.example',
+    kind: 'customer',
+    memberships: [
+      { id: 'm-mpho', role: 'trustee', agencyId: 'acacia', schemeIds: ['the-willows'], label: 'Trustee · The Willows', grantedBy: 'Johan van der Merwe', grantedAt: '2026-03-18T18:00:00+02:00' },
+    ],
+  },
+  {
+    id: 'p-rand-plumbing',
+    name: 'Kevin Pillay',
+    initials: 'KP',
+    email: 'kevin@randplumbing.example',
+    kind: 'customer',
+    memberships: [
+      { id: 'm-kevin', role: 'supplier', agencyId: 'acacia', schemeIds: [], label: 'Rand Plumbing & Geysers', grantedBy: 'Thandeka Mokoena', grantedAt: '2026-06-02T09:00:00+02:00' },
+    ],
+  },
+  {
+    id: 'p-annette',
+    name: 'Annette Visser',
+    initials: 'AV',
+    email: 'annette@fynbos-pa.example',
+    kind: 'customer',
+    memberships: [
+      { id: 'm-annette', role: 'agency-admin', agencyId: 'fynbos', schemeIds: [], label: 'Principal · Fynbos Property Admin', grantedBy: 'Humo onboarding', grantedAt: '2026-01-20T09:00:00+02:00' },
+    ],
+  },
+  {
+    id: 'p-dumisani',
+    name: 'Dumisani Ngcobo',
+    initials: 'DN',
+    email: 'dumisani@humo.example',
+    kind: 'humo',
+    demo: true,
+    memberships: [
+      { id: 'm-dumisani', role: 'humo-account-manager', agencyId: null, schemeIds: [], label: 'Gauteng & KZN accounts', grantedBy: 'Terry Mosoma', grantedAt: '2026-02-02T09:00:00+02:00' },
+    ],
+  },
+  {
+    id: 'p-nomsa',
+    name: 'Nomsa Khoza',
+    initials: 'NK',
+    email: 'nomsa@humo.example',
+    kind: 'humo',
+    demo: true,
+    memberships: [
+      { id: 'm-nomsa', role: 'humo-executive', agencyId: null, schemeIds: [], label: 'Chief Operating Officer', grantedBy: 'Terry Mosoma', grantedAt: '2026-01-12T09:00:00+02:00' },
+      { id: 'm-nomsa-admin', role: 'system-admin', agencyId: null, schemeIds: [], label: 'Platform operations', grantedBy: 'Terry Mosoma', grantedAt: '2026-01-12T09:00:00+02:00' },
     ],
   },
 ];

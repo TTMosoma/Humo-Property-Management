@@ -6,7 +6,13 @@
   <div class="surface"><ui-empty-state illustration="not-found" title="We couldn’t find that supplier"><a class="btn btn-primary" routerLink="/suppliers">All suppliers</a></ui-empty-state></div>
 } @else {
   @let d = detail()!;
-  <ui-record-header [eyebrow]="d.supplier.trades.join(' · ')" [title]="d.supplier.name" [subtitle]="d.supplier.contactName + ' · ' + d.supplier.phone + ' · ' + d.supplier.email" [status]="status()" [facts]="facts()" />
+  <ui-record-header [eyebrow]="d.supplier.trades.join(' · ')" [title]="d.supplier.name" [subtitle]="d.supplier.contactName + ' · ' + d.supplier.phone + ' · ' + d.supplier.email" [status]="status()" [facts]="facts()">
+    @if (session.can('Suppliers.ChangeBankDetails')) {
+      <button recordActions type="button" class="btn btn-secondary" (click)="changeBank()">
+        <ion-icon name="finger-print-outline" aria-hidden="true" /> Change banking details
+      </button>
+    }
+  </ui-record-header>
 
   <div class="grid">
     <div class="main">
@@ -21,7 +27,7 @@
               <span class="doc-name">{{ doc.type }}</span>
               <span class="doc-note">{{ st.note }}</span>
               <ui-status-pill [label]="st.label" [tone]="st.tone" />
-              @if (st.tone !== 'success' && session.isStaff()) {
+              @if (st.tone !== 'success' && session.can('Suppliers.Manage')) {
                 <button type="button" class="btn btn-ghost btn-sm" (click)="request(doc)">Request</button>
               }
             </li>

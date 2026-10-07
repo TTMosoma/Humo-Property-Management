@@ -1,10 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { WorkItem } from '../../domain';
+import { LARGE_APPROVAL_AMOUNT, WorkItem } from '../../domain';
 import { AttentionService } from '../../core/attention/attention.service';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { ScopeService } from '../../core/scope/scope.service';
+import { StepUpService } from '../../core/security/step-up.service';
+import { SessionService } from '../../core/session/session.service';
 import { formatDate, formatRand, RandPipe } from '../../ui/format/money';
 import { StatusPill } from '../../ui/status-pill/status-pill';
 import { workItemView } from './work-item-view';
@@ -27,6 +29,8 @@ export class ApprovalCard {
   private readonly attention = inject(AttentionService);
   private readonly feedback = inject(FeedbackService);
   private readonly scope = inject(ScopeService);
+  private readonly stepUp = inject(StepUpService);
+  protected readonly session = inject(SessionService);
 
   readonly item = input.required<WorkItem>();
   /** Inside a drawer: no title block or "details" link. */
@@ -35,7 +39,9 @@ export class ApprovalCard {
 
   protected readonly view = computed(() => workItemView(this.item()));
   protected readonly scheme = computed(() => this.scope.findScheme(this.item().schemeId));
-  protected readonly canDecide = computed(() => this.attention.canDecide(this.item()));
+  protected readonly canDecide = computed(() => this.attention.canDecide(this.item()) && this.session.can('Approvals.Decide'));
+  /** Large amounts need a fresh proof of identity to approve (never to reject). */
+  protected readonly needsStepUp = computed(() => (this.item().amount ?? 0) >= LARGE_APPROVAL_AMOUNT);
 
   protected readonly rejecting = signal(false);
   protected readonly comment = signal('');
@@ -71,7 +77,13 @@ export class ApprovalCard {
   private decide(decision: 'approved' | 'rejected', comment?: string): void {
     const item = this.item();
     this.busy.set(true);
-    this.attention.decide(item.id, decision, comment).subscribe({
+    const decide$ = () => this.attention.decide(item.id, decision, comment);
+    const run$ =
+      decision === 'approved' && this.needsStepUp()
+        ? this.stepUp.guard({ action: 'approve-large-amount', detail: `Approve ${item.ref} · ${formatRand(item.amount)} — ${item.title}` }, decide$)
+        : decide$();
+    run$.subscribe({
+      complete: () => this.busy.set(false),
       next: () => {
         this.busy.set(false);
         this.rejecting.set(false);

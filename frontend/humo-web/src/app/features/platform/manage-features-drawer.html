@@ -1,0 +1,79 @@
+@let cu = customer();
+
+<ui-drawer eyebrow="Manage features" [title]="cu?.name ?? 'Customer'">
+  <div drawerMeta class="meta">Changes apply immediately, are audited, and need verification.</div>
+
+  @if (cu) {
+    <label class="field reason">
+      <span class="f-label">Why are you changing this?</span>
+      <textarea rows="2" [value]="reason()" (input)="reason.set($any($event.target).value)" placeholder="e.g. Signed Governance add-on order 14 Oct; trial agreed with Sbu Mkhize"></textarea>
+      <span class="f-help">Recorded in the audit log with your name. Required (a short sentence).</span>
+    </label>
+
+    <section>
+      <h3 class="label-caps">Package</h3>
+      <div class="pkgs">
+        @for (p of packages; track p.id) {
+          <label class="pkg" [class.on]="selectedPkg() === p.id" [class.current]="cu.subscription.packageId === p.id">
+            <input type="radio" name="pkg" [checked]="selectedPkg() === p.id" (change)="pkg.set(p.id)" />
+            <strong>{{ p.name.replace('Humo ', '') }}</strong>
+            <span>{{ p.tagline }}</span>
+            @if (cu.subscription.packageId === p.id) {
+              <em>Current</em>
+            }
+          </label>
+        }
+      </div>
+      @if (selectedPkg() !== cu.subscription.packageId) {
+        <button type="button" class="btn btn-primary btn-sm" (click)="changePackage()" [disabled]="!reasonOk() || busy()">
+          <ion-icon name="finger-print-outline" aria-hidden="true" /> Verify and change package
+        </button>
+      }
+    </section>
+
+    <section>
+      <h3 class="label-caps">Add-ons</h3>
+      <ul class="addons">
+        @for (a of addOns; track a.id) {
+          <li [class.on]="hasAddOn(a)">
+            <span class="a-text">
+              <strong>{{ a.name }}</strong>
+              <span>{{ redundant(a) ? 'Already included in their package' : a.description }}</span>
+            </span>
+            <button type="button" class="btn btn-sm" [class.btn-secondary]="!hasAddOn(a)" [class.btn-ghost]="hasAddOn(a)" (click)="toggleAddOn(a)" [disabled]="!reasonOk() || busy() || redundant(a)">
+              {{ hasAddOn(a) ? 'Remove' : 'Add' }}
+            </button>
+          </li>
+        }
+      </ul>
+    </section>
+
+    <section>
+      <h3 class="label-caps">Trials & overrides</h3>
+      <div class="trial">
+        <select (change)="trialFeature.set($any($event.target).value)" aria-label="Feature">
+          @for (f of trialable; track f.key) {
+            <option [value]="f.key" [selected]="f.key === trialFeature()" [disabled]="cu.entitlements.has(f.key)">{{ f.label }}{{ cu.entitlements.has(f.key) ? ' (on)' : '' }}</option>
+          }
+        </select>
+        <select (change)="trialDays.set(+$any($event.target).value)" aria-label="Length">
+          <option value="14">14 days</option>
+          <option value="30" selected>30 days</option>
+          <option value="60">60 days</option>
+        </select>
+        <button type="button" class="btn btn-secondary btn-sm" (click)="grantTrial()" [disabled]="!reasonOk() || busy() || cu.entitlements.has(trialFeature())">Grant trial</button>
+      </div>
+      @for (o of cu.subscription.overrides; track o.feature) {
+        <div class="override">
+          <span>
+            <strong>{{ meta[o.feature].label }}</strong> {{ o.enabled ? 'granted' : 'switched off' }}{{ o.expiresAt ? ' until ' + formatDate(o.expiresAt, true) : '' }}
+            <span class="muted">· {{ o.reason }} · {{ o.by }}</span>
+          </span>
+          <button type="button" class="btn btn-ghost btn-sm" (click)="clearOverride(o.feature)" [disabled]="busy()">Remove</button>
+        </div>
+      } @empty {
+        <p class="muted small">No overrides. Trials end automatically and the package value applies again.</p>
+      }
+    </section>
+  }
+</ui-drawer>

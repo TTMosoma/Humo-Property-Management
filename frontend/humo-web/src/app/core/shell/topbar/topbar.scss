@@ -142,13 +142,150 @@
   box-sizing: content-box;
 }
 
-.avatar-btn {
-  padding: 2px;
+// ---------- Identity + active role ----------
+.identity {
+  --role-c: var(--role-agency);
+  display: flex;
+  gap: var(--s-2);
+  align-items: center;
+  max-width: 240px;
   margin-left: var(--s-1);
+  padding: 3px var(--s-2) 3px 3px;
+  text-align: left;
+  color: var(--c-text);
   background: none;
-  border: 0;
-  border-radius: 50%;
+  border: 1px solid transparent;
+  border-radius: var(--r-pill);
   cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+
+  &:hover,
+  &[aria-expanded='true'] {
+    background: var(--c-surface-hover);
+    border-color: var(--c-border);
+  }
+
+  .avatar {
+    flex: none;
+    box-shadow: 0 0 0 2px var(--c-surface), 0 0 0 4px var(--role-c);
+  }
+
+  .chev {
+    flex: none;
+    font-size: 14px;
+    color: var(--c-text-muted);
+  }
+
+  // A brief, quiet acknowledgement after switching role.
+  &.pulse .avatar {
+    animation: role-pulse 1.4s var(--ease) 1;
+  }
+
+  // Impersonating: unmistakable, and nothing like a role accent.
+  &.imp {
+    background: var(--c-imp-soft);
+    border-color: var(--c-imp);
+
+    .avatar {
+      color: var(--c-on-imp);
+      background: var(--c-imp);
+      box-shadow: 0 0 0 2px var(--c-surface), 0 0 0 4px var(--c-imp);
+    }
+  }
+}
+
+@keyframes role-pulse {
+  0% { box-shadow: 0 0 0 2px var(--c-surface), 0 0 0 4px var(--role-c), 0 0 0 4px transparent; }
+  40% { box-shadow: 0 0 0 2px var(--c-surface), 0 0 0 4px var(--role-c), 0 0 0 10px color-mix(in srgb, var(--role-c) 25%, transparent); }
+  100% { box-shadow: 0 0 0 2px var(--c-surface), 0 0 0 4px var(--role-c), 0 0 0 14px transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .identity.pulse .avatar {
+    animation: none;
+  }
+}
+
+.id-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.id-name {
+  overflow: hidden;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.id-role {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  overflow: hidden;
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-medium);
+  color: var(--c-text-muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.role-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  background: var(--role-c);
+  border-radius: 50%;
+}
+
+.imp-tag {
+  padding: 0 5px;
+  font-size: 9px;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--c-on-imp);
+  background: var(--c-imp);
+  border-radius: var(--r-sm);
+}
+
+@media (max-width: 899px) {
+  .identity {
+    padding-right: 3px;
+
+    .chev,
+    .id-name {
+      display: none;
+    }
+
+    // Phones: keep the active role visible next to the avatar, without the name.
+    .id-text {
+      max-width: 92px;
+      padding-right: var(--s-1);
+    }
+
+    .id-role {
+      font-size: var(--fs-2xs);
+      white-space: normal;
+      line-height: 1.15;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    .role-dot {
+      display: none;
+    }
+  }
+}
+
+@media (max-width: 380px) {
+  .identity .id-text {
+    display: none;
+  }
 }
 
 .avatar {
@@ -297,7 +434,8 @@
 
 // ---------- User panel ----------
 .user-panel {
-  width: 280px;
+  width: 320px;
+  max-width: calc(100vw - 24px);
 }
 
 .user-head {
@@ -362,6 +500,11 @@
 
   .search-text,
   .new-label {
+    display: none;
+  }
+
+  // The tab bar carries Search on phones.
+  :host(.tab-search) .search {
     display: none;
   }
 
@@ -471,29 +614,35 @@
   border-radius: var(--r-sm);
 }
 
-// ---------- Multi-role indicator & context switch ----------
-.avatar-btn {
-  position: relative;
+// ---------- Switch role ----------
+.role-item,
+.single-role {
+  --role-c: var(--role-agency);
+  align-items: center;
 }
 
-.multi {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  width: 10px;
-  height: 10px;
-  background: var(--c-accent);
-  border: 2px solid var(--c-surface);
-  border-radius: 50%;
+.single-role {
+  display: flex;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-3) var(--s-3);
 }
 
-.context-item {
-  align-items: flex-start;
+.role-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  font-size: 16px;
+  color: var(--role-c);
+  background: color-mix(in srgb, var(--role-c) 12%, transparent);
+  border-radius: var(--r);
 }
 
 .ctx-text {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   line-height: 1.3;
 }
 
@@ -502,14 +651,82 @@
 }
 
 .ctx-label {
+  overflow: hidden;
   font-size: var(--fs-xs);
   color: var(--c-text-muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-.role-line {
-  padding: 0 var(--s-3) var(--s-2);
+.identity-note {
+  display: flex;
+  gap: var(--s-2);
+  margin: var(--s-1) var(--s-3) var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  font-size: var(--fs-2xs);
+  line-height: 1.45;
+  color: var(--c-text-muted);
+  background: var(--c-surface-2);
+  border-radius: var(--r);
+
+  ion-icon {
+    flex: none;
+    margin-top: 1px;
+    font-size: 14px;
+  }
+}
+
+.mini-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--c-border);
+  border-top-color: var(--c-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// ---------- Impersonation block in the menu ----------
+.imp-block {
+  margin: var(--s-1);
+  padding: var(--s-3);
+  background: var(--c-imp-soft);
+  border: 1px solid var(--c-imp);
+  border-radius: var(--r);
+
+  .label-caps {
+    color: var(--c-imp-strong);
+  }
+
+  .user-head {
+    padding: var(--s-2) 0;
+  }
+}
+
+.avatar.imp {
+  color: var(--c-on-imp);
+  background: var(--c-imp);
+}
+
+.imp-actor {
+  margin-bottom: var(--s-3);
   font-size: var(--fs-xs);
-  color: var(--c-primary-text);
+  color: var(--c-text-2);
+}
+
+.btn-imp {
+  width: 100%;
+  color: var(--c-on-imp);
+  background: var(--c-imp);
+
+  &:hover {
+    background: var(--c-imp-strong);
+  }
 }
 
 .notif-foot {

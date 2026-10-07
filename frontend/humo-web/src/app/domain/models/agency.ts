@@ -1,4 +1,4 @@
-/** A managing agency — a customer (tenant) of the Humo platform. */
+/** A managing agency — a customer (tenant) of the Humo platform. Its package and features live on its Subscription. */
 export interface Agency {
   id: string;
   name: string;
@@ -7,5 +7,4 @@ export interface Agency {
   province: string;
   schemeCount: number;
   unitCount: number;
-  plan: 'Starter' | 'Professional' | 'Enterprise';
 }

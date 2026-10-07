@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, input, output, signal } fro
 import { IonIcon } from '@ionic/angular/standalone';
 import { TimelineDataSource } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
+import { SessionService } from '../../core/session/session.service';
 
 /**
  * Log a call or note against a unit and/or person. When an owner phones,
@@ -12,6 +13,7 @@ import { FeedbackService } from '../../core/feedback/feedback.service';
   selector: 'app-log-note',
   imports: [IonIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '[hidden]': "!session.can('Notes.Add')" },
   template: `
     <form (submit)="save($event)">
       <div class="kinds" role="radiogroup" aria-label="Type of entry">
@@ -58,6 +60,7 @@ import { FeedbackService } from '../../core/feedback/feedback.service';
 export class LogNote {
   private readonly timeline = inject(TimelineDataSource);
   private readonly feedback = inject(FeedbackService);
+  protected readonly session = inject(SessionService);
 
   readonly unitId = input<string>();
   readonly personId = input<string>();

@@ -1,4 +1,5 @@
 <ui-page-header eyebrow="Finance" title="Payables" subtitle="Approved, matched invoices are paid in batches from each scheme’s trust account — with a second authoriser before money leaves." />
+<app-smart-nudge placement="payables" />
 <app-scope-notice />
 
 <ui-view-tabs label="Payables views" [tabs]="tabs()" [active]="state().view ?? 'ready'" (activeChange)="setView($event)" />
@@ -29,10 +30,10 @@
         @if (b.approvalItem; as item) {
           <app-approval-card [item]="item" [compact]="true" />
         }
-      } @else if (canPay()) {
+      } @else if (canRelease()) {
         <div class="release">
           <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="release(b)">
-            <ion-icon name="send-outline" aria-hidden="true" /> Release EFT batch
+            <ion-icon name="finger-print-outline" aria-hidden="true" /> Verify and release EFT batch
           </button>
           <span class="muted small">Prototype: marks every invoice paid and moves linked jobs to “Paid”.</span>
         </div>

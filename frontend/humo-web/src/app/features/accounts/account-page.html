@@ -36,7 +36,7 @@
         <strong>A payment of {{ v.receipt.amount | rand }} may belong to this account.</strong>
         It arrived on {{ formatDate(v.receipt.date) }} with reference “{{ v.receipt.reference }}”{{ v.receipt.payer ? ' from ' + v.receipt.payer : '' }}, and hasn’t been allocated yet.
       </div>
-      @if (session.role() === 'agency-admin' || session.role() === 'finance') {
+      @if (session.can('Receipts.Allocate')) {
         <button type="button" class="btn btn-primary btn-sm" [disabled]="busyReceipt() === v.receipt.id" (click)="allocateHere(v)">Allocate to {{ d.account.accountNo }}</button>
         <a class="btn btn-ghost btn-sm" routerLink="/finance/receipts" [queryParams]="{ receipt: v.receipt.id }">Review</a>
       } @else {

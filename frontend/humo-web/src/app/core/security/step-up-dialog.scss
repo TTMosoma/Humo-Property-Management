@@ -1,0 +1,239 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+  width: min(460px, calc(100vw - 32px));
+  padding: var(--s-6);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-overlay);
+}
+
+.head {
+  display: flex;
+  gap: var(--s-4);
+  align-items: flex-start;
+}
+
+.seal {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  font-size: 22px;
+  color: var(--c-primary-text);
+  background: var(--c-primary-soft);
+  border-radius: 50%;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+
+  &.ok {
+    color: var(--c-success);
+    background: var(--c-success-soft);
+  }
+
+  &.bad {
+    color: var(--c-danger);
+    background: var(--c-danger-soft);
+  }
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-semibold);
+  color: var(--c-text);
+}
+
+.lede {
+  margin: 4px 0 0;
+  font-size: var(--fs-sm);
+  color: var(--c-text-muted);
+}
+
+.action {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--s-3) var(--s-4);
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r);
+}
+
+.action-detail {
+  font-size: var(--fs-base);
+  font-weight: var(--fw-medium);
+  color: var(--c-text);
+}
+
+.imp-note {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 4px;
+  font-size: var(--fs-xs);
+  color: var(--c-imp-strong);
+}
+
+.methods {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.method {
+  display: flex;
+  gap: var(--s-3);
+  align-items: center;
+  width: 100%;
+  padding: var(--s-3) var(--s-4);
+  text-align: left;
+  color: var(--c-text);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border-strong);
+  border-radius: var(--r);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+
+  &:hover {
+    background: var(--c-surface-hover);
+  }
+
+  &.primary {
+    border-color: var(--c-primary);
+    box-shadow: inset 0 0 0 1px var(--c-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--c-focus);
+    outline-offset: 2px;
+  }
+}
+
+.m-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  font-size: 20px;
+  color: var(--c-primary-text);
+  background: var(--c-primary-soft);
+  border-radius: var(--r);
+}
+
+.m-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.m-name {
+  font-weight: var(--fw-semibold);
+}
+
+.m-device {
+  overflow: hidden;
+  font-size: var(--fs-xs);
+  color: var(--c-text-muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.m-go {
+  color: var(--c-text-faint);
+}
+
+.none p {
+  margin: 0 0 var(--s-3);
+  font-size: var(--fs-sm);
+  color: var(--c-text-2);
+}
+
+.waiting {
+  display: flex;
+  gap: var(--s-4);
+  align-items: flex-start;
+  padding: var(--s-4);
+  background: var(--c-surface-2);
+  border-radius: var(--r);
+
+  &.ok {
+    align-items: center;
+    color: var(--c-success);
+    background: var(--c-success-soft);
+
+    ion-icon {
+      flex: none;
+      font-size: 22px;
+    }
+
+    .w-sub {
+      color: var(--c-text-2);
+    }
+  }
+}
+
+.w-title {
+  font-weight: var(--fw-semibold);
+  color: var(--c-text);
+}
+
+.w-sub {
+  font-size: var(--fs-sm);
+  color: var(--c-text-muted);
+}
+
+.match {
+  display: inline-block;
+  margin-top: var(--s-3);
+  padding: 6px 16px;
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.06em;
+  color: var(--c-text);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r);
+}
+
+.spinner {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-top: 2px;
+  border: 2.5px solid var(--c-primary-soft);
+  border-top-color: var(--c-primary);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 3s;
+  }
+}
+
+.foot {
+  display: flex;
+  gap: var(--s-3);
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--c-border);
+}
+
+.why {
+  font-size: var(--fs-xs);
+  color: var(--c-text-faint);
+}

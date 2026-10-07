@@ -53,8 +53,9 @@ export class JobNextStep {
 
   protected readonly busy = signal(false);
   /** Portfolio managers and agency admins run jobs; finance and trustees see the state. */
-  protected readonly canAct = computed(() => ['agency-admin', 'portfolio-manager'].includes(this.session.role()));
-  protected readonly isFinance = computed(() => this.session.role() === 'finance' || this.session.role() === 'agency-admin');
+  // Permission-based: Operations runs jobs too; Observe impersonation removes both.
+  protected readonly canAct = computed(() => this.session.can('Maintenance.Manage'));
+  protected readonly isFinance = computed(() => this.session.can('Payables.Prepare'));
 
   // ---- Form state (reset when the job or stage changes) ----
   protected readonly assignee = signal('');

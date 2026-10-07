@@ -5,6 +5,7 @@ import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, combineLatest, map, of, switchMap } from 'rxjs';
 import { BatchView, InvoiceView, PayablesDataSource } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
+import { StepUpService } from '../../core/security/step-up.service';
 import { pageState } from '../../core/prototype/page-state';
 import { ScopeNotice } from '../../core/scope/scope-notice';
 import { ScopeService } from '../../core/scope/scope.service';
@@ -26,9 +27,10 @@ import { ApprovalCard } from '../my-work/approval-card';
  * invoices; in batches from each scheme's trust account; with a second
  * authoriser before money leaves.
  */
+import { SmartNudge } from '../shared/smart-nudge';
 @Component({
   selector: 'app-payables-page',
-  imports: [PageHeader, ScopeNotice, ViewTabs, DataTable, CellDef, BulkBar, StatusPill, ApprovalCard, EmptyState, ErrorState, Skeleton, IonIcon, RouterLink, RandPipe],
+  imports: [SmartNudge, PageHeader, ScopeNotice, ViewTabs, DataTable, CellDef, BulkBar, StatusPill, ApprovalCard, EmptyState, ErrorState, Skeleton, IonIcon, RouterLink, RandPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './payables-page.html',
   styleUrl: './payables-page.scss',
@@ -36,6 +38,7 @@ import { ApprovalCard } from '../my-work/approval-card';
 export class PayablesPage {
   private readonly data = inject(PayablesDataSource);
   private readonly feedback = inject(FeedbackService);
+  private readonly stepUp = inject(StepUpService);
   protected readonly scope = inject(ScopeService);
   protected readonly session = inject(SessionService);
   protected readonly page = pageState();
@@ -84,7 +87,8 @@ export class PayablesPage {
   protected readonly selection = computed(() => this.rows().filter((r) => this.selected().includes(r.invoice.id)));
   protected readonly selectionTotal = computed(() => this.selection().reduce((s, r) => s + r.invoice.amount, 0));
   protected readonly mixedSchemes = computed(() => new Set(this.selection().map((r) => r.scheme.id)).size > 1);
-  protected readonly canPay = computed(() => this.session.role() === 'finance' || this.session.role() === 'agency-admin');
+  protected readonly canPay = computed(() => this.session.can('Payables.Prepare'));
+  protected readonly canRelease = computed(() => this.session.can('Payables.Release'));
 
   protected readonly columns: ColumnDef<InvoiceView>[] = [
     { key: 'invoice', header: 'Invoice', mobile: 'title', sort: (r) => r.invoice.id },
@@ -127,9 +131,12 @@ export class PayablesPage {
     });
   }
 
+  /** Money leaves the trust account: always a fresh step-up (the API checks it too). */
   protected release(b: BatchView): void {
     this.busy.set(true);
-    this.data.releaseBatch(b.batch.id).subscribe({
+    const detail = `Release ${formatRand(b.batch.total)} to ${b.invoices.length} suppliers from ${b.scheme.name}’s trust account`;
+    this.stepUp.guard({ action: 'release-payment', detail }, () => this.data.releaseBatch(b.batch.id)).subscribe({
+      complete: () => this.busy.set(false),
       next: () => {
         this.busy.set(false);
         this.feedback.success(`Released ${formatRand(b.batch.total)} to ${b.invoices.length} suppliers from ${b.scheme.name}’s trust account`);

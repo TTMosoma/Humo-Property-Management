@@ -235,3 +235,23 @@
   background: var(--proto-soft);
   border-radius: var(--r-pill);
 }
+
+.multi.humo {
+  color: var(--role-humo);
+  background: color-mix(in srgb, var(--role-humo) 12%, transparent);
+}
+
+.avatar.humo {
+  color: var(--role-humo);
+  background: color-mix(in srgb, var(--role-humo) 14%, transparent);
+}
+
+.hint {
+  margin: -4px 0 var(--s-2);
+  font-size: var(--fs-2xs);
+  color: var(--c-text-muted);
+}
+
+.reset {
+  margin-top: var(--s-3);
+}

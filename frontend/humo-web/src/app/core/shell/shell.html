@@ -1,3 +1,7 @@
+@if (session.isImpersonating()) {
+  <app-impersonation-banner />
+}
+<div class="frame">
 <ion-split-pane contentId="main-content" when="lg" [class.rail]="railCollapsed()">
   <ion-menu contentId="main-content" menuId="main" type="overlay">
     <app-sidebar
@@ -10,6 +14,18 @@
 
   <div class="ion-page" id="main-content">
     <app-topbar [showMenuButton]="!isDesktop()" (openMenu)="openMenu()" (openPalette)="openPalette()" />
+    @if (roleAck(); as ack) {
+      <div class="role-ack" role="status" [style.--role-c]="ack.color">
+        <span class="role-ack-icon"><ion-icon [name]="ack.icon" aria-hidden="true" /></span>
+        <span>
+          You’re now working as <strong>{{ ack.role }}</strong> · {{ ack.scope }}.
+          <span class="role-ack-sub">Navigation, queues and actions now match this role. You’re still signed in as {{ session.persona().name }}.</span>
+        </span>
+        <button type="button" class="btn btn-ghost btn-icon btn-sm" (click)="switcher.dismiss()" aria-label="Dismiss">
+          <ion-icon name="close-outline" aria-hidden="true" />
+        </button>
+      </div>
+    }
     @if (supportAgency(); as a) {
       <div class="support-banner" role="status">
         <ion-icon name="eye-outline" aria-hidden="true" />
@@ -28,5 +44,6 @@
     }
   </div>
 </ion-split-pane>
+</div>
 
 <app-prototype-toolbar />

@@ -1,0 +1,173 @@
+<div class="canvas">
+  <header class="head">
+    <div>
+      <div class="eyebrow">Humo Executive</div>
+      <h1>Business overview</h1>
+      <p class="sub">As of {{ today }} · trailing twelve months</p>
+    </div>
+    <div class="scope-chip"><ion-icon name="lock-closed-outline" aria-hidden="true" /> Read-only · aggregates only</div>
+  </header>
+
+  @if (failed()) {
+    <div class="panel"><ui-error-state title="We couldn’t load the business overview" (retry)="page.retry()" /></div>
+  } @else if (loading() || !o()) {
+    <ui-skeleton variant="tiles" [count]="7" />
+  } @else {
+    @let ov = o()!;
+
+    <!-- KPI strip -->
+    <section class="kpis" aria-label="Key figures">
+      @for (k of kpis(); track k.label) {
+        <div class="kpi" [class.lead]="k.lead">
+          <span class="k-label">{{ k.label }}</span>
+          <span class="k-value">{{ k.value }}</span>
+          <span class="k-delta" [class.up]="k.up">{{ k.delta }}</span>
+          @if (k.spark) {
+            <ui-sparkline class="k-spark" [values]="k.spark" [label]="k.label + ' trend'" />
+          }
+        </div>
+      }
+    </section>
+
+    <!-- Revenue -->
+    <div class="row two">
+      <section class="panel">
+        <header class="p-head">
+          <div>
+            <h2>Revenue</h2>
+            <p>Monthly recurring revenue</p>
+          </div>
+          <div class="p-figure">{{ rand(ov.mrr) }}<small> / month</small></div>
+        </header>
+        <ui-area-chart [values]="mrrSeries()" [labels]="months()" label="MRR, last 12 months" />
+        <div class="foot-stats">
+          <div><span>ARR</span><strong>{{ rand(ov.arr, true) }}</strong></div>
+          <div><span>Expansion (12 mo.)</span><strong>{{ rand(growthTotals().expansion, true) }}</strong></div>
+          <div><span>Net revenue retention</span><strong>{{ ov.nrr }}%</strong></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <header class="p-head">
+          <div>
+            <h2>Revenue by package</h2>
+            <p>Share of MRR · customers · average per account</p>
+          </div>
+        </header>
+        <div class="stack" role="img" aria-label="MRR share by package">
+          @for (p of packageRows(); track p.packageId) {
+            <span [attr.data-pkg]="p.packageId" [style.width.%]="p.share"></span>
+          }
+        </div>
+        <ul class="pkg-list">
+          @for (p of packageRows(); track p.packageId) {
+            <li>
+              <span class="swatch" [attr.data-pkg]="p.packageId"></span>
+              <span class="pkg-name">{{ p.name }}</span>
+              <span class="pkg-meta">{{ p.customers }} customers · {{ rand(p.arpa, true) }} avg</span>
+              <span class="pkg-mrr">{{ rand(p.mrr, true) }}</span>
+              <span class="pkg-share">{{ p.share.toFixed(0) }}%</span>
+            </li>
+          }
+        </ul>
+      </section>
+    </div>
+
+    <!-- Growth + Health -->
+    <div class="row two">
+      <section class="panel">
+        <header class="p-head">
+          <div>
+            <h2>Customer growth</h2>
+            <p>New customers (above) and churn (below), by month</p>
+          </div>
+        </header>
+        <ui-bar-chart class="growth" [data]="growth()" label="New customers and churn by month" />
+        <div class="foot-stats">
+          <div><span>New (12 mo.)</span><strong>+{{ growthTotals().added }}</strong></div>
+          <div><span>Churned</span><strong>−{{ growthTotals().churned }}</strong></div>
+          <div><span>Logo retention</span><strong>{{ ov.retention }}%</strong></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <header class="p-head">
+          <div>
+            <h2>Account health</h2>
+            <p>From usage, adoption, support and payment signals</p>
+          </div>
+          <div class="p-figure small">{{ rand(ov.health.atRiskMrr, true) }}<small> MRR needs attention</small></div>
+        </header>
+        <div class="health-bar" role="img" [attr.aria-label]="ov.health.healthy + ' healthy, ' + ov.health.atRisk + ' at risk, ' + ov.health.critical + ' critical'">
+          <span class="healthy" [style.width.%]="(ov.health.healthy / healthTotal()) * 100"></span>
+          <span class="risk" [style.width.%]="(ov.health.atRisk / healthTotal()) * 100"></span>
+          <span class="critical" [style.width.%]="(ov.health.critical / healthTotal()) * 100"></span>
+        </div>
+        <div class="health-legend">
+          <div><i class="healthy"></i><strong>{{ ov.health.healthy }}</strong> healthy</div>
+          <div><i class="risk"></i><strong>{{ ov.health.atRisk }}</strong> at risk</div>
+          <div><i class="critical"></i><strong>{{ ov.health.critical }}</strong> critical</div>
+        </div>
+        <ul class="list">
+          @for (c of atRisk(); track c.agencyId) {
+            <li>
+              <a [routerLink]="['/platform/customers', c.agencyId]">{{ c.name }}</a>
+              <span class="muted">{{ c.health.score }}/100 · {{ c.accountManager }}</span>
+              <span class="tag" [attr.data-band]="c.health.band">{{ c.health.band === 'critical' ? 'Critical' : 'At risk' }}</span>
+              <span class="right">{{ rand(c.subscription.mrr, true) }}</span>
+            </li>
+          }
+        </ul>
+      </section>
+    </div>
+
+    <!-- Adoption + Expansion -->
+    <div class="row two">
+      <section class="panel">
+        <header class="p-head">
+          <div>
+            <h2>Product adoption</h2>
+            <p>Share of entitled customers using each module regularly</p>
+          </div>
+          <div class="p-figure small">{{ num(ov.activeUsers) }}<small> active users</small></div>
+        </header>
+        <ul class="adoption">
+          @for (m of modules(); track m.module) {
+            <li>
+              <span class="a-name">{{ m.label }}</span>
+              <span class="a-bar"><span [style.width.%]="m.adoption"></span></span>
+              <span class="a-val">{{ m.adoption }}%</span>
+            </li>
+          }
+        </ul>
+      </section>
+
+      <section class="panel">
+        <header class="p-head">
+          <div>
+            <h2>Expansion opportunities</h2>
+            <p>Detected from usage — worked by Account Managers</p>
+          </div>
+          <div class="p-figure small">{{ rand(ov.expansion.potentialMrr, true) }}<small> indicative MRR</small></div>
+        </header>
+        <div class="opp-stats">
+          <div><strong>{{ ov.expansion.likelyToUpgrade }}</strong><span>likely to upgrade</span></div>
+          <div><strong>{{ ov.expansion.demandWithoutFeature }}</strong><span>using work-arounds for features they don’t have</span></div>
+          <div><strong>{{ ov.expansion.underutilising }}</strong><span>under-using their package (training, not sales)</span></div>
+        </div>
+        <ul class="list">
+          @for (op of opportunities(); track op.id) {
+            <li>
+              <a [routerLink]="['/platform/customers', op.agencyId]">{{ op.customer }}</a>
+              <span class="muted">{{ op.what }} · {{ op.reasons[0] }}</span>
+              <span class="tag" [attr.data-strength]="op.strength">{{ op.strength }}</span>
+              <span class="right">+{{ rand(op.potentialMrr, true) }}</span>
+            </li>
+          }
+        </ul>
+      </section>
+    </div>
+
+    <p class="note">Figures are mock data that add up across the platform (customers, subscriptions and usage). Values are contract MRR — no billing system is connected yet.</p>
+  }
+</div>

@@ -89,7 +89,7 @@
   } @else {
     <div class="actions">
       <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="approve()">
-        <ion-icon name="checkmark-outline" aria-hidden="true" /> Approve {{ w.amount | rand }}
+        <ion-icon [name]="needsStepUp() ? 'finger-print-outline' : 'checkmark-outline'" aria-hidden="true" /> {{ needsStepUp() ? 'Verify and approve' : 'Approve' }} {{ w.amount | rand }}
       </button>
       <button type="button" class="btn btn-secondary" [disabled]="busy()" (click)="rejecting.set(true)">Reject…</button>
       @if (!compact()) {
@@ -100,6 +100,10 @@
 } @else {
   <p class="waiting">
     <ion-icon name="time-outline" aria-hidden="true" />
-    Waiting for {{ w.approverRoles?.includes('trustee') ? 'trustee' : 'agency' }} approval. You can view it, but your role doesn’t decide it.
+    @if (session.readOnly()) {
+      Observe mode — decisions are disabled.
+    } @else {
+      Waiting for {{ w.approverRoles?.includes('trustee') ? 'trustee' : 'agency' }} approval. You can view it, but your role doesn’t decide it.
+    }
   </p>
 }

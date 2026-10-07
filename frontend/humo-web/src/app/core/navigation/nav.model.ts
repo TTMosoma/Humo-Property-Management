@@ -1,4 +1,4 @@
-import { Role } from '../../domain';
+import { Feature, Role } from '../../domain';
 import type { AttentionKey } from '../attention/attention.service';
 
 export interface NavLink {
@@ -7,6 +7,8 @@ export interface NavLink {
   icon?: string;
   route: string;
   roles: readonly Role[];
+  /** Hidden when the agency's plan doesn't include the feature. */
+  feature?: Feature;
   /** Live count from the Attention model. Never hard-code numbers here. */
   badge?: AttentionKey;
   /** 'attention' is used sparingly: only for queues where items are overdue or at risk. */

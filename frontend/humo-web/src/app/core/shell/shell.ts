@@ -15,7 +15,10 @@ import { Dialog } from '@angular/cdk/dialog';
 import { Overlay } from '@angular/cdk/overlay';
 import { IonIcon, IonMenu, IonSplitPane, MenuController } from '@ionic/angular/standalone';
 import { filter } from 'rxjs';
+import { ROLE_LABELS, ROLE_META } from '../../domain';
 import { PrototypeToolbar } from '../prototype/prototype-toolbar';
+import { ImpersonationBanner } from '../security/impersonation-banner';
+import { RoleSwitcher } from '../session/role-switcher';
 import { safeStorage } from '../prototype/safe-storage';
 import { SessionService } from '../session/session.service';
 import { Breadcrumbs } from './breadcrumbs/breadcrumbs';
@@ -34,16 +37,18 @@ const DESKTOP_QUERY = '(min-width: 992px)';
  */
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, IonSplitPane, IonMenu, IonIcon, Sidebar, Topbar, Breadcrumbs, MobileTabBar, PrototypeToolbar],
+  imports: [RouterOutlet, IonSplitPane, IonMenu, IonIcon, Sidebar, Topbar, Breadcrumbs, MobileTabBar, PrototypeToolbar, ImpersonationBanner],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shell.html',
   styleUrl: './shell.scss',
   host: {
     '(document:keydown)': 'onKeydown($event)',
+    '[class.impersonating]': 'session.isImpersonating()',
   },
 })
 export class Shell {
   protected readonly session = inject(SessionService);
+  protected readonly switcher = inject(RoleSwitcher);
   private readonly menu = inject(MenuController);
   private readonly dialog = inject(Dialog);
   private readonly overlay = inject(Overlay);
@@ -55,11 +60,21 @@ export class Shell {
   protected readonly collapsed = signal(safeStorage.get('humo.sidebar') === 'collapsed');
   /** The icon rail only exists on desktop; the mobile menu always shows full labels. */
   protected readonly railCollapsed = computed(() => this.collapsed() && this.isDesktop());
-  protected readonly showTabBar = computed(() => !this.isDesktop() && this.session.role() !== 'system-admin');
-  /** System Administrator viewing an agency: make it unmistakable. */
+  protected readonly showTabBar = computed(() => !this.isDesktop() && !this.session.isHumo());
+  /** Humo staff viewing an agency's setup: make it unmistakable. */
   protected readonly supportAgency = computed(() =>
-    this.session.role() === 'system-admin' && this.session.supportAgencyId() ? this.session.agency() : undefined,
+    this.session.isHumo() && this.session.supportAgencyId() ? this.session.agency() : undefined,
   );
+
+  /** Acknowledges a role switch for a few seconds — calm, in the role's accent, never the impersonation colour. */
+  protected readonly roleAck = computed(() => {
+    const change = this.switcher.lastChange();
+    if (!change) return null;
+    const a = change.assignment;
+    const agency = this.session.agency()?.shortName;
+    const scope = a.schemeIds.length === 0 && agency ? `All schemes in ${agency}` : a.label;
+    return { role: ROLE_LABELS[a.role], scope, icon: ROLE_META[a.role].icon, color: `var(--role-${ROLE_META[a.role].family})` };
+  });
 
   constructor() {
     const mq = matchMedia(DESKTOP_QUERY);
@@ -68,6 +83,12 @@ export class Shell {
     inject(DestroyRef).onDestroy(() => mq.removeEventListener('change', onChange));
 
     effect(() => safeStorage.set('humo.sidebar', this.collapsed() ? 'collapsed' : 'expanded'));
+
+    effect((onCleanup) => {
+      if (!this.switcher.lastChange()) return;
+      const t = setTimeout(() => this.switcher.dismiss(), 7000);
+      onCleanup(() => clearTimeout(t));
+    });
 
     // The content area (not the window) scrolls, so reset it on every page change.
     this.router.events

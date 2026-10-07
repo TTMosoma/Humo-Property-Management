@@ -9,6 +9,7 @@
   "
 />
 
+<app-smart-nudge placement="tasks" />
 <app-scope-notice />
 
 <ui-view-tabs label="Task views" [tabs]="tabs()" [active]="state().view ?? 'mine'" (activeChange)="setView($event)" />
@@ -48,7 +49,7 @@
         [rows]="rows()"
         [columns]="columns"
         [rowId]="rowId"
-        [selectable]="session.isStaff() && state().view !== 'done'"
+        [selectable]="session.isStaff() && session.can('Work.Manage') && state().view !== 'done'"
         [(selected)]="selected"
         [activeId]="activeId()"
         [muted]="isDone"

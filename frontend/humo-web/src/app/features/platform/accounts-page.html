@@ -1,0 +1,84 @@
+<ui-page-header
+  eyebrow="Humo Account Manager"
+  [title]="'Good to see you, ' + session.actor().name.split(' ')[0]"
+  subtitle="Your accounts, ordered by what needs a person first: questions from customers, accounts that are slipping, and conversations worth having."
+/>
+
+@if (failed()) {
+  <ui-error-state (retry)="page.retry()" />
+} @else if (loading()) {
+  <ui-skeleton variant="tiles" [count]="6" />
+} @else if (!mine().length) {
+  <div class="surface"><ui-empty-state title="No accounts assigned to you yet" message="When a customer is assigned to you, they appear here." /></div>
+} @else {
+  @let s = summary();
+  <section class="tiles">
+    <div class="tile surface"><span class="t-label">Accounts</span><span class="t-value">{{ s.accounts }}</span></div>
+    <div class="tile surface"><span class="t-label">MRR you look after</span><span class="t-value">{{ rand(s.mrr, true) }}</span></div>
+    <div class="tile surface"><span class="t-label">Average health</span><span class="t-value">{{ s.avgHealth }}<small>/100</small></span></div>
+    <div class="tile surface"><span class="t-label">Average adoption</span><span class="t-value">{{ s.adoption }}%</span></div>
+    <div class="tile surface"><span class="t-label">Renewing in 90 days</span><span class="t-value">{{ s.renewals }}</span></div>
+    <div class="tile surface" [class.hl]="s.requests"><span class="t-label">New requests</span><span class="t-value">{{ s.requests }}</span></div>
+  </section>
+
+  <div class="cols">
+    <section class="col">
+      <h2 class="section-title">Needs you</h2>
+      <ul class="needs surface">
+        @for (n of needsYou(); track $index) {
+          <li [attr.data-tone]="n.tone">
+            <span class="n-icon"><ion-icon [name]="n.icon" aria-hidden="true" /></span>
+            <span class="n-text">
+              <a [routerLink]="['/platform/customers', n.c.agencyId]">{{ n.title }}</a>
+              <span class="n-detail">{{ n.detail }}</span>
+            </span>
+          </li>
+        } @empty {
+          <li class="empty">Nothing urgent. Every account is healthy and nobody is waiting on you.</li>
+        }
+      </ul>
+    </section>
+
+    <section class="col">
+      <h2 class="section-title">Worth a conversation</h2>
+      <div class="convos">
+        @for (x of conversations(); track x.o.id) {
+          <a class="convo surface" [routerLink]="['/platform/customers', x.c.agencyId]" [attr.data-strength]="x.o.strength">
+            <span class="c-top">
+              <span class="c-name">{{ x.c.name }}</span>
+              <span class="strength">{{ x.o.strength }}</span>
+            </span>
+            <span class="c-what">{{ oppTitle(x.o) }}</span>
+            <span class="c-why">{{ x.o.reasons.join(' · ') }}</span>
+          </a>
+        } @empty {
+          <div class="surface empty-box">No strong signals right now.</div>
+        }
+      </div>
+    </section>
+  </div>
+
+  <h2 class="section-title">All my accounts</h2>
+  <div class="accounts">
+    @for (c of accounts(); track c.agencyId) {
+      <a class="acct surface" [routerLink]="['/platform/customers', c.agencyId]">
+        <ui-score-ring [score]="c.health.score" />
+        <span class="a-main">
+          <span class="a-name">{{ c.name }}</span>
+          <span class="a-meta">{{ shortPackage(c.subscription.packageId) }}{{ c.subscription.addOns.length ? ' + ' + c.subscription.addOns.length + ' add-on' : '' }} · {{ c.snapshot.units }} units · renews {{ formatDate(c.subscription.renewsAt, true) }}</span>
+          <span class="a-stats">
+            <ui-status-pill [label]="bandLabel[c.health.band]" [tone]="bandTone[c.health.band]" />
+            <span>Adoption {{ adoptionOf(c) }}%</span>
+            @if (c.opportunities.length) {
+              <span>{{ c.opportunities.length }} {{ c.opportunities.length === 1 ? 'opportunity' : 'opportunities' }}</span>
+            }
+          </span>
+        </span>
+        <span class="a-side">
+          <ui-sparkline [values]="c.health.history" label="Health trend" />
+          <span class="a-mrr">{{ rand(c.subscription.mrr, true) }}</span>
+        </span>
+      </a>
+    }
+  </div>
+}

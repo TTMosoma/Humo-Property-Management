@@ -4,7 +4,7 @@ import { roleGuard } from './core/access/role.guard';
 import { SessionService } from './core/session/session.service';
 import type { BreadcrumbData } from './core/shell/breadcrumbs/breadcrumbs';
 import { Shell } from './core/shell/shell';
-import { AGENCY_STAFF, EVERYONE, Role, STAFF_AND_TRUSTEE, Scheme, periodLabel } from './domain';
+import { AGENCY_STAFF, EVERYONE, FINANCE_STAFF, Feature, HUMO_ROLES, Role, STAFF_AND_TRUSTEE, Scheme, periodLabel } from './domain';
 import type { PlannedMeta } from './features/planned/planned-page';
 import { schemeResolver } from './features/schemes/scheme.resolver';
 
@@ -16,6 +16,13 @@ const APPROVERS: Role[] = ['agency-admin', 'portfolio-manager', 'finance', 'trus
 const RESIDENT: Role[] = ['owner', 'tenant'];
 const OWNER: Role[] = ['owner'];
 const SYSADMIN: Role[] = ['system-admin'];
+const HUMO: readonly Role[] = HUMO_ROLES;
+const HUMO_OPS: Role[] = ['system-admin', 'humo-support', 'humo-account-manager'];
+const HUMO_AUDIT: Role[] = ['system-admin', 'humo-support'];
+/** Money pages: not for Operations (jobs, not ledgers). */
+const MONEY: readonly Role[] = FINANCE_STAFF;
+const MONEY_AND_TRUSTEE: Role[] = [...FINANCE_STAFF, 'trustee'];
+const GOVERNANCE: { feature: Feature } = { feature: 'governance' };
 
 /**
  * A screen that isn't built yet. Each one declares who may open it and the job it serves,
@@ -30,13 +37,14 @@ function planned(
   job: string,
   plannedItems: string[] = [],
   crumb: BreadcrumbData | false = typeof title === 'string' ? title : false,
+  extra: Record<string, unknown> = {},
 ): Route {
   const meta: PlannedMeta = { job, planned: plannedItems, checkpoint };
   return {
     path,
     title,
     loadComponent: () => import('./features/planned/planned-page').then((m) => m.PlannedPage),
-    data: { roles, planned: meta, ...(crumb ? { breadcrumb: crumb } : {}) },
+    data: { roles, planned: meta, ...(crumb ? { breadcrumb: crumb } : {}), ...extra },
   };
 }
 
@@ -54,7 +62,7 @@ export const routes: Routes = [
       {
         path: 'tasks',
         title: 'Tasks',
-        data: { section: 'My work', breadcrumb: 'Tasks', roles: [...STAFF, 'trustee'] },
+        data: { section: 'My work', breadcrumb: 'Tasks', roles: STAFF_AND_TRUSTEE },
         loadComponent: () => import('./features/my-work/tasks-page').then((m) => m.TasksPage),
       },
       {
@@ -131,7 +139,7 @@ export const routes: Routes = [
                   },
                   {
                     path: 'account',
-                    data: { breadcrumb: 'Account' },
+                    data: { breadcrumb: 'Account', roles: MONEY },
                     children: [
                       {
                         path: '',
@@ -154,7 +162,7 @@ export const routes: Routes = [
                 data: { roles: STAFF, breadcrumb: 'People' },
                 loadComponent: () => import('./features/people/people-page').then((m) => m.PeoplePage),
               },
-              planned('finance', 'Finance', STAFF_AND_TRUSTEE, 3, 'This scheme’s levy roll, receipts, credit control, payables and budget.'),
+              planned('finance', 'Finance', MONEY_AND_TRUSTEE, 3, 'This scheme’s levy roll, receipts, credit control, payables and budget.'),
               {
                 path: 'maintenance',
                 title: 'Maintenance',
@@ -168,8 +176,8 @@ export const routes: Routes = [
                 loadComponent: () => import('./features/suppliers/suppliers-page').then((m) => m.SuppliersPage),
               },
               planned('documents', 'Documents', STAFF_AND_TRUSTEE, 7, 'This scheme’s documents, filtered from the library.'),
-              planned('communications', 'Communications', STAFF, 6, 'Everything sent to and received from this scheme’s people.'),
-              planned('meetings', 'Meetings', STAFF_AND_TRUSTEE, 5, 'Trustee meetings, AGMs and SGMs, with resolutions and actions.'),
+              planned('communications', 'Communications', MONEY, 6, 'Everything sent to and received from this scheme’s people.'),
+              planned('meetings', 'Meetings', STAFF_AND_TRUSTEE, 5, 'Trustee meetings, AGMs and SGMs, with resolutions and actions.', [], 'Meetings', GOVERNANCE),
               planned('compliance', 'Compliance', STAFF_AND_TRUSTEE, 7, 'This scheme’s compliance items, generated from its records.'),
               planned('reports', 'Reports', STAFF_AND_TRUSTEE, 8, 'Reports scoped to this scheme.'),
             ],
@@ -225,7 +233,7 @@ export const routes: Routes = [
         data: { section: 'Finance' },
         children: [
           { path: '', pathMatch: 'full', redirectTo: 'billing' },
-          planned('billing', 'Levies & billing', STAFF, 6, 'Bill every unit correctly each month.', [
+          planned('billing', 'Levies & billing', MONEY, 6, 'Bill every unit correctly each month.', [
             'Levy schedules per scheme (participation quota, special levies)',
             'Billing runs with status; statements are generated and sent from the run',
           ]),
@@ -236,10 +244,10 @@ export const routes: Routes = [
           {
             path: 'receipts',
             title: 'Receipts',
-            data: { roles: ADMIN_FINANCE, breadcrumb: 'Receipts' },
+            data: { roles: ADMIN_FINANCE, breadcrumb: 'Receipts', feature: 'payment-allocation' },
             loadComponent: () => import('./features/receipts/receipts-page').then((m) => m.ReceiptsPage),
           },
-          planned('credit-control', 'Credit control', STAFF, 6, 'Chase arrears in a structured, fair way.', [
+          planned('credit-control', 'Credit control', MONEY, 6, 'Chase arrears in a structured, fair way.', [
             'Collection pipeline: Reminder → Final demand → Letter of demand → Handed over (+ Arrangement, Disputed)',
             'Ageing (Current · 30 · 60 · 90 · 120+) as a filter and chart',
             'Bulk reminders through Compose',
@@ -247,10 +255,10 @@ export const routes: Routes = [
           {
             path: 'payables',
             title: 'Payables',
-            data: { roles: STAFF_AND_TRUSTEE, breadcrumb: 'Payables' },
+            data: { roles: MONEY_AND_TRUSTEE, breadcrumb: 'Payables', feature: 'payables' },
             loadComponent: () => import('./features/finance/payables-page').then((m) => m.PayablesPage),
           },
-          planned('budgets', 'Budgets', STAFF_AND_TRUSTEE, 5, 'Prepare budgets and track budget vs actual.', [
+          planned('budgets', 'Budgets', MONEY_AND_TRUSTEE, 5, 'Prepare budgets and track budget vs actual.', [
             'Budget vs Actual vs Variance by category with visual comparison',
             'Budget approval at the AGM links to Meetings',
           ]),
@@ -332,7 +340,7 @@ export const routes: Routes = [
       // ---------------- Governance & Compliance ----------------
       {
         path: 'governance',
-        data: { section: 'Governance' },
+        data: { section: 'Governance', feature: 'governance' },
         children: [
           { path: '', pathMatch: 'full', redirectTo: 'meetings' },
           planned('meetings', 'Meetings', STAFF_AND_TRUSTEE, 5, 'Prepare, run and minute meetings, including AGMs and SGMs.', [
@@ -349,7 +357,7 @@ export const routes: Routes = [
       },
       {
         path: 'compliance',
-        data: { section: 'Compliance' },
+        data: { section: 'Compliance', feature: 'compliance' },
         children: [
           planned('', 'Compliance', STAFF_AND_TRUSTEE, 7, 'Know what is due, overdue or complete across every scheme.', [
             'Matrix: schemes × compliance types, cells drill into the source record',
@@ -376,10 +384,39 @@ export const routes: Routes = [
         data: { section: 'Settings' },
         children: [
           { path: '', pathMatch: 'full', redirectTo: 'profile' },
-          planned('profile', 'My profile', EVERYONE, 8, 'Your details, password and personal notification preferences.'),
+          planned('profile', 'My profile', EVERYONE, 8, 'Your details and personal notification preferences.'),
+          {
+            path: 'security',
+            title: 'Security',
+            data: { roles: EVERYONE, breadcrumb: 'Security' },
+            loadComponent: () => import('./features/security/security-page').then((m) => m.SecurityPage),
+          },
           planned('agency', 'Agency', ADMIN, 8, 'Agency details, branding, trust bank accounts and banking details shown on statements.'),
-          planned('users', 'Users & access', ADMIN, 8, 'Invite staff, trustees and residents, and control who can sign in.'),
-          planned('roles', 'Roles & permissions', ADMIN, 8, 'Decide what each role can see and do.'),
+          {
+            path: 'users',
+            title: 'Users & access',
+            data: { roles: ADMIN, breadcrumb: 'Users & access' },
+            loadComponent: () => import('./features/access/users-page').then((m) => m.UsersPage),
+          },
+          {
+            path: 'plan',
+            title: 'Plan & features',
+            // Staff can read it (nudges link here); only administrators can ask Humo for more.
+            data: { roles: STAFF, breadcrumb: 'Plan & features' },
+            loadComponent: () => import('./features/plan/plan-page').then((m) => m.PlanPage),
+          },
+          {
+            path: 'roles',
+            title: 'Roles & permissions',
+            data: { roles: ADMIN, breadcrumb: 'Roles & permissions' },
+            loadComponent: () => import('./features/access/roles-page').then((m) => m.RolesPage),
+          },
+          {
+            path: 'audit',
+            title: 'Audit log',
+            data: { roles: ADMIN, breadcrumb: 'Audit log', feature: 'audit-log' },
+            loadComponent: () => import('./features/audit/audit-page').then((m) => m.AuditPage),
+          },
           planned('notifications', 'Notifications', ADMIN_PM, 8, 'Agency-wide notification rules and channels.'),
           planned('billing', 'Billing configuration', ADMIN_FINANCE, 8, 'Interest rates, billing day, statement layout and levy rules.'),
           planned('system', 'System', SYSADMIN, 8, 'Platform-wide configuration.'),
@@ -422,18 +459,80 @@ export const routes: Routes = [
         ],
       },
 
-      // ---------------- Platform (System Administrator) ----------------
+      // ---------------- Supplier portal ----------------
+      {
+        path: 'supplier',
+        data: { section: 'Supplier' },
+        children: [
+          planned('', 'Work orders', ['supplier'], 9, 'See and respond to this agency’s work orders, quotes and invoices — and keep vetting documents current.', [
+            'Quote requests to answer, work orders to accept and schedule, and “Mark complete” with photos',
+            'Submit invoices against the approved quote; see when they will be paid',
+            'Upload COIDA, insurance and bank letters before they expire',
+          ], false),
+        ],
+      },
+
+      // ---------------- Platform (Humo internal roles) ----------------
       {
         path: 'platform',
         data: { section: 'Platform' },
         children: [
-          { path: '', pathMatch: 'full', redirectTo: 'agencies' },
-          planned('agencies', 'Agencies', SYSADMIN, 8, 'Onboard and support managing agencies on Humo.', [
-            'Agency list with plan, schemes, units and health',
-            'Support view: enter an agency’s workspace read-only, with an audit trail',
+          { path: '', pathMatch: 'full', redirectTo: 'customers' },
+          { path: 'agencies', redirectTo: 'customers' },
+          {
+            path: 'executive',
+            title: 'Business overview',
+            data: { roles: ['humo-executive', 'system-admin'], breadcrumb: 'Business overview' },
+            loadComponent: () => import('./features/platform/executive-page').then((m) => m.ExecutivePage),
+          },
+          {
+            path: 'accounts',
+            title: 'My accounts',
+            data: { roles: ['humo-account-manager'], breadcrumb: 'My accounts' },
+            loadComponent: () => import('./features/platform/accounts-page').then((m) => m.AccountsPage),
+          },
+          {
+            path: 'customers',
+            data: { breadcrumb: 'Customers' },
+            children: [
+              {
+                path: '',
+                title: 'Customers',
+                data: { roles: HUMO },
+                loadComponent: () => import('./features/platform/customers-page').then((m) => m.CustomersPage),
+              },
+              {
+                path: ':agencyId',
+                title: 'Customer',
+                data: { roles: HUMO, breadcrumb: (_: unknown, p: Record<string, string>) => p['agencyId'] },
+                loadComponent: () => import('./features/platform/customer-page').then((m) => m.CustomerPage),
+              },
+            ],
+          },
+          {
+            path: 'packages',
+            title: 'Packages & features',
+            data: { roles: ['system-admin', 'humo-account-manager', 'humo-executive'], breadcrumb: 'Packages & features' },
+            loadComponent: () => import('./features/platform/packages-page').then((m) => m.PackagesPage),
+          },
+          planned('flags', 'Feature flags', SYSADMIN, 9, 'Roll features out safely: per environment, per customer, per percentage — separate from commercial entitlements.', [
+            'Flags are technical (is it switched on?); entitlements are commercial (has the customer got it?)',
+            'Kill switches and gradual rollout, every change audited',
           ]),
-          planned('plans', 'Plans & subscriptions', SYSADMIN, 8, 'Manage subscription plans and agency billing.'),
-          planned('health', 'Platform health', SYSADMIN, 8, 'Monitor usage, jobs and integrations.'),
+          {
+            path: 'users',
+            title: 'Users & impersonation',
+            data: { roles: HUMO_OPS, breadcrumb: 'Users & impersonation' },
+            loadComponent: () => import('./features/platform/platform-users-page').then((m) => m.PlatformUsersPage),
+          },
+          {
+            path: 'audit',
+            title: 'Platform audit log',
+            data: { roles: HUMO_AUDIT, breadcrumb: 'Audit log', platform: true },
+            loadComponent: () => import('./features/audit/audit-page').then((m) => m.AuditPage),
+          },
+          { path: 'plans', redirectTo: 'packages' },
+          planned('health', 'Platform health', ['system-admin', 'humo-support'], 9, 'Uptime, background jobs, integrations and error rates.'),
         ],
       },
 
