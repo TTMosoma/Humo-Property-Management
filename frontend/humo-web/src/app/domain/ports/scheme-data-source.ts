@@ -1,5 +1,6 @@
 import { Observable } from 'rxjs';
 import { Scheme } from '../models/scheme';
+import { SchemeHealth } from '../models/scheme-health';
 
 /**
  * Port: how the UI reads schemes.
@@ -11,4 +12,5 @@ import { Scheme } from '../models/scheme';
 export abstract class SchemeDataSource {
   abstract list(): Observable<Scheme[]>;
   abstract get(id: string): Observable<Scheme | undefined>;
+  abstract health(): Observable<SchemeHealth[]>;
 }

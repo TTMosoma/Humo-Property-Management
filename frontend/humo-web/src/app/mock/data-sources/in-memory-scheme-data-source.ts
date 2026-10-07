@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { Scheme, SchemeDataSource } from '../../domain';
+import { Scheme, SchemeDataSource, SchemeHealth } from '../../domain';
+import { SCHEME_HEALTH } from '../fixtures/scheme-health';
 import { SCHEMES } from '../fixtures/schemes';
 import { mockResponder } from '../mock-latency';
 
@@ -14,5 +15,9 @@ export class InMemorySchemeDataSource extends SchemeDataSource {
 
   get(id: string): Observable<Scheme | undefined> {
     return this.respond(SCHEMES.find((s) => s.id === id));
+  }
+
+  health(): Observable<SchemeHealth[]> {
+    return this.respond(SCHEME_HEALTH);
   }
 }

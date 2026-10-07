@@ -1,11 +1,29 @@
-// Humo design tokens.
-// Every colour, size and radius used by components comes from here.
+// Humo design tokens — derived from the Humo logo:
+//   Navy  #041B40  (wordmark)            → primary, sidebar, headings
+//   Leaf  #54BE8D → #6CD3A0 (leaf mark)  → accent, active states, positive values
+//   Cream #F2F0E4  (reversed wordmark)   → text on navy
 // Components must never hard-code hex values: use var(--c-*) instead.
 
 :root {
-  // Typography
-  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  // ---- Brand palette (raw values; prefer the semantic tokens below) ----
+  --brand-navy-950: #020f26;
+  --brand-navy-900: #041b40;
+  --brand-navy-800: #0a2a5c;
+  --brand-navy-700: #143a75;
+  --brand-navy-600: #234f92;
+  --brand-leaf-300: #9be3bf;
+  --brand-leaf-400: #6cd3a0;
+  --brand-leaf-500: #54be8d;
+  --brand-leaf-600: #2e9e6e;
+  --brand-leaf-700: #1d7a52;
+  --brand-cream: #f2f0e4;
+  --brand-leaf-gradient: linear-gradient(135deg, #3fae80 0%, #6cd3a0 100%);
+
+  // ---- Typography ----
+  // Outfit echoes the logo's geometric, rounded letterforms (headings, labels).
+  // DM Sans is a calm, highly legible text face with tabular figures for money.
+  --font-display: 'Outfit', 'DM Sans', system-ui, sans-serif;
+  --font-sans: 'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
   --fs-2xs: 11px;
   --fs-xs: 12px;
@@ -14,15 +32,15 @@
   --fs-md: 15px;
   --fs-lg: 17px;
   --fs-xl: 20px;
-  --fs-2xl: 24px;
-  --fs-3xl: 30px;
+  --fs-2xl: 26px;
+  --fs-3xl: 32px;
 
   --fw-regular: 400;
   --fw-medium: 500;
   --fw-semibold: 600;
   --fw-bold: 700;
 
-  // Spacing (4px grid)
+  // ---- Spacing (4px grid) ----
   --s-1: 4px;
   --s-2: 8px;
   --s-3: 12px;
@@ -33,112 +51,139 @@
   --s-10: 40px;
   --s-12: 48px;
 
-  // Shape
+  // ---- Shape ----
   --r-sm: 4px;
   --r: 6px;
-  --r-lg: 8px;
+  --r-lg: 10px;
   --r-pill: 999px;
 
-  // Layout
-  --topbar-h: 56px;
-  --sidebar-w: 256px;
+  // ---- Layout ----
+  --topbar-h: 60px;
+  --sidebar-w: 260px;
   --sidebar-w-collapsed: 68px;
   --content-max: 1440px;
   --gutter: 32px;
+  --drawer-w: 520px;
 
-  // Motion (kept short and rare)
+  // ---- Motion (short and rare) ----
   --ease: cubic-bezier(0.2, 0, 0, 1);
   --dur-fast: 120ms;
   --dur: 180ms;
 
   // ---- Colour: light (default) ----
-  --c-bg: #f4f6f6;
+  --c-bg: #f4f6f9;
   --c-surface: #ffffff;
-  --c-surface-2: #f9fafa;
-  --c-surface-sunken: #eef1f1;
-  --c-surface-hover: #f3f5f5;
-  --c-border: #e1e6e6;
-  --c-border-strong: #cbd3d3;
+  --c-surface-2: #f8fafc;
+  --c-surface-sunken: #edf1f6;
+  --c-surface-hover: #f1f4f8;
+  --c-border: #e0e6ee;
+  --c-border-strong: #c7d1de;
 
-  --c-text: #111d1d;
-  --c-text-2: #364645;
-  --c-text-muted: #637372;
-  --c-text-faint: #8f9c9b;
+  --c-text: #0a1a33;
+  --c-text-2: #2c3b55;
+  --c-text-muted: #5b6a82;
+  --c-text-faint: #8b97ab;
 
-  --c-primary: #0b5f5c;
-  --c-primary-hover: #084d4a;
-  --c-primary-active: #063f3d;
-  --c-primary-soft: #e4f1f0;
-  --c-primary-text: #0a5855;
+  --c-primary: var(--brand-navy-900);
+  --c-primary-hover: var(--brand-navy-800);
+  --c-primary-active: var(--brand-navy-950);
+  --c-primary-soft: #e7edf6;
+  --c-primary-text: #17418a;
   --c-on-primary: #ffffff;
-  --c-focus-ring: rgba(11, 95, 92, 0.28);
 
-  --c-success: #1c7a4b;
-  --c-success-soft: #e3f3ea;
-  --c-warning: #9a5800;
-  --c-warning-soft: #fcf0d9;
-  --c-danger: #b3261e;
-  --c-danger-soft: #fce8e6;
-  --c-info: #2556a6;
-  --c-info-soft: #e6eefb;
-  --c-neutral: #5d6a6a;
-  --c-neutral-soft: #edf0f0;
+  --c-accent: var(--brand-leaf-500);
+  --c-accent-strong: var(--brand-leaf-700);
+  --c-accent-soft: #e3f5ec;
+  --c-focus: var(--brand-leaf-600);
 
-  // Sidebar is always dark ink, in both themes, to anchor the layout.
-  --c-nav-bg: #0d1a1b;
-  --c-nav-bg-2: #132223;
-  --c-nav-text: #aebdbc;
-  --c-nav-text-strong: #f2f7f7;
-  --c-nav-muted: #6c8382;
-  --c-nav-hover: rgba(255, 255, 255, 0.055);
-  --c-nav-active: rgba(92, 198, 186, 0.13);
-  --c-nav-accent: #5cc6ba;
-  --c-nav-border: rgba(255, 255, 255, 0.07);
+  --c-success: #1d7a52;
+  --c-success-soft: #e3f5ec;
+  --c-warning: #a35a00;
+  --c-warning-soft: #fdf1dc;
+  --c-danger: #b42318;
+  --c-danger-soft: #fde8e6;
+  --c-info: #1d5bbf;
+  --c-info-soft: #e7effc;
+  --c-neutral: #56647a;
+  --c-neutral-soft: #edf1f6;
 
-  --shadow-sm: 0 1px 2px rgba(10, 25, 25, 0.06);
-  --shadow-overlay: 0 16px 40px rgba(10, 25, 25, 0.16), 0 2px 8px rgba(10, 25, 25, 0.08);
+  // Sidebar is always brand navy, in both themes.
+  --c-nav-bg: var(--brand-navy-900);
+  --c-nav-bg-2: #0a2550;
+  --c-nav-text: #b6c3d9;
+  --c-nav-text-strong: var(--brand-cream);
+  --c-nav-muted: #7487a8;
+  --c-nav-hover: rgba(255, 255, 255, 0.06);
+  --c-nav-active: rgba(108, 211, 160, 0.15);
+  --c-nav-accent: var(--brand-leaf-400);
+  --c-nav-border: rgba(255, 255, 255, 0.08);
+  --c-nav-attention: #f0b44c;
+
+  // Illustration palette (used by ui-illustration and ui-scheme-art)
+  --c-illo-ink: var(--brand-navy-900);
+  --c-illo-fill: #e7edf6;
+  --c-illo-fill-2: #d3deed;
+  --c-illo-accent: var(--brand-leaf-500);
+  --c-illo-accent-soft: #c9eedb;
+  --c-illo-sky: #eef3fa;
+
+  --shadow-sm: 0 1px 2px rgba(4, 27, 64, 0.06);
+  --shadow-md: 0 4px 14px rgba(4, 27, 64, 0.08);
+  --shadow-overlay: 0 18px 44px rgba(4, 27, 64, 0.18), 0 2px 8px rgba(4, 27, 64, 0.08);
 
   color-scheme: light;
 }
 
 @mixin dark-tokens {
-  --c-bg: #0c1415;
-  --c-surface: #121c1d;
-  --c-surface-2: #162223;
-  --c-surface-sunken: #0a1112;
-  --c-surface-hover: #1a2728;
-  --c-border: #233233;
-  --c-border-strong: #33494a;
+  --c-bg: #050e1f;
+  --c-surface: #0b1730;
+  --c-surface-2: #0e1c3a;
+  --c-surface-sunken: #040b19;
+  --c-surface-hover: #12234a;
+  --c-border: #1b2b4c;
+  --c-border-strong: #2a3e66;
 
-  --c-text: #e8efef;
-  --c-text-2: #c3d0cf;
-  --c-text-muted: #8ea09f;
-  --c-text-faint: #64797a;
+  --c-text: #eaf0f8;
+  --c-text-2: #c3cee1;
+  --c-text-muted: #8e9bb5;
+  --c-text-faint: #5f6d89;
 
-  --c-primary: #3fb3a6;
-  --c-primary-hover: #56c2b5;
-  --c-primary-active: #6ccdc1;
-  --c-primary-soft: rgba(63, 179, 166, 0.14);
-  --c-primary-text: #6fd0c4;
-  --c-on-primary: #06201e;
-  --c-focus-ring: rgba(63, 179, 166, 0.35);
+  --c-primary: var(--brand-leaf-400);
+  --c-primary-hover: var(--brand-leaf-300);
+  --c-primary-active: var(--brand-leaf-300);
+  --c-primary-soft: rgba(108, 211, 160, 0.13);
+  --c-primary-text: #8fe0b8;
+  --c-on-primary: var(--brand-navy-900);
 
-  --c-success: #4cc38a;
-  --c-success-soft: rgba(76, 195, 138, 0.14);
-  --c-warning: #e0a641;
-  --c-warning-soft: rgba(224, 166, 65, 0.15);
-  --c-danger: #f07167;
-  --c-danger-soft: rgba(240, 113, 103, 0.14);
-  --c-info: #7aa7f0;
-  --c-info-soft: rgba(122, 167, 240, 0.14);
-  --c-neutral: #9aabab;
-  --c-neutral-soft: rgba(154, 171, 171, 0.14);
+  --c-accent: var(--brand-leaf-400);
+  --c-accent-strong: #8fe0b8;
+  --c-accent-soft: rgba(108, 211, 160, 0.13);
+  --c-focus: var(--brand-leaf-400);
 
-  --c-nav-bg: #081011;
-  --c-nav-bg-2: #0e1819;
+  --c-success: #6cd3a0;
+  --c-success-soft: rgba(108, 211, 160, 0.13);
+  --c-warning: #f0b44c;
+  --c-warning-soft: rgba(240, 180, 76, 0.14);
+  --c-danger: #f4776c;
+  --c-danger-soft: rgba(244, 119, 108, 0.14);
+  --c-info: #82aaf5;
+  --c-info-soft: rgba(130, 170, 245, 0.14);
+  --c-neutral: #9aa7bf;
+  --c-neutral-soft: rgba(154, 167, 191, 0.13);
+
+  --c-nav-bg: var(--brand-navy-950);
+  --c-nav-bg-2: #071631;
+
+  --c-illo-ink: #c3cee1;
+  --c-illo-fill: #13254a;
+  --c-illo-fill-2: #1b3160;
+  --c-illo-accent: var(--brand-leaf-400);
+  --c-illo-accent-soft: rgba(108, 211, 160, 0.22);
+  --c-illo-sky: #0e1c3a;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-overlay: 0 16px 40px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.35);
+  --shadow-overlay: 0 18px 44px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.3);
 
   color-scheme: dark;
 }

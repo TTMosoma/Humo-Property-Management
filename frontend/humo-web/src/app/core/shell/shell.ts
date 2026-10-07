@@ -13,7 +13,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { Dialog } from '@angular/cdk/dialog';
 import { Overlay } from '@angular/cdk/overlay';
-import { IonMenu, IonSplitPane, MenuController } from '@ionic/angular/standalone';
+import { IonIcon, IonMenu, IonSplitPane, MenuController } from '@ionic/angular/standalone';
 import { filter } from 'rxjs';
 import { PrototypeToolbar } from '../prototype/prototype-toolbar';
 import { safeStorage } from '../prototype/safe-storage';
@@ -34,7 +34,7 @@ const DESKTOP_QUERY = '(min-width: 992px)';
  */
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, IonSplitPane, IonMenu, Sidebar, Topbar, Breadcrumbs, MobileTabBar, PrototypeToolbar],
+  imports: [RouterOutlet, IonSplitPane, IonMenu, IonIcon, Sidebar, Topbar, Breadcrumbs, MobileTabBar, PrototypeToolbar],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shell.html',
   styleUrl: './shell.scss',
@@ -55,7 +55,11 @@ export class Shell {
   protected readonly collapsed = signal(safeStorage.get('humo.sidebar') === 'collapsed');
   /** The icon rail only exists on desktop; the mobile menu always shows full labels. */
   protected readonly railCollapsed = computed(() => this.collapsed() && this.isDesktop());
-  protected readonly showTabBar = computed(() => !this.isDesktop() && this.session.isResident());
+  protected readonly showTabBar = computed(() => !this.isDesktop() && this.session.role() !== 'system-admin');
+  /** System Administrator viewing an agency: make it unmistakable. */
+  protected readonly supportAgency = computed(() =>
+    this.session.role() === 'system-admin' && this.session.supportAgencyId() ? this.session.agency() : undefined,
+  );
 
   constructor() {
     const mq = matchMedia(DESKTOP_QUERY);

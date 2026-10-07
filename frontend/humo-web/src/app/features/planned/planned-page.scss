@@ -19,12 +19,6 @@
   height: var(--s-6);
 }
 
-.surface {
-  background: var(--c-surface);
-  border: 1px solid var(--c-border);
-  border-radius: var(--r-lg);
-}
-
 .plan {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
@@ -38,23 +32,19 @@
 
 .plan-head {
   display: flex;
-  gap: var(--s-4);
-
-  > ion-icon {
-    flex: none;
-    padding: 10px;
-    font-size: 20px;
-    color: var(--c-primary-text);
-    background: var(--c-primary-soft);
-    border-radius: var(--r);
-  }
+  gap: var(--s-5);
+  align-items: center;
 
   h2 {
-    font-size: var(--fs-md);
+    font-size: var(--fs-lg);
+  }
+
+  .label-caps {
+    margin-bottom: var(--s-1);
   }
 
   p {
-    margin-top: 2px;
+    margin-top: var(--s-1);
   }
 }
 
@@ -124,5 +114,12 @@ dd {
 @media (max-width: 900px) {
   .plan {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .plan-head {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

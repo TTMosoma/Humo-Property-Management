@@ -3,6 +3,8 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRouteSnapshot, NavigationEnd, Router, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { filter, map, startWith } from 'rxjs';
+import { Role } from '../../../domain';
+import { SessionService } from '../../session/session.service';
 
 export interface Crumb {
   label: string;
@@ -52,6 +54,7 @@ export type BreadcrumbData = string | ((data: Record<string, unknown>, params: R
 })
 export class Breadcrumbs {
   private readonly router = inject(Router);
+  private readonly session = inject(SessionService);
 
   protected readonly crumbs = toSignal(
     this.router.events.pipe(
@@ -61,6 +64,16 @@ export class Breadcrumbs {
     ),
     { initialValue: [] as Crumb[] },
   );
+
+  /** A crumb links only if the current role may open it (its own roles, or its index child's). */
+  private canOpen(route: ActivatedRouteSnapshot): boolean {
+    const config = route.routeConfig;
+    if (!config) return false;
+    const index = config.children?.find((c) => c.path === '');
+    const roles = (index?.data?.['roles'] ?? config.data?.['roles']) as Role[] | undefined;
+    if (!config.component && !config.loadComponent && !index) return false;
+    return this.session.hasRole(roles);
+  }
 
   private build(root: ActivatedRouteSnapshot): Crumb[] {
     const crumbs: Crumb[] = [];
@@ -75,7 +88,7 @@ export class Breadcrumbs {
       if (bc) {
         const label = typeof bc === 'function' ? bc(route.data, route.params) : bc;
         const prev = crumbs[crumbs.length - 1];
-        if (!prev || prev.label !== label) crumbs.push({ label, url });
+        if (!prev || prev.label !== label) crumbs.push({ label, url: this.canOpen(route) ? url : null });
       }
       route = route.firstChild;
     }

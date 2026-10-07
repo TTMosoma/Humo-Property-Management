@@ -1,6 +1,9 @@
 # Humo Property Management — Information Architecture & Shell (Proposal v0.1)
 
-> Status: **PROPOSAL — partially accepted (2026-10-06).** Nothing in this document is implemented yet.
+> Status: **SUPERSEDED IN PART by [02-ux-review.md](02-ux-review.md) (2026-10-07).** Where they differ — navigation (§4.1), scheme scope,
+> multi-role memberships and build order (§4.2) — doc 02 wins. The core model (Agency → Scheme → Unit → People, D1, D2, D3) still stands.
+>
+> Original status: proposal, partially accepted (2026-10-06).
 >
 > | Decision | Outcome |
 > |---|---|

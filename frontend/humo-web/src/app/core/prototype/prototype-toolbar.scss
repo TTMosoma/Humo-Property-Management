@@ -225,3 +225,13 @@
     display: none;
   }
 }
+
+.multi {
+  margin-left: var(--s-1);
+  padding: 1px 6px;
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semibold);
+  color: var(--proto);
+  background: var(--proto-soft);
+  border-radius: var(--r-pill);
+}

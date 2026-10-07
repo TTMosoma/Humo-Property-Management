@@ -1,14 +1,17 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
+import { ConnectedPosition } from '@angular/cdk/overlay';
+import { CdkMenu, CdkMenuItem, CdkMenuTrigger } from '@angular/cdk/menu';
 import { IonIcon } from '@ionic/angular/standalone';
 import { Logo } from '../../../ui/brand/logo';
 import { NavService } from '../../navigation/nav.service';
 import { NavGroup, NavLink, NavNode, isGroup } from '../../navigation/nav.model';
+import { ScopeService } from '../../scope/scope.service';
 
 @Component({
   selector: 'app-sidebar',
-  imports: [RouterLink, NgTemplateOutlet, IonIcon, Logo],
+  imports: [RouterLink, NgTemplateOutlet, IonIcon, Logo, CdkMenu, CdkMenuItem, CdkMenuTrigger],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './sidebar.html',
   styleUrl: './sidebar.scss',
@@ -16,7 +19,7 @@ import { NavGroup, NavLink, NavNode, isGroup } from '../../navigation/nav.model'
 })
 export class Sidebar {
   protected readonly nav = inject(NavService);
-  private readonly router = inject(Router);
+  protected readonly scope = inject(ScopeService);
 
   readonly collapsed = input(false);
   readonly canCollapse = input(true);
@@ -29,6 +32,13 @@ export class Sidebar {
     () => this.nav.sections().find((s) => s.id === 'footer')?.nodes ?? [],
   );
 
+  /** The scheme in the current URL, to highlight its pinned entry. */
+  protected readonly activeSchemeId = computed(() => /^\/schemes\/([^/?#]+)/.exec(this.nav.url())?.[1] ?? null);
+
+  protected readonly flyoutPosition: ConnectedPosition[] = [
+    { originX: 'end', originY: 'top', overlayX: 'start', overlayY: 'top', offsetX: 8 },
+  ];
+
   protected readonly isGroup = isGroup;
 
   protected asGroup(node: NavNode): NavGroup {
@@ -39,17 +49,16 @@ export class Sidebar {
     return node as NavLink;
   }
 
-  protected groupHasBadge(group: NavGroup): boolean {
-    return group.children.some((c) => c.badge?.tone === 'attention');
+  protected isPinned(id: string): boolean {
+    return this.scope.isPinned(id);
+  }
+
+  protected groupAttention(group: NavGroup): boolean {
+    return group.children.some((c) => this.nav.badgeAttention(c));
   }
 
   protected onGroupClick(group: NavGroup): void {
-    if (this.collapsed()) {
-      // In the icon rail there is no room for sub-items: jump to the first one.
-      this.router.navigateByUrl(group.children[0].route);
-      this.navigated.emit();
-      return;
-    }
-    this.nav.toggle(group.id);
+    // In the icon rail the flyout menu handles it.
+    if (!this.collapsed()) this.nav.toggle(group.id);
   }
 }

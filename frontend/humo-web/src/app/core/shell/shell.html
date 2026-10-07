@@ -10,6 +10,13 @@
 
   <div class="ion-page" id="main-content">
     <app-topbar [showMenuButton]="!isDesktop()" (openMenu)="openMenu()" (openPalette)="openPalette()" />
+    @if (supportAgency(); as a) {
+      <div class="support-banner" role="status">
+        <ion-icon name="eye-outline" aria-hidden="true" />
+        <span>Support view: <strong>{{ a.name }}</strong>. Read-only — every page you open is logged for the agency’s audit trail.</span>
+        <button type="button" (click)="session.viewAgency(null)">Exit support view</button>
+      </div>
+    }
     <main class="content" #scroller>
       <div class="content-inner">
         <app-breadcrumbs />
@@ -17,7 +24,7 @@
       </div>
     </main>
     @if (showTabBar()) {
-      <app-mobile-tab-bar (more)="openMenu()" />
+      <app-mobile-tab-bar (more)="openMenu()" (search)="openPalette()" />
     }
   </div>
 </ion-split-pane>

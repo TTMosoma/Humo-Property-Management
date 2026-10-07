@@ -1,0 +1,93 @@
+<ui-page-header eyebrow="Portfolio" title="Schemes" [subtitle]="subtitle()" />
+
+<ui-view-tabs label="Scheme views" [tabs]="tabs()" [active]="state().view ?? 'all'" (activeChange)="patch({ view: $event })" />
+<ui-filter-bar
+  searchLabel="Search by name, code, suburb or manager…"
+  [filters]="filters"
+  [values]="{ type: state().type, province: state().province, manager: state().manager, health: state().health }"
+  (valuesChange)="setFilters($event)"
+  [search]="state().q ?? ''"
+  (searchChange)="patch({ q: $event })"
+/>
+
+@switch (page.status()) {
+  @case ('loading') {
+    <ui-skeleton [count]="8" />
+  }
+  @case ('error') {
+    <div class="surface"><ui-error-state title="We couldn’t load your schemes" (retry)="page.retry()" /></div>
+  }
+  @default {
+    @if (rows().length === 0) {
+      <div class="surface">
+        @if (state().view === 'pinned' && !state().q) {
+          <ui-empty-state kind="first-use" illustration="building" title="No pinned schemes yet" message="Pin the schemes you work on most and they’ll appear in the sidebar for one-click access.">
+            <button type="button" class="btn btn-secondary" (click)="patch({ view: 'all' })">Browse all schemes</button>
+          </ui-empty-state>
+        } @else if (allRows().length === 0 || page.forceEmpty()) {
+          <ui-empty-state kind="first-use" illustration="building" title="Add your first scheme" message="Bring in a scheme with its units and owners — from a spreadsheet or your previous system — and Humo builds the rest.">
+            <button type="button" class="btn btn-primary" disabled title="Arrives with onboarding">Import schemes</button>
+          </ui-empty-state>
+        } @else {
+          <ui-empty-state kind="filtered" title="No schemes match these filters">
+            <button type="button" class="btn btn-secondary" (click)="patch({ q: '', type: null, province: null, manager: null, health: null })">Clear filters</button>
+          </ui-empty-state>
+        }
+      </div>
+    } @else {
+      @let t = totals();
+      <div class="summary">
+        <span><strong>{{ t.schemes }}</strong> schemes</span>
+        <span><strong>{{ t.units }}</strong> units</span>
+        <span><strong class="money">{{ t.arrears | rand: 'compact' }}</strong> arrears</span>
+        @if (t.atRisk) {
+          <span class="risk"><strong>{{ t.atRisk }}</strong> at risk</span>
+        }
+      </div>
+
+      <ui-data-table caption="Schemes" [rows]="rows()" [columns]="columns" [rowId]="rowId" [activeId]="activeId()" (rowClick)="open($event)">
+        <ng-template uiCell="scheme" let-r>
+          <div class="scheme">
+            <ui-scheme-art class="thumb" [seed]="r.scheme.id" [type]="r.scheme.type" />
+            <div class="scheme-text">
+              <div class="name">
+                {{ r.scheme.name }}
+                <ui-status-pill class="rating" [label]="ratingOf(r).label" [tone]="ratingOf(r).tone" />
+              </div>
+              <div class="sub">{{ r.scheme.code }} · {{ r.scheme.type }} · {{ r.scheme.suburb }}, {{ r.scheme.city }}</div>
+            </div>
+          </div>
+        </ng-template>
+        <ng-template uiCell="units" let-r><span class="num">{{ r.scheme.unitCount }}</span></ng-template>
+        <ng-template uiCell="collections" let-r>
+          <div class="collect">
+            <span class="num" [class]="collectionTone(r.health.collectionRate)">{{ r.health.collectionRate }}%</span>
+            <span class="meter" aria-hidden="true"><span [style.width.%]="r.health.collectionRate" [class]="collectionTone(r.health.collectionRate)"></span></span>
+          </div>
+        </ng-template>
+        <ng-template uiCell="arrears" let-r><span class="money">{{ r.health.arrears | rand: 'whole' }}</span></ng-template>
+        <ng-template uiCell="jobs" let-r>
+          <span class="num">{{ r.health.openJobs }}</span>
+          @if (r.health.overdueJobs) {
+            <span class="overdue">{{ r.health.overdueJobs }} overdue</span>
+          }
+        </ng-template>
+        <ng-template uiCell="compliance" let-r>
+          <ui-status-pill [label]="complianceOf(r).label" [tone]="complianceOf(r).tone" />
+        </ng-template>
+        <ng-template uiCell="pin" let-r>
+          <button
+            type="button"
+            class="pin"
+            [class.on]="scope.isPinned(r.scheme.id)"
+            (click)="togglePin(r, $event)"
+            [attr.aria-label]="(scope.isPinned(r.scheme.id) ? 'Unpin ' : 'Pin ') + r.scheme.name"
+            [attr.aria-pressed]="scope.isPinned(r.scheme.id)"
+          >
+            <ion-icon [name]="scope.isPinned(r.scheme.id) ? 'star' : 'star-outline'" aria-hidden="true" />
+          </button>
+        </ng-template>
+      </ui-data-table>
+    }
+  }
+}

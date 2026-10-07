@@ -1,14 +1,12 @@
-<ui-page-header
-  [eyebrow]="scheme() ? scheme()!.name : section()"
-  [title]="title()"
-  [subtitle]="meta()?.job"
->
-  @if (meta()) {
-    <span class="checkpoint">Checkpoint {{ meta()!.checkpoint }} · {{ checkpointName() }}</span>
-  }
-</ui-page-header>
+@if (!embedded()) {
+  <ui-page-header [eyebrow]="section()" [title]="title()" [subtitle]="meta()?.job">
+    @if (meta()) {
+      <span class="checkpoint">Checkpoint {{ meta()!.checkpoint }} · {{ checkpointName() }}</span>
+    }
+  </ui-page-header>
+}
 
-@switch (status()) {
+@switch (page.status()) {
   @case ('loading') {
     <ui-skeleton variant="tiles" [count]="4" />
     <div class="gap"></div>
@@ -16,16 +14,16 @@
   }
   @case ('error') {
     <div class="surface">
-      <ui-error-state (retry)="load()" />
+      <ui-error-state (retry)="page.retry()" />
     </div>
   }
   @default {
-    @if (viewState() === 'empty') {
+    @if (page.forceEmpty()) {
       <div class="surface">
         <ui-empty-state
-          icon="file-tray-outline"
+          kind="first-use"
           title="Nothing here yet"
-          message="This is how an empty list will look: it explains why it’s empty and offers the next step."
+          message="This is how a first-use empty state looks: it explains why it’s empty and offers the next step."
         >
           <button type="button" class="btn btn-primary">
             <ion-icon name="add-outline" aria-hidden="true" /> Add the first item
@@ -36,10 +34,18 @@
       <div class="plan">
         <section class="surface plan-main">
           <div class="plan-head">
-            <ion-icon name="layers-outline" aria-hidden="true" />
+            <ui-illustration name="coming-soon" [size]="96" />
             <div>
-              <h2>Planned screen</h2>
-              <p class="text-muted">This page is a placeholder in the navigation review. It will be built in checkpoint {{ meta()?.checkpoint }}.</p>
+              @if (embedded()) {
+                <div class="label-caps">{{ title() }}</div>
+                <h2>{{ meta()?.job }}</h2>
+              } @else {
+                <h2>Planned screen</h2>
+              }
+              <p class="text-muted">
+                Part of checkpoint {{ meta()?.checkpoint }}<span class="cp"> · {{ checkpointName() }}</span>.
+                It’s in the navigation now so the whole product can be reviewed end to end.
+              </p>
             </div>
           </div>
           @if (meta()?.planned?.length) {
@@ -59,15 +65,6 @@
               <li>Everyone signed in</li>
             }
           </ul>
-          @if (scheme()) {
-            <div class="label-caps side-gap">Scheme context</div>
-            <dl>
-              <dt>Scheme</dt><dd>{{ scheme()!.name }}</dd>
-              <dt>Type</dt><dd>{{ scheme()!.type }}</dd>
-              <dt>Location</dt><dd>{{ scheme()!.suburb }}, {{ scheme()!.city }}</dd>
-              <dt>Units</dt><dd class="num">{{ scheme()!.unitCount }}</dd>
-            </dl>
-          }
         </aside>
       </div>
     }

@@ -50,6 +50,17 @@ import {
   swapHorizontalOutline,
   timeOutline,
   walletOutline,
+  chevronUpOutline,
+  star,
+  starOutline,
+  openOutline,
+  personAddOutline,
+  funnelOutline,
+  documentAttachOutline,
+  checkmarkCircleOutline,
+  closeCircleOutline,
+  informationCircleOutline,
+  eyeOutline,
 } from 'ionicons/icons';
 
 /** Registers every icon the app uses (tree-shaken, no runtime fetches). */
@@ -105,5 +116,16 @@ export function registerIcons(): void {
     'swap-horizontal-outline': swapHorizontalOutline,
     'time-outline': timeOutline,
     'wallet-outline': walletOutline,
+    'chevron-up-outline': chevronUpOutline,
+    'star': star,
+    'star-outline': starOutline,
+    'open-outline': openOutline,
+    'person-add-outline': personAddOutline,
+    'funnel-outline': funnelOutline,
+    'document-attach-outline': documentAttachOutline,
+    'checkmark-circle-outline': checkmarkCircleOutline,
+    'close-circle-outline': closeCircleOutline,
+    'information-circle-outline': informationCircleOutline,
+    'eye-outline': eyeOutline,
   });
 }

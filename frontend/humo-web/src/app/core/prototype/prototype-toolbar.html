@@ -22,8 +22,13 @@
         >
           <span class="avatar">{{ p.initials }}</span>
           <span class="persona-text">
-            <span class="role">{{ roleLabels[p.role] }}</span>
-            <span class="who">{{ p.name }} · {{ p.subtitle }}</span>
+            <span class="role">
+              {{ roleLabels[p.memberships[0].role] }}
+              @if (p.memberships.length > 1) {
+                <span class="multi">+{{ p.memberships.length - 1 }} role</span>
+              }
+            </span>
+            <span class="who">{{ p.name }} · {{ p.memberships[0].label }}</span>
           </span>
         </button>
       }

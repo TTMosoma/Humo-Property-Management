@@ -21,7 +21,6 @@ body {
   background: var(--c-bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-feature-settings: 'cv11', 'ss01';
 }
 
 h1,
@@ -29,8 +28,9 @@ h2,
 h3,
 h4 {
   margin: 0;
-  font-weight: var(--fw-semibold);
-  letter-spacing: -0.011em;
+  font-family: var(--font-display);
+  font-weight: var(--fw-medium);
+  letter-spacing: -0.01em;
   color: var(--c-text);
 }
 
@@ -53,7 +53,7 @@ button {
 }
 
 :focus-visible {
-  outline: 2px solid var(--c-primary);
+  outline: 2px solid var(--c-focus);
   outline-offset: 2px;
 }
 
@@ -64,9 +64,10 @@ button {
 }
 
 .label-caps {
+  font-family: var(--font-display);
   font-size: var(--fs-2xs);
-  font-weight: var(--fw-semibold);
-  letter-spacing: 0.08em;
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--c-text-muted);
 }
@@ -161,6 +162,15 @@ kbd {
   }
 }
 
+.btn-danger {
+  color: #fff;
+  background: var(--c-danger);
+
+  &:hover:not(:disabled) {
+    filter: brightness(0.92);
+  }
+}
+
 .btn-ghost {
   color: var(--c-text-2);
   background: transparent;
@@ -239,4 +249,33 @@ kbd {
   height: 1px;
   margin: var(--s-1) 0;
   background: var(--c-border);
+}
+
+// ---------- Money ----------
+// Amounts are always tabular and right-aligned in tables.
+.money {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+
+  &.negative,
+  &.arrears {
+    color: var(--c-danger);
+  }
+
+  &.credit {
+    color: var(--c-success);
+  }
+}
+
+// ---------- Surfaces ----------
+.surface {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-medium);
 }

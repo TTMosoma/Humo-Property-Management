@@ -1,11 +1,5 @@
 import { Role } from '../../domain';
-
-export interface NavBadge {
-  count: number;
-  /** 'attention' is used sparingly: only for items that are overdue or at risk. */
-  tone?: 'neutral' | 'attention';
-  label: string;
-}
+import type { AttentionKey } from '../attention/attention.service';
 
 export interface NavLink {
   id: string;
@@ -13,8 +7,11 @@ export interface NavLink {
   icon?: string;
   route: string;
   roles: readonly Role[];
-  badge?: NavBadge;
-  /** Extra words the command palette should match, e.g. "arrears" for Debtors. */
+  /** Live count from the Attention model. Never hard-code numbers here. */
+  badge?: AttentionKey;
+  /** 'attention' is used sparingly: only for queues where items are overdue or at risk. */
+  badgeTone?: 'neutral' | 'attention';
+  /** Extra words the command palette should match, e.g. "arrears" for Credit control. */
   keywords?: string;
 }
 

@@ -2,6 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter, map } from 'rxjs';
+import { AttentionService } from '../attention/attention.service';
 import { SessionService } from '../session/session.service';
 import { NAV } from './nav.config';
 import { NavGroup, NavLink, NavNode, NavSection, isGroup } from './nav.model';
@@ -10,6 +11,7 @@ import { NavGroup, NavLink, NavNode, NavSection, isGroup } from './nav.model';
 export class NavService {
   private readonly session = inject(SessionService);
   private readonly router = inject(Router);
+  private readonly attention = inject(AttentionService);
 
   readonly url = toSignal(
     this.router.events.pipe(
@@ -22,12 +24,15 @@ export class NavService {
   /** Navigation filtered to the current role. Groups left with one link collapse into that link. */
   readonly sections = computed<NavSection[]>(() => {
     const role = this.session.role();
+    const ownScheme = this.session.membership().schemeIds[0];
     return NAV.map((section) => ({
       ...section,
       nodes: section.nodes
         .map((node): NavNode | null => {
           if (!isGroup(node)) {
-            return node.roles.includes(role) ? node : null;
+            if (!node.roles.includes(role)) return null;
+            // A trustee's "My scheme" points at their own scheme.
+            return node.id === 'my-scheme' && ownScheme ? { ...node, route: `/schemes/${ownScheme}` } : node;
           }
           const children = node.children.filter((c) => c.roles.includes(role));
           if (children.length === 0) return null;
@@ -77,6 +82,16 @@ export class NavService {
   toggle(groupId: string): void {
     const open = this.isExpanded(groupId);
     this.toggled.update((s) => ({ ...s, [groupId]: !open }));
+  }
+
+  /** Live badge count for a link (0 hides the badge). */
+  badgeCount(link: NavLink): number {
+    return link.badge ? this.attention.counts()[link.badge] : 0;
+  }
+
+  /** Whether a link's badge should be emphasised (only when something in it is overdue). */
+  badgeAttention(link: NavLink): boolean {
+    return link.badgeTone === 'attention' && this.badgeCount(link) > 0;
   }
 
   isActive(link: NavLink): boolean {

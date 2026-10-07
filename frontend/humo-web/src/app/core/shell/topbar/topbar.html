@@ -1,4 +1,5 @@
 @let persona = session.persona();
+@let m = session.membership();
 
 <div class="left">
   @if (showMenuButton()) {
@@ -7,33 +8,46 @@
     </button>
   }
 
-  @if (session.isResident()) {
-    <div class="context static">
-      <span class="context-name">{{ residentScheme()?.name }}</span>
-      <span class="context-sub">{{ persona.unitLabel }}</span>
-    </div>
-  } @else if (session.role() === 'trustee') {
-    <div class="context static">
-      <span class="context-name">{{ residentScheme()?.name }}</span>
-      <span class="context-sub">Managed by {{ session.agency()?.shortName }}</span>
-    </div>
+  @if (scope.canChangeScope()) {
+    <!-- Scheme scope: every portfolio-wide list, count and search follows this. -->
+    <button
+      type="button"
+      class="scope"
+      [class.on]="!!scope.scheme()"
+      [cdkMenuTriggerFor]="scopeMenu"
+      [attr.aria-label]="'Scheme scope: ' + (scope.scheme()?.name ?? 'All schemes')"
+    >
+      <ion-icon [name]="scope.scheme() ? 'business-outline' : 'layers-outline'" aria-hidden="true" />
+      <span class="scope-text">
+        <span class="scope-label">{{ session.agency()?.shortName }}</span>
+        <span class="scope-name">{{ scope.scheme()?.name ?? 'All schemes' }}</span>
+      </span>
+      <ion-icon class="chev" name="chevron-down-outline" aria-hidden="true" />
+    </button>
+    @if (scope.scheme()) {
+      <button type="button" class="btn btn-ghost btn-icon btn-sm clear-scope" (click)="scope.setScope(null)" aria-label="Show all schemes" title="Show all schemes">
+        <ion-icon name="close-outline" aria-hidden="true" />
+      </button>
+    }
   } @else if (session.role() === 'system-admin') {
-    <button type="button" class="context" [cdkMenuTriggerFor]="agencyMenu" aria-label="Switch agency">
-      <span class="context-label">Viewing agency</span>
-      <span class="context-name">{{ session.agency()?.shortName }}</span>
+    <button type="button" class="context" [cdkMenuTriggerFor]="agencyMenu" aria-label="Choose agency to support">
+      <span class="context-label">{{ session.supportAgencyId() ? 'Support view' : 'Platform' }}</span>
+      <span class="context-name">{{ session.supportAgencyId() ? session.agency()?.shortName : 'All agencies' }}</span>
       <ion-icon name="chevron-down-outline" aria-hidden="true" />
     </button>
   } @else {
     <div class="context static">
-      <span class="context-name">{{ session.agency()?.shortName }}</span>
-      <span class="context-sub">{{ session.agency()?.city }}</span>
+      <span class="context-name">{{ ownScheme()?.name }}</span>
+      <span class="context-sub">
+        {{ session.isResident() ? m.unitLabel : 'Managed by ' + session.agency()?.shortName }}
+      </span>
     </div>
   }
 </div>
 
 <button type="button" class="search" (click)="openPalette.emit()" aria-label="Search or jump to (Ctrl K)">
   <ion-icon name="search-outline" aria-hidden="true" />
-  <span class="search-text">Search schemes, units, people…</span>
+  <span class="search-text">{{ scope.scheme() ? 'Search ' + scope.scheme()!.name + '…' : 'Search schemes, pages, actions…' }}</span>
   <span class="search-keys"><kbd>Ctrl</kbd><kbd>K</kbd></span>
 </button>
 
@@ -65,14 +79,52 @@
 
   <button type="button" class="avatar-btn" [cdkMenuTriggerFor]="userMenu" aria-label="Account menu">
     <span class="avatar">{{ persona.initials }}</span>
+    @if (session.memberships().length > 1) {
+      <span class="multi" aria-hidden="true"></span>
+    }
   </button>
 </div>
 
 <!-- ===== Menus ===== -->
 
+<ng-template #scopeMenu>
+  <div class="menu-panel scope-panel" cdkMenu>
+    <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="scope.setScope(null)">
+      <ion-icon name="layers-outline" aria-hidden="true" />
+      <span>All schemes</span>
+      @if (!scope.scheme()) { <ion-icon class="menu-item-meta check" name="checkmark-outline" aria-hidden="true" /> }
+    </button>
+    @if (scopeOptions().pinned.length) {
+      <div class="menu-divider"></div>
+      <div class="menu-section-label label-caps">Pinned</div>
+      @for (s of scopeOptions().pinned; track s.id) {
+        <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="scope.setScope(s.id)">
+          <span class="code">{{ s.code }}</span>
+          <span>{{ s.name }}</span>
+          @if (scope.scopeId() === s.id) { <ion-icon class="menu-item-meta check" name="checkmark-outline" aria-hidden="true" /> }
+        </button>
+      }
+    }
+    <div class="menu-divider"></div>
+    <div class="menu-section-label label-caps">All schemes</div>
+    @for (s of scopeOptions().others; track s.id) {
+      <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="scope.setScope(s.id)">
+        <span class="code">{{ s.code }}</span>
+        <span>{{ s.name }}</span>
+        @if (scope.scopeId() === s.id) { <ion-icon class="menu-item-meta check" name="checkmark-outline" aria-hidden="true" /> }
+      </button>
+    }
+  </div>
+</ng-template>
+
 <ng-template #agencyMenu>
   <div class="menu-panel" cdkMenu>
-    <div class="menu-section-label label-caps">Agencies on Humo</div>
+    <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="session.viewAgency(null)">
+      <ion-icon name="pulse-outline" aria-hidden="true" />
+      <span>Platform view (all agencies)</span>
+    </button>
+    <div class="menu-divider"></div>
+    <div class="menu-section-label label-caps">Support an agency</div>
     @for (a of session.agencies; track a.id) {
       <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="session.viewAgency(a.id)">
         <ion-icon name="business-outline" aria-hidden="true" />
@@ -85,7 +137,9 @@
 
 <ng-template #createMenu>
   <div class="menu-panel" cdkMenu>
-    <div class="menu-section-label label-caps">Create</div>
+    <div class="menu-section-label label-caps">
+      Create{{ scope.scheme() ? ' in ' + scope.scheme()!.name : '' }}
+    </div>
     @for (a of quickActions(); track a.route) {
       <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="go(a.route)">
         <ion-icon [name]="a.icon" aria-hidden="true" />
@@ -103,7 +157,7 @@
         <button type="button" class="link-btn" cdkMenuItem (cdkMenuItemTriggered)="markAllRead()">Mark all read</button>
       }
     </div>
-    @for (n of visibleNotifications(); track n.id) {
+    @for (n of notifications(); track n.id) {
       <button type="button" class="notif" [class.unread]="!n.read" cdkMenuItem (cdkMenuItemTriggered)="openNotification(n)">
         <span class="notif-icon"><ion-icon [name]="kindIcon[n.kind]" aria-hidden="true" /></span>
         <span class="notif-body">
@@ -112,14 +166,15 @@
             <span class="notif-time">{{ relativeTime(n.at) }}</span>
           </span>
           <span class="notif-detail">{{ n.detail }}</span>
-          @if (n.schemeName) {
-            <span class="notif-scheme">{{ n.schemeName }}</span>
+          @if (n.schemeId && !session.isResident()) {
+            <span class="notif-scheme">{{ scope.findScheme(n.schemeId)?.name }}</span>
           }
         </span>
       </button>
     } @empty {
       <div class="notif-empty">You’re all caught up.</div>
     }
+    <div class="notif-foot">Things to <em>do</em> live in My work. Notifications tell you what happened.</div>
   </div>
 </ng-template>
 
@@ -130,9 +185,33 @@
       <span class="user-text">
         <span class="user-name">{{ persona.name }}</span>
         <span class="user-sub">{{ persona.email }}</span>
-        <span class="user-role">{{ roleLabels[persona.role] }}</span>
       </span>
     </div>
+
+    @if (session.memberships().length > 1) {
+      <div class="menu-divider"></div>
+      <div class="menu-section-label label-caps">Acting as</div>
+      <div cdkMenuGroup>
+        @for (mm of session.memberships(); track mm.id) {
+          <button
+            type="button"
+            class="menu-item context-item"
+            cdkMenuItemRadio
+            [cdkMenuItemChecked]="mm.id === m.id"
+            (cdkMenuItemTriggered)="switchContext(mm.id)"
+          >
+            <span class="ctx-text">
+              <span class="ctx-role">{{ roleLabels[mm.role] }}</span>
+              <span class="ctx-label">{{ mm.label }}</span>
+            </span>
+            @if (mm.id === m.id) { <ion-icon class="menu-item-meta check" name="checkmark-outline" aria-hidden="true" /> }
+          </button>
+        }
+      </div>
+    } @else {
+      <div class="role-line">{{ roleLabels[m.role] }} · {{ m.label }}</div>
+    }
+
     <div class="menu-divider"></div>
     <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="go('/settings/profile')">
       <ion-icon name="person-circle-outline" aria-hidden="true" />

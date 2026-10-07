@@ -1,13 +1,27 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
-import { IonIcon } from '@ionic/angular/standalone';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { Illustration, IllustrationName } from '../illustration/illustration';
 
-/** Shown when a list or page has nothing to display. Always explain why and what to do next. */
+/**
+ * Three different situations, three different empty states:
+ * - first-use: nothing exists yet → generous, explains the value, offers to create/import
+ * - filtered:  filters hide everything → compact, offers "clear filters"
+ * - done:      a queue is cleared → a small reward and what to do next
+ */
+export type EmptyKind = 'first-use' | 'filtered' | 'done';
+
+const DEFAULT_ART: Record<EmptyKind, IllustrationName> = {
+  'first-use': 'empty-tray',
+  filtered: 'no-results',
+  done: 'all-done',
+};
+
 @Component({
   selector: 'ui-empty-state',
-  imports: [IonIcon],
+  imports: [Illustration],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '[class]': 'kind()' },
   template: `
-    <div class="icon"><ion-icon [name]="icon()" aria-hidden="true" /></div>
+    <ui-illustration [name]="art()" [size]="kind() === 'filtered' ? 96 : 150" />
     <h3>{{ title() }}</h3>
     @if (message()) {
       <p>{{ message() }}</p>
@@ -19,28 +33,22 @@ import { IonIcon } from '@ionic/angular/standalone';
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: var(--s-12) var(--s-6);
+      padding: var(--s-10) var(--s-6);
       text-align: center;
     }
-    .icon {
-      display: grid;
-      place-items: center;
-      width: 48px;
-      height: 48px;
-      margin-bottom: var(--s-4);
-      font-size: 24px;
-      color: var(--c-text-muted);
-      background: var(--c-surface-sunken);
-      border-radius: var(--r-lg);
-    }
-    h3 { font-size: var(--fs-md); }
-    p { max-width: 420px; margin-top: var(--s-2); color: var(--c-text-muted); }
-    .actions { display: flex; gap: var(--s-2); margin-top: var(--s-5); }
+    :host(.filtered) { padding: var(--s-8) var(--s-6); }
+    ui-illustration { margin-bottom: var(--s-4); }
+    h3 { font-size: var(--fs-lg); }
+    :host(.filtered) h3 { font-size: var(--fs-md); }
+    p { max-width: 440px; margin-top: var(--s-2); color: var(--c-text-muted); }
+    .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s-2); margin-top: var(--s-5); }
     .actions:empty { display: none; }
   `,
 })
 export class EmptyState {
-  readonly icon = input('file-tray-outline');
+  readonly kind = input<EmptyKind>('first-use');
   readonly title = input.required<string>();
   readonly message = input<string>();
+  readonly illustration = input<IllustrationName>();
+  protected readonly art = computed(() => this.illustration() ?? DEFAULT_ART[this.kind()]);
 }
