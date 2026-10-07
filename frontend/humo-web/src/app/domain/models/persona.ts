@@ -16,6 +16,8 @@ export interface RoleAssignment {
   agencyId: string | null;
   /** Schemes this assignment covers. Empty means "every scheme in the agency". */
   schemeIds: string[];
+  /** For contractors and suppliers: the Humo Contractor business they act for. Not tied to one agency. */
+  partyId?: string;
   /** For owners and tenants: the unit owned or occupied, e.g. "Unit 42". */
   unitLabel?: string;
   /** Short description shown in the role switcher, e.g. "Chairperson · Kingfisher Court". */

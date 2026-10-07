@@ -1,0 +1,92 @@
+@if (failed()) {
+  <ui-error-state (retry)="page.retry()" />
+} @else if (!p()) {
+  <ui-skeleton variant="tiles" [count]="4" />
+} @else {
+  @let x = p()!;
+  <header class="head">
+    <div>
+      <div class="eyebrow">Business profile</div>
+      <h1>{{ x.party.tradingName }}</h1>
+      <p class="muted">{{ x.summary }}</p>
+      <p class="muted small">{{ x.party.legalName }} · Reg. {{ x.party.registrationNo }} · trading since {{ x.party.established }} · on Humo since {{ x.party.onHumoSince }}</p>
+    </div>
+    <ct-verification-badge [level]="x.verification.level" />
+  </header>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Reputation</h2>
+      <ct-reputation [profile]="x" />
+      <p class="muted small note">Built from completed work with Humo customers. It can’t be edited, bought or boosted.</p>
+    </section>
+
+    <section class="card">
+      <h2>Verification</h2>
+      <ol class="levels">
+        @for (l of levels(); track l.id) {
+          <li [class.done]="l.done">
+            <span class="dot"><ion-icon [name]="l.done ? 'checkmark' : 'ellipse-outline'" aria-hidden="true" /></span>
+            <span>
+              <strong>{{ l.label }}</strong>
+              <span class="muted small">{{ l.text }}</span>
+              @if (!l.done && l.eligible) { <span class="elig">Your record meets the bar — Humo reviews it at your next check.</span> }
+            </span>
+          </li>
+        }
+      </ol>
+      @if (x.verification.reviewedAt) {
+        <p class="muted small">Last reviewed by Humo {{ formatDate(x.verification.reviewedAt, true) }}.</p>
+      }
+    </section>
+
+    <section class="card">
+      <h2>Services</h2>
+      <ul class="plain">
+        @for (s of x.services; track s.category) {
+          <li><strong>{{ s.category }}</strong><span class="muted small">{{ s.description }} · usually starts within {{ s.leadTimeDays }} days</span></li>
+        }
+      </ul>
+      <h3>Service areas</h3>
+      <div class="chips">@for (a of x.areas; track a.name) { <span class="chip">{{ a.name }}</span> }</div>
+      <h3>Availability</h3>
+      <p class="small">{{ x.availability.status === 'fully-booked' ? 'Fully booked' : x.availability.status === 'limited' ? 'Limited availability' : 'Available' }} · next opening {{ formatDate(x.availability.nextAvailable, true) }}</p>
+    </section>
+
+    <section class="card">
+      <h2>Compliance & insurance</h2>
+      <ul class="docs">
+        @for (d of x.documents; track d.type) {
+          <li>
+            <ion-icon [name]="d.onFile ? 'document-text-outline' : 'alert-circle-outline'" aria-hidden="true" [class.bad]="!d.onFile" />
+            <span class="d-name">{{ d.type }}</span>
+            <span class="muted small">{{ d.onFile ? (d.expires ? 'to ' + formatDate(d.expires, true) : 'On file') : 'Not uploaded' }}{{ d.verifiedByHumo ? ' · verified' : '' }}</span>
+          </li>
+        }
+        @for (i of x.insurance; track i.kind) {
+          <li>
+            <ion-icon name="umbrella-outline" aria-hidden="true" />
+            <span class="d-name">{{ i.kind }} · {{ i.insurer }}</span>
+            <span class="muted small">{{ rand(i.coverAmount) }} to {{ formatDate(i.expires, true) }}{{ i.verifiedByHumo ? ' · verified' : '' }}</span>
+          </li>
+        }
+      </ul>
+    </section>
+
+    <section class="card wide">
+      <h2>Endorsements from Humo customers <span class="count">{{ x.endorsements.length }}</span></h2>
+      <p class="muted small">Endorsements come only from Humo customers you’ve completed work for. You can’t add or request them here.</p>
+      <ul class="ends">
+        @for (e of x.endorsements; track e.id) {
+          <li>
+            <span class="e-from">{{ e.fromCustomerName }}</span>
+            <span class="e-note">“{{ e.note }}”</span>
+            <span class="muted small">{{ e.endorsedBy }} · based on {{ e.basedOnCompletedJobs }} completed jobs · {{ formatDate(e.at, true) }}</span>
+          </li>
+        } @empty {
+          <li class="muted">No endorsements yet.</li>
+        }
+      </ul>
+    </section>
+  </div>
+}

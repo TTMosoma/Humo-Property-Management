@@ -1,4 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { catchError, distinctUntilChanged, map, of, switchMap } from 'rxjs';
+import { ContractorNetwork } from '../../domain/contractor';
 import { RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import {
@@ -38,10 +41,21 @@ const TRADES: Trade[] = ['Plumbing', 'Electrical', 'Roofing & waterproofing', 'P
 })
 export class JobNextStep {
   private readonly jobs = inject(JobDataSource);
+  private readonly network = inject(ContractorNetwork);
   private readonly feedback = inject(FeedbackService);
   protected readonly session = inject(SessionService);
 
   readonly detail = input.required<JobDetail>();
+
+  /** A Humo Contractor quote request for this job, if quotes were requested through Humo. */
+  protected readonly networkRequest = toSignal(
+    toObservable(computed(() => this.detail().job.ref)).pipe(
+      distinctUntilChanged(),
+      switchMap((ref) => this.network.quoteRequestFor({ product: 'humo-pm', ref }).pipe(catchError(() => of(undefined)))),
+      map((v) => v ?? null),
+    ),
+    { initialValue: null },
+  );
 
   protected readonly staff = STAFF.filter((s) => s.title !== 'Senior Accountant' && s.title !== 'Credit Controller');
   protected readonly trades = TRADES;

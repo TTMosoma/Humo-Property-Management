@@ -121,7 +121,7 @@ export class SessionService {
       case 'tenant':
         return '/my/home';
       case 'supplier':
-        return '/supplier';
+        return '/contractor';
       case 'trustee':
         return '/approvals';
       default:

@@ -165,6 +165,20 @@ export const PERSONAS: Identity[] = [
     ],
   },
 
+  // ---------------- Humo Contractor ----------------
+  {
+    // A contractor's identity isn't owned by any one agency: they serve many Humo customers.
+    id: 'p-themba',
+    name: 'Themba Khoza',
+    initials: 'TK',
+    email: 'themba@secureaccess.example',
+    kind: 'customer',
+    demo: true,
+    memberships: [
+      { id: 'm-themba', role: 'supplier', agencyId: null, partyId: 'party-secureaccess', schemeIds: [], label: 'SecureAccess Systems', grantedBy: 'Self-registered on Humo Contractor', grantedAt: '2025-09-14T09:00:00+02:00' },
+    ],
+  },
+
   // ---------------- Directory only (not in the prototype's sign-in list) ----------------
   {
     id: 'p-naledi',
@@ -232,7 +246,7 @@ export const PERSONAS: Identity[] = [
     email: 'kevin@randplumbing.example',
     kind: 'customer',
     memberships: [
-      { id: 'm-kevin', role: 'supplier', agencyId: 'acacia', schemeIds: [], label: 'Rand Plumbing & Geysers', grantedBy: 'Thandeka Mokoena', grantedAt: '2026-06-02T09:00:00+02:00' },
+      { id: 'm-kevin', role: 'supplier', agencyId: null, partyId: 'party-rand-plumbing', schemeIds: [], label: 'Rand Plumbing & Drainage', grantedBy: 'Self-registered on Humo Contractor', grantedAt: '2026-06-02T09:00:00+02:00' },
     ],
   },
   {

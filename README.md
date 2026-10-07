@@ -121,6 +121,27 @@ The model is described in `docs/04-platform-commercial.md`.
 
 To see a nudge again, use **Prototype › Reset Smart Nudges**. Nudges follow their frequency rules, so a nudge that was shown once won't reappear for 30 days.
 
+## Demo: Humo Contractor foundation (not a marketplace)
+
+The design is described in `docs/05-humo-contractor.md`.
+
+1. As **Johan**, open **MR-1070 — Replace damaged entrance gate**. Its Next step shows the Humo quote request **QR-2041**. Choose **Compare quotes**:
+   - a workflow stepper
+   - who was invited and who declined
+   - ABC Gates R 38 500, XYZ Security R 42 000, SecureAccess R 35 900, side by side: price, timing, proposed work, reputation, endorsements, response time and compliance
+   - SecureAccess's contact details hidden ("New to you")
+2. **Accept & send for approval** on SecureAccess. Then:
+   - **Sipho** approves it in Approvals.
+   - Johan issues the work order. The bank letter needs an override, because SecureAccess is a new supplier.
+3. Sign in as **Themba Khoza** (SecureAccess). **Humo Contractor** has its own look:
+   - dashboard: 3 open requests, 5 active jobs, 28 completed, 4.8 rating, 12 endorsements, Verified
+   - the gate quote shows **Accepted**
+   - the job shows **Scheduled**
+   - quote on Tshikrand's **boom gate** request
+   - open **Profile** to see the verification levels and endorsements
+4. In Humo PM, open **Suppliers › PaintPro Gauteng** and choose **Endorse**. This is only possible because Acacia has completed work with them.
+5. Open **MR-1061 — Request quotes through Humo** to create a new quote request from a reported job.
+
 ## Progress
 
 Build order follows workflow slices (see `docs/02-ux-review.md` §4.2).
@@ -131,6 +152,7 @@ Build order follows workflow slices (see `docs/02-ux-review.md` §4.2).
 - [x] Checkpoint 4 — Slice B: Fix the leaking geyser (Job → Quote → Approval → Work order → Verification → Invoice → Payment, suppliers, resident requests)
 - [x] Identity & access — one identity with many roles, Switch role, permissions, scope by assignment, plan entitlements, step-up (passkey / Humo Mobile), impersonation (Observe/Act) and the audit log
 - [x] Humo platform layer — internal roles, packages/add-ons/overrides → effective entitlements, Account Health, opportunities, Smart Nudges, Executive dashboard, Account Manager home, customer 360
+- [x] Humo Contractor foundation — business party, contractor profile, verification, reputation, endorsements, quote requests with multiple quotes, side-by-side comparison, protected contact, lifecycle events, Contractor portal
 - [ ] Checkpoint 5 — Slice C: Run the trustee meeting (Meeting → Resolution → Action → Completion)
 - [ ] Checkpoint 6 — Credit control & billing run
 - [ ] Checkpoint 7 — Dashboard, Compliance & Documents

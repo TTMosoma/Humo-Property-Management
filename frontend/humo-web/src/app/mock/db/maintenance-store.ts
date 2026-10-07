@@ -221,6 +221,40 @@ export class MaintenanceStore {
     return ref;
   }
 
+  /** Find or start the agency's supplier relationship with a Humo Contractor party. */
+  linkParty(input: { partyId: string; name: string; trades: Supplier['trades']; contactName: string; phone: string; email: string; schemeId: string }): string {
+    const existing = this.suppliers.find((s) => s.partyId === input.partyId);
+    if (existing) {
+      if (!existing.schemeIds.includes(input.schemeId)) existing.schemeIds.push(input.schemeId);
+      return existing.id;
+    }
+    const soon = (d: number) => new Date(Date.now() + d * 86_400_000).toISOString();
+    const supplier: Supplier = {
+      id: `sup-${input.partyId.replace(/^party-/, '')}`,
+      partyId: input.partyId,
+      name: input.name,
+      trades: input.trades,
+      contactName: input.contactName,
+      phone: input.phone,
+      email: input.email,
+      bankAccount: 'To be confirmed',
+      bankVerified: false,
+      schemeIds: [input.schemeId],
+      // Documents Humo verified on the contractor profile; the bank letter still needs the agency's own check.
+      documents: [
+        { type: 'COIDA letter of good standing', onFile: true, expires: soon(200) },
+        { type: 'Public liability insurance', onFile: true, expires: soon(240) },
+        { type: 'Tax compliance (SARS PIN)', onFile: true, expires: soon(300) },
+        { type: 'B-BBEE certificate', onFile: true, expires: soon(320) },
+        { type: 'Bank confirmation letter', onFile: false },
+      ],
+      performance: { jobsCompleted: 0, onTimeRate: 0, avgVariance: 0, verifiedRate: 0 },
+      status: 'active',
+    };
+    this.suppliers.push(supplier);
+    return supplier.id;
+  }
+
   act(ref: string, action: JobAction, by: string): void {
     const job = this.jobs.find((j) => j.ref === ref);
     if (!job) throw new Error(`Unknown job ${ref}`);
@@ -268,10 +302,23 @@ export class MaintenanceStore {
         break;
       }
 
+      case 'award-network-quote': {
+        // The comparison happened in the contractor network; the job records the chosen quote
+        // and continues exactly like any other quote (approval → work order → invoice).
+        const quoteId = `${ref}-q${job.quotes.length + 1}`;
+        job.quotes.push({
+          id: quoteId, supplierId: action.supplierId, amount: action.amount, status: 'received', receivedAt: new Date().toISOString(),
+          guaranteeMonths: action.guaranteeMonths, notes: `Via Humo quote request ${action.quoteRequestId} · complete by ${fmtDay(action.completeBy)}`,
+        });
+        job.networkQuotes = { quoteRequestId: action.quoteRequestId, compared: action.compared };
+        this.log(job, 'quote', `Chose ${this.supplier(action.supplierId)?.name} (${formatRand(action.amount)}) from ${action.compared} quotes in Humo quote request ${action.quoteRequestId}`, by);
+        return this.act(ref, action.amount <= DELEGATED_LIMIT ? { type: 'approve-within-delegation', quoteId } : { type: 'send-for-approval', quoteId }, by);
+      }
+
       case 'send-for-approval': {
         const q = job.quotes.find((x) => x.id === action.quoteId)!;
         job.quotes.forEach((x) => (x.recommended = x.id === q.id));
-        const received = job.quotes.filter((x) => x.status === 'received');
+        const received = { length: job.networkQuotes?.compared ?? job.quotes.filter((x) => x.status === 'received').length };
         const supplier = this.supplier(q.supplierId)!;
         const workId = `w-${ref}-approval`;
         const budget = this.budgetFor(job);

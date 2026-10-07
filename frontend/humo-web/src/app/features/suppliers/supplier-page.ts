@@ -1,9 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, map, of, switchMap } from 'rxjs';
 import { SupplierDataSource, SupplierDocument, docStatus } from '../../domain';
+import { ContractorNetwork } from '../../domain/contractor';
+import { EndorsedBy, Reputation, VerificationBadge } from '../contractor-shared/contractor-ui';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { pageState } from '../../core/prototype/page-state';
 import { StepUpService } from '../../core/security/step-up.service';
@@ -20,7 +22,7 @@ import { VETTING } from './suppliers-page';
 /** A supplier's record: vetting documents, performance, jobs and money. */
 @Component({
   selector: 'app-supplier-page',
-  imports: [RecordHeader, StatusPill, EmptyState, ErrorState, Skeleton, IonIcon, RouterLink, RandPipe],
+  imports: [VerificationBadge, Reputation, EndorsedBy, RecordHeader, StatusPill, EmptyState, ErrorState, Skeleton, IonIcon, RouterLink, RandPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './supplier-page.html',
   styleUrl: './supplier-page.scss',
@@ -30,6 +32,7 @@ export class SupplierPage {
   private readonly data = inject(SupplierDataSource);
   private readonly feedback = inject(FeedbackService);
   private readonly stepUp = inject(StepUpService);
+  private readonly contractors = inject(ContractorNetwork);
   protected readonly session = inject(SessionService);
   protected readonly page = pageState();
 
@@ -44,6 +47,30 @@ export class SupplierPage {
     const r = this.result();
     return r ? r : undefined;
   });
+
+  /** The business's Humo-wide profile (if it's on Humo Contractor). */
+  protected readonly network = toSignal(
+    toObservable(computed(() => this.detail()?.supplier.partyId ?? null)).pipe(
+      switchMap((partyId) => (partyId ? this.contractors.profile(partyId).pipe(catchError(() => of(undefined))) : of(undefined))),
+    ),
+  );
+  protected readonly endorsing = signal(false);
+  protected readonly endorseNote = signal('');
+  protected readonly endorsedByUs = computed(() => !!this.network()?.endorsements.some((e) => e.fromCustomerId === this.session.agency()?.id));
+  protected readonly canEndorse = computed(() => this.session.can('Suppliers.Manage') && (this.detail()?.supplier.performance.jobsCompleted ?? 0) > 0);
+
+  protected endorse(): void {
+    const s = this.detail()?.supplier;
+    const agency = this.session.agency();
+    if (!s?.partyId || !agency) return;
+    this.contractors.endorse(s.partyId, agency.id, agency.shortName, this.endorseNote().trim(), s.performance.jobsCompleted).subscribe({
+      next: () => {
+        this.endorsing.set(false);
+        this.feedback.success(`${agency.shortName} now endorses ${s.name} on Humo. Other Humo customers will see it when comparing quotes.`);
+      },
+      error: () => this.feedback.error('The endorsement wasn’t saved.'),
+    });
+  }
 
   protected readonly status = computed(() => {
     const d = this.detail();

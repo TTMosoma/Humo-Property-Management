@@ -46,6 +46,11 @@
             <li class="muted">No suppliers for {{ job.category }} serve this scheme yet. <a routerLink="/suppliers">Add one in Suppliers</a>.</li>
           }
         </ul>
+        <a class="humo-quotes" [routerLink]="['/maintenance', job.ref, 'quote-request']">
+          <ion-icon name="hammer-outline" aria-hidden="true" />
+          <span><strong>Request quotes through Humo</strong> — your suppliers quote in Humo Contractor and you compare offers side by side.</span>
+          <ion-icon name="chevron-forward-outline" aria-hidden="true" />
+        </a>
         <div class="actions">
           <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="triageAndRequest()">
             {{ chosenSuppliers().length ? 'Save & request ' + chosenSuppliers().length + ' quote' + (chosenSuppliers().length > 1 ? 's' : '') : 'Save triage' }}
@@ -59,12 +64,22 @@
 
     <!-- ============================== QUOTING ============================== -->
     @case ('quoting') {
+      @if (networkRequest(); as nr) {
+        <a class="humo-quotes on" [routerLink]="['/maintenance', job.ref, 'quotes']">
+          <ion-icon name="hammer-outline" aria-hidden="true" />
+          <span>
+            <strong>Humo quote request {{ nr.request.id }}</strong> — {{ nr.quotes.length }} of {{ nr.request.invitations.length }} contractors have quoted · closes {{ formatDate(nr.request.deadline, true) }}
+          </span>
+          <span class="btn btn-primary btn-sm">Compare quotes</span>
+        </a>
+      }
       @if (job.approval?.status === 'rejected') {
         <div class="note warn">
           <ion-icon name="close-circle-outline" aria-hidden="true" />
           <span>The previous recommendation was rejected by {{ job.approval.decidedBy }}@if (job.approval.comment) {: “{{ job.approval.comment }}”}.</span>
         </div>
       }
+      @if (!networkRequest()) {
       <p class="lead">
         {{ received().length }} of {{ job.quotes.length }} quotes received.
         @if (received().length) { Choose the one to recommend. } @else { Record quotes as suppliers send them. }
@@ -120,6 +135,7 @@
         }
       } @else {
         <p class="muted">The managing agent is collecting quotes.</p>
+      }
       }
     }
 

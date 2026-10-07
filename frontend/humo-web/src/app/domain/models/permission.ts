@@ -26,6 +26,8 @@ export type Permission =
   | 'Suppliers.ChangeBankDetails'
   // Residents
   | 'Resident.Requests'
+  // Contractors (Humo Contractor)
+  | 'Contractor.Respond'
   // Agency administration
   | 'Users.Manage'
   | 'Users.ManageAdmins'
@@ -79,6 +81,7 @@ export const PERMISSIONS: PermissionMeta[] = [
   { id: 'Suppliers.Manage', area: 'Maintenance', label: 'Manage suppliers and vetting documents', mutates: true },
   { id: 'Suppliers.ChangeBankDetails', area: 'Maintenance', label: 'Change supplier banking details', mutates: true, stepUp: true },
   { id: 'Resident.Requests', area: 'Residents', label: 'Report problems and confirm fixes', mutates: true },
+  { id: 'Contractor.Respond', area: 'Residents', label: 'Respond to quote requests and manage work orders (Humo Contractor)', mutates: true },
   { id: 'Users.Manage', area: 'Administration', label: 'Assign customer roles and scope', mutates: true, stepUp: true },
   { id: 'Users.ManageAdmins', area: 'Administration', label: 'Add or remove Agency Administrators', mutates: true, stepUp: true },
   { id: 'Audit.View', area: 'Administration', label: 'View the agency’s audit log', mutates: false },
@@ -129,7 +132,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   trustee: ['Work.Manage', 'Approvals.Decide', 'Portfolio.View', 'Security.ManageOwn'],
   owner: ['Accounts.View', 'Resident.Requests', 'Security.ManageOwn'],
   tenant: ['Resident.Requests', 'Security.ManageOwn'],
-  supplier: ['Security.ManageOwn'],
+  supplier: ['Contractor.Respond', 'Security.ManageOwn'],
   // Highest operational authority — but impersonation is still an individual grant.
   'system-admin': [
     'Platform.View', 'Platform.Customers.View', 'Platform.Customers.Manage', 'Platform.Customers.Users', 'Platform.Subscriptions.View',

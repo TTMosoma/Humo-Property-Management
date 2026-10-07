@@ -16,7 +16,6 @@ const SYSADMIN: readonly Role[] = ['system-admin'];
 const HUMO: readonly Role[] = ['system-admin', 'humo-account-manager', 'humo-support', 'humo-executive'];
 const HUMO_OPS: readonly Role[] = ['system-admin', 'humo-support', 'humo-account-manager'];
 const HUMO_AUDIT: readonly Role[] = ['system-admin', 'humo-support'];
-const SUPPLIER: readonly Role[] = ['supplier'];
 const APPROVERS: readonly Role[] = ['agency-admin', 'portfolio-manager', 'finance', 'trustee'];
 
 /**
@@ -47,10 +46,6 @@ export const NAV: NavSection[] = [
       { id: 'my-documents', label: 'Documents', icon: 'folder-open-outline', route: '/my/documents', roles: RESIDENT },
       { id: 'my-notices', label: 'Notices', icon: 'megaphone-outline', route: '/my/notices', roles: RESIDENT },
     ],
-  },
-  {
-    id: 'supplier',
-    nodes: [{ id: 'supplier-home', label: 'Work orders', icon: 'hammer-outline', route: '/supplier', roles: SUPPLIER }],
   },
   {
     id: 'platform',

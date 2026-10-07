@@ -29,9 +29,17 @@ export interface SupplierDocument {
 
 export type DocStatus = 'valid' | 'expiring' | 'expired' | 'missing';
 
-/** A contractor or vendor. Vetting documents gate new work orders (review finding F18). */
+/**
+ * The agency's relationship with a contractor or vendor: its vetting, its
+ * performance *with this agency*, bank details for payment. The business itself
+ * (profile, Humo-wide reputation, verification) is a Humo Contractor party,
+ * linked by `partyId` — one business, one party, whatever it does.
+ * Vetting documents gate new work orders (review finding F18).
+ */
 export interface Supplier {
   id: string;
+  /** The Humo Contractor business party, when the business is on Humo. */
+  partyId?: string;
   name: string;
   trades: Trade[];
   contactName: string;

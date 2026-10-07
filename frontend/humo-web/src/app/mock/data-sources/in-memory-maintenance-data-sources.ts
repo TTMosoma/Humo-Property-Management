@@ -26,6 +26,7 @@ const JOB_VERB: Record<JobAction['type'], string> = {
   'record-quote': 'Recorded a quote',
   'send-for-approval': 'Sent quote for approval',
   'approve-within-delegation': 'Approved quote within delegated authority',
+  'award-network-quote': 'Chose a quote from a Humo quote request',
   'issue-work-order': 'Issued work order',
   'start-work': 'Marked supplier on site',
   complete: 'Marked job completed',
@@ -110,6 +111,13 @@ export class InMemorySupplierDataSource extends Live implements SupplierDataSour
   requestDocument(supplierId: string, type: string): Observable<void> {
     const name = this.store.supplierDetail(supplierId)?.supplier.name;
     return this.command({ action: `Requested ${type} from ${name}`, resource: 'Supplier', resourceId: supplierId, permission: 'Suppliers.Manage' }, () => undefined);
+  }
+
+  linkParty(input: Parameters<SupplierDataSource['linkParty']>[0]): Observable<string> {
+    return this.command(
+      { action: `Added ${input.name} as a supplier (from Humo Contractor)`, resource: 'Supplier', resourceId: input.partyId, permission: 'Suppliers.Manage' },
+      () => this.store.linkParty(input),
+    );
   }
 
   changeBankDetails(supplierId: string): Observable<void> {

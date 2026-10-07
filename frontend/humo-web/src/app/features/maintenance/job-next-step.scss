@@ -321,3 +321,35 @@ textarea {
     grid-column: auto;
   }
 }
+
+.humo-quotes {
+  display: flex;
+  gap: var(--s-3);
+  align-items: center;
+  margin: var(--s-3) 0;
+  padding: var(--s-3) var(--s-4);
+  font-size: var(--fs-sm);
+  color: var(--c-text-2);
+  text-decoration: none;
+  background: color-mix(in srgb, #0e7490 6%, var(--c-surface));
+  border: 1px solid color-mix(in srgb, #0e7490 30%, var(--c-border));
+  border-radius: var(--r);
+
+  > ion-icon:first-child {
+    flex: none;
+    font-size: 20px;
+    color: #0e7490;
+  }
+
+  span:not(.btn) {
+    flex: 1;
+  }
+
+  strong {
+    color: var(--c-text);
+  }
+
+  &:hover {
+    background: color-mix(in srgb, #0e7490 10%, var(--c-surface));
+  }
+}

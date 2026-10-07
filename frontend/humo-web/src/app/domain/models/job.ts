@@ -95,6 +95,8 @@ export interface Job {
   completion?: { completedAt: string; notes: string };
   verification?: { at: string; by: string; outcome: 'fixed' | 'not-fixed'; comment?: string };
   invoiceId?: string;
+  /** Quotes gathered through a Humo Contractor quote request (compared there, awarded here). */
+  networkQuotes?: { quoteRequestId: string; compared: number };
   budgetCategory: string;
   events: JobEvent[];
   /** Overdue flag for the current stage (e.g. contractor missed the booking). */

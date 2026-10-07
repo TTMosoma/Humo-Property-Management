@@ -75,6 +75,8 @@ export type JobAction =
   | { type: 'request-quotes'; supplierIds: string[] }
   | { type: 'record-quote'; quoteId: string; amount: number; guaranteeMonths?: number; notes?: string }
   | { type: 'send-for-approval'; quoteId: string }
+  /** A quote chosen in a Humo Contractor quote request, compared against `compared` offers. */
+  | { type: 'award-network-quote'; supplierId: string; amount: number; guaranteeMonths: number; quoteRequestId: string; compared: number; completeBy: string }
   | { type: 'approve-within-delegation'; quoteId: string }
   | { type: 'issue-work-order'; scheduledFor: string; accessNotes?: string }
   | { type: 'start-work' }
@@ -105,6 +107,11 @@ export abstract class SupplierDataSource {
   abstract requestDocument(supplierId: string, type: string): Observable<void>;
   /** Sensitive: needs step-up; payments to the supplier are held until the new account is verified. */
   abstract changeBankDetails(supplierId: string): Observable<void>;
+  /**
+   * Start (or find) the agency's supplier relationship with a Humo Contractor
+   * business — e.g. when awarding work to a contractor invited by email.
+   */
+  abstract linkParty(input: { partyId: string; name: string; trades: Supplier['trades']; contactName: string; phone: string; email: string; schemeId: string }): Observable<string>;
 }
 
 export abstract class PayablesDataSource {

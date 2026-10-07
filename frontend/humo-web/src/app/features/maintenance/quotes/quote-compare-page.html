@@ -1,0 +1,220 @@
+@if (failed()) {
+  <div class="surface"><ui-error-state title="We couldn’t load these quotes" (retry)="page.retry()" /></div>
+} @else if (loading()) {
+  <ui-skeleton variant="tiles" [count]="4" />
+} @else if (!job() || !qr()) {
+  <div class="surface">
+    <ui-empty-state illustration="not-found" title="No Humo quote request for this job">
+      <a class="btn btn-primary" [routerLink]="['/maintenance', ref()]">Back to the job</a>
+    </ui-empty-state>
+  </div>
+} @else {
+  @let v = qr()!;
+  @let j = job()!;
+
+  <header class="head">
+    <div>
+      <div class="label-caps">Quote request {{ v.request.id }} · <a [routerLink]="['/maintenance', j.job.ref]">{{ j.job.ref }}</a> · {{ j.scheme.name }}</div>
+      <h1>{{ v.request.title }}</h1>
+      <p class="muted">
+        @if (v.request.status === 'open') {
+          Quotes close {{ formatDate(v.request.deadline) }} · {{ v.quotes.length }} of {{ v.request.invitations.length }} contractors have quoted
+        } @else {
+          Awarded to {{ name(accepted()?.partyId ?? '') }} · {{ v.quotes.length }} quotes compared
+        }
+      </p>
+    </div>
+    <span class="via"><ion-icon name="hammer-outline" aria-hidden="true" /> Through Humo Contractor</span>
+  </header>
+
+  <!-- The workflow at a glance -->
+  <ol class="flow" aria-label="Workflow">
+    @for (s of steps(); track s.label) {
+      <li [attr.data-state]="s.state">
+        <span class="dot" aria-hidden="true">
+          @if (s.state === 'done') { <ion-icon name="checkmark-outline" /> }
+        </span>
+        <span class="f-label">{{ s.label }}</span>
+        @if (s.note) { <span class="f-note">{{ s.note }}</span> }
+      </li>
+    }
+  </ol>
+
+  <div class="layout">
+    <!-- The request -->
+    <section class="surface request">
+      <h2>What was asked</h2>
+      <p>{{ v.request.description }}</p>
+      <h3 class="label-caps">Requirements</h3>
+      <ul class="reqs">
+        @for (r of v.request.requirements; track r) { <li>{{ r }}</li> }
+      </ul>
+      <div class="facts">
+        <span><ion-icon name="images-outline" aria-hidden="true" /> {{ v.request.photos }} photos shared</span>
+        <span><ion-icon name="calendar-outline" aria-hidden="true" /> Deadline {{ formatDate(v.request.deadline) }}</span>
+        <span><ion-icon name="location-outline" aria-hidden="true" /> Contractors see: {{ v.request.site.suburb }}, {{ v.request.site.city }}</span>
+      </div>
+      <h3 class="label-caps">Invited</h3>
+      <ul class="invited">
+        @for (i of v.request.invitations; track i.partyId) {
+          <li>
+            <span>{{ name(i.partyId) }}</span>
+            <span class="muted small">{{ i.via === 'email-invite' ? 'Invited by email' : 'Your supplier' }}</span>
+            <ui-status-pill
+              [label]="i.status === 'quoted' ? 'Quoted' : i.status === 'declined' ? 'Declined' : i.status === 'viewed' ? 'Viewed' : 'Invited'"
+              [tone]="i.status === 'quoted' ? 'success' : i.status === 'declined' ? 'neutral' : 'info'"
+            />
+          </li>
+          @if (i.declineReason) { <li class="reason">“{{ i.declineReason }}”</li> }
+        }
+      </ul>
+    </section>
+
+    <!-- The comparison -->
+    <section class="compare">
+      <div class="compare-head">
+        <h2>Compare quotes</h2>
+        <span class="muted small">Humo shows the facts side by side. The choice is yours.</span>
+      </div>
+
+      @if (!offers().length) {
+        <div class="surface"><ui-empty-state kind="first-use" title="No quotes yet" message="Contractors have been invited. Quotes appear here as they’re submitted." /></div>
+      } @else {
+        <div class="table-wrap surface">
+          <table>
+            <caption class="sr-only">Quotes compared</caption>
+            <thead>
+              <tr>
+                <th scope="col"><span class="sr-only">Criterion</span></th>
+                @for (o of offers(); track o.q.id) {
+                  <th scope="col" [class.rec]="o.q.recommendedByCustomer" [class.won]="o.q.status === 'accepted'">
+                    <span class="c-name">{{ o.profile.party.tradingName }}</span>
+                    <span class="c-tags">
+                      <ct-verification-badge [level]="o.profile.verification.level" />
+                      <span class="rel" [class.new]="!o.existing">{{ o.existing ? 'Your supplier' : 'New to you' }}</span>
+                    </span>
+                    @if (o.q.status === 'accepted') { <span class="flag won-flag">Accepted</span> }
+                    @else if (o.q.status === 'not-selected') { <span class="flag">Not selected</span> }
+                    @else if (o.q.recommendedByCustomer) { <span class="flag rec-flag">Your recommendation</span> }
+                  </th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="price">
+                <th scope="row">Price (incl. VAT)</th>
+                @for (o of offers(); track o.q.id) {
+                  <td><strong>{{ rand(o.q.amount) }}</strong>@if (o.lowest) { <span class="fact">Lowest</span> }</td>
+                }
+              </tr>
+              <tr>
+                <th scope="row">Start · complete</th>
+                @for (o of offers(); track o.q.id) {
+                  <td>{{ formatDate(o.q.startBy, true) }} → {{ formatDate(o.q.completeBy, true) }}@if (o.fastest) { <span class="fact">Soonest</span> }</td>
+                }
+              </tr>
+              <tr>
+                <th scope="row">Guarantee</th>
+                @for (o of offers(); track o.q.id) { <td>{{ o.q.guaranteeMonths }} months</td> }
+              </tr>
+              <tr>
+                <th scope="row">Proposed work</th>
+                @for (o of offers(); track o.q.id) {
+                  <td class="work">
+                    <ul>@for (w of o.q.proposedWork; track w) { <li>{{ w }}</li> }</ul>
+                    @if (o.q.exclusions) { <p class="excl">Excludes: {{ o.q.exclusions }}</p> }
+                  </td>
+                }
+              </tr>
+              <tr>
+                <th scope="row">Reputation on Humo</th>
+                @for (o of offers(); track o.q.id) {
+                  <td><ct-reputation [profile]="o.profile" [compact]="true" /></td>
+                }
+              </tr>
+              <tr>
+                <th scope="row">Endorsements</th>
+                @for (o of offers(); track o.q.id) { <td><ct-endorsed-by [profile]="o.profile" /></td> }
+              </tr>
+              <tr>
+                <th scope="row">Response time</th>
+                @for (o of offers(); track o.q.id) { <td>Quoted in {{ o.responseHours }} h<span class="muted small"> · usually ~{{ o.profile.reputation.medianResponseHours }} h</span></td> }
+              </tr>
+              <tr>
+                <th scope="row">Compliance</th>
+                @for (o of offers(); track o.q.id) {
+                  <td>
+                    <ui-status-pill [label]="o.compliant ? 'Documents valid' : 'Check documents'" [tone]="o.compliant ? 'success' : 'warning'" />
+                    <div class="muted small">{{ o.profile.verification.insuranceVerified ? 'Insurance verified by Humo' : 'Insurance not yet verified' }}</div>
+                  </td>
+                }
+              </tr>
+              <tr>
+                <th scope="row">Contact</th>
+                @for (o of offers(); track o.q.id) {
+                  <td>
+                    @if (o.disclosure.contactVisible) {
+                      <div>{{ o.profile.party.contact.name }}</div>
+                      <div class="muted small">{{ o.profile.party.contact.phone }} · {{ o.profile.party.contact.email }}</div>
+                    } @else {
+                      <div class="masked"><ion-icon name="lock-closed-outline" aria-hidden="true" /> Shared after acceptance</div>
+                      <button type="button" class="link" (click)="message(o.profile.party.tradingName)">Message through Humo</button>
+                    }
+                  </td>
+                }
+              </tr>
+              @if (canAct() && v.request.status === 'open') {
+                <tr class="decide">
+                  <th scope="row">Decide</th>
+                  @for (o of offers(); track o.q.id) {
+                    <td>
+                      @if (confirming() === o.q.id) {
+                        <div class="confirm">
+                          <p>
+                            Accept <strong>{{ o.profile.party.tradingName }}</strong> at {{ rand(o.q.amount) }}?
+                            {{ o.q.amount > limit ? 'It goes to the trustees for approval (above your ' + rand(limit) + ' authority).' : 'It’s within your delegated authority.' }}
+                            The other contractors will be told they weren’t selected.
+                          </p>
+                          <div class="btns">
+                            <button type="button" class="btn btn-primary btn-sm" [disabled]="busy()" (click)="accept(o.q, o.profile)">Accept</button>
+                            <button type="button" class="btn btn-ghost btn-sm" (click)="confirming.set(null)">Cancel</button>
+                          </div>
+                        </div>
+                      } @else {
+                        <div class="btns">
+                          <button type="button" class="btn btn-sm" [class.btn-primary]="o.q.recommendedByCustomer" [class.btn-secondary]="!o.q.recommendedByCustomer" (click)="confirming.set(o.q.id)">
+                            {{ o.q.amount > limit ? 'Accept & send for approval' : 'Accept' }}
+                          </button>
+                          @if (!o.q.recommendedByCustomer) {
+                            <button type="button" class="btn btn-ghost btn-sm" (click)="recommend(o.q)">Mark as my recommendation</button>
+                          }
+                        </div>
+                      }
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (noResponse().length) {
+          <p class="muted small">No quote from: {{ noResponseNames() }}.</p>
+        }
+      }
+    </section>
+  </div>
+
+  <!-- Lifecycle: the event stream future commercial rules would read -->
+  <section class="surface lifecycle">
+    <h2>Quote lifecycle</h2>
+    <p class="muted small">Every step is recorded as an event — the basis for reporting now and any commercial rules later. Nothing is charged.</p>
+    <ol>
+      @for (e of events(); track e.id) {
+        <li>
+          <span class="e-type">{{ lifecycleLabel[e.type] }}</span>
+          <span class="muted">{{ e.partyId ? name(e.partyId) + ' · ' : '' }}{{ e.amount ? rand(e.amount) + ' · ' : '' }}{{ relativeTime(e.at) }}</span>
+        </li>
+      }
+    </ol>
+  </section>
+}

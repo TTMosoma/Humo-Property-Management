@@ -51,6 +51,45 @@ function planned(
 const schemeName = (d: Record<string, unknown>) => (d['scheme'] as Scheme | undefined)?.name ?? 'Scheme';
 
 export const routes: Routes = [
+  // ---------------- Humo Contractor (its own product shell) ----------------
+  {
+    path: 'contractor',
+    loadComponent: () => import('./features/contractor-portal/contractor-shell').then((m) => m.ContractorShell),
+    canActivateChild: [roleGuard],
+    data: { section: 'Humo Contractor' },
+    children: [
+      {
+        path: '',
+        title: 'Humo Contractor',
+        data: { roles: ['supplier'], view: 'dashboard' },
+        loadComponent: () => import('./features/contractor-portal/contractor-home-page').then((m) => m.ContractorHomePage),
+      },
+      {
+        path: 'requests',
+        title: 'Quote requests · Humo Contractor',
+        data: { roles: ['supplier'], view: 'requests' },
+        loadComponent: () => import('./features/contractor-portal/contractor-home-page').then((m) => m.ContractorHomePage),
+      },
+      {
+        path: 'requests/:id',
+        title: 'Quote request · Humo Contractor',
+        data: { roles: ['supplier'] },
+        loadComponent: () => import('./features/contractor-portal/contractor-request-page').then((m) => m.ContractorRequestPage),
+      },
+      {
+        path: 'jobs',
+        title: 'Jobs · Humo Contractor',
+        data: { roles: ['supplier'], view: 'jobs' },
+        loadComponent: () => import('./features/contractor-portal/contractor-home-page').then((m) => m.ContractorHomePage),
+      },
+      {
+        path: 'profile',
+        title: 'Profile · Humo Contractor',
+        data: { roles: ['supplier'] },
+        loadComponent: () => import('./features/contractor-portal/contractor-profile-page').then((m) => m.ContractorProfilePage),
+      },
+    ],
+  },
   {
     path: '',
     component: Shell,
@@ -287,6 +326,18 @@ export const routes: Routes = [
           },
           { path: 'quotes', redirectTo: '/approvals' },
           {
+            path: ':requestId/quote-request',
+            title: 'Request quotes',
+            data: { roles: STAFF, breadcrumb: 'Request quotes' },
+            loadComponent: () => import('./features/maintenance/quotes/quote-request-page').then((m) => m.QuoteRequestPage),
+          },
+          {
+            path: ':requestId/quotes',
+            title: 'Compare quotes',
+            data: { roles: STAFF_AND_TRUSTEE, breadcrumb: 'Compare quotes' },
+            loadComponent: () => import('./features/maintenance/quotes/quote-compare-page').then((m) => m.QuoteComparePage),
+          },
+          {
             path: ':requestId',
             title: (r: ActivatedRouteSnapshot) => `Job ${r.paramMap.get('requestId')}`,
             data: { roles: STAFF_AND_TRUSTEE, breadcrumb: (_: unknown, p: Record<string, string>) => p['requestId'] },
@@ -459,18 +510,8 @@ export const routes: Routes = [
         ],
       },
 
-      // ---------------- Supplier portal ----------------
-      {
-        path: 'supplier',
-        data: { section: 'Supplier' },
-        children: [
-          planned('', 'Work orders', ['supplier'], 9, 'See and respond to this agency’s work orders, quotes and invoices — and keep vetting documents current.', [
-            'Quote requests to answer, work orders to accept and schedule, and “Mark complete” with photos',
-            'Submit invoices against the approved quote; see when they will be paid',
-            'Upload COIDA, insurance and bank letters before they expire',
-          ], false),
-        ],
-      },
+      // Humo Contractor lives outside the PM shell (see the 'contractor' route above).
+      { path: 'supplier', redirectTo: '/contractor' },
 
       // ---------------- Platform (Humo internal roles) ----------------
       {

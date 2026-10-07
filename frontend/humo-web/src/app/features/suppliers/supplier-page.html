@@ -79,6 +79,34 @@
     </div>
 
     <aside class="side">
+      @if (network(); as np) {
+        <section class="surface panel humo">
+          <div class="humo-head">
+            <span class="humo-label"><ion-icon name="hammer-outline" aria-hidden="true" /> On Humo Contractor</span>
+            <ct-verification-badge [level]="np.verification.level" />
+          </div>
+          <ct-reputation [profile]="np" [compact]="true" />
+          <ct-endorsed-by class="endorsed" [profile]="np" />
+          <p class="muted small">Reputation across every Humo customer they work for. Your own numbers with them are on the left.</p>
+          @if (endorsedByUs()) {
+            <p class="ok"><ion-icon name="thumbs-up-outline" aria-hidden="true" /> {{ session.agency()?.shortName }} has endorsed them.</p>
+          } @else if (canEndorse()) {
+            @if (endorsing()) {
+              <label class="endorse">
+                <span class="small">What should other Humo customers know? (based on your {{ d.supplier.performance.jobsCompleted }} completed jobs)</span>
+                <textarea rows="2" [value]="endorseNote()" (input)="endorseNote.set($any($event.target).value)" placeholder="e.g. Reliable on after-hours call-outs; quotes match invoices."></textarea>
+              </label>
+              <div class="btns">
+                <button type="button" class="btn btn-primary btn-sm" [disabled]="endorseNote().trim().length < 10" (click)="endorse()">Endorse on Humo</button>
+                <button type="button" class="btn btn-ghost btn-sm" (click)="endorsing.set(false)">Cancel</button>
+              </div>
+            } @else {
+              <button type="button" class="btn btn-secondary btn-sm" (click)="endorsing.set(true)"><ion-icon name="thumbs-up-outline" aria-hidden="true" /> Endorse {{ d.supplier.name }}</button>
+              <p class="muted small">Only customers who’ve completed work with a contractor can endorse them. Contractors can’t endorse themselves.</p>
+            }
+          }
+        </section>
+      }
       <section class="surface panel">
         <h2 class="section-title">Banking</h2>
         <p class="bank">{{ d.supplier.bankAccount }}</p>

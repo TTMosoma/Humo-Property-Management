@@ -28,7 +28,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   trustee: 'Trustee',
   owner: 'Owner',
   tenant: 'Tenant',
-  supplier: 'Supplier / Contractor',
+  supplier: 'Contractor / Supplier',
   'system-admin': 'Humo System Administrator',
   'humo-account-manager': 'Humo Account Manager',
   'humo-support': 'Humo Support',
@@ -85,8 +85,7 @@ export const ROLE_META: Record<Role, RoleMeta> = {
   },
   supplier: {
     role: 'supplier', family: 'supplier', icon: 'hammer-outline', scopeKind: 'supplier', grantedBy: 'agency-admin', privileged: false,
-    summary: 'Their own work orders, quotes and invoices with this agency.',
-    experiencePlanned: true,
+    summary: 'Works in Humo Contractor: quote requests, work orders and reputation — across every Humo customer they serve.',
   },
   'system-admin': {
     role: 'system-admin', family: 'humo', icon: 'shield-outline', scopeKind: 'platform', grantedBy: 'system-admin', privileged: true,

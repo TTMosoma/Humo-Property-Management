@@ -59,6 +59,8 @@ const SUPPLIER_SEEDS: SupplierSeed[] = [
   { id: 'sup-mabaso-building', name: 'Mabaso Building & Maintenance', trades: ['Building', 'Painting', 'Plumbing'], contact: 'Themba Mabaso', region: GP },
   { id: 'sup-solid-ground', name: 'Solid Ground Engineering', trades: ['Building'], contact: 'Dr. Elmarie Botha', region: GP },
   { id: 'sup-firesafe', name: 'FireSafe Compliance', trades: ['Fire equipment'], contact: 'Yusuf Essop', region: [...GP, ...KZN, ...WC] },
+  { id: 'sup-abc-gates', name: 'ABC Gates & Automation', trades: ['Gate automation', 'Security'], contact: 'Sizwe Ndaba', region: GP },
+  { id: 'sup-xyz-security', name: 'XYZ Security Solutions', trades: ['Security', 'Gate automation'], contact: 'Charl Pretorius', region: GP },
   { id: 'sup-kzn-handyman', name: 'Umgeni Handyman Services', trades: ['Building', 'Painting', 'Electrical'], contact: 'Lwazi Shabalala', region: KZN, onHold: true, docs: { 'Tax compliance (SARS PIN)': -40 } },
 ];
 
@@ -74,6 +76,8 @@ export function seedSuppliers(): Supplier[] {
     const slug = s.name.split(' ')[0].toLowerCase().replace(/[^a-z]/g, '');
     return {
       id: s.id,
+      // Every supplier in the demo is also a business on Humo Contractor.
+      partyId: `party-${s.id.replace(/^sup-/, '')}`,
       name: s.name,
       trades: s.trades,
       contactName: s.contact,
@@ -202,6 +206,13 @@ const NAMED_JOBS: JobSeed[] = [
     ref: 'MR-1061', schemeId: 'kingfisher-court', location: 'Block A entrance', category: 'Security', priority: 'normal',
     title: 'Intercom not working — Block A', description: 'Reported by three residents this morning. Visitors can’t call units.',
     stage: 'reported', reportedAgo: 0, reportedBy: { name: 'Ruan Botha', role: 'tenant', personId: 'per-ruan' },
+  },
+  {
+    // Quotes requested through Humo Contractor: see the contractor network's QR-2041.
+    ref: 'MR-1070', schemeId: 'kingfisher-court', location: 'Main vehicle entrance', category: 'Gate automation', priority: 'high',
+    title: 'Replace damaged entrance gate', description: 'A delivery truck reversed into the main gate. The leaf is bent and the motor bracket sheared; the gate is chained open and guarded at night.',
+    stage: 'quoting', reportedAgo: 6, reportedBy: { name: 'Johan van der Merwe', role: 'staff' },
+    photos: ['Bent gate leaf', 'Sheared motor bracket', 'Gate chained open'], dueIn: 23,
   },
   {
     ref: 'MR-0998', schemeId: 'benoni-lakeside', location: 'Northern boundary wall', category: 'Building', priority: 'high',

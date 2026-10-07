@@ -1,0 +1,131 @@
+@if (failed()) {
+  <ui-error-state (retry)="page.retry()" />
+} @else if (loading() || !d()) {
+  <ui-skeleton variant="tiles" [count]="6" />
+} @else {
+  @let x = d()!;
+  @let rep = x.profile.reputation;
+
+  <header class="head">
+    <div>
+      <div class="eyebrow">{{ view === 'requests' ? 'Quote requests' : view === 'jobs' ? 'Jobs' : 'Dashboard' }}</div>
+      <h1>{{ x.profile.party.tradingName }}</h1>
+    </div>
+    <ct-verification-badge [level]="x.profile.verification.level" />
+  </header>
+
+  @if (view === 'dashboard') {
+    <section class="kpis" aria-label="Summary">
+      <a class="kpi hl" routerLink="/contractor/requests"><span class="k-v">{{ x.openRequests }}</span><span class="k-l">Open quote requests</span></a>
+      <a class="kpi" routerLink="/contractor/jobs"><span class="k-v">{{ x.activeJobs }}</span><span class="k-l">Active jobs</span></a>
+      <div class="kpi"><span class="k-v">{{ x.completedJobs }}</span><span class="k-l">Completed jobs</span></div>
+      <div class="kpi"><span class="k-v">{{ rep.rating.toFixed(1) }} <ion-icon name="star" aria-hidden="true" /></span><span class="k-l">Average rating</span></div>
+      <div class="kpi"><span class="k-v">{{ rep.endorsements }}</span><span class="k-l">Humo endorsements</span></div>
+      <div class="kpi"><span class="k-v ok"><ion-icon name="shield-checkmark" aria-hidden="true" /> {{ x.profile.verification.level === 'listed' ? 'Listed' : 'Verified' }}</span><span class="k-l">Verification</span></div>
+    </section>
+  }
+
+  @if (view !== 'jobs') {
+    <section class="block">
+      <h2>Waiting for your quote</h2>
+      <div class="cards">
+        @for (r of x.awaitingResponse; track r.id) {
+          <a class="req surface" [routerLink]="['/contractor/requests', r.id]">
+            <span class="r-top">
+              <span class="cat">{{ r.category }}</span>
+              <span class="due" [class.urgent]="daysLeft(r) <= 3">{{ daysLeft(r) === 0 ? 'Due today' : daysLeft(r) + ' days left' }}</span>
+            </span>
+            <span class="r-title">{{ r.title }}</span>
+            <span class="r-meta">{{ r.customerName }} · {{ r.site.suburb }}, {{ r.site.city }}</span>
+            <span class="r-foot">
+              <span>{{ r.requirements.length }} requirements · {{ r.photos }} {{ r.photos === 1 ? 'photo' : 'photos' }}</span>
+              <span class="go">{{ myStatus(r) === 'viewed' ? 'Continue' : 'Respond' }} <ion-icon name="chevron-forward-outline" aria-hidden="true" /></span>
+            </span>
+          </a>
+        } @empty {
+          <div class="surface empty"><ui-empty-state kind="done" title="Nothing waiting" message="New quote requests from your customers appear here." /></div>
+        }
+      </div>
+    </section>
+
+    @if (x.submitted.length) {
+      <section class="block">
+        <h2>Quotes you’ve sent</h2>
+        <ul class="list surface">
+          @for (s of x.submitted; track s.quote.id) {
+            @let st = quoteState(s);
+            <li>
+              <span class="l-main">
+                <a [routerLink]="['/contractor/requests', s.request.id]">{{ s.request.title }}</a>
+                <span class="muted small">{{ s.request.customerName }} · sent {{ relativeTime(s.quote.submittedAt) }}</span>
+              </span>
+              <span class="money">{{ rand(s.quote.amount) }}</span>
+              <span class="state" [attr.data-tone]="st.tone">{{ st.label }}</span>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+  }
+
+  @if (view !== 'requests') {
+    <section class="block">
+      <h2>{{ view === 'jobs' ? 'Work orders' : 'Today and coming up' }}</h2>
+      <ul class="list surface">
+        @for (w of view === 'jobs' ? x.workOrders : today(); track w.id) {
+          <li>
+            <span class="when">
+              @if (w.scheduledFor) {
+                <strong>{{ formatDate(w.scheduledFor, true) }}</strong>
+                <span class="muted small">{{ time(w.scheduledFor) }}</span>
+              } @else {
+                <span class="muted small">To book</span>
+              }
+            </span>
+            <span class="l-main">
+              <span class="w-title">{{ w.title }}</span>
+              <span class="muted small">{{ w.customerName }} · {{ w.site }}</span>
+            </span>
+            <span class="money">{{ rand(w.amount) }}</span>
+            <span class="state" [attr.data-tone]="w.status === 'in-progress' ? 'info' : w.status === 'awarded' ? 'good' : 'muted'">{{ woLabel[w.status] }}</span>
+          </li>
+        } @empty {
+          <li class="muted">No work orders.</li>
+        }
+      </ul>
+      @if (view === 'jobs') {
+        <p class="muted small note">Upload photos, update progress and submit invoices from each job — coming in Humo Contractor. Jobs from Humo PM customers update here as they progress.</p>
+      }
+    </section>
+  }
+
+  @if (view === 'dashboard') {
+    <section class="block two">
+      <div class="surface panel">
+        <h2>How customers see you</h2>
+        <dl class="rep">
+          <div><dt>Rating</dt><dd>{{ rep.rating.toFixed(1) }} ★ ({{ rep.ratingsCount }})</dd></div>
+          <div><dt>Completion</dt><dd>{{ rep.completionRate }}%</dd></div>
+          <div><dt>On time</dt><dd>{{ rep.onTimeRate }}%</dd></div>
+          <div><dt>Quote response</dt><dd>{{ rep.quoteResponseRate }}%</dd></div>
+          <div><dt>Endorsements</dt><dd>{{ rep.endorsements }}</dd></div>
+          <div><dt>Humo customers</dt><dd>{{ rep.humoRelationships }}</dd></div>
+        </dl>
+        <a routerLink="/contractor/profile" class="small">View your profile</a>
+      </div>
+      <div class="surface panel">
+        <h2>Compliance</h2>
+        @if (expiring().length) {
+          <ul class="docs">
+            @for (doc of expiring(); track doc.type) {
+              <li><ion-icon name="alert-circle-outline" aria-hidden="true" /> {{ doc.type }} expires {{ formatDate(doc.expires, true) }}</li>
+            }
+          </ul>
+          <p class="muted small">Customers see your compliance when comparing quotes. Upload renewals before they lapse.</p>
+        } @else {
+          <p class="ok"><ion-icon name="shield-checkmark-outline" aria-hidden="true" /> All documents valid for the next 45 days.</p>
+        }
+      </div>
+    </section>
+  }
+}

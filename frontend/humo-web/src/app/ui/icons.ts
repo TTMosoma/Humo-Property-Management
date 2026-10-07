@@ -1,5 +1,13 @@
 import { addIcons } from 'ionicons';
 import {
+  ribbon,
+  shieldCheckmark,
+  ellipseOutline,
+  thumbsUpOutline,
+  imagesOutline,
+  locationOutline,
+  speedometerOutline,
+  checkmark,
   analyticsOutline,
   heartOutline,
   cubeOutline,
@@ -225,5 +233,13 @@ export function registerIcons(): void {
     'trending-down-outline': trendingDownOutline,
     'options-outline': optionsOutline,
     'remove-outline': removeOutline,
+    'ribbon': ribbon,
+    'shield-checkmark': shieldCheckmark,
+    'ellipse-outline': ellipseOutline,
+    'thumbs-up-outline': thumbsUpOutline,
+    'images-outline': imagesOutline,
+    'location-outline': locationOutline,
+    'speedometer-outline': speedometerOutline,
+    'checkmark': checkmark,
   });
 }
