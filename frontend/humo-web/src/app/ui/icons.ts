@@ -1,5 +1,10 @@
 import { addIcons } from 'ionicons';
 import {
+  bulbOutline,
+  shieldHalfOutline,
+  trendingUpOutline,
+  rocketOutline,
+  chatboxEllipsesOutline,
   ribbon,
   shieldCheckmark,
   ellipseOutline,
@@ -241,5 +246,10 @@ export function registerIcons(): void {
     'location-outline': locationOutline,
     'speedometer-outline': speedometerOutline,
     'checkmark': checkmark,
+    'shield-half-outline': shieldHalfOutline,
+    'trending-up-outline': trendingUpOutline,
+    'rocket-outline': rocketOutline,
+    'chatbox-ellipses-outline': chatboxEllipsesOutline,
+    'bulb-outline': bulbOutline,
   });
 }

@@ -7,6 +7,10 @@
   }
 </div>
 
+@if (!collapsed()) {
+  <app-context-card />
+}
+
 <nav class="nav" aria-label="Main">
   @for (section of mainSections(); track section.id) {
     @if (section.label && !collapsed()) {
@@ -106,7 +110,9 @@
                 (click)="navigated.emit()"
               >
                 <span class="item-label">{{ child.label }}</span>
-                @if (nav.badgeCount(child); as n) {
+                @if (child.locked) {
+                  <ion-icon class="lock" name="lock-closed-outline" aria-label="Not in your plan" />
+                } @else if (nav.badgeCount(child); as n) {
                   <span class="badge" [class.attention]="nav.badgeAttention(child)">{{ n }}</span>
                 }
               </a>
@@ -143,7 +149,9 @@
         <ion-icon [name]="link.icon ?? 'ellipsis-horizontal-outline'" aria-hidden="true" />
         @if (!collapsed()) {
           <span class="item-label">{{ link.label }}</span>
-          @if (nav.badgeCount(link); as n) {
+          @if (link.locked) {
+            <ion-icon class="lock" name="lock-closed-outline" aria-label="Not in your plan" />
+          } @else if (nav.badgeCount(link); as n) {
             <span class="badge" [class.attention]="nav.badgeAttention(link)" [attr.aria-label]="n + ' ' + link.label.toLowerCase()">{{ n }}</span>
           }
         } @else if (nav.badgeCount(link)) {

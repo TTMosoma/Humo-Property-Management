@@ -33,7 +33,7 @@
   font-weight: var(--fw-semibold);
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #0e7490;
+  color: var(--c-accent-strong);
 }
 
 .grid {
@@ -106,7 +106,7 @@
 
   .done & {
     color: #fff;
-    background: #0e7490;
+    background: var(--c-accent-strong);
   }
 }
 

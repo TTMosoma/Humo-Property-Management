@@ -124,15 +124,9 @@ export const routes: Routes = [
       },
       {
         path: 'dashboard',
-        data: { section: 'My work' },
-        children: [
-          planned('', 'Dashboard', STAFF_AND_TRUSTEE, 7, 'Start the day knowing what will hurt if it isn’t done today.', [
-            '“Today”: overdue and due work from the Attention model, grouped by urgency (not by module)',
-            'Exceptions since yesterday: new 90+ day arrears, quotes received, failed debit orders, compliance changes',
-            'Scheme health table — which scheme needs me',
-            'Role variants: finance, portfolio manager, agency admin (team workload), trustee (one scheme)',
-          ]),
-        ],
+        title: 'Dashboard',
+        data: { section: 'My work', breadcrumb: 'Dashboard', roles: STAFF_AND_TRUSTEE },
+        loadComponent: () => import('./features/dashboard/dashboard-page').then((m) => m.DashboardPage),
       },
 
       // ---------------- Schemes & Portfolio ----------------
@@ -479,7 +473,12 @@ export const routes: Routes = [
         path: 'my',
         children: [
           { path: '', pathMatch: 'full', redirectTo: 'home' },
-          planned('home', 'Home', RESIDENT, 8, 'See my balance, open requests and latest notices at a glance.', [], false),
+          {
+            path: 'home',
+            title: 'Home',
+            data: { roles: RESIDENT },
+            loadComponent: () => import('./features/my/resident-home-page').then((m) => m.ResidentHomePage),
+          },
           {
             path: 'account',
             title: 'My account',
@@ -522,15 +521,40 @@ export const routes: Routes = [
           { path: 'agencies', redirectTo: 'customers' },
           {
             path: 'executive',
-            title: 'Business overview',
-            data: { roles: ['humo-executive', 'system-admin'], breadcrumb: 'Business overview' },
-            loadComponent: () => import('./features/platform/executive-page').then((m) => m.ExecutivePage),
+            data: { breadcrumb: 'Business overview' },
+            children: [
+              {
+                path: '',
+                title: 'Business overview',
+                data: { roles: ['humo-executive', 'system-admin'] },
+                loadComponent: () => import('./features/platform/executive-page').then((m) => m.ExecutivePage),
+              },
+              {
+                // Focused views of the same dashboard: revenue, growth, health, opportunities.
+                path: ':section',
+                title: 'Business overview',
+                data: { roles: ['humo-executive', 'system-admin'], breadcrumb: (_: unknown, p: Record<string, string>) => p['section'].replace(/^./, (c) => c.toUpperCase()) },
+                loadComponent: () => import('./features/platform/executive-page').then((m) => m.ExecutivePage),
+              },
+            ],
           },
           {
             path: 'accounts',
-            title: 'My accounts',
-            data: { roles: ['humo-account-manager'], breadcrumb: 'My accounts' },
-            loadComponent: () => import('./features/platform/accounts-page').then((m) => m.AccountsPage),
+            data: { breadcrumb: 'My accounts' },
+            children: [
+              {
+                path: '',
+                title: 'My accounts',
+                data: { roles: ['humo-account-manager'] },
+                loadComponent: () => import('./features/platform/accounts-page').then((m) => m.AccountsPage),
+              },
+              {
+                path: ':view',
+                title: 'My accounts',
+                data: { roles: ['humo-account-manager'], breadcrumb: (_: unknown, p: Record<string, string>) => ({ health: 'Account health', subscriptions: 'Subscriptions', opportunities: 'Opportunities', support: 'Support & requests' })[p['view']] ?? p['view'] },
+                loadComponent: () => import('./features/platform/accounts-page').then((m) => m.AccountsPage),
+              },
+            ],
           },
           {
             path: 'customers',

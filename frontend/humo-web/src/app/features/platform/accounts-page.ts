@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, map, of } from 'rxjs';
 import { ADD_ONS, Opportunity, PlatformCustomer, PlatformDataSource, packageById } from '../../domain';
@@ -34,6 +34,15 @@ export class AccountsPage {
   private readonly data = inject(PlatformDataSource);
   protected readonly session = inject(SessionService);
   protected readonly page = pageState();
+
+  /** One page, five views: portfolio (default), health, subscriptions, opportunities, support. */
+  protected readonly view = toSignal(inject(ActivatedRoute).paramMap.pipe(map((p) => p.get('view') ?? 'portfolio')), { initialValue: 'portfolio' });
+  protected readonly titles: Record<string, { title: string; sub: string }> = {
+    health: { title: 'Account health', sub: 'Your accounts from most to least at risk, with the signal that’s pulling each one down.' },
+    subscriptions: { title: 'Subscriptions', sub: 'Packages, add-ons and renewals for your accounts. Open an account to change its features.' },
+    opportunities: { title: 'Opportunities', sub: 'Reasons to talk to a customer — from their own usage. Not a sales list.' },
+    support: { title: 'Support & requests', sub: 'Open tickets, escalations and upgrade requests across your accounts.' },
+  };
 
   private readonly result = toSignal(
     this.data.customers().pipe(
@@ -96,6 +105,37 @@ export class AccountsPage {
 
   protected readonly accounts = computed(() => [...this.mine()].sort((a, b) => a.health.score - b.health.score));
 
+  protected readonly renewals = computed(() =>
+    [...this.mine()].sort((a, b) => a.subscription.renewsAt.localeCompare(b.subscription.renewsAt)),
+  );
+
+  protected readonly allOpportunities = computed(() => {
+    const rank = { high: 0, medium: 1, low: 2 };
+    return this.mine()
+      .flatMap((c) => c.opportunities.map((o) => ({ c, o })))
+      .sort((a, b) => rank[a.o.strength] - rank[b.o.strength] || b.o.potentialMrr - a.o.potentialMrr);
+  });
+
+  protected readonly tickets = computed(() =>
+    this.mine()
+      .flatMap((c) => c.tickets.map((t) => ({ c, t })))
+      .sort((a, b) => (a.t.severity === b.t.severity ? a.t.openedAt.localeCompare(b.t.openedAt) : a.t.severity === 'critical' ? -1 : 1)),
+  );
+  protected readonly requests = computed(() => this.mine().flatMap((c) => c.requests.map((r) => ({ c, r }))));
+
+  protected weakest(c: PlatformCustomer) {
+    return [...c.health.signals].sort((a, b) => a.score - b.score)[0];
+  }
+
+  protected renewsSoon(c: PlatformCustomer): boolean {
+    return new Date(c.subscription.renewsAt).getTime() < Date.now() + 90 * DAY;
+  }
+
+  protected addOnNames(c: PlatformCustomer): string {
+    return c.subscription.addOns.map((a) => ADD_ONS.find((x) => x.id === a.addOnId)?.name).join(', ');
+  }
+
+  protected readonly relativeTime = relativeTime;
   protected readonly bandLabel = BAND_LABEL;
   protected readonly bandTone = BAND_TONE;
   protected readonly shortPackage = shortPackage;

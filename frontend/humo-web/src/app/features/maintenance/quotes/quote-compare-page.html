@@ -197,6 +197,61 @@
             </tbody>
           </table>
         </div>
+        <!-- Phones: one card per quote, same facts, same actions. -->
+        <div class="m-cards">
+          @for (o of offers(); track o.q.id) {
+            <article class="m-card surface" [class.won]="o.q.status === 'accepted'" [class.rec]="o.q.recommendedByCustomer">
+              <header>
+                <span class="c-name">{{ o.profile.party.tradingName }}</span>
+                <span class="c-tags">
+                  <ct-verification-badge [level]="o.profile.verification.level" />
+                  <span class="rel" [class.new]="!o.existing">{{ o.existing ? 'Your supplier' : 'New to you' }}</span>
+                </span>
+              </header>
+              <div class="m-price">
+                <strong>{{ rand(o.q.amount) }}</strong>
+                @if (o.lowest) { <span class="fact">Lowest</span> }
+                @if (o.fastest) { <span class="fact">Soonest</span> }
+              </div>
+              <dl class="m-facts">
+                <div><dt>Start → complete</dt><dd>{{ formatDate(o.q.startBy, true) }} → {{ formatDate(o.q.completeBy, true) }}</dd></div>
+                <div><dt>Guarantee</dt><dd>{{ o.q.guaranteeMonths }} months</dd></div>
+                <div><dt>Rating</dt><dd>★ {{ o.profile.reputation.rating.toFixed(1) }} · {{ o.profile.reputation.completedJobs }} jobs · {{ o.profile.reputation.onTimeRate }}% on time</dd></div>
+                <div><dt>Compliance</dt><dd>{{ o.compliant ? 'Documents valid' : 'Check documents' }}</dd></div>
+                <div><dt>Response</dt><dd>Quoted in {{ o.responseHours }} h</dd></div>
+                <div><dt>Contact</dt><dd>{{ o.disclosure.contactVisible ? o.profile.party.contact.phone : 'Shared after acceptance' }}</dd></div>
+              </dl>
+              <ct-endorsed-by [profile]="o.profile" />
+              <details class="m-work">
+                <summary>Proposed work ({{ o.q.proposedWork.length }})</summary>
+                <ul>@for (w of o.q.proposedWork; track w) { <li>{{ w }}</li> }</ul>
+                @if (o.q.exclusions) { <p class="excl">Excludes: {{ o.q.exclusions }}</p> }
+              </details>
+              @if (o.q.status === 'accepted') {
+                <p class="flag won-flag">Accepted</p>
+              } @else if (o.q.status === 'not-selected') {
+                <p class="flag">Not selected</p>
+              } @else if (canAct() && v.request.status === 'open') {
+                @if (confirming() === o.q.id) {
+                  <div class="confirm">
+                    <p>Accept {{ o.profile.party.tradingName }} at {{ rand(o.q.amount) }}? {{ o.q.amount > limit ? 'It goes to the trustees for approval.' : 'It’s within your delegated authority.' }}</p>
+                    <div class="btns">
+                      <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="accept(o.q, o.profile)">Accept</button>
+                      <button type="button" class="btn btn-ghost" (click)="confirming.set(null)">Cancel</button>
+                    </div>
+                  </div>
+                } @else {
+                  <div class="btns">
+                    <button type="button" class="btn btn-primary" (click)="confirming.set(o.q.id)">{{ o.q.amount > limit ? 'Accept & send for approval' : 'Accept' }}</button>
+                    @if (!o.q.recommendedByCustomer) {
+                      <button type="button" class="btn btn-ghost" (click)="recommend(o.q)">Mark as my recommendation</button>
+                    }
+                  </div>
+                }
+              }
+            </article>
+          }
+        </div>
         @if (noResponse().length) {
           <p class="muted small">No quote from: {{ noResponseNames() }}.</p>
         }

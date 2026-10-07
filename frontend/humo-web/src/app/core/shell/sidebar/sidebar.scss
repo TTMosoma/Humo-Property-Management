@@ -325,3 +325,15 @@
     }
   }
 }
+
+// Plan-locked entries: present (so people know the feature exists) but quiet.
+.lock {
+  margin-left: auto;
+  font-size: 13px !important;
+  color: var(--c-nav-muted) !important;
+}
+
+.item:has(.lock) .item-label,
+.sub-item:has(.lock) .item-label {
+  color: var(--c-nav-muted);
+}

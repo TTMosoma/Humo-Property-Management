@@ -18,7 +18,7 @@ import { NudgeDataSource, NudgePlacement } from '../../domain';
     @if (nudge(); as n) {
       @if (!gone()) {
         <aside class="nudge" [attr.aria-label]="n.definition.eyebrow">
-          <span class="spark" aria-hidden="true"><ion-icon name="sparkles-outline" /></span>
+          <span class="spark" aria-hidden="true"><ion-icon name="bulb-outline" /></span>
           <div class="body">
             <div class="eyebrow">{{ n.definition.eyebrow }}</div>
             <p class="usage">{{ n.usageLine }}</p>
@@ -47,17 +47,18 @@ import { NudgeDataSource, NudgePlacement } from '../../domain';
       gap: var(--s-3);
       margin-bottom: var(--s-5);
       padding: var(--s-4) var(--s-5);
-      background: linear-gradient(120deg, var(--c-accent-soft), var(--c-surface) 60%);
-      border: 1px solid color-mix(in srgb, var(--c-accent) 30%, var(--c-border));
+      background: var(--c-surface);
+      border: 1px solid var(--c-border);
+      border-left: 3px solid var(--c-accent);
       border-radius: var(--r-lg);
       animation: in var(--dur) var(--ease);
     }
     @keyframes in { from { opacity: 0; transform: translateY(-4px); } }
     @media (prefers-reduced-motion: reduce) { .nudge { animation: none; } }
-    .spark { display: grid; flex: none; place-items: center; width: 32px; height: 32px; font-size: 17px; color: var(--c-accent-strong); background: var(--c-surface); border-radius: 50%; }
+    .spark { display: grid; flex: none; place-items: center; width: 32px; height: 32px; font-size: 17px; color: var(--c-accent-strong); background: var(--c-accent-soft); border-radius: 50%; }
     .body { flex: 1; min-width: 0; padding-right: var(--s-6); }
     .eyebrow { font-size: var(--fs-xs); font-weight: var(--fw-semibold); color: var(--c-accent-strong); }
-    .usage { margin: 4px 0 0; font-size: var(--fs-md); font-weight: var(--fw-medium); color: var(--c-text); }
+    .usage { margin: 4px 0 0; font-size: var(--fs-base); font-weight: var(--fw-medium); color: var(--c-text); }
     .suggest { margin: 4px 0 var(--s-3); font-size: var(--fs-sm); color: var(--c-text-2); }
     .actions { display: flex; flex-wrap: wrap; gap: var(--s-2); align-items: center; }
     .why-btn { padding: 0; font: inherit; font-size: var(--fs-xs); color: var(--c-text-muted); text-decoration: underline; background: none; border: 0; cursor: pointer; }

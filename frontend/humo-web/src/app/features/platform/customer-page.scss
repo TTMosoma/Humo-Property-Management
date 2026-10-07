@@ -487,3 +487,7 @@
     padding-left: var(--s-4);
   }
 }
+
+.requests li > ion-icon.crit {
+  color: var(--c-danger);
+}

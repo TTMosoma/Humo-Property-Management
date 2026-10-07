@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, combineLatest, map, of } from 'rxjs';
 import { ADD_ONS, BusinessOverview, MODULE_LABELS, FeatureModule, PlatformCustomer, PlatformDataSource, packageById } from '../../domain';
@@ -31,6 +31,15 @@ export class ExecutivePage {
   private readonly data = inject(PlatformDataSource);
   protected readonly session = inject(SessionService);
   protected readonly page = pageState();
+
+  /** Overview shows everything; /revenue, /growth, /health, /opportunities focus one theme. */
+  protected readonly focus = toSignal(inject(ActivatedRoute).paramMap.pipe(map((p) => p.get('section'))), { initialValue: null });
+  protected show(section: 'revenue' | 'growth' | 'health' | 'opportunities'): boolean {
+    const f = this.focus();
+    return !f || f === section;
+  }
+  protected readonly focusTitle = computed(() => ({ revenue: 'Revenue', growth: 'Growth', health: 'Account health', opportunities: 'Expansion opportunities' })[this.focus() ?? ''] ?? 'Business overview');
+  protected readonly listSize = computed(() => (this.focus() ? 12 : 4));
 
   private readonly result = toSignal(
     combineLatest([this.data.overview(), this.data.customers()]).pipe(
@@ -96,7 +105,7 @@ export class ExecutivePage {
     this.customers()
       .filter((c) => c.health.band !== 'healthy')
       .sort((a, b) => b.subscription.mrr - a.subscription.mrr)
-      .slice(0, 4),
+      .slice(0, this.listSize()),
   );
 
   protected readonly modules = computed(() =>
@@ -105,7 +114,7 @@ export class ExecutivePage {
 
   protected readonly opportunities = computed(() => {
     const byId = new Map(this.customers().map((c) => [c.agencyId, c]));
-    return (this.o()?.expansion.top ?? []).map((op) => ({
+    return (this.o()?.expansion.top ?? []).slice(0, this.focus() ? 12 : 6).map((op) => ({
       ...op,
       customer: byId.get(op.agencyId)?.name ?? op.agencyId,
       what: op.target.addOn ? ADD_ONS.find((a) => a.id === op.target.addOn)?.name : op.target.package ? packageById(op.target.package).name : op.title,

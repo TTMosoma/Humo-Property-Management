@@ -14,7 +14,6 @@ const OWNER: readonly Role[] = ['owner'];
 const RESIDENT: readonly Role[] = ['owner', 'tenant'];
 const SYSADMIN: readonly Role[] = ['system-admin'];
 const HUMO: readonly Role[] = ['system-admin', 'humo-account-manager', 'humo-support', 'humo-executive'];
-const HUMO_OPS: readonly Role[] = ['system-admin', 'humo-support', 'humo-account-manager'];
 const HUMO_AUDIT: readonly Role[] = ['system-admin', 'humo-support'];
 const APPROVERS: readonly Role[] = ['agency-admin', 'portfolio-manager', 'finance', 'trustee'];
 
@@ -31,10 +30,10 @@ export const NAV: NavSection[] = [
     id: 'work',
     label: 'My work',
     nodes: [
+      { id: 'dashboard', label: 'Dashboard', icon: 'grid-outline', route: '/dashboard', roles: STAFF_AND_TRUSTEE, keywords: 'home attention today overview' },
       { id: 'tasks', label: 'Tasks', icon: 'checkmark-done-outline', route: '/tasks', roles: STAFF_AND_TRUSTEE, badge: 'tasks', keywords: 'to do work queue follow up' },
       { id: 'approvals', label: 'Approvals', icon: 'shield-checkmark-outline', route: '/approvals', roles: APPROVERS, badge: 'approvals', badgeTone: 'attention', keywords: 'approve quote invoice authorise payment' },
       { id: 'inbox', label: 'Inbox', icon: 'mail-outline', route: '/inbox', roles: STAFF, badge: 'inbox', keywords: 'messages owners reply' },
-      { id: 'dashboard', label: 'Dashboard', icon: 'grid-outline', route: '/dashboard', roles: STAFF_AND_TRUSTEE },
     ],
   },
   {
@@ -50,11 +49,21 @@ export const NAV: NavSection[] = [
   {
     id: 'platform',
     nodes: [
-      { id: 'platform-executive', label: 'Business overview', icon: 'analytics-outline', route: '/platform/executive', roles: ['humo-executive', 'system-admin'], keywords: 'mrr arr revenue growth retention board' },
-      { id: 'platform-accounts', label: 'My accounts', icon: 'heart-outline', route: '/platform/accounts', roles: ['humo-account-manager'], keywords: 'account health adoption opportunities renewals requests' },
-      { id: 'platform-customers', label: 'Customers', icon: 'business-outline', route: '/platform/customers', roles: HUMO, keywords: 'agencies organisations subscriptions tshikrand' },
-      { id: 'platform-packages', label: 'Packages & features', icon: 'cube-outline', route: '/platform/packages', roles: ['system-admin', 'humo-account-manager', 'humo-executive'], keywords: 'entitlements add-ons catalogue nudges' },
-      { id: 'platform-users', label: 'Users & impersonation', icon: 'people-outline', route: '/platform/users', roles: HUMO_OPS, keywords: 'impersonate view as support customer user humo team roles' },
+      // Executive: the business, read-only.
+      { id: 'exec-overview', label: 'Overview', icon: 'analytics-outline', route: '/platform/executive', roles: ['humo-executive', 'system-admin'], keywords: 'mrr arr board business' },
+      // Account Manager: customer success.
+      { id: 'am-accounts', label: 'My accounts', icon: 'heart-outline', route: '/platform/accounts', roles: ['humo-account-manager'], keywords: 'customer portfolio' },
+      { id: 'platform-customers', label: 'Customers', icon: 'business-outline', route: '/platform/customers', roles: ['system-admin', 'humo-support', 'humo-executive'], keywords: 'agencies organisations subscriptions tshikrand' },
+      { id: 'exec-revenue', label: 'Revenue', icon: 'trending-up-outline', route: '/platform/executive/revenue', roles: ['humo-executive'], keywords: 'mrr arr package' },
+      { id: 'exec-growth', label: 'Growth', icon: 'people-outline', route: '/platform/executive/growth', roles: ['humo-executive'], keywords: 'new customers churn retention adoption' },
+      { id: 'exec-health', label: 'Account health', icon: 'pulse-outline', route: '/platform/executive/health', roles: ['humo-executive'], keywords: 'at risk critical' },
+      { id: 'exec-opps', label: 'Opportunities', icon: 'rocket-outline', route: '/platform/executive/opportunities', roles: ['humo-executive'], keywords: 'expansion upgrade' },
+      { id: 'am-health', label: 'Account health', icon: 'pulse-outline', route: '/platform/accounts/health', roles: ['humo-account-manager'], keywords: 'at risk adoption' },
+      { id: 'am-subscriptions', label: 'Subscriptions', icon: 'card-outline', route: '/platform/accounts/subscriptions', roles: ['humo-account-manager'], keywords: 'package add-ons renewals entitlements' },
+      { id: 'am-opps', label: 'Opportunities', icon: 'rocket-outline', route: '/platform/accounts/opportunities', roles: ['humo-account-manager'], keywords: 'expansion upgrade training' },
+      { id: 'am-support', label: 'Support & requests', icon: 'help-buoy-outline', route: '/platform/accounts/support', roles: ['humo-account-manager'], keywords: 'tickets escalations upgrade requests' },
+      { id: 'platform-packages', label: 'Packages & features', icon: 'cube-outline', route: '/platform/packages', roles: ['system-admin'], keywords: 'entitlements add-ons catalogue nudges' },
+      { id: 'platform-users', label: 'Users & impersonation', icon: 'people-outline', route: '/platform/users', roles: ['system-admin', 'humo-support'], keywords: 'impersonate view as support customer user humo team roles' },
       { id: 'platform-audit', label: 'Audit log', icon: 'document-lock-outline', route: '/platform/audit', roles: HUMO_AUDIT, keywords: 'audit activity security impersonation history' },
       { id: 'platform-flags', label: 'Feature flags', icon: 'flag-outline', route: '/platform/flags', roles: ['system-admin'] },
       { id: 'platform-health', label: 'Platform health', icon: 'pulse-outline', route: '/platform/health', roles: ['system-admin', 'humo-support'] },

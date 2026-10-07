@@ -72,8 +72,8 @@ export class MobileTabBar {
     }
     if (role === 'trustee') {
       return [
+        { id: 'home', label: 'Home', icon: 'grid-outline', route: '/dashboard' },
         { id: 'approvals', label: 'Approvals', icon: 'shield-checkmark-outline', route: '/approvals', badge: 'approvals' },
-        { id: 'tasks', label: 'Tasks', icon: 'checkmark-done-outline', route: '/tasks', badge: 'tasks' },
         { id: 'scheme', label: 'Scheme', icon: 'business-outline', route: `/schemes/${this.session.membership().schemeIds[0]}` },
         { id: 'search', label: 'Search', icon: 'search-outline', route: null },
         more,
@@ -81,7 +81,7 @@ export class MobileTabBar {
     }
     if (role === 'operations') {
       return [
-        { id: 'tasks', label: 'Tasks', icon: 'checkmark-done-outline', route: '/tasks', badge: 'tasks' },
+        { id: 'home', label: 'Home', icon: 'grid-outline', route: '/dashboard' },
         { id: 'jobs', label: 'Jobs', icon: 'construct-outline', route: '/maintenance', badge: 'jobs' },
         { id: 'search', label: 'Search', icon: 'search-outline', route: null },
         { id: 'suppliers', label: 'Suppliers', icon: 'people-outline', route: '/suppliers' },
@@ -92,10 +92,10 @@ export class MobileTabBar {
       return [{ id: 'orders', label: 'Work orders', icon: 'hammer-outline', route: '/supplier' }, more];
     }
     return [
+      { id: 'home', label: 'Home', icon: 'grid-outline', route: '/dashboard' },
       { id: 'tasks', label: 'Tasks', icon: 'checkmark-done-outline', route: '/tasks', badge: 'tasks' },
       { id: 'approvals', label: 'Approvals', icon: 'shield-checkmark-outline', route: '/approvals', badge: 'approvals' },
       { id: 'search', label: 'Search', icon: 'search-outline', route: null },
-      { id: 'inbox', label: 'Inbox', icon: 'mail-outline', route: '/inbox', badge: 'inbox' },
       more,
     ];
   });

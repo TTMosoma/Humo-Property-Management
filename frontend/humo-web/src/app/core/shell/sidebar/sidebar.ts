@@ -9,9 +9,10 @@ import { NavService } from '../../navigation/nav.service';
 import { NavGroup, NavLink, NavNode, isGroup } from '../../navigation/nav.model';
 import { ScopeService } from '../../scope/scope.service';
 
+import { ContextCard } from '../context-card/context-card';
 @Component({
   selector: 'app-sidebar',
-  imports: [RouterLink, NgTemplateOutlet, IonIcon, Logo, CdkMenu, CdkMenuItem, CdkMenuTrigger],
+  imports: [ContextCard, RouterLink, NgTemplateOutlet, IonIcon, Logo, CdkMenu, CdkMenuItem, CdkMenuTrigger],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './sidebar.html',
   styleUrl: './sidebar.scss',

@@ -11,6 +11,7 @@ import {
   PlatformCustomer,
   Subscription,
   SubscriptionChange,
+  SupportTicket,
   UpgradeRequest,
   calculateHealth,
   detectOpportunities,
@@ -27,6 +28,35 @@ import { CustomerSeed, seedCustomers, seedHistory, seedRequests } from './seed-p
  *
  *   usage → health → opportunities → nudge / Account Manager → upgrade → entitlements → usage
  */
+const TICKET_TITLES = [
+  'Statement PDF cuts off banking details',
+  'Split receipt won’t allocate to two units',
+  'Trustee can’t see the approved budget',
+  'Bulk SMS to Block C not delivered',
+  'Owner portal login loop on iPhone',
+  'Import of September bank statement failed',
+  'Levy increase not applied to two units',
+  'Supplier invoice stuck in “awaiting approval”',
+];
+
+/** Mock support desk: the snapshot's ticket counts, turned into readable tickets. */
+function ticketsFor(c: CustomerSeed): SupportTicket[] {
+  const n = c.snapshot.openTickets;
+  return Array.from({ length: n }, (_, i) => {
+    const k = (c.agencyId.length * 7 + i * 3) % TICKET_TITLES.length;
+    const critical = i < c.snapshot.criticalTickets;
+    return {
+      id: `HUMO-${2300 + ((c.agencyId.charCodeAt(0) * 13 + i * 17) % 90)}`,
+      agencyId: c.agencyId,
+      title: TICKET_TITLES[k],
+      severity: critical ? 'critical' : 'normal',
+      status: critical ? 'escalated' : i % 3 === 2 ? 'waiting-on-customer' : 'open',
+      openedAt: new Date(Date.now() - (i + 1) * 2.5 * 86_400_000).toISOString(),
+      owner: critical ? 'Terry Mosoma' : 'Lerato Dube',
+    } satisfies SupportTicket;
+  });
+}
+
 @Injectable({ providedIn: 'root' })
 export class PlatformStore {
   private readonly seeds = signal<CustomerSeed[]>(seedCustomers());
@@ -42,7 +72,7 @@ export class PlatformStore {
       const entitlements = resolveEntitlements(c.subscription);
       const health = calculateHealth(c.snapshot, entitlements);
       const opportunities = detectOpportunities({ snapshot: c.snapshot, entitlements, subscription: c.subscription, health });
-      return { ...c, entitlements, health, opportunities, requests: requests.filter((r) => r.agencyId === c.agencyId) };
+      return { ...c, entitlements, health, opportunities, requests: requests.filter((r) => r.agencyId === c.agencyId), tickets: ticketsFor(c) };
     });
   });
 
@@ -99,7 +129,7 @@ export class PlatformStore {
         potentialMrr: sales.filter((o) => o.strength !== 'low').reduce((n, o) => n + o.potentialMrr, 0),
         underutilising: new Set(opps.filter((o) => o.kind === 'adoption').map((o) => o.agencyId)).size,
         demandWithoutFeature: all.filter((c) => c.health.modules.some((m) => !m.enabled && m.adoption >= 15)).length,
-        top: [...sales].sort((a, b) => (a.strength === b.strength ? b.potentialMrr - a.potentialMrr : a.strength === 'high' ? -1 : b.strength === 'high' ? 1 : 0)).slice(0, 6),
+        top: [...sales].sort((a, b) => (a.strength === b.strength ? b.potentialMrr - a.potentialMrr : a.strength === 'high' ? -1 : b.strength === 'high' ? 1 : 0)).slice(0, 12),
       },
     };
   });

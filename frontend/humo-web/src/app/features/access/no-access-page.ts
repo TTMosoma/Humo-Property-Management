@@ -19,11 +19,16 @@ import { EmptyState } from '../../ui/states/empty-state';
   template: `
     <div class="surface">
       <ui-empty-state
-        illustration="no-access"
-        [title]="planFeature() ? 'Not included in your plan' : 'You don’t have access to this page'"
+        [illustration]="planFeature() ? 'coming-soon' : 'no-access'"
+        [title]="planFeature() ? featureLabel() + ' — not included in your current plan' : 'You don’t have access to this page'"
         [message]="message()"
       >
-        @if (alternative(); as m) {
+        @if (planFeature(); as f) {
+          @if (session.can('Subscription.Request')) {
+            <a class="btn btn-primary" routerLink="/settings/plan" [queryParams]="{ feature: f }">Request upgrade</a>
+          }
+          <a class="btn btn-secondary" routerLink="/settings/plan" [queryParams]="{ feature: f }">See your plan</a>
+        } @else if (alternative(); as m) {
           <button type="button" class="btn btn-primary" (click)="switchTo(m.id)">Switch role to {{ roleLabels[m.role] }}</button>
         }
         <button type="button" class="btn btn-secondary" (click)="back()">Go back</button>
@@ -40,12 +45,18 @@ export class NoAccessPage {
   private readonly location = inject(Location);
   private readonly params = toSignal(inject(ActivatedRoute).queryParamMap);
   private readonly from = computed(() => this.params()?.get('from') ?? '');
+  protected readonly featureLabel = computed(() => {
+    const f = this.planFeature();
+    return f ? (FEATURE_META[f]?.label ?? f) : '';
+  });
   protected readonly planFeature = computed(() => this.params()?.get('feature') as Feature | null);
 
   protected readonly message = computed(() => {
     const feature = this.planFeature();
     if (feature) {
-      return `${FEATURE_META[feature]?.label ?? feature} isn’t switched on for ${this.session.agency()?.shortName ?? 'your agency'}. Your agency administrator can ask Humo about it from Settings › Plan & features.`;
+      const what = FEATURE_META[feature]?.description ?? '';
+      const who = this.session.can('Subscription.Request') ? 'You can ask your Humo account manager about adding it — nothing changes until you agree.' : 'Your agency administrator can ask Humo about adding it.';
+      return `${what} ${who}`.trim();
     }
     const role = ROLE_LABELS[this.session.role()];
     const admin = this.session.isHumo()

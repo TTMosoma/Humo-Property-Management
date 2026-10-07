@@ -7,8 +7,10 @@ export interface NavLink {
   icon?: string;
   route: string;
   roles: readonly Role[];
-  /** Hidden when the agency's plan doesn't include the feature. */
+  /** The plan feature it needs. Not entitled → shown locked (it explains and offers an upgrade request). */
   feature?: Feature;
+  /** Set at runtime: the role may use it, but the plan doesn't include it. */
+  locked?: boolean;
   /** Live count from the Attention model. Never hard-code numbers here. */
   badge?: AttentionKey;
   /** 'attention' is used sparingly: only for queues where items are overdue or at risk. */

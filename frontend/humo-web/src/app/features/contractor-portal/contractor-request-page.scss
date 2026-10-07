@@ -16,7 +16,7 @@
   align-items: center;
   margin-bottom: var(--s-3);
   font-size: var(--fs-sm);
-  color: #0e7490;
+  color: var(--c-accent-strong);
   text-decoration: none;
 }
 
@@ -39,7 +39,7 @@
   font-weight: var(--fw-semibold);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #0e7490;
+  color: var(--c-accent-strong);
 }
 
 .deadline {
@@ -47,7 +47,7 @@
   flex-direction: column;
   padding: var(--s-3) var(--s-4);
   color: #fff;
-  background: #14202b;
+  background: var(--brand-navy-900);
   border-radius: var(--r-lg);
 }
 
@@ -93,7 +93,7 @@
 }
 
 .quote {
-  border-top: 3px solid #0e7490;
+  border-top: 3px solid var(--c-accent-strong);
 }
 
 .reqs {
@@ -218,7 +218,7 @@
 .s-state {
   font-size: var(--fs-sm);
   font-weight: var(--fw-semibold);
-  color: #0e7490;
+  color: var(--c-accent-strong);
 
   &[data-status='accepted'] {
     color: var(--c-success);

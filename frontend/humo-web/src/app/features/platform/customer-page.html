@@ -138,6 +138,23 @@
         <div class="surface"><ui-empty-state kind="done" title="Nothing to raise right now" message="They’re using what they have, and nothing suggests they need more." /></div>
       }
 
+      <h2 class="section-title">Support & escalations</h2>
+      @if (cu.tickets.length) {
+        <ul class="requests surface">
+          @for (t of cu.tickets; track t.id) {
+            <li>
+              <ion-icon [name]="t.severity === 'critical' ? 'alert-circle-outline' : 'chatbox-ellipses-outline'" aria-hidden="true" [class.crit]="t.severity === 'critical'" />
+              <span class="r-text">
+                <strong>{{ t.title }}</strong> · {{ t.id }} · opened {{ relativeTime(t.openedAt) }} · {{ t.owner }}
+              </span>
+              <ui-status-pill [label]="t.status === 'escalated' ? 'Escalated' : t.status === 'waiting-on-customer' ? 'Waiting on customer' : 'Open'" [tone]="t.status === 'escalated' ? 'danger' : t.status === 'waiting-on-customer' ? 'neutral' : 'info'" />
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="muted small">No open support tickets.</p>
+      }
+
       @if (cu.requests.length) {
         <h2 class="section-title">Asked by the customer</h2>
         <ul class="requests surface">

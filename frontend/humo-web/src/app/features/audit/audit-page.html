@@ -40,6 +40,35 @@
       <option value="humo">Humo platform only</option>
     </select>
   }
+  <select [value]="state().actor ?? ''" (change)="set('actor', $any($event.target).value)" aria-label="Actor or acting as">
+    <option value="">Anyone</option>
+    @for (p of people(); track p.id) {
+      <option [value]="p.id">{{ p.name }}</option>
+    }
+  </select>
+  <select [value]="state().role ?? ''" (change)="set('role', $any($event.target).value)" aria-label="Role">
+    <option value="">Any role</option>
+    @for (r of roles(); track r.id) {
+      <option [value]="r.id">{{ r.label }}</option>
+    }
+  </select>
+  @if (!platform) {
+    <select [value]="state().scheme ?? ''" (change)="set('scheme', $any($event.target).value)" aria-label="Scheme">
+      <option value="">Any scheme</option>
+      @for (s of schemesSeen(); track s.id) {
+        <option [value]="s.id">{{ s.name }}</option>
+      }
+    </select>
+  }
+  <select [value]="state().range ?? ''" (change)="set('range', $any($event.target).value)" aria-label="Date">
+    <option value="">Any date</option>
+    <option value="1">Last 24 hours</option>
+    <option value="7">Last 7 days</option>
+    <option value="30">Last 30 days</option>
+  </select>
+  @if (filtered()) {
+    <button type="button" class="btn btn-ghost btn-sm" (click)="clearFilters()">Clear filters</button>
+  }
   <label class="check">
     <input type="checkbox" [checked]="state().only === 'problems'" (change)="set('only', $any($event.target).checked ? 'problems' : null)" />
     Only denied or failed
@@ -84,6 +113,9 @@
                   }
                   @if (e.amount) {
                     <span class="money">{{ rand(e.amount) }}</span>
+                  }
+                  @if (e.category === 'impersonation' && e.impersonation) {
+                    <span class="why-imp">· {{ reasons[e.impersonation.reason] }}</span>
                   }
                 </span>
               </span>

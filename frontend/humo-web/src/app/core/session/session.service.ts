@@ -122,10 +122,9 @@ export class SessionService {
         return '/my/home';
       case 'supplier':
         return '/contractor';
-      case 'trustee':
-        return '/approvals';
+      // Agency staff and trustees start on their dashboard: "what needs my attention?"
       default:
-        return '/tasks';
+        return '/dashboard';
     }
   });
 

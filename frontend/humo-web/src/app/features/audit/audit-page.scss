@@ -297,3 +297,19 @@
     padding-left: var(--s-4);
   }
 }
+
+.filters select {
+  height: 36px;
+  padding: 0 var(--s-3);
+  font: inherit;
+  font-size: var(--fs-sm);
+  color: var(--c-text);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border-strong);
+  border-radius: var(--r);
+}
+
+.why-imp {
+  margin-left: 4px;
+  color: var(--c-text-muted);
+}

@@ -17,16 +17,12 @@ import { ImpersonationService } from './impersonation.service';
   template: `
     @if (imp(); as i) {
       <span class="flag"><span class="dot" aria-hidden="true"></span>Impersonation mode</span>
-      <span class="who">
-        <span class="k">Viewing Humo as</span>
-        <strong>{{ session.persona().name }}</strong>
-        <span class="sep" aria-hidden="true">·</span>{{ roleLabels[session.role()] }}
-        <span class="sep" aria-hidden="true">·</span>{{ session.agency()?.shortName }}
-      </span>
-      <span class="mode">
-        <ion-icon [name]="i.mode === 'act' ? 'create-outline' : 'eye-outline'" aria-hidden="true" />
-        {{ i.mode === 'act' ? 'Act — changes are made as ' + firstName() : 'Observe — read-only' }}
-      </span>
+      <dl class="facts">
+        <div><dt>Viewing as</dt><dd><strong>{{ session.persona().name }}</strong></dd></div>
+        <div><dt>Role</dt><dd>{{ roleLabels[session.role()] }}</dd></div>
+        <div><dt>Organisation</dt><dd>{{ session.agency()?.shortName ?? session.membership().label }}</dd></div>
+        <div><dt>Mode</dt><dd class="mode"><ion-icon [name]="i.mode === 'act' ? 'create-outline' : 'eye-outline'" aria-hidden="true" />{{ i.mode === 'act' ? 'Act — changes are made as ' + firstName() : 'Observe — read-only' }}</dd></div>
+      </dl>
       <span class="why">{{ reasons[i.reason] }}{{ i.ticket ? ' · ' + i.ticket : '' }} · {{ minutes() }} min · you are {{ session.actor().name }}</span>
       <button type="button" class="exit" (click)="exit()" [disabled]="service.busy()">
         <ion-icon name="exit-outline" aria-hidden="true" />
@@ -73,18 +69,12 @@ import { ImpersonationService } from './impersonation.service';
     }
     @keyframes blink { 50% { opacity: 0.25; } }
     @media (prefers-reduced-motion: reduce) { .dot { animation: none; } }
-    .who strong { font-weight: var(--fw-bold); }
-    .k { opacity: 0.85; margin-right: 4px; }
-    .sep { margin: 0 6px; opacity: 0.7; }
-    .mode {
-      display: inline-flex;
-      gap: 6px;
-      align-items: center;
-      padding: 2px 8px;
-      font-weight: var(--fw-semibold);
-      background: rgba(0, 0, 0, 0.18);
-      border-radius: var(--r);
-    }
+    .facts { display: flex; flex-wrap: wrap; gap: 4px var(--s-5); margin: 0; }
+    .facts div { display: flex; flex-direction: column; }
+    dt { font-size: 10px; font-weight: var(--fw-semibold); letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.8; }
+    dd { margin: 0; font-size: var(--fs-sm); }
+    dd strong { font-weight: var(--fw-bold); }
+    .mode { display: inline-flex; gap: 6px; align-items: center; font-weight: var(--fw-semibold); }
     .why { font-size: var(--fs-xs); opacity: 0.9; }
     .exit {
       display: inline-flex;

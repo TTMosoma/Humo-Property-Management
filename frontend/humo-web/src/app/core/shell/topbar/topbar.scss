@@ -288,6 +288,13 @@
   }
 }
 
+// On phones the red banner already says "Impersonation mode"; keep the chip to the avatar.
+@media (max-width: 767px) {
+  .identity.imp .id-text {
+    display: none;
+  }
+}
+
 .avatar {
   display: grid;
   place-items: center;

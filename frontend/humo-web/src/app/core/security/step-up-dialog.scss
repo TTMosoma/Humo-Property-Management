@@ -3,9 +3,13 @@
   flex-direction: column;
   gap: var(--s-5);
   width: min(460px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
   padding: var(--s-6);
   background: var(--c-surface);
   border: 1px solid var(--c-border);
+  // Security attention: amber. (Red is reserved for impersonation.)
+  border-top: 4px solid var(--c-sec);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-overlay);
 }
@@ -23,8 +27,8 @@
   width: 44px;
   height: 44px;
   font-size: 22px;
-  color: var(--c-primary-text);
-  background: var(--c-primary-soft);
+  color: var(--c-sec);
+  background: var(--c-sec-soft);
   border-radius: 50%;
   transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
 

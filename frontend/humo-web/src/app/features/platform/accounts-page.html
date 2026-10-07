@@ -1,7 +1,7 @@
 <ui-page-header
   eyebrow="Humo Account Manager"
-  [title]="'Good to see you, ' + session.actor().name.split(' ')[0]"
-  subtitle="Your accounts, ordered by what needs a person first: questions from customers, accounts that are slipping, and conversations worth having."
+  [title]="view() === 'portfolio' ? 'Good to see you, ' + session.actor().name.split(' ')[0] : titles[view()].title"
+  [subtitle]="view() === 'portfolio' ? 'Your accounts, ordered by what needs a person first: questions from customers, accounts that are slipping, and conversations worth having.' : titles[view()].sub"
 />
 
 @if (failed()) {
@@ -10,6 +10,90 @@
   <ui-skeleton variant="tiles" [count]="6" />
 } @else if (!mine().length) {
   <div class="surface"><ui-empty-state title="No accounts assigned to you yet" message="When a customer is assigned to you, they appear here." /></div>
+} @else if (view() !== 'portfolio') {
+  @switch (view()) {
+    @case ('health') {
+      <div class="accounts">
+        @for (c of accounts(); track c.agencyId) {
+          @let w = weakest(c);
+          <a class="acct surface" [routerLink]="['/platform/customers', c.agencyId]">
+            <ui-score-ring [score]="c.health.score" />
+            <span class="a-main">
+              <span class="a-name">{{ c.name }}</span>
+              <span class="a-meta">Weakest: {{ w.label.toLowerCase() }} — {{ w.detail }}</span>
+              <span class="a-stats"><ui-status-pill [label]="bandLabel[c.health.band]" [tone]="bandTone[c.health.band]" /><span>Adoption {{ adoptionOf(c) }}%</span></span>
+            </span>
+            <span class="a-side"><ui-sparkline [values]="c.health.history" label="Health trend" /></span>
+          </a>
+        }
+      </div>
+    }
+    @case ('subscriptions') {
+      <div class="table surface">
+        <table>
+          <thead><tr><th>Customer</th><th>Package</th><th>Add-ons</th><th>Active / seats</th><th>Renews</th><th class="end">MRR</th></tr></thead>
+          <tbody>
+            @for (c of renewals(); track c.agencyId) {
+              <tr>
+                <td><a [routerLink]="['/platform/customers', c.agencyId]" [queryParams]="{ view: 'subscription' }">{{ c.name }}</a></td>
+                <td>{{ shortPackage(c.subscription.packageId) }}</td>
+                <td class="muted">{{ addOnNames(c) || '—' }}</td>
+                <td>{{ c.snapshot.activeUsers30d }} / {{ c.subscription.seats }}</td>
+                <td [class.soon]="renewsSoon(c)">{{ formatDate(c.subscription.renewsAt, true) }}</td>
+                <td class="end">{{ rand(c.subscription.mrr, true) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @case ('opportunities') {
+      <div class="convos">
+        @for (x of allOpportunities(); track x.o.id) {
+          <a class="convo surface" [routerLink]="['/platform/customers', x.c.agencyId]" [attr.data-strength]="x.o.strength">
+            <span class="c-top">
+              <span class="c-name">{{ x.c.name }}</span>
+              <span class="strength">{{ x.o.kind === 'adoption' ? 'Training' : x.o.strength }}</span>
+            </span>
+            <span class="c-what">{{ oppTitle(x.o) }}</span>
+            <span class="c-why">{{ x.o.reasons.join(' · ') }}</span>
+          </a>
+        } @empty {
+          <div class="surface empty-box">No opportunities right now.</div>
+        }
+      </div>
+    }
+    @case ('support') {
+      <h2 class="section-title first">Tickets & escalations</h2>
+      <ul class="needs surface">
+        @for (x of tickets(); track x.c.agencyId + x.t.id) {
+          <li [attr.data-tone]="x.t.severity === 'critical' ? 'danger' : 'info'">
+            <span class="n-icon"><ion-icon [name]="x.t.severity === 'critical' ? 'alert-circle-outline' : 'chatbox-ellipses-outline'" aria-hidden="true" /></span>
+            <span class="n-text">
+              <a [routerLink]="['/platform/customers', x.c.agencyId]">{{ x.t.title }}</a>
+              <span class="n-detail">{{ x.c.name }} · {{ x.t.id }} · {{ x.t.status === 'escalated' ? 'Escalated to ' + x.t.owner : x.t.status === 'waiting-on-customer' ? 'Waiting on the customer' : 'With ' + x.t.owner }} · opened {{ relativeTime(x.t.openedAt) }}</span>
+            </span>
+          </li>
+        } @empty {
+          <li class="empty">No open tickets across your accounts.</li>
+        }
+      </ul>
+      <h2 class="section-title">Requests from customers</h2>
+      <ul class="needs surface">
+        @for (x of requests(); track x.r.id) {
+          <li data-tone="info">
+            <span class="n-icon"><ion-icon name="hand-right-outline" aria-hidden="true" /></span>
+            <span class="n-text">
+              <a [routerLink]="['/platform/customers', x.c.agencyId]">{{ x.c.name }} — {{ x.r.addOn ?? x.r.package ?? 'upgrade' }}</a>
+              <span class="n-detail">{{ x.r.requestedBy }} · {{ relativeTime(x.r.at) }} · {{ x.r.status }}</span>
+            </span>
+          </li>
+        } @empty {
+          <li class="empty">No requests.</li>
+        }
+      </ul>
+    }
+  }
 } @else {
   @let s = summary();
   <section class="tiles">

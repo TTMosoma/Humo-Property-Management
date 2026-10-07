@@ -331,14 +331,14 @@ textarea {
   font-size: var(--fs-sm);
   color: var(--c-text-2);
   text-decoration: none;
-  background: color-mix(in srgb, #0e7490 6%, var(--c-surface));
-  border: 1px solid color-mix(in srgb, #0e7490 30%, var(--c-border));
+  background: color-mix(in srgb, var(--c-accent-strong) 6%, var(--c-surface));
+  border: 1px solid color-mix(in srgb, var(--c-accent-strong) 30%, var(--c-border));
   border-radius: var(--r);
 
   > ion-icon:first-child {
     flex: none;
     font-size: 20px;
-    color: #0e7490;
+    color: var(--c-accent-strong);
   }
 
   span:not(.btn) {
@@ -350,6 +350,6 @@ textarea {
   }
 
   &:hover {
-    background: color-mix(in srgb, #0e7490 10%, var(--c-surface));
+    background: color-mix(in srgb, var(--c-accent-strong) 10%, var(--c-surface));
   }
 }

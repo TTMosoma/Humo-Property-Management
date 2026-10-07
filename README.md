@@ -153,6 +153,7 @@ Build order follows workflow slices (see `docs/02-ux-review.md` §4.2).
 - [x] Identity & access — one identity with many roles, Switch role, permissions, scope by assignment, plan entitlements, step-up (passkey / Humo Mobile), impersonation (Observe/Act) and the audit log
 - [x] Humo platform layer — internal roles, packages/add-ons/overrides → effective entitlements, Account Health, opportunities, Smart Nudges, Executive dashboard, Account Manager home, customer 360
 - [x] Humo Contractor foundation — business party, contractor profile, verification, reputation, endorsements, quote requests with multiple quotes, side-by-side comparison, protected contact, lifecycle events, Contractor portal
+- [x] Experience integration — role-specific homes (operational Dashboard, resident Home), context card, locked plan states with upgrade requests, red impersonation / amber step-up language, Executive and Account Manager navigation, audit filters, phone layouts (`docs/06-experience-review.md`)
 - [ ] Checkpoint 5 — Slice C: Run the trustee meeting (Meeting → Resolution → Action → Completion)
 - [ ] Checkpoint 6 — Credit control & billing run
 - [ ] Checkpoint 7 — Dashboard, Compliance & Documents

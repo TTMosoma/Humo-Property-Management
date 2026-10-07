@@ -2,7 +2,7 @@
   <header class="head">
     <div>
       <div class="eyebrow">Humo Executive</div>
-      <h1>Business overview</h1>
+      <h1>{{ focusTitle() }}</h1>
       <p class="sub">As of {{ today }} · trailing twelve months</p>
     </div>
     <div class="scope-chip"><ion-icon name="lock-closed-outline" aria-hidden="true" /> Read-only · aggregates only</div>
@@ -30,6 +30,7 @@
     </section>
 
     <!-- Revenue -->
+    @if (show('revenue')) {
     <div class="row two">
       <section class="panel">
         <header class="p-head">
@@ -73,8 +74,11 @@
       </section>
     </div>
 
+    }
+
     <!-- Growth + Health -->
-    <div class="row two">
+    <div class="row" [class.two]="!focus()">
+      @if (show('growth')) {
       <section class="panel">
         <header class="p-head">
           <div>
@@ -89,7 +93,9 @@
           <div><span>Logo retention</span><strong>{{ ov.retention }}%</strong></div>
         </div>
       </section>
+      }
 
+      @if (show('health')) {
       <section class="panel">
         <header class="p-head">
           <div>
@@ -119,10 +125,12 @@
           }
         </ul>
       </section>
+      }
     </div>
 
     <!-- Adoption + Expansion -->
-    <div class="row two">
+    <div class="row" [class.two]="!focus()">
+      @if (show('growth')) {
       <section class="panel">
         <header class="p-head">
           <div>
@@ -141,7 +149,9 @@
           }
         </ul>
       </section>
+      }
 
+      @if (show('opportunities')) {
       <section class="panel">
         <header class="p-head">
           <div>
@@ -166,6 +176,7 @@
           }
         </ul>
       </section>
+      }
     </div>
 
     <p class="note">Figures are mock data that add up across the platform (customers, subscriptions and usage). Values are contract MRR — no billing system is connected yet.</p>

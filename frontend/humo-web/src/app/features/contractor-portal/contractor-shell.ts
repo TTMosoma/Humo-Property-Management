@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { PrototypeToolbar } from '../../core/prototype/prototype-toolbar';
+import { ImpersonationBanner } from '../../core/security/impersonation-banner';
 import { SessionService } from '../../core/session/session.service';
 import { Logo } from '../../ui/brand/logo';
 
@@ -13,9 +14,14 @@ import { Logo } from '../../ui/brand/logo';
  */
 @Component({
   selector: 'app-contractor-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, IonIcon, Logo, PrototypeToolbar],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, IonIcon, Logo, PrototypeToolbar, ImpersonationBanner],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  // Impersonation looks the same in every Humo product: red banner and frame, always visible.
+  host: { '[class.impersonating]': 'session.isImpersonating()' },
   template: `
+    @if (session.isImpersonating()) {
+      <app-impersonation-banner />
+    }
     <header class="bar">
       <a class="brand" routerLink="/contractor" aria-label="Humo Contractor home">
         <ui-logo variant="mark" [reverse]="true" [height]="26" />
@@ -45,12 +51,13 @@ import { Logo } from '../../ui/brand/logo';
   `,
   styles: `
     :host {
-      --ct-ink: #14202b;
-      --ct-ink-2: #1f2f3d;
-      --ct-accent: #0e7490;
-      --ct-accent-2: #22a5c4;
+      --ct-ink: var(--brand-navy-900);
+      --ct-ink-2: var(--brand-navy-800);
+      --ct-accent: var(--c-accent-strong);
+      --ct-accent-2: var(--brand-leaf-400);
       display: flex; flex-direction: column; height: 100%; background: var(--c-bg);
     }
+    :host(.impersonating)::after { position: fixed; inset: 0; z-index: 1500; pointer-events: none; content: ''; border: 3px solid var(--c-imp); }
     .bar { display: flex; flex: none; gap: var(--s-5); align-items: center; height: 58px; padding: 0 var(--s-5); color: #e6eef4; background: var(--ct-ink); }
     .brand { display: flex; gap: 10px; align-items: center; color: inherit; text-decoration: none; }
     .name { font-family: var(--font-display); font-size: var(--fs-lg); font-weight: 400; letter-spacing: 0.01em; }

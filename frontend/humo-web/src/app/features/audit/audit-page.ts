@@ -45,7 +45,7 @@ export class AuditPage {
 
   /** Platform view (Humo) vs one agency's view. */
   protected readonly platform = !!inject(ActivatedRoute).snapshot.data['platform'];
-  protected readonly state = urlState({ view: 'all', q: null, agency: null, only: null });
+  protected readonly state = urlState({ view: 'all', q: null, agency: null, only: null, actor: null, role: null, scheme: null, range: null });
   protected readonly expanded = signal<string | null>(null);
   protected readonly exporting = signal(false);
 
@@ -64,13 +64,18 @@ export class AuditPage {
 
   protected readonly loading = computed(() => this.page.status() === 'loading' || this.result() === undefined);
   protected readonly failed = computed(() => this.page.status() === 'error' || !!this.result()?.failed);
-  private readonly all = computed(() => (this.page.forceEmpty() ? [] : (this.result()?.events ?? [])));
+  private readonly all = computed(() => (this.page.forceEmpty() ? [] : [...(this.result()?.events ?? [])].sort((a, b) => b.at.localeCompare(a.at))));
 
   /** Agency filter (platform only) and text search, before the category tabs. */
   private readonly base = computed(() => {
-    const { q, agency, only } = this.state();
+    const { q, agency, only, actor, role, scheme, range } = this.state();
     const needle = (q ?? '').trim().toLowerCase();
+    const since = range ? Date.now() - Number(range) * 86_400_000 : 0;
     return this.all().filter((e) => {
+      if (actor && e.actor.identityId !== actor && e.actingAs?.identityId !== actor) return false;
+      if (role && e.role !== role) return false;
+      if (scheme && e.schemeId !== scheme) return false;
+      if (since && new Date(e.at).getTime() < since) return false;
       if (agency === 'humo' && e.agencyId !== null) return false;
       if (agency && agency !== 'humo' && e.agencyId !== agency) return false;
       if (only === 'problems' && e.result === 'success') return false;
@@ -134,7 +139,26 @@ export class AuditPage {
     this.expanded.update((x) => (x === id ? null : id));
   }
 
-  protected set(key: 'view' | 'q' | 'agency' | 'only', value: string | null): void {
+  /** Filter options come from the events themselves. */
+  protected readonly people = computed(() => {
+    const m = new Map<string, string>();
+    for (const e of this.all()) {
+      m.set(e.actor.identityId, e.actor.name);
+      if (e.actingAs) m.set(e.actingAs.identityId, e.actingAs.name);
+    }
+    return [...m].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+  });
+  protected readonly roles = computed(() => [...new Set(this.all().map((e) => e.role))].map((r) => ({ id: r, label: ROLE_LABELS[r] })));
+  protected readonly schemesSeen = computed(() =>
+    [...new Set(this.all().map((e) => e.schemeId).filter((x): x is string => !!x))].map((id) => ({ id, name: this.schemeName(id) ?? id })),
+  );
+  protected readonly filtered = computed(() => ['actor', 'role', 'scheme', 'range', 'agency', 'only', 'q'].some((k) => !!(this.state() as Record<string, string | null>)[k]));
+
+  protected clearFilters(): void {
+    this.state.set({ view: this.state().view, q: null, agency: null, only: null, actor: null, role: null, scheme: null, range: null });
+  }
+
+  protected set(key: 'view' | 'q' | 'agency' | 'only' | 'actor' | 'role' | 'scheme' | 'range', value: string | null): void {
     this.state.update((s) => ({ ...s, [key]: value || null }));
     this.expanded.set(null);
   }

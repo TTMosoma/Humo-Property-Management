@@ -1,0 +1,127 @@
+<header class="head">
+  <div>
+    <h1>{{ greeting() }}</h1>
+    <p class="ctx">{{ today }} · {{ context() }}</p>
+  </div>
+</header>
+
+@if (noScope()) {
+  <div class="surface">
+    <ui-empty-state title="No schemes assigned to you yet" message="Your role is set up, but it doesn’t cover any schemes. Ask your agency administrator to assign the schemes you work on." />
+  </div>
+} @else if (failed()) {
+  <ui-error-state (retry)="page.retry()" />
+} @else if (loading()) {
+  <ui-skeleton variant="tiles" [count]="6" />
+} @else {
+  <div class="layout">
+    <!-- What needs me -->
+    <section class="surface attention">
+      <header class="p-head">
+        <h2>Needs your attention</h2>
+        <a routerLink="/tasks" class="small">{{ attentionTotal() ? 'All ' + attentionTotal() + ' open' : 'Tasks' }}</a>
+      </header>
+      <ul>
+        @for (a of attentionItems(); track a.w.id) {
+          <li [attr.data-urgency]="a.urgency">
+            <a [routerLink]="link(a.w)">
+              <span class="u-dot" aria-hidden="true"></span>
+              <span class="a-main">
+                <span class="a-title">{{ a.w.title }}</span>
+                <span class="a-meta">{{ workLabel[a.w.type] }} · {{ schemeName(a.w.schemeId) }}{{ a.w.amount ? ' · ' + rand(a.w.amount) : '' }}</span>
+              </span>
+              <span class="a-due">{{ dueLabel(a.w.dueAt) }}</span>
+            </a>
+          </li>
+        } @empty {
+          <li class="none">
+            <ui-empty-state kind="done" title="Nothing urgent" message="No overdue or due-today work for you right now." />
+          </li>
+        }
+      </ul>
+    </section>
+
+    <!-- Actionable counts -->
+    <section class="tiles" aria-label="At a glance">
+      @for (t of tiles(); track t.id) {
+        <a class="tile surface" [routerLink]="t.route" [queryParams]="t.query" [attr.data-tone]="t.tone">
+          <span class="t-top"><ion-icon [name]="t.icon" aria-hidden="true" />{{ t.label }}</span>
+          <span class="t-value">{{ t.value }}</span>
+          <span class="t-sub">{{ t.sub }}</span>
+        </a>
+      }
+    </section>
+  </div>
+
+  @if (showMaintenanceFlow()) {
+    <section class="surface flow-card">
+      <header class="p-head">
+        <h2>Maintenance, end to end</h2>
+        <a routerLink="/maintenance" [queryParams]="{ mode: 'board' }" class="small">Open the board</a>
+      </header>
+      <ol class="flow">
+        @for (s of maintenanceFlow(); track s.label; let last = $last) {
+          <li [class.has]="s.count">
+            <a [routerLink]="s.route">
+              <span class="f-count">{{ s.count }}</span>
+              <span class="f-label">{{ s.label }}</span>
+            </a>
+          </li>
+        }
+      </ol>
+    </section>
+  }
+
+  @if (showFinanceFlow()) {
+    <section class="surface flow-card">
+      <header class="p-head"><h2>The money cycle</h2></header>
+      <ol class="flow">
+        @for (s of financeFlow(); track s.label) {
+          <li [class.has]="s.count">
+            <a [routerLink]="s.route">
+              <span class="f-count">{{ s.count ?? '—' }}</span>
+              <span class="f-label">{{ s.label }}</span>
+              <span class="f-note">{{ s.note }}</span>
+            </a>
+          </li>
+        }
+      </ol>
+    </section>
+  }
+
+  @if (ownScheme(); as o) {
+    <section class="surface scheme-card">
+      <header class="p-head">
+        <h2>{{ o.scheme?.name }}</h2>
+        <a [routerLink]="['/schemes', o.h.schemeId, 'overview']" class="small">Open the scheme</a>
+      </header>
+      <dl class="facts">
+        <div><dt>Levies collected</dt><dd>{{ o.h.collectionRate }}%</dd></div>
+        <div><dt>Arrears</dt><dd>{{ rand(o.h.arrears) }}</dd></div>
+        <div><dt>Open jobs</dt><dd>{{ o.h.openJobs }}{{ o.h.overdueJobs ? ' (' + o.h.overdueJobs + ' overdue)' : '' }}</dd></div>
+        <div><dt>Next meeting</dt><dd>{{ o.h.nextMeeting ? o.h.nextMeeting.type + ', ' + formatDate(o.h.nextMeeting.at, true) : 'None scheduled' }}</dd></div>
+      </dl>
+    </section>
+  } @else if (session.isStaff() && schemes().length) {
+    <section class="surface schemes-card">
+      <header class="p-head">
+        <h2>Schemes that need you</h2>
+        <a routerLink="/schemes" [queryParams]="{ view: 'attention' }" class="small">All schemes needing attention</a>
+      </header>
+      <ul>
+        @for (x of schemes(); track x.h.schemeId) {
+          <li>
+            <a [routerLink]="['/schemes', x.h.schemeId, 'overview']">
+              <span class="code">{{ x.scheme.code }}</span>
+              <span class="s-main">
+                <span class="s-name">{{ x.scheme.name }}</span>
+                <span class="s-why">{{ x.reasons.join(' · ') || 'Watch list' }}</span>
+              </span>
+              <span class="rating" [attr.data-rating]="x.h.rating">{{ x.h.rating === 'at-risk' ? 'At risk' : 'Watch' }}</span>
+            </a>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+}

@@ -25,19 +25,26 @@ export class NavService {
   readonly sections = computed<NavSection[]>(() => {
     const role = this.session.role();
     const ownScheme = this.session.membership().schemeIds[0];
-    // Role decides what's offered; the agency's plan can take features away.
-    const allowed = (l: NavLink) => l.roles.includes(role) && (!l.feature || this.session.hasFeature(l.feature));
+    // Role decides what's offered. The plan doesn't hide things silently: a feature the role
+    // could use but the plan lacks stays visible, locked, and explains itself when opened.
+    const allowed = (l: NavLink) => l.roles.includes(role);
+    const lock = (l: NavLink): NavLink => (l.feature && !this.session.hasFeature(l.feature) ? { ...l, locked: true } : l);
     return NAV.map((section) => ({
       ...section,
       nodes: section.nodes
         .map((node): NavNode | null => {
           if (!isGroup(node)) {
             if (!allowed(node)) return null;
+            node = lock(node);
             // A trustee's "My scheme" points at their own scheme.
             return node.id === 'my-scheme' && ownScheme ? { ...node, route: `/schemes/${ownScheme}` } : node;
           }
-          const children = node.children.filter(allowed);
+          const children = node.children.filter(allowed).map(lock);
           if (children.length === 0) return null;
+          // A whole module outside the plan collapses into one quiet locked entry.
+          if (children.every((c) => c.locked)) {
+            return { ...children[0], id: node.id, label: node.label, icon: node.icon, badge: undefined, locked: true };
+          }
           if (children.length === 1) {
             return { ...children[0], label: node.label, icon: node.icon };
           }

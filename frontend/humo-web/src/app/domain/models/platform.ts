@@ -21,6 +21,19 @@ export interface PlatformCustomer {
   health: AccountHealth;
   opportunities: Opportunity[];
   requests: UpgradeRequest[];
+  /** Open support tickets (from the support desk later; mock today). */
+  tickets: SupportTicket[];
+}
+
+export interface SupportTicket {
+  id: string;
+  agencyId: string;
+  title: string;
+  severity: 'critical' | 'normal';
+  status: 'open' | 'escalated' | 'waiting-on-customer';
+  openedAt: string;
+  /** Humo person handling it. */
+  owner: string;
 }
 
 export interface MonthPoint {
