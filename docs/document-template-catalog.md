@@ -29,6 +29,17 @@ The initial catalogue: what exists, what's planned, and why each template exists
   - about 30% of Enterprise customers have their own template.
 - **All seeded statements** were issued with Standard v1.
 
+## Meeting notice and minutes (Slice C)
+
+| Template | Tier | Status | Version | Layout | Why it exists |
+|---|---|---|---|---|---|
+| **Notice: Standard** (`meeting-notice.standard`) | Standard | Active | v1 | `meeting-notice/classic` | Trustees and owners must get written notice with the agenda; this is a correct one with no setting up. |
+| **Notice: Professional** (`meeting-notice.professional`) | Premium | Active | v1 | `meeting-notice/branded`, agency branding | Matches branded statements. |
+| **Minutes: Standard** (`meeting-minutes.standard`) | Standard | Active | v1 | `meeting-minutes/classic` | The scheme's formal record of decisions: attendance, quorum, minutes, resolutions with votes, actions. |
+| **Minutes: Professional** (`meeting-minutes.professional`) | Premium | Active | v1 | `meeting-minutes/branded`, agency branding | Matches the agency's other documents. |
+
+The meeting records the version a notice was sent with and the version minutes were approved with (`docs/10-governance.md`).
+
 ## Planned document types
 
 | Document type | Standard | Professional | Notes |
@@ -39,7 +50,7 @@ The initial catalogue: what exists, what's planned, and why each template exists
 | Owner statement | — | — | Type defined, no templates yet. |
 | Payment notice | — | — | Reminders and letters of demand from credit control. |
 | Contractor quote | — | — | As approved through Humo Contractor. |
-| Meeting minutes, trustee resolution, AGM/SGM notice | — | — | Governance; arrive with the governance module. |
+| Trustee resolution | — | — | Resolutions print inside the minutes for now. |
 | Financial report | — | — | Income statement, balance sheet, levy roll. |
 
 ## Commercial packaging (entitlements, not prices)

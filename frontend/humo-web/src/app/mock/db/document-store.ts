@@ -17,7 +17,11 @@ interface DocumentSnapshot {
 @Injectable({ providedIn: 'root' })
 export class DocumentStore {
   private readonly saved = simulationStorage.load<DocumentSnapshot>('documents') ?? this.seed();
-  readonly templates = signal<DocumentTemplate[]>(this.saved.templates);
+  /** Humo's own templates ship with the app: any the saved catalogue doesn't have yet are added. */
+  readonly templates = signal<DocumentTemplate[]>([
+    ...this.saved.templates,
+    ...seedTemplates().filter((t) => !t.organisationId && !this.saved.templates.some((x) => x.id === t.id)),
+  ]);
   readonly settings = signal<OrganisationDocumentSettings[]>(this.saved.settings);
 
   constructor() {

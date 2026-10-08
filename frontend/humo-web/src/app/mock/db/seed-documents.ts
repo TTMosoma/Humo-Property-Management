@@ -7,6 +7,10 @@ const PUBLISHED = '2026-06-01T09:00:00+02:00';
 
 const CLASSIC: TemplateDesign = { layout: 'levy-statement/classic', brandingMode: 'humo', sections: ALL_SECTIONS };
 const BRANDED: TemplateDesign = { layout: 'levy-statement/branded', brandingMode: 'agency', sections: ALL_SECTIONS };
+const NOTICE: TemplateDesign = { layout: 'meeting-notice/classic', brandingMode: 'humo', sections: [] };
+const NOTICE_BRANDED: TemplateDesign = { layout: 'meeting-notice/branded', brandingMode: 'agency', sections: [] };
+const MINUTES: TemplateDesign = { layout: 'meeting-minutes/classic', brandingMode: 'humo', sections: [] };
+const MINUTES_BRANDED: TemplateDesign = { layout: 'meeting-minutes/branded', brandingMode: 'agency', sections: [] };
 
 function platform(
   id: string,
@@ -52,6 +56,18 @@ export function seedTemplates(): DocumentTemplate[] {
     platform('receipt.professional', 'receipt', 'premium', 'Professional', 'Receipt in your agency’s branding.', 'Matches branded statements.'),
     platform('work-order.standard', 'work-order', 'standard', 'Standard', 'Scope, site access and approval for a supplier.', 'Suppliers need one clear instruction to work to.', undefined, true),
     platform('work-order.professional', 'work-order', 'premium', 'Professional', 'Work order in your agency’s branding, with terms.', 'Agencies attach their own conditions of appointment.'),
+    platform('meeting-notice.standard', 'meeting-notice', 'standard', 'Standard',
+      'Date, venue, notice period and the numbered agenda on one A4 page.',
+      'Trustees and owners must receive written notice; this is a correct one with no setting up.', NOTICE, true),
+    platform('meeting-notice.professional', 'meeting-notice', 'premium', 'Professional',
+      'The notice in your agency’s colours, font and wordmark.',
+      'Matches branded statements, so owners recognise post from their agent.', NOTICE_BRANDED),
+    platform('meeting-minutes.standard', 'meeting-minutes', 'standard', 'Standard',
+      'Attendance, quorum, the minute of each agenda item, resolutions with votes, and actions.',
+      'The scheme’s formal record of decisions; every customer needs a correct one.', MINUTES, true),
+    platform('meeting-minutes.professional', 'meeting-minutes', 'premium', 'Professional',
+      'The minutes in your agency’s branding.',
+      'Matches the agency’s other documents.', MINUTES_BRANDED),
     // An Enterprise custom template: Acacia's own statement, on its second version.
     {
       id: 'acacia.levy-statement',

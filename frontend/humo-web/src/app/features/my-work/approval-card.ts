@@ -88,7 +88,7 @@ export class ApprovalCard {
         this.busy.set(false);
         this.rejecting.set(false);
         const what = decision === 'approved' ? 'Approved' : 'Rejected';
-        this.feedback.success(`${what} ${item.ref} · ${formatRand(item.amount)}`, () =>
+        this.feedback.success(`${what} ${item.ref}${item.amount !== undefined ? ` · ${formatRand(item.amount)}` : ''}`, () =>
           this.attention.reopen([item.id]).subscribe(),
         );
       },

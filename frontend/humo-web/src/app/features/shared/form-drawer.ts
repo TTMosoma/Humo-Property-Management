@@ -64,6 +64,13 @@ export function openForm<R>(drawer: DrawerService, spec: FormSpec<R>): void {
       @if (spec.intro) {
         <p class="intro">{{ spec.intro }}</p>
       }
+      @if (otherErrors().length) {
+        <div class="form-errors" role="alert">
+          @for (m of otherErrors(); track m) {
+            <p>{{ m }}</p>
+          }
+        </div>
+      }
       <form class="form" (submit)="$event.preventDefault(); send()" novalidate>
         @for (f of visibleFields(); track f.key) {
           <label class="field" [class.half]="f.half">
@@ -108,6 +115,9 @@ export function openForm<R>(drawer: DrawerService, spec: FormSpec<R>): void {
   styles: `
     :host { display: block; height: 100%; }
     .intro { margin: 0 0 var(--s-4); font-size: var(--fs-sm); color: var(--c-text-muted); }
+    .form-errors { margin: 0 0 var(--s-4); padding: var(--s-3); font-size: var(--fs-sm); color: var(--c-danger); background: var(--c-danger-soft); border-radius: var(--r); }
+    .form-errors p { margin: 0; }
+    .form-errors p + p { margin-top: var(--s-1); }
     .form { display: flex; flex-wrap: wrap; gap: var(--s-4) var(--s-3); }
     .field { display: flex; flex-direction: column; gap: 6px; flex: 1 1 100%; min-width: 0; }
     .field.half { flex: 1 1 calc(50% - var(--s-3)); min-width: 140px; }
@@ -127,6 +137,13 @@ export class FormDrawer {
   protected readonly errors = signal<FieldErrors>({});
   protected readonly busy = signal(false);
   protected readonly visibleFields = computed(() => this.spec.fields.filter((f) => !f.showIf || f.showIf(this.values())));
+  /** The server's messages about things that aren't a field on this form (e.g. "needs 7 days' notice"). */
+  protected readonly otherErrors = computed(() => {
+    const shown = new Set(this.visibleFields().map((f) => f.key));
+    return Object.entries(this.errors())
+      .filter(([k]) => !shown.has(k))
+      .map(([, m]) => m);
+  });
 
   protected set(key: string, e: Event): void {
     const value = (e.target as HTMLInputElement).value;

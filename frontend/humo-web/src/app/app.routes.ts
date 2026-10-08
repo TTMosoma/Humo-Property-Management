@@ -207,7 +207,12 @@ export const routes: Routes = [
               },
               planned('documents', 'Documents', 'Documents.View', 7, 'This scheme’s documents, filtered from the library.'),
               planned('communications', 'Communications', 'Communications.View', 6, 'Everything sent to and received from this scheme’s people.'),
-              planned('meetings', 'Meetings', 'Governance.View', 5, 'Trustee meetings, AGMs and SGMs, with resolutions and actions.', [], 'Meetings', GOVERNANCE),
+              {
+                path: 'meetings',
+                title: 'Meetings',
+                data: { permission: 'Governance.View', breadcrumb: 'Meetings', ...GOVERNANCE },
+                loadComponent: () => import('./features/governance/meetings-page').then((m) => m.MeetingsPage),
+              },
               planned('compliance', 'Compliance', 'Compliance.View', 7, 'This scheme’s compliance items, generated from its records.'),
               planned('reports', 'Reports', 'Reports.View', 8, 'Reports scoped to this scheme.'),
             ],
@@ -385,14 +390,39 @@ export const routes: Routes = [
         data: { section: 'Governance', feature: 'governance' },
         children: [
           { path: '', pathMatch: 'full', redirectTo: 'meetings' },
-          planned('meetings', 'Meetings', 'Governance.View', 5, 'Prepare, run and minute meetings, including AGMs and SGMs.', [
-            'Lifecycle: Draft agenda → Notice sent → Pack ready → Held → Minutes draft → Minutes approved',
-          ]),
-          planned('meetings/new', 'Schedule meeting', 'Meetings.Manage', 5, 'Schedule a trustee meeting, AGM or SGM.'),
-          planned('meetings/:meetingId', 'Meeting', 'Governance.View', 5, 'Agenda, attendees, documents, decisions, action items and minutes.'),
-          planned('resolutions', 'Resolutions & actions', 'Governance.View', 5, 'Track what was decided and whether it was done.', [
-            'Resolution → Meeting → Decision → Action (a Task) → Assigned person → Completion',
-          ]),
+          {
+            path: 'meetings',
+            data: { permission: 'Governance.View', breadcrumb: 'Meetings' },
+            children: [
+              { path: '', title: 'Meetings', loadComponent: () => import('./features/governance/meetings-page').then((m) => m.MeetingsPage) },
+              { path: 'new', redirectTo: () => inject(Router).parseUrl('/governance/meetings?new=1') },
+              {
+                path: ':meetingId',
+                data: { breadcrumb: 'Meeting' },
+                children: [
+                  { path: '', title: 'Meeting', loadComponent: () => import('./features/governance/meeting-page').then((m) => m.MeetingPage) },
+                  {
+                    path: 'notice',
+                    title: 'Notice of meeting',
+                    data: { breadcrumb: 'Notice', document: 'meeting-notice' },
+                    loadComponent: () => import('./features/governance/meeting-document-page').then((m) => m.MeetingDocumentPage),
+                  },
+                  {
+                    path: 'minutes',
+                    title: 'Minutes',
+                    data: { breadcrumb: 'Minutes', document: 'meeting-minutes' },
+                    loadComponent: () => import('./features/governance/meeting-document-page').then((m) => m.MeetingDocumentPage),
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            path: 'resolutions',
+            title: 'Resolutions & actions',
+            data: { permission: 'Governance.View', breadcrumb: 'Resolutions & actions' },
+            loadComponent: () => import('./features/governance/resolutions-page').then((m) => m.ResolutionsPage),
+          },
           planned('trustees', 'Trustee boards', 'Governance.View', 5, 'Who serves on each board, in which role, and since when.'),
           planned('rules', 'Scheme rules', 'Governance.View', 5, 'Keep rules current and support their enforcement.'),
         ],

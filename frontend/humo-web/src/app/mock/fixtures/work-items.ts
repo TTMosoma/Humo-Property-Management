@@ -50,9 +50,6 @@ const SEEDS: Seed[] = [
   { id: 'w27', ref: 'CMP-BDE-FIRE', kind: 'task', type: 'compliance-due', title: 'Fire equipment service certificate expired', detail: 'Annual service lapsed 24 Sep. Book service provider.', schemeId: 'ballito-dunes', dueAt: day(-12), assigneeId: 'staff-kabelo', route: '/compliance' },
 
   // ---------------- Governance ----------------
-  { id: 'w28', ref: 'RES-KC-14', kind: 'task', type: 'meeting-action', title: 'Obtain 3 quotes for CCTV upgrade', detail: 'Resolution 14 · Trustee meeting 18 Sep', schemeId: 'kingfisher-court', dueAt: day(3), assigneeId: 'staff-johan', route: '/governance/resolutions' },
-  { id: 'w29', ref: 'RES-KC-15', kind: 'task', type: 'meeting-action', title: 'Circulate revised pet rule to owners', detail: 'Resolution 15 · Trustee meeting 18 Sep', schemeId: 'kingfisher-court', dueAt: day(-1), assigneeId: 'p-sipho', route: '/governance/resolutions' },
-  { id: 'w30', ref: 'RES-TW-07', kind: 'task', type: 'meeting-action', title: 'Instruct attorney on Unit 9 arrears', detail: 'Resolution 7 · Trustee meeting 25 Sep', schemeId: 'the-willows', dueAt: day(10), assigneeId: 'staff-johan', route: '/governance/resolutions' },
 
   // ---------------- Messages (Inbox) ----------------
   { id: 'w31', ref: 'MSG-5521', kind: 'message', type: 'owner-message', title: 'When will the lift be repaired?', detail: 'Owner of Unit 8 has elderly parents visiting next week.', schemeId: 'rosebank-terraces', unitLabel: 'Unit 8', personName: 'Pieter Joubert', dueAt: day(0, 12), assigneeId: 'staff-johan', route: '/inbox' },

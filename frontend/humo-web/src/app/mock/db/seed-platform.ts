@@ -59,7 +59,7 @@ const NAMED: CustomerSeed[] = [
     organisationId: 'acacia', name: 'Acacia Managing Agents', city: 'Johannesburg', province: 'Gauteng', customerSince: iso(17),
     accountManagerId: 'p-dumisani', accountManager: 'Dumisani Ngcobo',
     subscription: {
-      version: 1, organisationId: 'acacia', packageId: 'professional', status: 'active', startedAt: iso(17), renewsAt: inMonths(7), addOns: [], mrr: 15_900, seats: 14,
+      version: 1, organisationId: 'acacia', packageId: 'professional', status: 'active', startedAt: iso(17), renewsAt: inMonths(7), addOns: [{ addOnId: 'governance', since: iso(2) }], mrr: 17_400, seats: 14,
       // An Enterprise capability on a Professional plan: a time-boxed pilot, granted by the account manager.
       overrides: [{ feature: 'document-templates-custom', enabled: true, reason: 'Custom statement pilot', by: 'Dumisani Ngcobo', at: iso(3), expiresAt: inMonths(2) }],
     },

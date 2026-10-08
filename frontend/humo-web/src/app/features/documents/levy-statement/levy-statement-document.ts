@@ -7,6 +7,7 @@ import {
   StatementView,
   TemplateDesign,
   documentNumber,
+  isBrandedLayout,
 } from '../../../domain';
 import { Logo } from '../../../ui/brand/logo';
 import { RandPipe, formatDate } from '../../../ui/format/money';
@@ -23,7 +24,7 @@ import { RandPipe, formatDate } from '../../../ui/format/money';
   imports: [Logo, RandPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './levy-statement-document.html',
-  styleUrl: './levy-statement-document.scss',
+  styleUrls: ['../document-sheet.scss', './levy-statement-document.scss'],
 })
 export class LevyStatementDocument {
   readonly view = input.required<StatementView>();
@@ -35,7 +36,7 @@ export class LevyStatementDocument {
 
   protected readonly formatDate = formatDate;
 
-  protected readonly isBranded = computed(() => this.design().layout === 'levy-statement/branded');
+  protected readonly isBranded = computed(() => isBrandedLayout(this.design().layout));
   protected readonly title = computed(() => this.design().title?.trim() || 'Levy statement');
   protected readonly number = computed(() => documentNumber(this.design(), this.view().statement.period, this.view().account.accountNo));
   /** Humo's own font stays as the app sets it; anything else is set on the sheet. */

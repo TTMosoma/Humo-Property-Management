@@ -1,6 +1,6 @@
 # Document & template architecture
 
-Status: **frontend implemented, backend designed** (October 2026). The levy statement is the first document on this architecture. Every other document type is in the catalogue as *planned*.
+Status: **frontend implemented, backend designed** (October 2026). The levy statement was the first document on this architecture. The meeting notice and minutes followed (Slice C). Every other document type is in the catalogue as *planned*.
 
 Related:
 - [document-template-catalog.md](document-template-catalog.md): the templates that exist.
@@ -34,7 +34,9 @@ domain/ports/document-data-sources.ts DocumentTemplateDataSource (customer), Pla
 core/documents/document-templates.service.ts   the registry: forType(), defaultFor(), resolve(), brandingFor()
 features/documents/
   document-renderer.ts               DocumentRenderer: type + template@version + data → layout component
+  document-sheet.scss / document-sheet.ts        the shared A4 sheet, letterhead, table, footer; how branding is applied
   levy-statement/levy-statement-document.*      the levy statement layouts (classic, branded)
+  meeting/meeting-notice-document.ts, meeting-minutes-document.ts   notice and minutes layouts (classic, branded)
   template-picker.ts                 reusable selector: available / locked / planned
   documents-settings-page.*          Settings → Documents & templates
   document-forms.ts                  default template, contact & branding, publish custom version, platform forms

@@ -4,6 +4,7 @@ import { FieldErrors, SCHEME_STATUS_LABELS, Scheme, SchemeDataSource, SchemeDeta
 import { AccessStore } from '../db/access-store';
 import { MockDb } from '../db/mock-db';
 import { SCHEME_HEALTH } from '../fixtures/scheme-health';
+import { GovernanceStore } from '../db/governance-store';
 import { portfolioManagerOf } from '../fixtures/staff';
 import { mockResponder } from '../mock-latency';
 import { MockAuthSession } from '../server/mock-auth-session';
@@ -26,6 +27,7 @@ export class InMemorySchemeDataSource extends SchemeDataSource {
   private readonly respond = mockResponder();
   private readonly access = inject(AccessStore);
   private readonly db = inject(MockDb);
+  private readonly governance = inject(GovernanceStore);
   private readonly auth = inject(MockAuthSession);
   private readonly gateway = inject(MockGateway);
 
@@ -44,19 +46,32 @@ export class InMemorySchemeDataSource extends SchemeDataSource {
     return this.respond(s ? this.withManager(s) : undefined);
   }
 
+  /**
+   * Schemes with meetings in Governance take the next one from there (none if
+   * nothing is scheduled); the rest keep their seeded figure.
+   */
+  private nextMeeting(schemeId: string): SchemeHealth['nextMeeting'] {
+    const next = this.governance.meetings
+      .filter((m) => m.schemeId === schemeId)
+      .filter((m) => ['draft', 'notice-sent', 'pack-ready'].includes(m.stage) && new Date(m.scheduledFor).getTime() > Date.now())
+      .sort((a, b) => a.scheduledFor.localeCompare(b.scheduledFor))[0];
+    return next ? { type: next.type === 'trustee' ? 'Trustee meeting' : next.type === 'agm' ? 'AGM' : 'SGM', at: next.scheduledFor } : undefined;
+  }
+
   /** Seeded figures where there are some; a new scheme starts with an empty bill of health. */
   health(): Observable<SchemeHealth[]> {
     return this.db.changes$.pipe(
       switchMap(() => {
         const known = new Map(SCHEME_HEALTH.map((h) => [h.schemeId, h]));
         return this.respond(
-          [...this.db.schemes.values()].map(
-            (s): SchemeHealth =>
-              known.get(s.id) ?? {
-                schemeId: s.id, collectionRate: 100, arrears: 0, accounts90Plus: 0, monthlyLevyRoll: 0, openJobs: 0, overdueJobs: 0,
-                compliance: 'not-applicable', complianceOpenItems: 0, rating: 'good',
-              },
-          ),
+          [...this.db.schemes.values()].map((s): SchemeHealth => {
+            const h: SchemeHealth = known.get(s.id) ?? {
+              schemeId: s.id, collectionRate: 100, arrears: 0, accounts90Plus: 0, monthlyLevyRoll: 0, openJobs: 0, overdueJobs: 0,
+              compliance: 'not-applicable', complianceOpenItems: 0, rating: 'good',
+            };
+            const governed = this.governance.meetings.some((m) => m.schemeId === s.id);
+            return { ...h, nextMeeting: governed ? this.nextMeeting(s.id) : h.nextMeeting };
+          }),
         );
       }),
     );

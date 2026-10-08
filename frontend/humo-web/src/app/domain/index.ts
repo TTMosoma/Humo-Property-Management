@@ -35,3 +35,5 @@ export * from './ports/list-query';
 export * from './models/money';
 export * from './models/document';
 export * from './ports/document-data-sources';
+export * from './models/meeting';
+export * from './ports/governance-data-sources';

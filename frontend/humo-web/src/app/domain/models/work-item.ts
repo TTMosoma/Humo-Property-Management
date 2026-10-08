@@ -18,6 +18,8 @@ export type WorkItemType =
   | 'billing-run-approval'
   | 'compliance-due'
   | 'meeting-action'
+  | 'minutes-approval'
+  | 'resolution-approval'
   | 'document-expiry'
   | 'owner-message';
 
@@ -70,6 +72,8 @@ export const WORK_TYPE_LABELS: Record<WorkItemType, string> = {
   'billing-run-approval': 'Billing run',
   'compliance-due': 'Compliance',
   'meeting-action': 'Meeting action',
+  'minutes-approval': 'Minutes approval',
+  'resolution-approval': 'Written resolution',
   'document-expiry': 'Document expiry',
   'owner-message': 'Message',
 };
@@ -86,6 +90,8 @@ export const WORK_TYPE_AREA: Record<WorkItemType, 'Finance' | 'Maintenance' | 'G
   'billing-run-approval': 'Finance',
   'compliance-due': 'Compliance',
   'meeting-action': 'Governance',
+  'minutes-approval': 'Governance',
+  'resolution-approval': 'Governance',
   'document-expiry': 'Compliance',
   'owner-message': 'Communication',
 };

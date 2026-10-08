@@ -21,7 +21,9 @@
       </div>
     </div>
     <div class="amount-block">
-      <div class="amount money">{{ w.amount | rand }}</div>
+      @if (w.amount !== undefined) {
+        <div class="amount money">{{ w.amount | rand }}</div>
+      }
       <ui-status-pill [label]="v.due" [tone]="v.tone" />
     </div>
   </div>
@@ -89,7 +91,7 @@
   } @else {
     <div class="actions">
       <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="approve()">
-        <ion-icon [name]="needsStepUp() ? 'finger-print-outline' : 'checkmark-outline'" aria-hidden="true" /> {{ needsStepUp() ? 'Verify and approve' : 'Approve' }} {{ w.amount | rand }}
+        <ion-icon [name]="needsStepUp() ? 'finger-print-outline' : 'checkmark-outline'" aria-hidden="true" /> {{ needsStepUp() ? 'Verify and approve' : 'Approve' }}@if (w.amount !== undefined) { {{ w.amount | rand }} }
       </button>
       <button type="button" class="btn btn-secondary" [disabled]="busy()" (click)="rejecting.set(true)">Reject…</button>
       @if (!compact()) {

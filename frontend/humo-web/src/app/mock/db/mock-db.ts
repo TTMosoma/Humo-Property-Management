@@ -137,6 +137,15 @@ export class MockDb {
   }
 
   /** Relationships in force today (ended ones stay as history). */
+  /** A scheme's board: trustees in office, with their portfolio (Chairperson, Treasurer, …). */
+  trustees(schemeId: string): { person: Person; portfolio: string }[] {
+    return [...new Set([...this.relsByPerson.values()].flat())]
+      .filter((r) => r.type === 'trustee' && r.schemeId === schemeId && this.current(r))
+      .map((r) => ({ person: this.persons.get(r.personId)!, portfolio: r.portfolio ?? 'Trustee' }))
+      .filter((t) => !!t.person)
+      .sort((a, b) => (a.portfolio === 'Chairperson' ? -1 : b.portfolio === 'Chairperson' ? 1 : 0));
+  }
+
   private current(r: Relationship): boolean {
     return !r.until || new Date(r.until) >= new Date(new Date().toDateString());
   }

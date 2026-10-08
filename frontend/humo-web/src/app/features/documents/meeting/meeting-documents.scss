@@ -1,0 +1,145 @@
+// The meeting notice's and minutes' own parts. The page, sheet, letterhead,
+// addressee block, table and footer come from ../document-sheet.scss.
+
+.draft-banner {
+  margin: var(--s-4) 0 0;
+  padding: var(--s-2) var(--s-3);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.04em;
+  color: #92400e;
+  background: #fef3c7;
+  border-radius: var(--r);
+}
+
+.lead {
+  margin: 0 0 var(--s-5);
+  font-size: var(--fs-base);
+  line-height: 1.5;
+}
+
+.section-h {
+  margin: var(--s-5) 0 var(--s-2);
+  font-family: var(--font-display);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+  color: var(--doc-primary);
+}
+
+// A heading never ends a page on its own.
+.keep-next {
+  break-after: avoid;
+}
+
+.agenda {
+  margin: 0;
+  padding-left: var(--s-5);
+
+  li {
+    padding: var(--s-2) 0;
+    border-bottom: 1px solid #edf1f6;
+  }
+}
+
+.a-title {
+  display: block;
+  font-weight: var(--fw-medium);
+}
+
+.a-notes {
+  display: block;
+  color: #5b6a82;
+}
+
+.note {
+  margin-top: var(--s-5);
+  padding: var(--s-3) var(--s-4);
+  background: #f4f6f9;
+  border-radius: var(--r);
+
+  p {
+    margin: 0;
+  }
+}
+
+// Dates, times and the quorum read on one line; the attendance list takes the rest.
+.refs dd {
+  white-space: nowrap;
+}
+
+.people {
+  flex: 1;
+  min-width: 0;
+}
+
+.people .gap {
+  margin-top: var(--s-3);
+}
+
+.item {
+  margin-bottom: var(--s-2);
+}
+
+.minute {
+  margin: 0 0 var(--s-2);
+  line-height: 1.5;
+}
+
+.res {
+  margin: var(--s-2) 0 var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border-left: 3px solid var(--doc-primary);
+  background: #f7f9fb;
+
+  p {
+    margin: var(--s-1) 0 0;
+  }
+}
+
+.res-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--s-2);
+}
+
+.res-out {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  color: var(--doc-accent);
+
+  &.no {
+    color: #b42318;
+  }
+}
+
+.sign {
+  margin-top: var(--s-6);
+
+  p {
+    margin: 0 0 var(--s-2);
+  }
+}
+
+.sign-off {
+  line-height: 1.6;
+}
+
+.sign-lines {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--s-6);
+  margin: var(--s-8) 0 var(--s-3);
+
+  span {
+    padding-top: var(--s-1);
+    font-size: var(--fs-xs);
+    color: #5b6a82;
+    border-top: 1px solid #0a1a33;
+  }
+}
+
+.muted {
+  font-size: var(--fs-xs);
+  color: #5b6a82;
+}

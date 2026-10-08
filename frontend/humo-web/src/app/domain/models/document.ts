@@ -46,9 +46,9 @@ export const DOCUMENT_TYPES: DocumentTypeDef[] = [
   { type: 'payment-notice', label: 'Payment notice', description: 'Reminders and letters of demand from credit control.', implemented: false },
   { type: 'work-order', label: 'Maintenance work order', description: 'The instruction a supplier works to, with scope and approval.', implemented: false },
   { type: 'contractor-quote', label: 'Contractor quote', description: 'A quote received through Humo Contractor, as approved.', implemented: false },
-  { type: 'meeting-minutes', label: 'Meeting minutes', description: 'The record of a trustee meeting or AGM.', implemented: false },
+  { type: 'meeting-minutes', label: 'Meeting minutes', description: 'The record of a trustee meeting or AGM.', implemented: true },
   { type: 'trustee-resolution', label: 'Trustee resolution', description: 'A decision of the board, as signed.', implemented: false },
-  { type: 'meeting-notice', label: 'AGM / SGM notice', description: 'Notice of a general meeting with agenda and proxy form.', implemented: false },
+  { type: 'meeting-notice', label: 'Meeting notice', description: 'Notice of a trustee meeting, AGM or SGM, with the agenda.', implemented: true },
   { type: 'financial-report', label: 'Financial report', description: 'Income statement, balance sheet and levy roll for a scheme.', implemented: false },
 ];
 
@@ -96,7 +96,18 @@ export const TEMPLATE_STATUS_MOVES: Record<TemplateStatus, TemplateStatus[]> = {
 // ---------------------------------------------------------------- Design (the safe, structured part of a template)
 
 /** Humo's own layouts. A template version picks one; nothing else renders. */
-export type TemplateLayout = 'levy-statement/classic' | 'levy-statement/branded';
+export type TemplateLayout =
+  | 'levy-statement/classic'
+  | 'levy-statement/branded'
+  | 'meeting-notice/classic'
+  | 'meeting-notice/branded'
+  | 'meeting-minutes/classic'
+  | 'meeting-minutes/branded';
+
+/** Branded layouts draw the brand bar, wordmark and branded headings; classic ones keep Humo's plain letterhead. */
+export function isBrandedLayout(layout: TemplateLayout): boolean {
+  return layout.endsWith('/branded');
+}
 
 /** Whose look a template uses: Humo's neutral one, the agency's branding, or the template's own. */
 export type BrandingMode = 'humo' | 'agency' | 'template';
@@ -110,7 +121,7 @@ export const DOCUMENT_FONTS: Record<DocumentFont, { label: string; stack: string
   serif: { label: 'Serif (Georgia)', stack: "Georgia, 'Times New Roman', serif" },
 };
 
-/** Sections a levy statement layout knows how to draw, in order. A design may hide some; it can't invent new ones. */
+/** Sections a levy statement layout knows how to draw, in order. A design may hide some; it can't invent new ones. (Meeting documents have fixed sections.) */
 export type StatementSection = 'summary' | 'transactions' | 'payment' | 'queries';
 
 export const STATEMENT_SECTIONS: Record<StatementSection, string> = {
@@ -317,7 +328,7 @@ export function validateDesign(d: TemplateDesign): Record<string, string> {
   if (d.palette && !HEX.test(d.palette.primary)) e['primary'] = 'Use a colour like #0a3d62.';
   if (d.palette && !HEX.test(d.palette.accent)) e['accent'] = 'Use a colour like #1d7a52.';
   if (d.font && !(d.font in DOCUMENT_FONTS)) e['font'] = 'Choose one of the listed fonts.';
-  if (!d.sections.includes('transactions')) e['transactions'] = 'A statement always shows its transactions.';
+  if (d.layout.startsWith('levy-statement/') && !d.sections.includes('transactions')) e['transactions'] = 'A statement always shows its transactions.';
   for (const k of ['title', 'footerText', 'legalText'] as const) {
     if ((d[k]?.length ?? 0) > MAX_TEMPLATE_TEXT) e[k] = `Keep this under ${MAX_TEMPLATE_TEXT} characters.`;
   }
