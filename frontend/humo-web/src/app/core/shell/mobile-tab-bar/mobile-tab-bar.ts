@@ -74,7 +74,7 @@ export class MobileTabBar {
       return [
         { id: 'home', label: 'Home', icon: 'grid-outline', route: '/dashboard' },
         { id: 'approvals', label: 'Approvals', icon: 'shield-checkmark-outline', route: '/approvals', badge: 'approvals' },
-        { id: 'scheme', label: 'Scheme', icon: 'business-outline', route: `/schemes/${this.session.membership().schemeIds[0]}` },
+        { id: 'scheme', label: 'Scheme', icon: 'business-outline', route: `/schemes/${this.session.assignment().scope.schemeIds[0]}` },
         { id: 'search', label: 'Search', icon: 'search-outline', route: null },
         more,
       ];

@@ -4,7 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, map, of } from 'rxjs';
 import { ADD_ONS, Opportunity, PlatformCustomer, PlatformDataSource, packageById } from '../../domain';
-import { pageState } from '../../core/prototype/page-state';
+import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
 import { ScoreRing, Sparkline } from '../../ui/charts/charts';
 import { formatDate, formatRand } from '../../ui/format/money';
@@ -33,7 +33,6 @@ const DAY = 86_400_000;
 export class AccountsPage {
   private readonly data = inject(PlatformDataSource);
   protected readonly session = inject(SessionService);
-  protected readonly page = pageState();
 
   /** One page, five views: portfolio (default), health, subscriptions, opportunities, support. */
   protected readonly view = toSignal(inject(ActivatedRoute).paramMap.pipe(map((p) => p.get('view') ?? 'portfolio')), { initialValue: 'portfolio' });
@@ -44,18 +43,13 @@ export class AccountsPage {
     support: { title: 'Support & requests', sub: 'Open tickets, escalations and upgrade requests across your accounts.' },
   };
 
-  private readonly result = toSignal(
-    this.data.customers().pipe(
-      map((all) => ({ all, failed: false })),
-      catchError(() => of({ all: [] as PlatformCustomer[], failed: true })),
-    ),
-  );
-  protected readonly loading = computed(() => this.page.status() === 'loading' || this.result() === undefined);
-  protected readonly failed = computed(() => this.page.status() === 'error' || !!this.result()?.failed);
+  protected readonly result = loadable(() => this.data.customers().pipe(map((all) => ({ all }))));
+  protected readonly loading = this.result.loading;
+  protected readonly failed = this.result.failed;
 
   /** My book: the accounts I look after. */
   protected readonly mine = computed(() =>
-    (this.page.forceEmpty() ? [] : (this.result()?.all ?? [])).filter((c) => c.accountManagerId === this.session.actor().id),
+    ((this.result.value()?.all ?? [])).filter((c) => c.accountManagerId === this.session.actor().id),
   );
 
   protected readonly summary = computed(() => {

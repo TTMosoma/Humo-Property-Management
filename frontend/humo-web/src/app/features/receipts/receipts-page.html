@@ -13,7 +13,7 @@
 @if (loading()) {
   <div class="split"><ui-skeleton [count]="6" /><ui-skeleton variant="tiles" [count]="2" /></div>
 } @else if (failed()) {
-  <div class="surface"><ui-error-state title="We couldn’t load receipts" (retry)="page.retry()" /></div>
+  <div class="surface"><ui-error-state title="We couldn’t load receipts" (retry)="result.retry()" /></div>
 } @else if (list().length === 0) {
   <div class="surface">
     @if (view() === 'open') {

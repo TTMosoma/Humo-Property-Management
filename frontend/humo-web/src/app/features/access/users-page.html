@@ -1,7 +1,7 @@
 <ui-page-header
   eyebrow="Settings"
   title="Users & access"
-  [subtitle]="'Everyone who can sign in to ' + (session.agency()?.shortName ?? 'your agency') + ' in Humo Property Management. One person, one Humo sign-in — however many roles they hold. Role decides what they can do; where it applies decides what they can see.'"
+  [subtitle]="'Everyone who can sign in to ' + (session.organisation()?.shortName ?? 'your agency') + ' in Humo Property Management. One person, one Humo sign-in — however many roles they hold. Role decides what they can do; where it applies decides what they can see.'"
 >
   <a class="btn btn-ghost" routerLink="/settings/roles">
     <ion-icon name="key-outline" aria-hidden="true" />
@@ -23,7 +23,7 @@
 </div>
 
 @if (failed()) {
-  <ui-error-state (retry)="page.retry()" />
+  <ui-error-state (retry)="result.retry()" />
 } @else if (loading()) {
   <ui-skeleton [count]="6" />
 } @else if (!rows().length) {
@@ -40,6 +40,9 @@
             {{ r.name }}
             @if (r.id === session.actor().id) {
               <span class="you">You</span>
+            }
+            @if (r.status !== 'active') {
+              <ui-status-pill [label]="statusLabel(r)" [tone]="r.status === 'invited' ? 'info' : 'danger'" />
             }
           </span>
           <span class="p-sub">{{ r.email }}</span>

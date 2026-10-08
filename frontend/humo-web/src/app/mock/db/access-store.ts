@@ -70,22 +70,35 @@ export class AccessStore {
   }
 
   assign(identityId: string, input: NewAssignment, by: string): RoleAssignment {
-    const assignment: RoleAssignment = {
-      ...input,
-      id: `m-new-${this.seq++}`,
-      grantedBy: by,
-      grantedAt: new Date().toISOString(),
-    };
-    this.identities.update((all) => all.map((i) => (i.id === identityId ? { ...i, memberships: [...i.memberships, assignment] } : i)));
+    const at = new Date().toISOString();
+    const assignment: RoleAssignment = { ...input, id: `m-new-${this.seq++}`, status: 'active', grantedBy: by, grantedAt: at };
+    const org = input.scope.organisationId;
+    this.identities.update((all) =>
+      all.map((i) => {
+        if (i.id !== identityId) return i;
+        // Granting a role in an organisation makes (or keeps) the person a member of it.
+        const member = !org || i.memberships.some((m) => m.organisationId === org && m.status === 'active');
+        const memberships = member
+          ? i.memberships
+          : [...i.memberships.filter((m) => m.organisationId !== org), { organisationId: org, status: 'active' as const, since: at }];
+        return { ...i, memberships, assignments: [...i.assignments, assignment] };
+      }),
+    );
     return assignment;
   }
 
-  revoke(identityId: string, assignmentId: string): RoleAssignment | undefined {
-    const removed = this.identity(identityId)?.memberships.find((m) => m.id === assignmentId);
+  /** Assignments end; they're never deleted (the history is part of the access record). */
+  end(identityId: string, assignmentId: string, by: string): RoleAssignment | undefined {
+    const ended = this.identity(identityId)?.assignments.find((m) => m.id === assignmentId);
+    const at = new Date().toISOString();
     this.identities.update((all) =>
-      all.map((i) => (i.id === identityId ? { ...i, memberships: i.memberships.filter((m) => m.id !== assignmentId) } : i)),
+      all.map((i) =>
+        i.id === identityId
+          ? { ...i, assignments: i.assignments.map((m) => (m.id === assignmentId ? { ...m, status: 'ended' as const, endedBy: by, endedAt: at } : m)) }
+          : i,
+      ),
     );
-    return removed;
+    return ended;
   }
 
   updateSecurity(identityId: string, change: (p: SecurityProfile) => SecurityProfile): void {

@@ -24,7 +24,7 @@ export class SignOutService {
     const name = this.session.actor().name;
     const done = () => {
       this.busy.set(false);
-      this.session.signOut();
+      this.session.signedOutLocally();
       this.router.navigate(['/signed-out'], { queryParams: { product: from, name: name.split(' ')[0] } });
     };
     this.access.signOut(HUMO_PRODUCTS[from].name).subscribe({ next: done, error: done });

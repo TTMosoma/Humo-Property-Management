@@ -7,6 +7,7 @@ import {
   MODULE_KEY_FEATURE,
   MonthPoint,
   NudgeState,
+  OrganisationStatus,
   PackageId,
   PlatformCustomer,
   Subscription,
@@ -14,6 +15,7 @@ import {
   SupportTicket,
   UpgradeRequest,
   calculateHealth,
+  entitlementSet,
   detectOpportunities,
   resolveEntitlements,
 } from '../../domain';
@@ -43,11 +45,11 @@ const TICKET_TITLES = [
 function ticketsFor(c: CustomerSeed): SupportTicket[] {
   const n = c.snapshot.openTickets;
   return Array.from({ length: n }, (_, i) => {
-    const k = (c.agencyId.length * 7 + i * 3) % TICKET_TITLES.length;
+    const k = (c.organisationId.length * 7 + i * 3) % TICKET_TITLES.length;
     const critical = i < c.snapshot.criticalTickets;
     return {
-      id: `HUMO-${2300 + ((c.agencyId.charCodeAt(0) * 13 + i * 17) % 90)}`,
-      agencyId: c.agencyId,
+      id: `HUMO-${2300 + ((c.organisationId.charCodeAt(0) * 13 + i * 17) % 90)}`,
+      organisationId: c.organisationId,
       title: TICKET_TITLES[k],
       severity: critical ? 'critical' : 'normal',
       status: critical ? 'escalated' : i % 3 === 2 ? 'waiting-on-customer' : 'open',
@@ -57,9 +59,16 @@ function ticketsFor(c: CustomerSeed): SupportTicket[] {
   });
 }
 
+/** The organisation's lifecycle, as the mock derives it (the real one is recorded, not derived). */
+function organisationStatus(c: CustomerSeed): OrganisationStatus {
+  if (c.subscription.status === 'cancelled') return 'archived';
+  if (c.subscription.status === 'suspended') return 'suspended';
+  return Date.now() - new Date(c.customerSince).getTime() < 45 * 86_400_000 ? 'onboarding' : 'active';
+}
+
 @Injectable({ providedIn: 'root' })
 export class PlatformStore {
-  private readonly seeds = signal<CustomerSeed[]>(seedCustomers());
+  readonly seeds = signal<CustomerSeed[]>(seedCustomers());
   readonly requests = signal<UpgradeRequest[]>(seedRequests());
   /** Persisted so a dismissed nudge stays dismissed across reloads in the prototype. */
   readonly nudges = signal<NudgeState[]>(this.readNudges());
@@ -72,7 +81,15 @@ export class PlatformStore {
       const entitlements = resolveEntitlements(c.subscription);
       const health = calculateHealth(c.snapshot, entitlements);
       const opportunities = detectOpportunities({ snapshot: c.snapshot, entitlements, subscription: c.subscription, health });
-      return { ...c, entitlements, health, opportunities, requests: requests.filter((r) => r.agencyId === c.agencyId), tickets: ticketsFor(c) };
+      return {
+        ...c,
+        status: organisationStatus(c),
+        entitlements: entitlements.all,
+        health,
+        opportunities,
+        requests: requests.filter((r) => r.organisationId === c.organisationId),
+        tickets: ticketsFor(c),
+      };
     });
   });
 
@@ -120,14 +137,14 @@ export class PlatformStore {
         atRiskMrr: [...band('at-risk'), ...band('critical')].reduce((n, c) => n + c.subscription.mrr, 0),
       },
       moduleUsage: modules.map((m) => {
-        const entitled = all.filter((c) => c.entitlements.has(MODULE_KEY_FEATURE[m]));
+        const entitled = all.filter((c) => entitlementSet(c.entitlements).has(MODULE_KEY_FEATURE[m]));
         const active = entitled.filter((c) => (c.health.modules.find((x) => x.module === m)?.adoption ?? 0) >= 40);
         return { module: m, adoption: entitled.length ? Math.round((active.length / entitled.length) * 100) : 0 };
       }),
       expansion: {
-        likelyToUpgrade: new Set(sales.filter((o) => o.strength === 'high').map((o) => o.agencyId)).size,
+        likelyToUpgrade: new Set(sales.filter((o) => o.strength === 'high').map((o) => o.organisationId)).size,
         potentialMrr: sales.filter((o) => o.strength !== 'low').reduce((n, o) => n + o.potentialMrr, 0),
-        underutilising: new Set(opps.filter((o) => o.kind === 'adoption').map((o) => o.agencyId)).size,
+        underutilising: new Set(opps.filter((o) => o.kind === 'adoption').map((o) => o.organisationId)).size,
         demandWithoutFeature: all.filter((c) => c.health.modules.some((m) => !m.enabled && m.adoption >= 15)).length,
         top: [...sales].sort((a, b) => (a.strength === b.strength ? b.potentialMrr - a.potentialMrr : a.strength === 'high' ? -1 : b.strength === 'high' ? 1 : 0)).slice(0, 12),
       },
@@ -138,15 +155,15 @@ export class PlatformStore {
     effect(() => safeStorage.set('humo.nudges', JSON.stringify(this.nudges())));
   }
 
-  subscription(agencyId: string): Subscription | undefined {
-    return this.seeds().find((c) => c.agencyId === agencyId)?.subscription;
+  subscription(organisationId: string): Subscription | undefined {
+    return this.seeds().find((c) => c.organisationId === organisationId)?.subscription;
   }
 
-  change(agencyId: string, change: SubscriptionChange, by: string): void {
+  change(organisationId: string, change: SubscriptionChange, by: string): void {
     const at = new Date().toISOString();
     this.seeds.update((all) =>
       all.map((c) => {
-        if (c.agencyId !== agencyId) return c;
+        if (c.organisationId !== organisationId) return c;
         const sub = { ...c.subscription, addOns: [...c.subscription.addOns], overrides: [...c.subscription.overrides] };
         switch (change.type) {
           case 'package':
@@ -169,7 +186,7 @@ export class PlatformStore {
       }),
     );
     // Conversion closes the loop: nudges for features they now have retire for good.
-    this.retireConvertedNudges(agencyId);
+    this.retireConvertedNudges(organisationId);
   }
 
   addRequest(r: Omit<UpgradeRequest, 'id' | 'at' | 'status'>): void {
@@ -180,10 +197,10 @@ export class PlatformStore {
     this.requests.update((all) => all.map((r) => (r.id === id ? { ...r, status } : r)));
   }
 
-  recordNudge(nudgeId: string, identityId: string, agencyId: string, event: 'shown' | 'dismissed' | 'not-interested' | 'learn-more' | 'snoozed'): void {
+  recordNudge(nudgeId: string, identityId: string, organisationId: string, event: 'shown' | 'dismissed' | 'not-interested' | 'learn-more' | 'snoozed'): void {
     const at = new Date().toISOString();
     this.nudges.update((all) => {
-      const existing = all.find((s) => s.nudgeId === nudgeId && s.identityId === identityId) ?? { nudgeId, identityId, agencyId, shownAt: [] };
+      const existing = all.find((s) => s.nudgeId === nudgeId && s.identityId === identityId) ?? { nudgeId, identityId, organisationId, shownAt: [] };
       const next: NudgeState = { ...existing };
       if (event === 'shown') next.shownAt = [...existing.shownAt, at];
       if (event === 'dismissed') next.dismissedAt = at;
@@ -200,16 +217,16 @@ export class PlatformStore {
     this.nudges.set([]);
   }
 
-  private retireConvertedNudges(agencyId: string): void {
-    const customer = this.customers().find((c) => c.agencyId === agencyId);
+  private retireConvertedNudges(organisationId: string): void {
+    const customer = this.customers().find((c) => c.organisationId === organisationId);
     if (!customer) return;
     const at = new Date().toISOString();
     this.nudges.update((all) =>
       all.map((s) => {
-        if (s.agencyId !== agencyId || s.convertedAt) return s;
+        if (s.organisationId !== organisationId || s.convertedAt) return s;
         const addOn = NUDGES.find((n) => n.id === s.nudgeId)?.addOn;
         const features = ADD_ONS.find((a) => a.id === addOn)?.features ?? [];
-        return features.length && features.every((f) => customer.entitlements.has(f)) ? { ...s, convertedAt: at } : s;
+        return features.length && features.every((f) => entitlementSet(customer.entitlements).has(f)) ? { ...s, convertedAt: at } : s;
       }),
     );
   }

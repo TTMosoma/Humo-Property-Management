@@ -3,7 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, map, of } from 'rxjs';
 import { ContractorDashboard, ContractorPortal, VERIFICATION_LABEL, meetsRecommendedBar } from '../../domain/contractor';
-import { pageState } from '../../core/prototype/page-state';
+import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
 import { formatDate, formatRand } from '../../ui/format/money';
 import { ErrorState } from '../../ui/states/error-state';
@@ -25,16 +25,10 @@ import { Reputation, VerificationBadge } from '../contractor-shared/contractor-u
 export class ContractorProfilePage {
   private readonly portal = inject(ContractorPortal);
   protected readonly session = inject(SessionService);
-  protected readonly page = pageState();
 
-  private readonly result = toSignal(
-    this.portal.dashboard(this.session.membership().partyId ?? '').pipe(
-      map((d) => ({ d, failed: false })),
-      catchError(() => of({ d: undefined as ContractorDashboard | undefined, failed: true })),
-    ),
-  );
-  protected readonly p = computed(() => this.result()?.d?.profile);
-  protected readonly failed = computed(() => this.page.status() === 'error' || !!this.result()?.failed);
+  protected readonly result = loadable(() => this.portal.dashboard(this.session.assignment().scope.partyId ?? '').pipe(map((d) => ({ d }))));
+  protected readonly p = computed(() => this.result.value()?.d?.profile);
+  protected readonly failed = this.result.failed;
 
   /** The three states, and what each one means — no fake checks. */
   protected readonly levels = computed(() => {

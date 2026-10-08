@@ -125,7 +125,7 @@ export class SchemeWorkspace {
 
   protected readonly chain = computed<ChainLink[]>(() => {
     const s = this.scheme();
-    const agency = this.session.agency();
+    const agency = this.session.organisation();
     if (!s) return [];
     return [
       { kind: 'Agency', label: agency?.shortName ?? 'Agency' },

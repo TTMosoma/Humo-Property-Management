@@ -3,7 +3,7 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { catchError, map, of, switchMap } from 'rxjs';
 import { PersonDataSource, TimelineDataSource, TimelineEvent } from '../../domain';
-import { pageState } from '../../core/prototype/page-state';
+import { loadable } from '../../core/data/loadable';
 import { formatRand } from '../../ui/format/money';
 import { KeyFact, RecordHeader } from '../../ui/record/record-header';
 import { EmptyState } from '../../ui/states/empty-state';
@@ -22,11 +22,11 @@ import { PersonRelationships } from './person-relationships';
   imports: [RecordHeader, PersonRelationships, Timeline, LogNote, EmptyState, ErrorState, Skeleton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (page.status() === 'loading' || summary() === undefined) {
+    @if (summary.loading()) {
       <ui-skeleton variant="tiles" [count]="4" />
-    } @else if (page.status() === 'error' || summary() === null) {
-      <div class="surface"><ui-error-state title="We couldn’t load this person" (retry)="page.retry()" /></div>
-    } @else if (summary() === false) {
+    } @else if (summary.failed()) {
+      <div class="surface"><ui-error-state title="We couldn’t load this person" (retry)="summary.retry()" /></div>
+    } @else if (summary.value() === false) {
       <div class="surface"><ui-empty-state illustration="not-found" title="We couldn’t find that person" message="They may have been removed, or you may not have access to their schemes." /></div>
     } @else {
       @let p = person()!;
@@ -56,9 +56,9 @@ import { PersonRelationships } from './person-relationships';
           <h2 class="section-title">Activity</h2>
           <app-log-note [personId]="p.person.id" [unitId]="firstUnit()" />
           <div class="tl">
-            @if (timeline() === null) {
-              <ui-error-state variant="inline" title="Activity unavailable" message="The rest of the page still works." (retry)="page.retry()" />
-            } @else if (timeline() === undefined) {
+            @if (timeline.failed()) {
+              <ui-error-state variant="inline" title="Activity unavailable" message="The rest of the page still works." (retry)="timeline.retry()" />
+            } @else if (timeline.loading()) {
               <ui-skeleton [count]="4" />
             } @else {
               <ui-timeline [events]="timelineEvents()" />
@@ -84,26 +84,22 @@ export class PersonPage {
   private readonly route = inject(ActivatedRoute);
   private readonly people = inject(PersonDataSource);
   private readonly timelineData = inject(TimelineDataSource);
-  protected readonly page = pageState();
 
   private readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('personId')!)), {
     initialValue: this.route.snapshot.paramMap.get('personId')!,
   });
 
-  protected readonly summary = toSignal(
-    toObservable(this.id).pipe(
-      switchMap((id) => this.people.get(id).pipe(map((p) => p ?? (false as const)), catchError(() => of(null)))),
-    ),
-  );
+  protected readonly summary = loadable(() => {
+    const id = this.id();
+    return this.people.get(id).pipe(map((p) => p ?? (false as const)));
+  });
 
   protected readonly person = computed(() => {
-    const s = this.summary();
+    const s = this.summary.value();
     return s ? s : undefined;
   });
 
-  protected readonly timeline = toSignal(
-    toObservable(this.id).pipe(switchMap((id) => this.timelineData.forPerson(id).pipe(catchError(() => of(null))))),
-  );
+  protected readonly timeline = loadable(() => this.timelineData.forPerson(this.id()));
 
   protected readonly facts = computed<KeyFact[]>(() => {
     const p = this.person();
@@ -127,6 +123,6 @@ export class PersonPage {
   }
 
   protected timelineEvents(): TimelineEvent[] {
-    return this.timeline() ?? [];
+    return this.timeline.value() ?? [];
   }
 }

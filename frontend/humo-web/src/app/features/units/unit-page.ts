@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { catchError, combineLatest, map, of, switchMap } from 'rxjs';
+import { EMPTY, catchError, combineLatest, map, of, switchMap } from 'rxjs';
 import {
   AccountDataSource,
   PersonDataSource,
@@ -15,7 +15,7 @@ import {
   periodLabel,
 } from '../../domain';
 import { AttentionService } from '../../core/attention/attention.service';
-import { pageState } from '../../core/prototype/page-state';
+import { loadable } from '../../core/data/loadable';
 import { AgeingBar } from '../../ui/ageing/ageing-bar';
 import { DrawerService } from '../../ui/drawer/drawer.service';
 import { RandPipe, formatDate, formatRand } from '../../ui/format/money';
@@ -50,7 +50,6 @@ export class UnitPage {
   private readonly timelineData = inject(TimelineDataSource);
   private readonly attention = inject(AttentionService);
   private readonly drawer = inject(DrawerService);
-  protected readonly page = pageState();
 
   private readonly key = toSignal(
     this.route.paramMap.pipe(map((p) => ({ schemeId: p.get('schemeId')!, number: p.get('unitId')! }))),
@@ -58,19 +57,13 @@ export class UnitPage {
   );
 
   /** undefined = loading; null = failed; false = not found. */
-  protected readonly summary = toSignal(
-    toObservable(this.key).pipe(
-      switchMap((k) =>
-        this.units.get(k.schemeId, k.number).pipe(
-          map((s) => s ?? (false as const)),
-          catchError(() => of(null)),
-        ),
-      ),
-    ),
-  );
+  protected readonly summary = loadable(() => {
+    const k = this.key();
+    return this.units.get(k.schemeId, k.number).pipe(map((s) => s ?? (false as const)));
+  });
 
   private readonly unit = computed(() => {
-    const s = this.summary();
+    const s = this.summary.value();
     return s ? s : undefined;
   });
 
@@ -78,11 +71,11 @@ export class UnitPage {
     toObservable(this.unit).pipe(switchMap((s) => (s ? this.accounts.get(s.account.id).pipe(catchError(() => of(undefined))) : of(undefined)))),
   );
 
-  protected readonly timeline = toSignal(
-    toObservable(this.unit).pipe(
-      switchMap((s) => (s ? this.timelineData.forUnit(s.unit.id).pipe(catchError(() => of(null))) : of(undefined))),
-    ),
-  );
+  /** Waits for the unit, then loads its history (its own retry, so one failure doesn't take the page down). */
+  protected readonly timeline = loadable(() => {
+    const s = this.unit();
+    return s ? this.timelineData.forUnit(s.unit.id) : EMPTY;
+  });
 
   /** Owners' other roles (e.g. "also Chairperson of the trustees"). */
   protected readonly ownerProfiles = toSignal(
@@ -155,6 +148,6 @@ export class UnitPage {
   }
 
   protected timelineEvents(): TimelineEvent[] {
-    return (this.timeline() as TimelineEvent[] | null | undefined) ?? [];
+    return this.timeline.value() ?? [];
   }
 }

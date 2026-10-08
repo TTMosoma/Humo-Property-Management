@@ -3,9 +3,9 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, map, of } from 'rxjs';
-import { ADD_ONS, AddOnId, CustomerPlan, FEATURE_META, Feature, PlanDataSource, UpgradeRequest, packageById, tierOf } from '../../domain';
+import { ADD_ONS, AddOnId, CustomerPlan, FEATURE_META, Feature, PlanDataSource, UpgradeRequest, packageById, tierOf, entitlementSet } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
-import { pageState } from '../../core/prototype/page-state';
+import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
 import { formatDate } from '../../ui/format/money';
 import { relativeTime } from '../../ui/format/relative-time';
@@ -31,24 +31,19 @@ export class PlanPage {
   private readonly data = inject(PlanDataSource);
   private readonly feedback = inject(FeedbackService);
   protected readonly session = inject(SessionService);
-  protected readonly page = pageState();
 
   /** Arrived from a nudge or "Learn more": e.g. ?feature=governance. */
   protected readonly focus = toSignal(inject(ActivatedRoute).queryParamMap.pipe(map((p) => p.get('feature') as Feature | null)), { initialValue: null });
 
-  private readonly result = toSignal(
-    this.data.mine(this.session.agency()?.id ?? '').pipe(
-      map((plan) => ({ plan, failed: false })),
-      catchError(() => of({ plan: undefined as CustomerPlan | undefined, failed: true })),
-    ),
-  );
-  protected readonly loading = computed(() => this.page.status() === 'loading' || this.result() === undefined);
-  protected readonly failed = computed(() => this.page.status() === 'error' || !!this.result()?.failed || (!this.loading() && !this.result()?.plan));
-  protected readonly plan = computed(() => this.result()?.plan);
+  protected readonly result = loadable(() => this.data.mine(this.session.organisation()?.id ?? '').pipe(map((plan) => ({ plan }))));
+  protected readonly loading = this.result.loading;
+  /** No plan on record counts as a failure: the page can't say anything useful without one. */
+  protected readonly failed = computed(() => this.result.failed() || (!this.loading() && !this.result.value()?.plan));
+  protected readonly plan = computed(() => this.result.value()?.plan);
 
   protected readonly rows = computed(() => {
     const p = this.plan();
-    return p ? moduleRows(p.entitlements).filter((r) => r.module !== 'platform') : [];
+    return p ? moduleRows(entitlementSet(p.entitlements)).filter((r) => r.module !== 'platform') : [];
   });
   protected readonly focusModule = computed(() => {
     const f = this.focus();
@@ -94,7 +89,7 @@ export class PlanPage {
     this.busy.set(true);
     const feature = this.rows().find((r) => r.module === module)?.features.find((f) => !f.enabled)?.key as Feature | undefined;
     this.data
-      .requestUpgrade({ agencyId: p.agencyId, addOn: how.addOn, feature, note: this.note().trim() || undefined, source: this.focus() ? 'nudge' : 'plan-page' })
+      .requestUpgrade({ organisationId: p.organisationId, addOn: how.addOn, feature, note: this.note().trim() || undefined, source: this.focus() ? 'nudge' : 'plan-page' })
       .subscribe({
         next: () => {
           this.busy.set(false);

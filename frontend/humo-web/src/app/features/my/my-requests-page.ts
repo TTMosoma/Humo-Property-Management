@@ -5,7 +5,7 @@ import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, map, of, switchMap } from 'rxjs';
 import { JobDataSource, JobSummary, UnitDataSource } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
-import { pageState } from '../../core/prototype/page-state';
+import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
 import { formatDate } from '../../ui/format/money';
 import { PageHeader } from '../../ui/page-header/page-header';
@@ -36,10 +36,10 @@ const RESIDENT_STAGES = [
       <a class="btn btn-primary" routerLink="/my/requests/new"><ion-icon name="add-outline" aria-hidden="true" /> Report a problem</a>
     </ui-page-header>
 
-    @if (page.status() === 'loading' || result() === undefined) {
+    @if (result.loading()) {
       <ui-skeleton variant="tiles" [count]="2" />
-    } @else if (page.status() === 'error' || result() === null) {
-      <div class="surface"><ui-error-state title="We couldn’t load your requests" (retry)="page.retry()" /></div>
+    } @else if (result.failed()) {
+      <div class="surface"><ui-error-state title="We couldn’t load your requests" (retry)="result.retry()" /></div>
     } @else if (open().length === 0 && closed().length === 0) {
       <div class="surface">
         <ui-empty-state kind="first-use" title="No requests yet" message="If something needs fixing in your unit or on the property, report it here and follow it until it’s done.">
@@ -113,7 +113,6 @@ export class MyRequestsPage {
   private readonly units = inject(UnitDataSource);
   private readonly jobs = inject(JobDataSource);
   private readonly feedback = inject(FeedbackService);
-  protected readonly page = pageState();
 
   protected readonly stages = RESIDENT_STAGES;
   protected readonly formatDate = formatDate;
@@ -122,22 +121,15 @@ export class MyRequestsPage {
   protected readonly why = signal('');
 
   /** Load the resident's unit, then their requests (reported by them or for their unit). */
-  protected readonly result = toSignal(
-    toObservable(this.session.membership).pipe(
-      switchMap((m) => {
-        const personId = this.session.persona().personId ?? '';
-        const unit$ = m.unitLabel ? this.units.get(m.schemeIds[0], m.unitLabel.replace(/\D/g, '')) : of(undefined);
-        return unit$.pipe(
-          switchMap((u) => this.jobs.forResident(personId, u?.unit.id)),
-          map((rows) => rows),
-          catchError(() => of(null)),
-        );
-      }),
-    ),
-  );
+  protected readonly result = loadable(() => {
+    const a = this.session.assignment();
+    const personId = this.session.identity().personId ?? '';
+    const unit$ = a.scope.unitId ? this.units.byId(a.scope.unitId) : of(undefined);
+    return unit$.pipe(switchMap((u) => this.jobs.forResident(personId, u?.unit.id)));
+  });
 
-  protected readonly open = computed(() => (this.page.forceEmpty() ? [] : (this.result() ?? []).filter((r) => isOpenJob(r.job) && !['verified', 'invoiced', 'paid'].includes(r.job.stage))));
-  protected readonly closed = computed(() => (this.page.forceEmpty() ? [] : (this.result() ?? []).filter((r) => !isOpenJob(r.job) || ['verified', 'invoiced', 'paid'].includes(r.job.stage))));
+  protected readonly open = computed(() => (this.result.value() ?? []).filter((r) => isOpenJob(r.job) && !['verified', 'invoiced', 'paid'].includes(r.job.stage)));
+  protected readonly closed = computed(() => (this.result.value() ?? []).filter((r) => !isOpenJob(r.job) || ['verified', 'invoiced', 'paid'].includes(r.job.stage)));
 
   protected status(r: JobSummary) {
     return residentStatus(r.job);

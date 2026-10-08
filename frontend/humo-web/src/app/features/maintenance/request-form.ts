@@ -3,10 +3,11 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, debounceTime, map, of, switchMap } from 'rxjs';
-import { JobDataSource, PRIORITY_LABEL, Priority, Trade, UnitDataSource, UnitSummary } from '../../domain';
+import { FieldErrors, JobDataSource, PRIORITY_LABEL, Priority, Trade, UnitDataSource, UnitSummary, describeFailure, fieldErrorsOf } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { ScopeService } from '../../core/scope/scope.service';
 import { SessionService } from '../../core/session/session.service';
+import { FieldError } from '../../ui/form/field-error';
 import { PageHeader } from '../../ui/page-header/page-header';
 import { PhotoTile } from '../../ui/photo/photo-tile';
 
@@ -36,7 +37,7 @@ const TILES: TradeTile[] = [
  */
 @Component({
   selector: 'app-request-form',
-  imports: [PageHeader, PhotoTile, IonIcon],
+  imports: [PageHeader, PhotoTile, IonIcon, FieldError],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './request-form.html',
   styleUrl: './request-form.scss',
@@ -72,12 +73,14 @@ export class RequestForm {
   protected readonly photos = signal<string[]>([]);
   protected readonly busy = signal(false);
   protected readonly attempted = signal(false);
+  /** What the server said about the last attempt, per field. */
+  protected readonly serverErrors = signal<FieldErrors>({});
 
   /** Residents: their own unit, from their membership. */
   private readonly ownUnit = toSignal(
-    toObservable(computed(() => (this.mode() === 'resident' ? this.session.membership() : null))).pipe(
+    toObservable(computed(() => (this.mode() === 'resident' ? this.session.assignment() : null))).pipe(
       switchMap((m) =>
-        m && m.unitLabel ? this.units.get(m.schemeIds[0], m.unitLabel.replace(/\D/g, '')).pipe(catchError(() => of(undefined))) : of(undefined),
+        m?.scope.unitId ? this.units.byId(m.scope.unitId).pipe(catchError(() => of(undefined))) : of(undefined),
       ),
     ),
   );
@@ -130,11 +133,12 @@ export class RequestForm {
 
   protected submit(): void {
     this.attempted.set(true);
+    this.serverErrors.set({});
     if (this.errors().length) return;
     const resident = this.mode() === 'resident';
     const u = this.where() === 'unit' ? this.unit() : null;
-    const schemeId = resident ? this.session.membership().schemeIds[0] : this.schemeId();
-    const persona = this.session.persona();
+    const schemeId = resident ? this.session.assignment().scope.schemeIds[0] : this.schemeId();
+    const persona = this.session.identity();
     const reportedBy = resident
       ? { name: persona.name, role: this.session.role() as 'owner' | 'tenant', personId: persona.personId }
       : this.reporterRole() === 'staff'
@@ -164,9 +168,11 @@ export class RequestForm {
             this.router.navigate(['/maintenance', ref]);
           }
         },
-        error: () => {
+        // Everything they typed stays in the form.
+        error: (e) => {
           this.busy.set(false);
-          this.feedback.error('We couldn’t send that. Nothing was lost — try again.');
+          this.serverErrors.set(fieldErrorsOf(e));
+          this.feedback.error(describeFailure(e, 'We couldn’t send that'));
         },
       });
   }

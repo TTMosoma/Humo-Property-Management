@@ -1,9 +1,11 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, map, switchMap, throwError, timer } from 'rxjs';
 import {
+  ApiError,
   AuditCategory,
   AuditEvent,
   Feature,
+  FieldErrors,
   PERMISSION_META,
   Permission,
   PolicyDenial,
@@ -13,9 +15,9 @@ import {
 } from '../../domain';
 import { PolicyNotices } from '../../core/security/policy-notices';
 import { ScopeService } from '../../core/scope/scope.service';
-import { SessionService } from '../../core/session/session.service';
 import { AccessStore } from '../db/access-store';
 import { mockResponder } from '../mock-latency';
+import { MockAuthSession } from './mock-auth-session';
 
 export interface CommandSpec {
   /** Past tense for the audit log, e.g. "Released payment batch". */
@@ -33,6 +35,8 @@ export interface CommandSpec {
   category?: AuditCategory;
   /** Allowed in Observe impersonation (e.g. ending the impersonation itself). */
   allowedWhileObserving?: boolean;
+  /** Server-side validation, after authorisation: field → message, or null when the input is fine. */
+  validate?: () => FieldErrors | null;
 }
 
 const DENIAL_REASON: Record<PolicyDenial, string> = {
@@ -48,13 +52,14 @@ const DENIAL_REASON: Record<PolicyDenial, string> = {
  *   1. authorise (role permission, scope, entitlement) from the token's claims,
  *   2. refuse writes in Observe impersonation,
  *   3. require a fresh step-up proof for sensitive commands,
- *   4. append an audit record naming the actor AND the impersonated user.
+ *   4. validate the input (422 with field errors),
+ *   5. append an audit record naming the actor AND the impersonated user.
  *
  * The browser's own checks (SessionService.can) are UX; these are the rules.
  */
 @Injectable({ providedIn: 'root' })
 export class MockGateway {
-  private readonly session = inject(SessionService);
+  private readonly auth = inject(MockAuthSession);
   private readonly scope = inject(ScopeService);
   private readonly store = inject(AccessStore);
   private readonly notices = inject(PolicyNotices);
@@ -69,6 +74,8 @@ export class MockGateway {
     }
     return this.respond(null).pipe(
       map(() => {
+        const invalid = spec.validate?.();
+        if (invalid && Object.keys(invalid).length) throw new ApiError('validation', 'Some details need attention', invalid);
         try {
           const result = apply();
           this.audit(spec, 'success');
@@ -87,16 +94,17 @@ export class MockGateway {
 
   /** Records an event without a command (e.g. the API noticing a sign-in). */
   audit(spec: CommandSpec, result: AuditEvent['result'], reason?: string, stepUp?: { method: StepUpMethod; device?: string }): void {
-    const imp = this.session.impersonation();
-    const actor = this.session.actor();
-    const proof = this.session.stepUpProof();
+    const s = this.auth.current;
+    const imp = s.impersonation;
+    const actor = s.actor;
+    const proof = this.auth.stepUpProof();
     const needsProof = spec.stepUp ?? (spec.permission ? PERMISSION_META[spec.permission].stepUp : false);
     this.store.record({
       category: spec.category ?? 'activity',
       actor: { identityId: actor.id, name: actor.name },
-      actingAs: imp ? { identityId: this.session.persona().id, name: this.session.persona().name } : undefined,
-      role: this.session.role(),
-      agencyId: this.session.agency()?.id ?? null,
+      actingAs: imp ? { identityId: s.identity.id, name: s.identity.name } : undefined,
+      role: this.auth.assignment().role,
+      organisationId: s.organisation?.id ?? null,
       schemeId: spec.schemeId ?? this.scope.scopeId(),
       action: spec.action,
       resource: spec.resource,
@@ -111,15 +119,17 @@ export class MockGateway {
   }
 
   private authorise(spec: CommandSpec): PolicyDenial | null {
-    if (this.session.readOnly() && !spec.allowedWhileObserving) return 'observe-only';
-    if (spec.permission) {
-      const m = this.session.membership();
-      const granted = ROLE_PERMISSIONS[m.role].includes(spec.permission) || !!m.grants?.includes(spec.permission);
-      if (!granted) return 'forbidden';
-    }
-    if (spec.feature && !this.session.hasFeature(spec.feature)) return 'not-entitled';
+    if (this.auth.current.impersonation?.mode === 'observe' && !spec.allowedWhileObserving) return 'observe-only';
+    // Permission is checked against the token's role, not the observe-filtered list (observe is reported above).
+    if (spec.permission && !this.roleGrants(spec.permission)) return 'forbidden';
+    if (spec.feature && !this.auth.hasFeature(spec.feature)) return 'not-entitled';
     const needsProof = spec.stepUp ?? (spec.permission ? PERMISSION_META[spec.permission].stepUp : false);
-    if (needsProof && !this.session.stepUpFresh()) return 'step-up-required';
+    if (needsProof && !this.auth.stepUpFresh()) return 'step-up-required';
     return null;
+  }
+
+  private roleGrants(permission: Permission): boolean {
+    const a = this.auth.assignment();
+    return ROLE_PERMISSIONS[a.role].includes(permission) || !!a.grants?.includes(permission);
   }
 }

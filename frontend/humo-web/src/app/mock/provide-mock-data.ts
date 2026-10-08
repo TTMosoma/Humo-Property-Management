@@ -3,7 +3,9 @@ import {
   AccessDataSource,
   AccountDataSource,
   AuditDataSource,
+  NotificationDataSource,
   NudgeDataSource,
+  OrganisationDataSource,
   PlanDataSource,
   PlatformDataSource,
   SecurityDataSource,
@@ -14,6 +16,7 @@ import {
   SupplierDataSource,
   ReceiptDataSource,
   SchemeDataSource,
+  SessionDataSource,
   TimelineDataSource,
   UnitDataSource,
   WorkItemDataSource,
@@ -34,8 +37,10 @@ import {
   InMemoryAccessDataSource,
   InMemoryAuditDataSource,
   InMemorySecurityDataSource,
+  InMemorySessionDataSource,
   InMemoryStepUpAuthenticator,
 } from './data-sources/in-memory-access-data-sources';
+import { InMemoryNotificationDataSource, InMemoryOrganisationDataSource } from './data-sources/in-memory-organisation-data-sources';
 import { ContractorNetwork, ContractorPortal } from '../domain/contractor';
 import { InMemoryContractorNetwork, InMemoryContractorPortal } from './contractor/in-memory-contractor';
 import { InMemoryNudgeDataSource, InMemoryPlanDataSource, InMemoryPlatformDataSource } from './data-sources/in-memory-platform-data-sources';
@@ -49,6 +54,9 @@ import { InMemoryWorkItemDataSource } from './data-sources/in-memory-work-item-d
  */
 export function provideMockData(): EnvironmentProviders {
   return makeEnvironmentProviders([
+    { provide: SessionDataSource, useClass: InMemorySessionDataSource },
+    { provide: OrganisationDataSource, useClass: InMemoryOrganisationDataSource },
+    { provide: NotificationDataSource, useClass: InMemoryNotificationDataSource },
     { provide: SchemeDataSource, useClass: InMemorySchemeDataSource },
     { provide: WorkItemDataSource, useClass: InMemoryWorkItemDataSource },
     { provide: UnitDataSource, useClass: InMemoryUnitDataSource },

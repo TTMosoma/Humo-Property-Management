@@ -2,11 +2,12 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { toSignal } from '@angular/core/rxjs-interop';
 import { DIALOG_DATA } from '@angular/cdk/dialog';
 import { IonIcon } from '@ionic/angular/standalone';
-import { map } from 'rxjs';
+import { EMPTY, Observable, catchError, map, of, switchMap } from 'rxjs';
 import {
   AccessDataSource,
   CUSTOMER_ROLES,
   CustomerRole,
+  FieldErrors,
   NewAssignment,
   PERMISSION_META,
   ROLE_LABELS,
@@ -14,12 +15,16 @@ import {
   ROLE_PERMISSIONS,
   RoleAssignment,
   RoleFamily,
+  UnitDataSource,
+  describeFailure,
+  fieldErrorsOf,
 } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { ScopeService } from '../../core/scope/scope.service';
 import { StepUpService } from '../../core/security/step-up.service';
 import { SessionService } from '../../core/session/session.service';
 import { Drawer } from '../../ui/drawer/drawer';
+import { FieldError } from '../../ui/form/field-error';
 import { formatDate } from '../../ui/format/money';
 import { FAMILY_LABELS, roleColor } from './access-view';
 
@@ -32,7 +37,7 @@ const GROUPS: RoleFamily[] = ['agency', 'governance', 'resident', 'supplier'];
  */
 @Component({
   selector: 'app-access-drawer',
-  imports: [Drawer, IonIcon],
+  imports: [Drawer, IonIcon, FieldError],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './access-drawer.html',
   styleUrl: './access-drawer.scss',
@@ -43,11 +48,15 @@ export class AccessDrawer {
   private readonly stepUp = inject(StepUpService);
   private readonly feedback = inject(FeedbackService);
   private readonly scope = inject(ScopeService);
+  private readonly units = inject(UnitDataSource);
   protected readonly session = inject(SessionService);
 
-  private readonly agencyId = this.session.agency()?.id ?? '';
-  protected readonly identity = toSignal(this.access.directory(this.agencyId).pipe(map((all) => all.find((i) => i.id === this.input.identityId))));
-  protected readonly assignments = computed(() => (this.identity()?.memberships ?? []).filter((m) => m.agencyId === this.agencyId));
+  private readonly organisationId = this.session.organisation()?.id ?? '';
+  protected readonly identity = toSignal(this.access.directory(this.organisationId).pipe(map((all) => all.find((i) => i.id === this.input.identityId))));
+  private readonly here = computed(() => (this.identity()?.assignments ?? []).filter((m) => m.scope.organisationId === this.organisationId));
+  protected readonly assignments = computed(() => this.here().filter((m) => m.status === 'active'));
+  /** Ended assignments stay on record: who held what, and when it stopped. */
+  protected readonly ended = computed(() => this.here().filter((m) => m.status === 'ended'));
   protected readonly isSelf = computed(() => this.input.identityId === this.session.actor().id);
 
   // ---- Add a role ----
@@ -58,6 +67,8 @@ export class AccessDrawer {
   protected readonly unit = signal('');
   protected readonly supplier = signal('');
   protected readonly busy = signal(false);
+  /** The server's verdict on the last attempt, per field. Cleared when the person edits the form. */
+  protected readonly errors = signal<FieldErrors>({});
   protected readonly confirmRemove = signal<string | null>(null);
 
   protected readonly schemes = this.scope.accessible;
@@ -89,12 +100,14 @@ export class AccessDrawer {
   protected readonly formatDate = formatDate;
 
   protected pickRole(r: string): void {
+    this.errors.set({});
     this.role.set(r as CustomerRole);
     this.schemeIds.set([]);
     this.allSchemes.set(r === 'finance');
   }
 
   protected toggleScheme(id: string, single: boolean): void {
+    this.errors.set({});
     if (single) {
       this.schemeIds.set([id]);
       return;
@@ -104,23 +117,30 @@ export class AccessDrawer {
 
   protected grant(): void {
     const name = this.identity()?.name ?? 'this person';
-    const a = this.buildAssignment();
     const admin = this.role() === 'agency-admin';
     this.busy.set(true);
-    this.stepUp
-      .guard(
-        { action: admin ? 'add-administrator' : 'change-roles', detail: `Give ${name} the ${ROLE_LABELS[a.role]} role · ${a.label}` },
-        () => this.access.assign(this.input.identityId, a),
+    this.errors.set({});
+    this.buildAssignment()
+      .pipe(
+        switchMap((a) => {
+          if (!a) return EMPTY;
+          return this.stepUp
+            .guard({ action: admin ? 'add-administrator' : 'change-roles', detail: `Give ${name} the ${ROLE_LABELS[a.role]} role · ${a.label}` }, () =>
+              this.access.assign(this.input.identityId, a),
+            )
+            .pipe(map(() => a));
+        }),
       )
       .subscribe({
-        next: () => {
-          this.busy.set(false);
+        next: (a) => {
           this.adding.set(false);
           this.feedback.success(`${name} is now also ${ROLE_LABELS[a.role]} (${a.label}). They’ll see it in Switch role next time they open Humo Property Management.`);
         },
-        error: () => {
+        // The form keeps everything they chose; field problems show next to the fields.
+        error: (e) => {
           this.busy.set(false);
-          this.feedback.error('The role wasn’t granted. Nothing was changed.');
+          this.errors.set(fieldErrorsOf(e));
+          this.feedback.error(describeFailure(e, 'The role wasn’t granted'));
         },
         complete: () => this.busy.set(false),
       });
@@ -130,24 +150,38 @@ export class AccessDrawer {
     const name = this.identity()?.name ?? 'this person';
     this.confirmRemove.set(null);
     this.stepUp
-      .guard({ action: 'change-roles', detail: `Remove ${ROLE_LABELS[m.role]} · ${m.label} from ${name}` }, () => this.access.revoke(this.input.identityId, m.id))
+      .guard({ action: 'change-roles', detail: `End ${ROLE_LABELS[m.role]} · ${m.label} for ${name}` }, () => this.access.endAssignment(this.input.identityId, m.id))
       .subscribe({
-        next: () => this.feedback.success(`Removed ${ROLE_LABELS[m.role]} from ${name}. It takes effect on their next request.`),
-        error: () => this.feedback.error('The role wasn’t removed. Nothing was changed.'),
+        next: () => this.feedback.success(`Ended ${ROLE_LABELS[m.role]} for ${name}. It takes effect on their next request and stays in their access history.`),
+        error: (e) => this.feedback.error(describeFailure(e, 'The role wasn’t ended')),
       });
   }
 
-  private buildAssignment(): NewAssignment {
+  /** The assignment to request; null (with a field error) when the unit can't be found. */
+  private buildAssignment(): Observable<NewAssignment | null> {
     const role = this.role();
     const kind = this.meta().scopeKind;
+    const org = this.organisationId;
     const names = this.schemeIds().map((id) => this.scope.findScheme(id)?.name ?? id);
-    if (kind === 'agency') return { role, agencyId: this.agencyId, schemeIds: [], label: this.session.agency()?.shortName ?? 'Agency' };
-    if (kind === 'supplier') return { role, agencyId: this.agencyId, schemeIds: [], label: this.supplier().trim() };
+    if (kind === 'agency') return of({ role, scope: { type: 'organisation', organisationId: org, schemeIds: [] }, label: this.session.organisation()?.shortName ?? 'Agency' });
+    if (kind === 'supplier') return of({ role, scope: { type: 'organisation', organisationId: org, schemeIds: [] }, label: this.supplier().trim() });
     if (kind === 'unit') {
-      const unit = `Unit ${this.unit().trim().replace(/^unit\s*/i, '')}`;
-      return { role, agencyId: this.agencyId, schemeIds: this.schemeIds(), unitLabel: unit, label: `${unit}, ${names[0]}` };
+      const number = this.unit().trim().replace(/^unit\s*/i, '');
+      const schemeId = this.schemeIds()[0];
+      // People say "unit 42"; the assignment points at the unit itself.
+      return this.units.get(schemeId, number).pipe(
+        catchError(() => of(undefined)),
+        map((u) => {
+          if (!u) {
+            this.errors.set({ unit: `There’s no unit ${number} in ${names[0]}.` });
+            this.busy.set(false);
+            return null;
+          }
+          return { role, scope: { type: 'unit', organisationId: org, schemeIds: [schemeId], unitId: u.unit.id }, label: `Unit ${u.unit.number}, ${names[0]}` };
+        }),
+      );
     }
-    if (this.allSchemes() && role !== 'trustee') return { role, agencyId: this.agencyId, schemeIds: [], label: 'All schemes' };
-    return { role, agencyId: this.agencyId, schemeIds: this.schemeIds(), label: names.length <= 3 ? names.join(', ') : `${names.length} schemes` };
+    if (this.allSchemes() && role !== 'trustee') return of({ role, scope: { type: 'organisation', organisationId: org, schemeIds: [] }, label: 'All schemes' });
+    return of({ role, scope: { type: 'schemes', organisationId: org, schemeIds: this.schemeIds() }, label: names.length <= 3 ? names.join(', ') : `${names.length} schemes` });
   }
 }

@@ -1,9 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { IonIcon } from '@ionic/angular/standalone';
-import { IMPERSONATION_REASONS, Identity, ImpersonationMode, ImpersonationReason, ROLE_LABELS } from '../../domain';
+import { IMPERSONATION_REASONS, Identity, ImpersonationMode, ImpersonationReason, ROLE_LABELS, activeAssignments } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { ImpersonationService } from '../../core/security/impersonation.service';
+import { organisationName, visibleOrganisations } from '../../core/session/organisations';
 import { SessionService } from '../../core/session/session.service';
 
 /**
@@ -24,8 +25,11 @@ export class ImpersonateDialog {
   private readonly service = inject(ImpersonationService);
   private readonly feedback = inject(FeedbackService);
   protected readonly session = inject(SessionService);
+  private readonly organisations = visibleOrganisations();
 
-  protected readonly assignmentId = signal(this.target.memberships[0]?.id ?? '');
+  /** Only roles the person holds today can be viewed as. */
+  protected readonly assignments = activeAssignments(this.target);
+  protected readonly assignmentId = signal(this.assignments[0]?.id ?? '');
   protected readonly mode = signal<ImpersonationMode>('observe');
   protected readonly reason = signal<ImpersonationReason>('support');
   protected readonly ticket = signal('');
@@ -36,8 +40,8 @@ export class ImpersonateDialog {
   protected readonly reasons = Object.entries(IMPERSONATION_REASONS) as [ImpersonationReason, string][];
   protected readonly roleLabels = ROLE_LABELS;
   protected readonly agencyName = computed(() => {
-    const a = this.target.memberships.find((m) => m.id === this.assignmentId());
-    return this.session.agencies.find((x) => x.id === a?.agencyId)?.shortName ?? 'their agency';
+    const a = this.assignments.find((m) => m.id === this.assignmentId());
+    return organisationName(this.organisations(), a?.scope.organisationId, 'their agency');
   });
 
   protected readonly noteRequired = computed(() => this.mode() === 'act' || this.reason() === 'other');

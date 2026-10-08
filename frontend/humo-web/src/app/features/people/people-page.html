@@ -16,7 +16,7 @@
 @if (loading()) {
   <ui-skeleton [count]="10" />
 } @else if (failed()) {
-  <div class="surface"><ui-error-state title="We couldn’t load people" (retry)="page.retry()" /></div>
+  <div class="surface"><ui-error-state title="We couldn’t load people" (retry)="result.retry()" /></div>
 } @else if (filtered().length === 0) {
   <div class="surface">
     @if (state().q || state().scheme) {

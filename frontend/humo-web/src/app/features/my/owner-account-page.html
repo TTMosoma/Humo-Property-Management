@@ -1,7 +1,7 @@
-@if (page.status() === 'loading' || summary() === undefined || detail() === undefined) {
+@if (result.loading()) {
   <ui-skeleton variant="tiles" [count]="3" />
-} @else if (page.status() === 'error' || summary() === null || detail() === null) {
-  <div class="surface"><ui-error-state title="We couldn’t load your account" (retry)="page.retry()" /></div>
+} @else if (result.failed() || !summary()) {
+  <div class="surface"><ui-error-state title="We couldn’t load your account" (retry)="result.retry()" /></div>
 } @else {
   @let s = summary()!;
   @let d = detail()!;

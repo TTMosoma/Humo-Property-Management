@@ -3,7 +3,7 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, map, of, switchMap } from 'rxjs';
 import { DocStatus, Scheme, SupplierDataSource, SupplierSummary, Trade } from '../../domain';
-import { pageState } from '../../core/prototype/page-state';
+import { loadable } from '../../core/data/loadable';
 import { ScopeNotice } from '../../core/scope/scope-notice';
 import { ScopeService } from '../../core/scope/scope.service';
 import { CellDef, ColumnDef, DataTable } from '../../ui/data-table/data-table';
@@ -49,7 +49,7 @@ export const VETTING: Record<DocStatus, { label: string; tone: Tone }> = {
     @if (loading()) {
       <ui-skeleton [count]="8" />
     } @else if (failed()) {
-      <div class="surface"><ui-error-state title="We couldn’t load suppliers" (retry)="page.retry()" /></div>
+      <div class="surface"><ui-error-state title="We couldn’t load suppliers" (retry)="result.retry()" /></div>
     } @else if (rows().length === 0) {
       <div class="surface">
         @if (state().view === 'attention' && !state().q && !state().trade) {
@@ -90,7 +90,6 @@ export class SuppliersPage {
   private readonly router = inject(Router);
   private readonly data = inject(SupplierDataSource);
   protected readonly scope = inject(ScopeService);
-  protected readonly page = pageState();
 
   protected readonly fixedScheme = toSignal(this.route.data.pipe(map((d) => d['scheme'] as Scheme | undefined)), {
     initialValue: this.route.snapshot.data['scheme'] as Scheme | undefined,
@@ -98,15 +97,11 @@ export class SuppliersPage {
   protected readonly state = urlState({ view: 'all', q: '', trade: null });
 
   private readonly schemeIds = computed(() => (this.fixedScheme() ? [this.fixedScheme()!.id] : this.scope.effectiveIds()));
-  private readonly result = toSignal(
-    toObservable(this.schemeIds).pipe(
-      switchMap((ids) => this.data.list(ids).pipe(map((rows) => ({ rows, failed: false })), catchError(() => of({ rows: [] as SupplierSummary[], failed: true })))),
-    ),
-  );
+  protected readonly result = loadable(() => this.data.list(this.schemeIds()).pipe(map((rows) => ({ rows }))));
 
-  protected readonly loading = computed(() => this.page.status() === 'loading' || this.result() === undefined);
-  protected readonly failed = computed(() => this.page.status() === 'error' || !!this.result()?.failed);
-  private readonly all = computed(() => (this.page.forceEmpty() ? [] : (this.result()?.rows ?? [])).sort((a, b) => a.supplier.name.localeCompare(b.supplier.name)));
+  protected readonly loading = this.result.loading;
+  protected readonly failed = this.result.failed;
+  private readonly all = computed(() => ((this.result.value()?.rows ?? [])).sort((a, b) => a.supplier.name.localeCompare(b.supplier.name)));
 
   protected readonly rows = computed(() => {
     const s = this.state();

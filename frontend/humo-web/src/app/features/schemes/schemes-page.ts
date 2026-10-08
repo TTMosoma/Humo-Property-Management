@@ -2,11 +2,10 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { toSignal } from '@angular/core/rxjs-interop';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, of } from 'rxjs';
-import { SchemeDataSource, SchemeHealth } from '../../domain';
-import { pageState } from '../../core/prototype/page-state';
+import { SCHEME_STATUS_LABELS, SchemeDataSource, SchemeHealth } from '../../domain';
+import { loadable } from '../../core/data/loadable';
 import { ScopeService } from '../../core/scope/scope.service';
 import { SessionService } from '../../core/session/session.service';
-import { STAFF } from '../../mock/fixtures/staff';
 import { CellDef, ColumnDef, DataTable } from '../../ui/data-table/data-table';
 import { FilterBar, FilterDef } from '../../ui/data-table/filter-bar';
 import { urlState } from '../../ui/data-table/url-state';
@@ -39,20 +38,29 @@ export class SchemesPage {
   private readonly drawer = inject(DrawerService);
   protected readonly scope = inject(ScopeService);
   protected readonly session = inject(SessionService);
-  protected readonly page = pageState();
 
   protected readonly state = urlState({ view: 'all', q: '', type: null, province: null, manager: null, health: null });
   protected readonly activeId = signal<string | null>(null);
 
-  private readonly health = toSignal(this.data.health().pipe(catchError(() => of([] as SchemeHealth[]))), {
-    initialValue: [] as SchemeHealth[],
+  private readonly healthLoad = loadable(() => this.data.health());
+  private readonly health = computed(() => this.healthLoad.value() ?? []);
+
+  /** The list needs both the schemes and their health figures. */
+  protected readonly status = computed(() => {
+    const states = [this.scope.status(), this.healthLoad.status()];
+    return states.includes('error') ? 'error' : states.includes('loading') ? 'loading' : 'ready';
   });
+
+  protected retry(): void {
+    if (this.scope.status() === 'error') this.scope.retry();
+    if (this.healthLoad.status() === 'error') this.healthLoad.retry();
+  }
 
   protected readonly allRows = computed(() => toRows(this.scope.accessible(), this.health()));
 
   private readonly byView = computed(() => {
     const rows = this.allRows();
-    const mine = this.session.membership().schemeIds;
+    const mine = this.session.assignment().scope.schemeIds;
     switch (this.state().view) {
       case 'pinned':
         return rows.filter((r) => this.scope.isPinned(r.scheme.id));
@@ -66,13 +74,12 @@ export class SchemesPage {
   });
 
   protected readonly rows = computed(() => {
-    if (this.page.forceEmpty()) return [];
     const s = this.state();
     const q = (s.q ?? '').toLowerCase().trim();
     return this.byView()
       .filter((r) => !s.type || r.scheme.type === s.type)
       .filter((r) => !s.province || r.scheme.province === s.province)
-      .filter((r) => !s.manager || r.scheme.portfolioManagerId === s.manager)
+      .filter((r) => !s.manager || r.scheme.portfolioManager?.identityId === s.manager)
       .filter((r) => !s.health || r.health.rating === s.health)
       .filter((r) => !q || [r.scheme.name, r.scheme.code, r.scheme.suburb, r.scheme.city, r.manager].join(' ').toLowerCase().includes(q));
   });
@@ -102,12 +109,16 @@ export class SchemesPage {
       { id: 'attention', label: 'Needs attention', count: rows.filter((r) => r.health.rating !== 'good').length },
     ];
     if (this.session.role() === 'portfolio-manager') {
-      tabs.splice(1, 0, { id: 'mine', label: 'My schemes', count: this.session.membership().schemeIds.length });
+      tabs.splice(1, 0, { id: 'mine', label: 'My schemes', count: this.session.assignment().scope.schemeIds.length });
     }
     return tabs;
   });
 
-  protected readonly filters: FilterDef[] = [
+  protected schemeStatus(r: SchemeRow): string {
+    return SCHEME_STATUS_LABELS[r.scheme.status];
+  }
+
+  protected readonly filters = computed<FilterDef[]>(() => [
     {
       key: 'type',
       label: 'Type',
@@ -121,14 +132,17 @@ export class SchemesPage {
     {
       key: 'manager',
       label: 'Manager',
-      options: STAFF.filter((s) => s.title === 'Portfolio Manager').map((s) => ({ value: s.id, label: s.name })),
+      // The managers of the schemes in view (from their assignments), not a fixed staff list.
+      options: [...new Map(this.allRows().filter((r) => r.scheme.portfolioManager).map((r) => [r.scheme.portfolioManager!.identityId, r.scheme.portfolioManager!.name])).entries()]
+        .sort((a, b) => a[1].localeCompare(b[1]))
+        .map(([value, label]) => ({ value, label })),
     },
     {
       key: 'health',
       label: 'Health',
       options: (['good', 'watch', 'at-risk'] as const).map((h) => ({ value: h, label: RATING[h].label })),
     },
-  ];
+  ]);
 
   protected readonly columns: ColumnDef<SchemeRow>[] = [
     { key: 'scheme', header: 'Scheme', mobile: 'title', sort: (r) => r.scheme.name },

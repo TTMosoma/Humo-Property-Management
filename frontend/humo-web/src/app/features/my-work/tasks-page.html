@@ -23,12 +23,12 @@
   (searchChange)="setSearch($event)"
 />
 
-@switch (page.status()) {
+@switch (attention.status()) {
   @case ('loading') {
     <ui-skeleton [count]="7" />
   }
   @case ('error') {
-    <div class="surface"><ui-error-state title="We couldn’t load your tasks" (retry)="page.retry()" /></div>
+    <div class="surface"><ui-error-state title="We couldn’t load your tasks" (retry)="attention.retry()" /></div>
   }
   @default {
     @if (rows().length === 0) {
@@ -100,7 +100,7 @@
   <div class="menu-panel" cdkMenu>
     <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="assignSelected(null)">Unassigned (team)</button>
     <div class="menu-divider"></div>
-    @for (s of staff; track s.id) {
+    @for (s of staff(); track s.id) {
       <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="assignSelected(s.id)">
         {{ s.name }} <span class="menu-item-meta">{{ s.title }}</span>
       </button>

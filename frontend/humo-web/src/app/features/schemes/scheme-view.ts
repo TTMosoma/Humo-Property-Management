@@ -1,5 +1,4 @@
 import { ComplianceStatus, HealthRating, Scheme, SchemeHealth } from '../../domain';
-import { personName } from '../../mock/fixtures/staff';
 import { Tone } from '../../ui/status-pill/status-pill';
 
 export interface SchemeRow {
@@ -25,7 +24,7 @@ export function toRows(schemes: Scheme[], health: SchemeHealth[]): SchemeRow[] {
   const byId = new Map(health.map((h) => [h.schemeId, h]));
   return schemes
     .filter((s) => byId.has(s.id))
-    .map((scheme) => ({ scheme, health: byId.get(scheme.id)!, manager: personName(scheme.portfolioManagerId) }));
+    .map((scheme) => ({ scheme, health: byId.get(scheme.id)!, manager: scheme.portfolioManager?.name ?? 'Unassigned' }));
 }
 
 export function collectionTone(rate: number): 'success' | 'warning' | 'danger' {

@@ -9,7 +9,7 @@
 <div class="body">
   <fieldset>
     <legend class="label-caps">View as</legend>
-    @for (m of target.memberships; track m.id) {
+    @for (m of assignments; track m.id) {
       <label class="choice" [class.on]="assignmentId() === m.id">
         <input type="radio" name="assignment" [checked]="assignmentId() === m.id" (change)="assignmentId.set(m.id)" />
         <span>

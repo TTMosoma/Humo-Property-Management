@@ -26,7 +26,7 @@ export interface AuditEvent {
   actingAs?: AuditParty;
   role: Role;
   /** Agency the action happened in (null for platform-level events). */
-  agencyId: string | null;
+  organisationId: string | null;
   /** Scheme scope at the time, if any. */
   schemeId?: string | null;
   /** Past-tense, human: "Approved supplier invoice". */
@@ -75,7 +75,7 @@ export interface ImpersonationSession {
 
 export interface AuditQuery {
   /** Null for platform-wide. */
-  agencyId: string | null;
+  organisationId: string | null;
   category?: AuditCategory;
   /** Only events where this identity was the actor or was acted as. */
   identityId?: string;

@@ -4,7 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, combineLatest, map, of } from 'rxjs';
 import { ADD_ONS, BusinessOverview, MODULE_LABELS, FeatureModule, PlatformCustomer, PlatformDataSource, packageById } from '../../domain';
-import { pageState } from '../../core/prototype/page-state';
+import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
 import { AreaChart, BarChart, Sparkline } from '../../ui/charts/charts';
 import { formatRand } from '../../ui/format/money';
@@ -30,7 +30,6 @@ const num = (n: number) => n.toLocaleString('en-ZA').replace(/,/g, ' ');
 export class ExecutivePage {
   private readonly data = inject(PlatformDataSource);
   protected readonly session = inject(SessionService);
-  protected readonly page = pageState();
 
   /** Overview shows everything; /revenue, /growth, /health, /opportunities focus one theme. */
   protected readonly focus = toSignal(inject(ActivatedRoute).paramMap.pipe(map((p) => p.get('section'))), { initialValue: null });
@@ -41,17 +40,12 @@ export class ExecutivePage {
   protected readonly focusTitle = computed(() => ({ revenue: 'Revenue', growth: 'Growth', health: 'Account health', opportunities: 'Expansion opportunities' })[this.focus() ?? ''] ?? 'Business overview');
   protected readonly listSize = computed(() => (this.focus() ? 12 : 4));
 
-  private readonly result = toSignal(
-    combineLatest([this.data.overview(), this.data.customers()]).pipe(
-      map(([o, customers]) => ({ o, customers, failed: false })),
-      catchError(() => of({ o: null as BusinessOverview | null, customers: [] as PlatformCustomer[], failed: true })),
-    ),
-  );
+  protected readonly result = loadable(() => combineLatest([this.data.overview(), this.data.customers()]).pipe(map(([o, customers]) => ({ o, customers }))));
 
-  protected readonly loading = computed(() => this.page.status() === 'loading' || this.result() === undefined);
-  protected readonly failed = computed(() => this.page.status() === 'error' || !!this.result()?.failed);
-  protected readonly o = computed(() => this.result()?.o ?? null);
-  private readonly customers = computed(() => this.result()?.customers ?? []);
+  protected readonly loading = this.result.loading;
+  protected readonly failed = this.result.failed;
+  protected readonly o = computed(() => this.result.value()?.o ?? null);
+  private readonly customers = computed(() => this.result.value()?.customers ?? []);
 
   protected readonly today = TODAY.format(new Date());
   protected readonly rand = (n: number, compact = false) => formatRand(n, { compact, cents: false });
@@ -113,10 +107,10 @@ export class ExecutivePage {
   );
 
   protected readonly opportunities = computed(() => {
-    const byId = new Map(this.customers().map((c) => [c.agencyId, c]));
+    const byId = new Map(this.customers().map((c) => [c.organisationId, c]));
     return (this.o()?.expansion.top ?? []).slice(0, this.focus() ? 12 : 6).map((op) => ({
       ...op,
-      customer: byId.get(op.agencyId)?.name ?? op.agencyId,
+      customer: byId.get(op.organisationId)?.name ?? op.organisationId,
       what: op.target.addOn ? ADD_ONS.find((a) => a.id === op.target.addOn)?.name : op.target.package ? packageById(op.target.package).name : op.title,
     }));
   });

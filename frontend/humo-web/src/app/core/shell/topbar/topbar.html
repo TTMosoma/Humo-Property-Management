@@ -1,5 +1,5 @@
-@let persona = session.persona();
-@let m = session.membership();
+@let persona = session.identity();
+@let m = session.assignment();
 
 <div class="left">
   @if (showMenuButton()) {
@@ -19,7 +19,7 @@
     >
       <ion-icon [name]="scope.scheme() ? 'business-outline' : 'layers-outline'" aria-hidden="true" />
       <span class="scope-text">
-        <span class="scope-label">{{ session.agency()?.shortName }}</span>
+        <span class="scope-label">{{ session.organisation()?.shortName }}</span>
         <span class="scope-name">{{ scope.scheme()?.name ?? 'All schemes' }}</span>
       </span>
       <ion-icon class="chev" name="chevron-down-outline" aria-hidden="true" />
@@ -31,15 +31,15 @@
     }
   } @else if (session.isHumo()) {
     <button type="button" class="context" [cdkMenuTriggerFor]="agencyMenu" aria-label="Choose agency to support">
-      <span class="context-label">{{ session.supportAgencyId() ? 'Support view' : 'Platform' }}</span>
-      <span class="context-name">{{ session.supportAgencyId() ? session.agency()?.shortName : 'All agencies' }}</span>
+      <span class="context-label">{{ session.supportOrganisationId() ? 'Support view' : 'Platform' }}</span>
+      <span class="context-name">{{ session.supportOrganisationId() ? session.organisation()?.shortName : 'All agencies' }}</span>
       <ion-icon name="chevron-down-outline" aria-hidden="true" />
     </button>
   } @else {
     <div class="context static">
       <span class="context-name">{{ ownScheme()?.name }}</span>
       <span class="context-sub">
-        {{ session.isResident() ? m.unitLabel : 'Managed by ' + session.agency()?.shortName }}
+        {{ session.isResident() ? m.label : 'Managed by ' + session.organisation()?.shortName }}
       </span>
     </div>
   }
@@ -141,14 +141,14 @@
 
 <ng-template #agencyMenu>
   <div class="menu-panel" cdkMenu>
-    <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="session.viewAgency(null)">
+    <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="session.viewOrganisation(null)">
       <ion-icon name="pulse-outline" aria-hidden="true" />
       <span>Platform view (all agencies)</span>
     </button>
     <div class="menu-divider"></div>
     <div class="menu-section-label label-caps">Support an agency</div>
-    @for (a of session.agencies; track a.id) {
-      <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="session.viewAgency(a.id)">
+    @for (a of organisations(); track a.id) {
+      <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="session.viewOrganisation(a)">
         <ion-icon name="business-outline" aria-hidden="true" />
         <span>{{ a.shortName }}</span>
         <span class="menu-item-meta">{{ a.city }}</span>
@@ -210,7 +210,7 @@
           <span class="avatar lg imp">{{ persona.initials }}</span>
           <span class="user-text">
             <span class="user-name">{{ persona.name }}</span>
-            <span class="user-sub">{{ roleLabels[m.role] }} · {{ session.agency()?.shortName }}</span>
+            <span class="user-sub">{{ roleLabels[m.role] }} · {{ session.organisation()?.shortName }}</span>
           </span>
         </div>
         <div class="imp-actor">Signed in as <strong>{{ session.actor().name }}</strong></div>
@@ -228,11 +228,11 @@
         </span>
       </div>
 
-      @if (session.memberships().length > 1) {
+      @if (session.assignments().length > 1) {
         <div class="menu-divider"></div>
         <div class="menu-section-label label-caps">Switch role</div>
         <div cdkMenuGroup>
-          @for (mm of session.memberships(); track mm.id) {
+          @for (mm of session.assignments(); track mm.id) {
             <button
               type="button"
               class="menu-item role-item"

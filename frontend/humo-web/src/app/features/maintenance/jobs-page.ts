@@ -4,7 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, map, of, switchMap } from 'rxjs';
 import { JobDataSource, JobSummary, PRIORITY_LABEL, Priority, Scheme, Trade } from '../../domain';
-import { pageState } from '../../core/prototype/page-state';
+import { loadable } from '../../core/data/loadable';
 import { ScopeNotice } from '../../core/scope/scope-notice';
 import { ScopeService } from '../../core/scope/scope.service';
 import { SessionService } from '../../core/session/session.service';
@@ -42,7 +42,6 @@ export class JobsPage {
   private readonly drawer = inject(DrawerService);
   protected readonly scope = inject(ScopeService);
   protected readonly session = inject(SessionService);
-  protected readonly page = pageState();
 
   protected readonly fixedScheme = toSignal(this.route.data.pipe(map((d) => d['scheme'] as Scheme | undefined)), {
     initialValue: this.route.snapshot.data['scheme'] as Scheme | undefined,
@@ -53,20 +52,11 @@ export class JobsPage {
 
   private readonly schemeIds = computed(() => (this.fixedScheme() ? [this.fixedScheme()!.id] : this.scope.effectiveIds()));
 
-  private readonly result = toSignal(
-    toObservable(this.schemeIds).pipe(
-      switchMap((ids) =>
-        this.data.list(ids).pipe(
-          map((rows) => ({ rows, failed: false })),
-          catchError(() => of({ rows: [] as JobSummary[], failed: true })),
-        ),
-      ),
-    ),
-  );
+  protected readonly result = loadable(() => this.data.list(this.schemeIds()));
 
-  protected readonly loading = computed(() => this.page.status() === 'loading' || this.result() === undefined);
-  protected readonly failed = computed(() => this.page.status() === 'error' || !!this.result()?.failed);
-  private readonly all = computed(() => (this.page.forceEmpty() ? [] : (this.result()?.rows ?? [])));
+  protected readonly loading = this.result.loading;
+  protected readonly failed = this.result.failed;
+  private readonly all = computed(() => this.result.value() ?? []);
 
   private readonly mine = computed(() => new Set(this.session.selfIds()));
 

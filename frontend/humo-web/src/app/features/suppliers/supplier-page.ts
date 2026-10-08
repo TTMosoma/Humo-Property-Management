@@ -7,7 +7,7 @@ import { SupplierDataSource, SupplierDocument, docStatus } from '../../domain';
 import { ContractorNetwork } from '../../domain/contractor';
 import { EndorsedBy, Reputation, VerificationBadge } from '../contractor-shared/contractor-ui';
 import { FeedbackService } from '../../core/feedback/feedback.service';
-import { pageState } from '../../core/prototype/page-state';
+import { loadable } from '../../core/data/loadable';
 import { StepUpService } from '../../core/security/step-up.service';
 import { SessionService } from '../../core/session/session.service';
 import { RandPipe, formatDate, formatRand } from '../../ui/format/money';
@@ -34,17 +34,17 @@ export class SupplierPage {
   private readonly stepUp = inject(StepUpService);
   private readonly contractors = inject(ContractorNetwork);
   protected readonly session = inject(SessionService);
-  protected readonly page = pageState();
 
   private readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('supplierId')!)), {
     initialValue: this.route.snapshot.paramMap.get('supplierId')!,
   });
 
-  protected readonly result = toSignal(
-    toObservable(this.id).pipe(switchMap((id) => this.data.get(id).pipe(map((d) => d ?? (false as const)), catchError(() => of(null))))),
-  );
+  protected readonly result = loadable(() => {
+    const id = this.id();
+    return this.data.get(id).pipe(map((d) => d ?? (false as const)));
+  });
   protected readonly detail = computed(() => {
-    const r = this.result();
+    const r = this.result.value();
     return r ? r : undefined;
   });
 
@@ -56,12 +56,12 @@ export class SupplierPage {
   );
   protected readonly endorsing = signal(false);
   protected readonly endorseNote = signal('');
-  protected readonly endorsedByUs = computed(() => !!this.network()?.endorsements.some((e) => e.fromCustomerId === this.session.agency()?.id));
+  protected readonly endorsedByUs = computed(() => !!this.network()?.endorsements.some((e) => e.fromCustomerId === this.session.organisation()?.id));
   protected readonly canEndorse = computed(() => this.session.can('Suppliers.Manage') && (this.detail()?.supplier.performance.jobsCompleted ?? 0) > 0);
 
   protected endorse(): void {
     const s = this.detail()?.supplier;
-    const agency = this.session.agency();
+    const agency = this.session.organisation();
     if (!s?.partyId || !agency) return;
     this.contractors.endorse(s.partyId, agency.id, agency.shortName, this.endorseNote().trim(), s.performance.jobsCompleted).subscribe({
       next: () => {

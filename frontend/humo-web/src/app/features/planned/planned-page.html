@@ -6,7 +6,7 @@
   </ui-page-header>
 }
 
-@switch (page.status()) {
+@switch (view()) {
   @case ('loading') {
     <ui-skeleton variant="tiles" [count]="4" />
     <div class="gap"></div>
@@ -14,11 +14,11 @@
   }
   @case ('error') {
     <div class="surface">
-      <ui-error-state (retry)="page.retry()" />
+      <ui-error-state />
     </div>
   }
   @default {
-    @if (page.forceEmpty()) {
+    @if (view() === 'empty') {
       <div class="surface">
         <ui-empty-state
           kind="first-use"

@@ -82,7 +82,7 @@ export const NUDGES: NudgeDefinition[] = [
 export interface NudgeState {
   nudgeId: string;
   identityId: string;
-  agencyId: string;
+  organisationId: string;
   shownAt: string[];
   dismissedAt?: string;
   snoozedUntil?: string;

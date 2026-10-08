@@ -22,8 +22,9 @@ import {
   evaluateNudge,
   fillNudge,
   packageById,
+  isHumoRole,
 } from '../../domain';
-import { SessionService } from '../../core/session/session.service';
+import { MockAuthSession } from '../server/mock-auth-session';
 import { PlatformStore } from '../db/platform-store';
 import { mockResponder } from '../mock-latency';
 import { MockGateway } from '../server/mock-gateway';
@@ -44,7 +45,7 @@ function describe(change: SubscriptionChange): string {
 @Injectable()
 export class InMemoryPlatformDataSource extends PlatformDataSource {
   private readonly store = inject(PlatformStore);
-  private readonly session = inject(SessionService);
+  private readonly session = inject(MockAuthSession);
   private readonly gateway = inject(MockGateway);
   private readonly respond = mockResponder();
   private readonly customers$ = toObservable(this.store.customers);
@@ -54,32 +55,32 @@ export class InMemoryPlatformDataSource extends PlatformDataSource {
     return this.customers$.pipe(switchMap((c) => this.respond(c)));
   }
 
-  customer(agencyId: string): Observable<PlatformCustomer | undefined> {
-    return this.customers$.pipe(switchMap((all) => this.respond(all.find((c) => c.agencyId === agencyId))));
+  customer(organisationId: string): Observable<PlatformCustomer | undefined> {
+    return this.customers$.pipe(switchMap((all) => this.respond(all.find((c) => c.organisationId === organisationId))));
   }
 
   overview(): Observable<BusinessOverview> {
     return this.overview$.pipe(switchMap((o) => this.respond(o)));
   }
 
-  changeSubscription(agencyId: string, change: SubscriptionChange): Observable<void> {
-    const customer = this.store.customers().find((c) => c.agencyId === agencyId);
+  changeSubscription(organisationId: string, change: SubscriptionChange): Observable<void> {
+    const customer = this.store.customers().find((c) => c.organisationId === organisationId);
     return this.gateway
       .command(
         {
           action: `${describe(change)} for ${customer?.name} — ${change.reason}`,
           resource: 'Subscription',
-          resourceId: agencyId,
+          resourceId: organisationId,
           category: 'security',
           permission: 'Platform.Subscriptions.Manage',
         },
         () => {
           // "Where authorised": Account Managers change only the accounts they look after.
-          const role = this.session.role();
+          const role = this.session.assignment().role;
           if (role === 'humo-account-manager' && customer?.accountManagerId !== this.session.actor().id) {
             throw new PolicyError('forbidden', 'Not one of your accounts');
           }
-          this.store.change(agencyId, change, this.session.actor().name);
+          this.store.change(organisationId, change, this.session.actor().name);
         },
       )
       .pipe(map(() => undefined));
@@ -97,18 +98,18 @@ export class InMemoryPlatformDataSource extends PlatformDataSource {
 @Injectable()
 export class InMemoryPlanDataSource extends PlanDataSource {
   private readonly store = inject(PlatformStore);
-  private readonly session = inject(SessionService);
+  private readonly session = inject(MockAuthSession);
   private readonly gateway = inject(MockGateway);
   private readonly respond = mockResponder();
   private readonly customers$ = toObservable(this.store.customers);
 
   /** Only what the customer should see about their own plan — not Humo's health or opportunity data. */
-  mine(agencyId: string): Observable<CustomerPlan | undefined> {
+  mine(organisationId: string): Observable<CustomerPlan | undefined> {
     return this.customers$.pipe(
       switchMap((all) => {
-        const c = all.find((x) => x.agencyId === agencyId);
+        const c = all.find((x) => x.organisationId === organisationId);
         const plan: CustomerPlan | undefined = c && {
-          agencyId,
+          organisationId,
           packageId: c.subscription.packageId,
           status: c.subscription.status,
           renewsAt: c.subscription.renewsAt,
@@ -122,12 +123,12 @@ export class InMemoryPlanDataSource extends PlanDataSource {
     );
   }
 
-  requestUpgrade(input: { agencyId: string; addOn?: AddOnId; package?: PackageId; feature?: Feature; note?: string; source: UpgradeRequest['source'] }): Observable<void> {
+  requestUpgrade(input: { organisationId: string; addOn?: AddOnId; package?: PackageId; feature?: Feature; note?: string; source: UpgradeRequest['source'] }): Observable<void> {
     const what = input.addOn ? ADD_ONS.find((a) => a.id === input.addOn)?.name : input.package ? packageById(input.package).name : input.feature ? FEATURE_META[input.feature].label : 'an upgrade';
-    const me = this.session.persona();
+    const me = this.session.current.identity;
     return this.gateway
       .command({ action: `Asked Humo about ${what}`, resource: 'Upgrade request', permission: 'Subscription.Request' }, () =>
-        this.store.addRequest({ agencyId: input.agencyId, addOn: input.addOn, package: input.package, note: input.note, source: input.source, requestedBy: `${me.name} (Agency Administrator)` }),
+        this.store.addRequest({ organisationId: input.organisationId, addOn: input.addOn, package: input.package, note: input.note, source: input.source, requestedBy: `${me.name} (Agency Administrator)` }),
       )
       .pipe(map(() => undefined));
   }
@@ -141,26 +142,26 @@ export class InMemoryPlanDataSource extends PlanDataSource {
 @Injectable()
 export class InMemoryNudgeDataSource extends NudgeDataSource {
   private readonly store = inject(PlatformStore);
-  private readonly session = inject(SessionService);
+  private readonly session = inject(MockAuthSession);
   private readonly sources$ = toObservable(computed(() => ({ customers: this.store.customers(), states: this.store.nudges() })));
 
   next(placement: NudgePlacement): Observable<ServedNudge | null> {
     return this.sources$.pipe(
       map(({ customers, states }) => {
-        const agencyId = this.session.agency()?.id;
-        const me = this.session.persona().id;
-        const customer = customers.find((c) => c.agencyId === agencyId);
-        if (!customer || this.session.isImpersonating() || this.session.isHumo()) return null;
+        const organisationId = this.session.current.organisation?.id;
+        const me = this.session.current.identity.id;
+        const customer = customers.find((c) => c.organisationId === organisationId);
+        if (!customer || !!this.session.current.impersonation || isHumoRole(this.session.assignment().role)) return null;
         const served = this.store.sessionNudge;
         for (const def of NUDGES) {
-          if (!def.placements.includes(placement) || !def.audience.includes(this.session.role())) continue;
+          if (!def.placements.includes(placement) || !def.audience.includes(this.session.assignment().role)) continue;
           if (served && served !== def.id) continue;
           const state = states.find((s) => s.nudgeId === def.id && s.identityId === me);
           const verdict = evaluateNudge(def, state, customer.opportunities, new Date(), served === def.id);
           if (!verdict.show) continue;
           if (!served) {
             this.store.sessionNudge = def.id;
-            queueMicrotask(() => this.store.recordNudge(def.id, me, customer.agencyId, 'shown'));
+            queueMicrotask(() => this.store.recordNudge(def.id, me, customer.organisationId, 'shown'));
           }
           const opp = customer.opportunities.find((o) => o.rule === def.trigger.rule)!;
           return {
@@ -175,8 +176,8 @@ export class InMemoryNudgeDataSource extends NudgeDataSource {
   }
 
   record(nudgeId: string, event: 'dismissed' | 'not-interested' | 'learn-more' | 'snoozed'): Observable<void> {
-    if (!this.session.isImpersonating()) {
-      this.store.recordNudge(nudgeId, this.session.persona().id, this.session.agency()?.id ?? '', event);
+    if (!!!this.session.current.impersonation) {
+      this.store.recordNudge(nudgeId, this.session.current.identity.id, this.session.current.organisation?.id ?? '', event);
     }
     if (event !== 'learn-more') this.store.sessionNudge = null;
     return of(undefined);

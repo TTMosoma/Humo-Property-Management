@@ -1,10 +1,10 @@
-@if (page.status() === 'loading' || result() === undefined) {
+@if (result.loading()) {
   <ui-skeleton variant="tiles" [count]="5" />
   <div class="gap"></div>
   <ui-skeleton [count]="6" />
-} @else if (page.status() === 'error' || result() === null) {
-  <div class="surface"><ui-error-state title="We couldn’t load this job" (retry)="page.retry()" /></div>
-} @else if (result() === false) {
+} @else if (result.failed()) {
+  <div class="surface"><ui-error-state title="We couldn’t load this job" (retry)="result.retry()" /></div>
+} @else if (result.value() === false) {
   <div class="surface">
     <ui-empty-state illustration="not-found" title="We couldn’t find that job" message="Check the reference (e.g. MR-1042), or search for it with Ctrl K.">
       <a class="btn btn-primary" routerLink="/maintenance">All jobs</a>

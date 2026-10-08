@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { toSignal } from '@angular/core/rxjs-interop';
 import { DIALOG_DATA } from '@angular/cdk/dialog';
 import { IonIcon } from '@ionic/angular/standalone';
-import { ADD_ONS, AddOn, FEATURES, Feature, FEATURE_META, PACKAGES, PackageId, PlatformDataSource, SubscriptionChange } from '../../domain';
+import { ADD_ONS, AddOn, FEATURES, Feature, FEATURE_META, PACKAGES, PackageId, PlatformDataSource, SubscriptionChange, entitlementSet } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { StepUpService } from '../../core/security/step-up.service';
 import { Drawer } from '../../ui/drawer/drawer';
@@ -22,12 +22,14 @@ import { formatDate } from '../../ui/format/money';
   styleUrl: './manage-features-drawer.scss',
 })
 export class ManageFeaturesDrawer {
-  private readonly input = inject<{ agencyId: string }>(DIALOG_DATA);
+  private readonly input = inject<{ organisationId: string }>(DIALOG_DATA);
   private readonly data = inject(PlatformDataSource);
   private readonly stepUp = inject(StepUpService);
   private readonly feedback = inject(FeedbackService);
 
-  protected readonly customer = toSignal(this.data.customer(this.input.agencyId));
+  protected readonly customer = toSignal(this.data.customer(this.input.organisationId));
+  /** The customer's effective entitlements, for lookups. */
+  protected readonly entitled = computed(() => entitlementSet(this.customer()?.entitlements ?? []));
   protected readonly reason = signal('');
   protected readonly busy = signal(false);
   protected readonly pkg = signal<PackageId | null>(null);
@@ -50,7 +52,7 @@ export class ManageFeaturesDrawer {
   /** An add-on whose features the package already includes adds nothing. */
   protected redundant(a: AddOn): boolean {
     const c = this.customer();
-    return !!c && !this.hasAddOn(a) && a.features.every((f) => c.entitlements.get(f).source === 'package');
+    return !!c && !this.hasAddOn(a) && a.features.every((f) => this.entitled().get(f).source === 'package');
   }
 
   protected changePackage(): void {
@@ -76,7 +78,7 @@ export class ManageFeaturesDrawer {
   private apply(change: SubscriptionChange, detail: string): void {
     const name = this.customer()?.name ?? 'customer';
     this.busy.set(true);
-    this.stepUp.guard({ action: 'change-subscription', detail: `${detail} for ${name}` }, () => this.data.changeSubscription(this.input.agencyId, change)).subscribe({
+    this.stepUp.guard({ action: 'change-subscription', detail: `${detail} for ${name}` }, () => this.data.changeSubscription(this.input.organisationId, change)).subscribe({
       next: () => {
         this.busy.set(false);
         this.feedback.success(`${detail} — done. ${name} users see the change on their next page.`);

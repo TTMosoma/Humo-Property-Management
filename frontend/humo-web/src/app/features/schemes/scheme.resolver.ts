@@ -1,7 +1,7 @@
 import { inject } from '@angular/core';
 import { RedirectCommand, ResolveFn, Router } from '@angular/router';
 import { catchError, map, of } from 'rxjs';
-import { Scheme, SchemeDataSource } from '../../domain';
+import { Scheme, SchemeDataSource, coversAllSchemes } from '../../domain';
 import { SessionService } from '../../core/session/session.service';
 
 /**
@@ -12,7 +12,7 @@ import { SessionService } from '../../core/session/session.service';
  */
 export const schemeResolver: ResolveFn<Scheme | RedirectCommand> = (route) => {
   const router = inject(Router);
-  const membership = inject(SessionService).membership();
+  const membership = inject(SessionService).assignment();
   const id = route.paramMap.get('schemeId')!;
   const notFound = () =>
     new RedirectCommand(router.parseUrl('/not-found?what=scheme'), { skipLocationChange: true });
@@ -21,9 +21,9 @@ export const schemeResolver: ResolveFn<Scheme | RedirectCommand> = (route) => {
     .get(id)
     .pipe(
       map((scheme) => {
-        if (!scheme || scheme.agencyId !== membership.agencyId) return notFound();
-        const unrestricted = membership.schemeIds.length === 0 || membership.role === 'portfolio-manager';
-        return unrestricted || membership.schemeIds.includes(id) ? scheme : notFound();
+        if (!scheme || scheme.organisationId !== membership.scope.organisationId) return notFound();
+        const unrestricted = coversAllSchemes(membership) || membership.role === 'portfolio-manager';
+        return unrestricted || membership.scope.schemeIds.includes(id) ? scheme : notFound();
       }),
       catchError(() => of(notFound())),
     );

@@ -9,7 +9,7 @@
   </header>
 
   @if (failed()) {
-    <div class="panel"><ui-error-state title="We couldn’t load the business overview" (retry)="page.retry()" /></div>
+    <div class="panel"><ui-error-state title="We couldn’t load the business overview" (retry)="result.retry()" /></div>
   } @else if (loading() || !o()) {
     <ui-skeleton variant="tiles" [count]="7" />
   } @else {
@@ -115,9 +115,9 @@
           <div><i class="critical"></i><strong>{{ ov.health.critical }}</strong> critical</div>
         </div>
         <ul class="list">
-          @for (c of atRisk(); track c.agencyId) {
+          @for (c of atRisk(); track c.organisationId) {
             <li>
-              <a [routerLink]="['/platform/customers', c.agencyId]">{{ c.name }}</a>
+              <a [routerLink]="['/platform/customers', c.organisationId]">{{ c.name }}</a>
               <span class="muted">{{ c.health.score }}/100 · {{ c.accountManager }}</span>
               <span class="tag" [attr.data-band]="c.health.band">{{ c.health.band === 'critical' ? 'Critical' : 'At risk' }}</span>
               <span class="right">{{ rand(c.subscription.mrr, true) }}</span>
@@ -168,7 +168,7 @@
         <ul class="list">
           @for (op of opportunities(); track op.id) {
             <li>
-              <a [routerLink]="['/platform/customers', op.agencyId]">{{ op.customer }}</a>
+              <a [routerLink]="['/platform/customers', op.organisationId]">{{ op.customer }}</a>
               <span class="muted">{{ op.what }} · {{ op.reasons[0] }}</span>
               <span class="tag" [attr.data-strength]="op.strength">{{ op.strength }}</span>
               <span class="right">+{{ rand(op.potentialMrr, true) }}</span>

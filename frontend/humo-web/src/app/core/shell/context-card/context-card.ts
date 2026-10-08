@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { CdkMenu, CdkMenuItemRadio, CdkMenuTrigger } from '@angular/cdk/menu';
 import { IonIcon } from '@ionic/angular/standalone';
-import { ROLE_LABELS, ROLE_META, RoleAssignment } from '../../../domain';
+import { ROLE_LABELS, ROLE_META, RoleAssignment, coversAllSchemes } from '../../../domain';
 import { ScopeService } from '../../scope/scope.service';
 import { RoleSwitcher } from '../../session/role-switcher';
 import { SessionService } from '../../session/session.service';
@@ -16,7 +16,7 @@ import { SessionService } from '../../session/session.service';
   imports: [IonIcon, CdkMenu, CdkMenuItemRadio, CdkMenuTrigger],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @let m = session.membership();
+    @let m = session.assignment();
     <button
       type="button"
       class="card"
@@ -39,8 +39,8 @@ import { SessionService } from '../../session/session.service';
 
     <ng-template #menu>
       <div class="menu-panel ctx-menu" cdkMenu>
-        <div class="menu-section-label label-caps">Switch role · {{ session.persona().name }}</div>
-        @for (a of session.memberships(); track a.id) {
+        <div class="menu-section-label label-caps">Switch role · {{ session.identity().name }}</div>
+        @for (a of session.assignments(); track a.id) {
           <button type="button" class="menu-item" cdkMenuItemRadio [cdkMenuItemChecked]="a.id === m.id" (cdkMenuItemTriggered)="switcher.switchTo(a.id)">
             <span class="mi">
               <span class="mi-role">{{ roleLabels[a.role] }}</span>
@@ -84,23 +84,23 @@ export class ContextCard {
   protected readonly roleLabels = ROLE_LABELS;
   protected readonly roleMeta = ROLE_META;
 
-  protected readonly canSwitch = computed(() => this.session.memberships().length > 1 && !this.session.isImpersonating());
+  protected readonly canSwitch = computed(() => this.session.assignments().length > 1 && !this.session.isImpersonating());
 
   protected readonly organisation = computed(() => {
     if (this.session.isHumo()) return 'Humo platform';
-    const m = this.session.membership();
-    return this.session.agency()?.shortName ?? m.label;
+    const m = this.session.assignment();
+    return this.session.organisation()?.shortName ?? m.label;
   });
 
   /** Scheme in focus, or the extent of the assignment. */
   protected readonly scopeText = computed(() => {
-    const m: RoleAssignment = this.session.membership();
+    const m: RoleAssignment = this.session.assignment();
     if (this.session.isHumo()) return 'All customers';
     const s = this.scope.scheme();
-    if (m.unitLabel) return `${m.unitLabel}, ${s?.name ?? ''}`.replace(/, $/, '');
+    if (m.scope.type === 'unit') return m.label;
     if (s) return s.name;
     const n = this.scope.accessible().length;
     if (n === 0) return 'No schemes assigned';
-    return m.schemeIds.length === 0 ? 'All schemes' : n === 1 ? this.scope.accessible()[0].name : `${n} schemes`;
+    return coversAllSchemes(m) ? 'All schemes' : n === 1 ? this.scope.accessible()[0].name : `${n} schemes`;
   });
 }

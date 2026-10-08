@@ -5,9 +5,10 @@ import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, map, of, switchMap } from 'rxjs';
 import { AuditCategory, AuditDataSource, AuditEvent, AuditQuery, IMPERSONATION_REASONS, ROLE_LABELS } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
-import { pageState } from '../../core/prototype/page-state';
+import { loadable } from '../../core/data/loadable';
 import { ScopeService } from '../../core/scope/scope.service';
 import { StepUpService } from '../../core/security/step-up.service';
+import { organisationName, visibleOrganisations } from '../../core/session/organisations';
 import { SessionService } from '../../core/session/session.service';
 import { urlState } from '../../ui/data-table/url-state';
 import { ViewTabs } from '../../ui/data-table/view-tabs';
@@ -41,7 +42,6 @@ export class AuditPage {
   private readonly feedback = inject(FeedbackService);
   private readonly scope = inject(ScopeService);
   protected readonly session = inject(SessionService);
-  protected readonly page = pageState();
 
   /** Platform view (Humo) vs one agency's view. */
   protected readonly platform = !!inject(ActivatedRoute).snapshot.data['platform'];
@@ -49,22 +49,13 @@ export class AuditPage {
   protected readonly expanded = signal<string | null>(null);
   protected readonly exporting = signal(false);
 
-  private readonly query = computed<AuditQuery>(() => ({ agencyId: this.platform ? null : (this.session.agency()?.id ?? '') }));
+  private readonly query = computed<AuditQuery>(() => ({ organisationId: this.platform ? null : (this.session.organisation()?.id ?? '') }));
 
-  private readonly result = toSignal(
-    toObservable(this.query).pipe(
-      switchMap((q) =>
-        this.data.query(q).pipe(
-          map((events) => ({ events, failed: false })),
-          catchError(() => of({ events: [] as AuditEvent[], failed: true })),
-        ),
-      ),
-    ),
-  );
+  protected readonly result = loadable(() => this.data.query(this.query()));
 
-  protected readonly loading = computed(() => this.page.status() === 'loading' || this.result() === undefined);
-  protected readonly failed = computed(() => this.page.status() === 'error' || !!this.result()?.failed);
-  private readonly all = computed(() => (this.page.forceEmpty() ? [] : [...(this.result()?.events ?? [])].sort((a, b) => b.at.localeCompare(a.at))));
+  protected readonly loading = this.result.loading;
+  protected readonly failed = this.result.failed;
+  private readonly all = computed(() => [...(this.result.value() ?? [])].sort((a, b) => b.at.localeCompare(a.at)));
 
   /** Agency filter (platform only) and text search, before the category tabs. */
   private readonly base = computed(() => {
@@ -76,8 +67,8 @@ export class AuditPage {
       if (role && e.role !== role) return false;
       if (scheme && e.schemeId !== scheme) return false;
       if (since && new Date(e.at).getTime() < since) return false;
-      if (agency === 'humo' && e.agencyId !== null) return false;
-      if (agency && agency !== 'humo' && e.agencyId !== agency) return false;
+      if (agency === 'humo' && e.organisationId !== null) return false;
+      if (agency && agency !== 'humo' && e.organisationId !== agency) return false;
       if (only === 'problems' && e.result === 'success') return false;
       if (!needle) return true;
       return [e.actor.name, e.actingAs?.name, e.action, e.resource, e.resourceId, ROLE_LABELS[e.role]].some((x) => x?.toLowerCase().includes(needle));
@@ -115,7 +106,7 @@ export class AuditPage {
 
   protected readonly humoSessions = computed(() => this.all().filter((e) => e.category === 'impersonation' && e.action.startsWith('Started')).length);
 
-  protected readonly agencies = this.session.agencies;
+  protected readonly agencies = visibleOrganisations();
   protected readonly roleLabels = ROLE_LABELS;
   protected readonly reasons = IMPERSONATION_REASONS;
   protected readonly time = (iso: string) => TIME.format(new Date(iso));
@@ -123,7 +114,7 @@ export class AuditPage {
   protected readonly rand = (n: number) => formatRand(n);
 
   protected agencyName(id: string | null): string {
-    return id === null ? 'Humo platform' : (this.agencies.find((a) => a.id === id)?.shortName ?? id);
+    return organisationName(this.agencies(), id, 'Humo platform');
   }
 
   protected schemeName(id: string | null | undefined): string | null {
@@ -167,7 +158,7 @@ export class AuditPage {
     const q: AuditQuery = { ...this.query(), category: this.state().view === 'all' || this.state().view === 'impersonation' ? undefined : (this.state().view as AuditCategory) };
     this.exporting.set(true);
     this.stepUp
-      .guard({ action: 'export-data', detail: `Export ${this.rows().length} audit events (${this.platform ? 'all agencies' : this.session.agency()?.shortName})` }, () => this.data.export(q))
+      .guard({ action: 'export-data', detail: `Export ${this.rows().length} audit events (${this.platform ? 'all agencies' : this.session.organisation()?.shortName})` }, () => this.data.export(q))
       .subscribe({
         next: (file) => {
           this.exporting.set(false);

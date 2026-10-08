@@ -71,7 +71,7 @@ export class NoAccessPage {
   protected readonly alternative = computed(() => {
     const allowed = this.rolesFor(this.from());
     if (!allowed || this.planFeature()) return null;
-    return this.session.memberships().find((m) => m.id !== this.session.membership().id && allowed.includes(m.role)) ?? null;
+    return this.session.assignments().find((m) => m.id !== this.session.assignment().id && allowed.includes(m.role)) ?? null;
   });
 
   protected switchTo(id: string): void {

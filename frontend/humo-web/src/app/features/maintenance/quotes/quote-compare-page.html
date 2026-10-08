@@ -1,5 +1,5 @@
 @if (failed()) {
-  <div class="surface"><ui-error-state title="We couldn’t load these quotes" (retry)="page.retry()" /></div>
+  <div class="surface"><ui-error-state title="We couldn’t load these quotes" (retry)="result.retry()" /></div>
 } @else if (loading()) {
   <ui-skeleton variant="tiles" [count]="4" />
 } @else if (!job() || !qr()) {
@@ -153,9 +153,9 @@
                 <th scope="row">Contact</th>
                 @for (o of offers(); track o.q.id) {
                   <td>
-                    @if (o.disclosure.contactVisible) {
-                      <div>{{ o.profile.party.contact.name }}</div>
-                      <div class="muted small">{{ o.profile.party.contact.phone }} · {{ o.profile.party.contact.email }}</div>
+                    @if (o.profile.party.contact; as c) {
+                      <div>{{ c.name }}</div>
+                      <div class="muted small">{{ c.phone }} · {{ c.email }}</div>
                     } @else {
                       <div class="masked"><ion-icon name="lock-closed-outline" aria-hidden="true" /> Shared after acceptance</div>
                       <button type="button" class="link" (click)="message(o.profile.party.tradingName)">Message through Humo</button>
@@ -219,7 +219,7 @@
                 <div><dt>Rating</dt><dd>★ {{ o.profile.reputation.rating.toFixed(1) }} · {{ o.profile.reputation.completedJobs }} jobs · {{ o.profile.reputation.onTimeRate }}% on time</dd></div>
                 <div><dt>Compliance</dt><dd>{{ o.compliant ? 'Documents valid' : 'Check documents' }}</dd></div>
                 <div><dt>Response</dt><dd>Quoted in {{ o.responseHours }} h</dd></div>
-                <div><dt>Contact</dt><dd>{{ o.disclosure.contactVisible ? o.profile.party.contact.phone : 'Shared after acceptance' }}</dd></div>
+                <div><dt>Contact</dt><dd>{{ o.profile.party.contact?.phone ?? 'Shared after acceptance' }}</dd></div>
               </dl>
               <ct-endorsed-by [profile]="o.profile" />
               <details class="m-work">

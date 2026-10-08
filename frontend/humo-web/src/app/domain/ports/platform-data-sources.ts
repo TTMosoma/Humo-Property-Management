@@ -7,17 +7,17 @@ import { BusinessOverview, CustomerPlan, PlatformCustomer, SubscriptionChange } 
 /** Humo's customers, subscriptions, health and opportunities (Humo staff only). */
 export abstract class PlatformDataSource {
   abstract customers(): Observable<PlatformCustomer[]>;
-  abstract customer(agencyId: string): Observable<PlatformCustomer | undefined>;
+  abstract customer(organisationId: string): Observable<PlatformCustomer | undefined>;
   abstract overview(): Observable<BusinessOverview>;
   /** Sensitive: needs Platform.Subscriptions.Manage and step-up. */
-  abstract changeSubscription(agencyId: string, change: SubscriptionChange): Observable<void>;
+  abstract changeSubscription(organisationId: string, change: SubscriptionChange): Observable<void>;
   abstract updateRequest(requestId: string, status: UpgradeRequest['status']): Observable<void>;
 }
 
 /** The customer's own view of their plan (Agency Administrator). They can ask, not enable. */
 export abstract class PlanDataSource {
-  abstract mine(agencyId: string): Observable<CustomerPlan | undefined>;
-  abstract requestUpgrade(input: { agencyId: string; addOn?: AddOnId; package?: PackageId; feature?: Feature; note?: string; source: UpgradeRequest['source'] }): Observable<void>;
+  abstract mine(organisationId: string): Observable<CustomerPlan | undefined>;
+  abstract requestUpgrade(input: { organisationId: string; addOn?: AddOnId; package?: PackageId; feature?: Feature; note?: string; source: UpgradeRequest['source'] }): Observable<void>;
 }
 
 export interface ServedNudge {

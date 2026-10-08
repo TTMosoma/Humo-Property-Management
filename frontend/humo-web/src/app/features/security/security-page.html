@@ -10,14 +10,14 @@
   <div class="notice surface">
     <ion-icon name="lock-closed-outline" aria-hidden="true" />
     <div>
-      <strong>{{ session.persona().name }}’s security settings aren’t available while impersonating.</strong>
+      <strong>{{ session.identity().name }}’s security settings aren’t available while impersonating.</strong>
       <p>Passkeys, devices and sessions belong to the person who owns them. Below are your own, {{ actor.name }}.</p>
     </div>
   </div>
 }
 
 @if (failed()) {
-  <ui-error-state (retry)="page.retry()" />
+  <ui-error-state (retry)="result.retry()" />
 } @else if (loading() || !profile()) {
   <ui-skeleton variant="tiles" [count]="4" />
 } @else {
@@ -31,11 +31,11 @@
           <h2>{{ actor.name }}</h2>
           <div class="muted">{{ actor.email }}</div>
           <div class="roles">
-            @for (m of actor.memberships; track m.id) {
+            @for (m of session.assignments(); track m.id) {
               <span class="role-chip">{{ roleLabels[m.role] }} · {{ m.label }}</span>
             }
           </div>
-          <p class="small muted">One Humo identity{{ actor.memberships.length > 1 ? ' with ' + actor.memberships.length + ' roles' : '' }}. These settings protect every role you hold.</p>
+          <p class="small muted">One Humo identity{{ session.assignments().length > 1 ? ' with ' + session.assignments().length + ' roles' : '' }}. These settings protect every role you hold.</p>
         </div>
         <div class="fresh" [class.on]="fresh()">
           <ion-icon [name]="fresh() ? 'shield-checkmark-outline' : 'shield-outline'" aria-hidden="true" />

@@ -3,6 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { Observable, catchError, of } from 'rxjs';
 import { Role, WorkItem, WorkItemDataSource, WorkItemType, isOpen } from '../../domain';
 import { ScopeService } from '../scope/scope.service';
+import { loadable } from '../data/loadable';
 import { SessionService } from '../session/session.service';
 
 /** Badge keys used by the navigation config. */
@@ -38,13 +39,16 @@ export class AttentionService {
   private readonly scope = inject(ScopeService);
   private readonly source = inject(WorkItemDataSource);
 
-  private readonly all = toSignal(this.source.watch().pipe(catchError(() => of([] as WorkItem[]))), {
-    initialValue: [] as WorkItem[],
-  });
+  /** Live: emits again whenever a work item changes (HTTP: re-fetched or pushed). */
+  private readonly items = loadable(() => this.source.watch());
+  private readonly all = computed(() => this.items.value() ?? []);
+  /** For queues that show the work items themselves (Tasks, Approvals). */
+  readonly status = this.items.status;
+  readonly retry = () => this.items.retry();
 
   /** Everything this membership may see in any scheme it can access (ignores the scope chip). */
   private readonly entitled = computed<WorkItem[]>(() => {
-    const m = this.session.membership();
+    const m = this.session.assignment();
     const accessible = new Set(this.scope.accessible().map((s) => s.id));
     const me = new Set(this.session.selfIds());
     const mine = (w: WorkItem) => w.assigneeId !== null && me.has(w.assigneeId);
@@ -56,7 +60,7 @@ export class AttentionService {
           return true;
         case 'portfolio-manager':
           if (NOT_FOR_PORTFOLIO_MANAGERS.includes(w.type)) return false;
-          return m.schemeIds.includes(w.schemeId) || mine(w);
+          return m.scope.schemeIds.includes(w.schemeId) || mine(w);
         case 'finance':
           return FINANCE_TYPES.includes(w.type) || mine(w);
         case 'operations':
@@ -120,7 +124,7 @@ export class AttentionService {
 
   // ---- Commands (delegated to the port) ----
   complete(ids: string[]): Observable<void> {
-    return this.source.complete(ids, this.session.persona().name);
+    return this.source.complete(ids, this.session.identity().name);
   }
 
   reopen(ids: string[]): Observable<void> {
@@ -132,6 +136,6 @@ export class AttentionService {
   }
 
   decide(id: string, decision: 'approved' | 'rejected', comment?: string): Observable<void> {
-    return this.source.decide(id, decision, this.session.persona().name, comment);
+    return this.source.decide(id, decision, this.session.identity().name, comment);
   }
 }

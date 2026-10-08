@@ -15,7 +15,7 @@ import { Dialog } from '@angular/cdk/dialog';
 import { Overlay } from '@angular/cdk/overlay';
 import { IonIcon, IonMenu, IonSplitPane, MenuController } from '@ionic/angular/standalone';
 import { filter } from 'rxjs';
-import { ROLE_LABELS, ROLE_META } from '../../domain';
+import { ROLE_LABELS, ROLE_META, coversAllSchemes } from '../../domain';
 import { PrototypeToolbar } from '../prototype/prototype-toolbar';
 import { ImpersonationBanner } from '../security/impersonation-banner';
 import { RoleSwitcher } from '../session/role-switcher';
@@ -63,7 +63,7 @@ export class Shell {
   protected readonly showTabBar = computed(() => !this.isDesktop() && !this.session.isHumo());
   /** Humo staff viewing an agency's setup: make it unmistakable. */
   protected readonly supportAgency = computed(() =>
-    this.session.isHumo() && this.session.supportAgencyId() ? this.session.agency() : undefined,
+    this.session.isHumo() && this.session.supportOrganisationId() ? this.session.organisation() : undefined,
   );
 
   /** Acknowledges a role switch for a few seconds — calm, in the role's accent, never the impersonation colour. */
@@ -71,8 +71,8 @@ export class Shell {
     const change = this.switcher.lastChange();
     if (!change) return null;
     const a = change.assignment;
-    const agency = this.session.agency()?.shortName;
-    const scope = a.schemeIds.length === 0 && agency ? `All schemes in ${agency}` : a.label;
+    const agency = this.session.organisation()?.shortName;
+    const scope = coversAllSchemes(a) && agency ? `All schemes in ${agency}` : a.label;
     return { role: ROLE_LABELS[a.role], scope, icon: ROLE_META[a.role].icon, color: `var(--role-${ROLE_META[a.role].family})` };
   });
 

@@ -1,8 +1,8 @@
-@if (page.status() === 'loading' || view() === undefined) {
+@if (result.loading()) {
   <ui-skeleton [count]="10" />
-} @else if (page.status() === 'error') {
-  <div class="surface"><ui-error-state title="We couldn’t load this statement" (retry)="page.retry()" /></div>
-} @else if (view() === null) {
+} @else if (result.failed()) {
+  <div class="surface"><ui-error-state title="We couldn’t load this statement" (retry)="result.retry()" /></div>
+} @else if (!view()) {
   <div class="surface">
     <ui-empty-state illustration="not-found" title="No statement for this period" message="Statements are kept for the periods shown on the account." />
   </div>
@@ -26,7 +26,7 @@
   <article class="sheet" aria-label="Levy statement">
     <header class="letterhead">
       <div>
-        <div class="agency">{{ session.agency()?.name }}</div>
+        <div class="agency">{{ session.organisation()?.name }}</div>
         <div class="agency-sub">Managing agent for {{ v.scheme.name }} · {{ v.scheme.type }}</div>
         <div class="agency-sub">accounts&#64;acacia-ma.example · 011 555 0142</div>
       </div>

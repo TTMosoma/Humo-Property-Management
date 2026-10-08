@@ -6,7 +6,7 @@ import { catchError, combineLatest, map, of, switchMap } from 'rxjs';
 import { BatchView, InvoiceView, PayablesDataSource } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { StepUpService } from '../../core/security/step-up.service';
-import { pageState } from '../../core/prototype/page-state';
+import { loadable } from '../../core/data/loadable';
 import { ScopeNotice } from '../../core/scope/scope-notice';
 import { ScopeService } from '../../core/scope/scope.service';
 import { SessionService } from '../../core/session/session.service';
@@ -41,28 +41,21 @@ export class PayablesPage {
   private readonly stepUp = inject(StepUpService);
   protected readonly scope = inject(ScopeService);
   protected readonly session = inject(SessionService);
-  protected readonly page = pageState();
 
   protected readonly state = urlState({ view: 'ready' });
   protected readonly selected = signal<string[]>([]);
   protected readonly busy = signal(false);
 
-  private readonly result = toSignal(
-    toObservable(this.scope.effectiveIds).pipe(
-      switchMap((ids) =>
-        combineLatest([this.data.invoices(ids), this.data.batches(ids)]).pipe(
-          map(([invoices, batches]) => ({ invoices, batches, failed: false })),
-          catchError(() => of({ invoices: [] as InvoiceView[], batches: [] as BatchView[], failed: true })),
-        ),
-      ),
-    ),
-  );
+  protected readonly result = loadable(() => {
+    const ids = this.scope.effectiveIds();
+    return combineLatest([this.data.invoices(ids), this.data.batches(ids)]).pipe(map(([invoices, batches]) => ({ invoices, batches })));
+  });
 
-  protected readonly loading = computed(() => this.page.status() === 'loading' || this.result() === undefined);
-  protected readonly failed = computed(() => this.page.status() === 'error' || !!this.result()?.failed);
-  private readonly invoices = computed(() => (this.page.forceEmpty() ? [] : (this.result()?.invoices ?? [])));
+  protected readonly loading = this.result.loading;
+  protected readonly failed = this.result.failed;
+  private readonly invoices = computed(() => ((this.result.value()?.invoices ?? [])));
   protected readonly batches = computed(() =>
-    (this.page.forceEmpty() ? [] : (this.result()?.batches ?? [])).filter((b) => b.batch.status !== 'released' || this.state().view === 'paid'),
+    ((this.result.value()?.batches ?? [])).filter((b) => b.batch.status !== 'released' || this.state().view === 'paid'),
   );
 
   protected readonly rows = computed(() => {
@@ -75,7 +68,7 @@ export class PayablesPage {
 
   protected readonly tabs = computed(() => {
     const inv = this.invoices();
-    const openBatches = (this.result()?.batches ?? []).filter((b) => b.batch.status !== 'released').length;
+    const openBatches = (this.result.value()?.batches ?? []).filter((b) => b.batch.status !== 'released').length;
     return [
       { id: 'approval', label: 'Awaiting approval', count: inv.filter((i) => i.invoice.status === 'awaiting-approval').length },
       { id: 'ready', label: 'Ready to pay', count: inv.filter((i) => i.invoice.status === 'approved').length },

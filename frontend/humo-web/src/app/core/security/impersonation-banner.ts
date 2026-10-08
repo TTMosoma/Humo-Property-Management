@@ -18,9 +18,9 @@ import { ImpersonationService } from './impersonation.service';
     @if (imp(); as i) {
       <span class="flag"><span class="dot" aria-hidden="true"></span>Impersonation mode</span>
       <dl class="facts">
-        <div><dt>Viewing as</dt><dd><strong>{{ session.persona().name }}</strong></dd></div>
+        <div><dt>Viewing as</dt><dd><strong>{{ session.identity().name }}</strong></dd></div>
         <div><dt>Role</dt><dd>{{ roleLabels[session.role()] }}</dd></div>
-        <div><dt>Organisation</dt><dd>{{ session.agency()?.shortName ?? session.membership().label }}</dd></div>
+        <div><dt>Organisation</dt><dd>{{ session.organisation()?.shortName ?? session.assignment().label }}</dd></div>
         <div><dt>Mode</dt><dd class="mode"><ion-icon [name]="i.mode === 'act' ? 'create-outline' : 'eye-outline'" aria-hidden="true" />{{ i.mode === 'act' ? 'Act — changes are made as ' + firstName() : 'Observe — read-only' }}</dd></div>
       </dl>
       <span class="why">{{ reasons[i.reason] }}{{ i.ticket ? ' · ' + i.ticket : '' }} · {{ minutes() }} min · you are {{ session.actor().name }}</span>
@@ -104,7 +104,7 @@ export class ImpersonationBanner {
   protected readonly imp = this.session.impersonation;
   protected readonly roleLabels = ROLE_LABELS;
   protected readonly reasons = IMPERSONATION_REASONS;
-  protected readonly firstName = computed(() => this.session.persona().name.split(' ')[0]);
+  protected readonly firstName = computed(() => this.session.identity().name.split(' ')[0]);
 
   private readonly now = signal(Date.now());
   protected readonly minutes = computed(() => {

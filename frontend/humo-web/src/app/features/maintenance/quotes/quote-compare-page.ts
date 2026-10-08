@@ -3,10 +3,10 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, combineLatest, concatMap, map, of, switchMap } from 'rxjs';
-import { ContractorNetwork, ContractorProfile, ContractorQuote, LIFECYCLE_LABEL, QuoteRequestView, disclosureFor } from '../../../domain/contractor';
+import { ContractorNetwork, ContractorProfile, ContractorQuote, LIFECYCLE_LABEL, QuoteRequestView } from '../../../domain/contractor';
 import { DELEGATED_LIMIT, JobDataSource, JobDetail, JobStage, SupplierDataSource, SupplierSummary, stageIndex } from '../../../domain';
 import { FeedbackService } from '../../../core/feedback/feedback.service';
-import { pageState } from '../../../core/prototype/page-state';
+import { loadable } from '../../../core/data/loadable';
 import { SessionService } from '../../../core/session/session.service';
 import { formatDate, formatRand } from '../../../ui/format/money';
 import { relativeTime } from '../../../ui/format/relative-time';
@@ -41,30 +41,23 @@ export class QuoteComparePage {
   private readonly feedback = inject(FeedbackService);
   private readonly router = inject(Router);
   protected readonly session = inject(SessionService);
-  protected readonly page = pageState();
 
   protected readonly ref = toSignal(inject(ActivatedRoute).paramMap.pipe(map((p) => p.get('requestId')!)), { initialValue: '' });
 
-  protected readonly result = toSignal(
-    toObservable(this.ref).pipe(
-      switchMap((ref) =>
-        combineLatest([this.jobs.get(ref), this.network.quoteRequestFor({ product: 'humo-pm', ref })]).pipe(
-          switchMap(([job, qr]) =>
-            (job ? this.suppliers.list([job.job.schemeId]) : of([] as SupplierSummary[])).pipe(map((sups) => ({ job, qr, sups, failed: false }))),
-          ),
-          catchError(() => of({ job: undefined as JobDetail | undefined, qr: undefined as QuoteRequestView | undefined, sups: [] as SupplierSummary[], failed: true })),
-        ),
-      ),
-    ),
-  );
+  protected readonly result = loadable(() => {
+    const ref = this.ref();
+    return combineLatest([this.jobs.get(ref), this.network.quoteRequestFor({ product: 'humo-pm', ref })]).pipe(
+      switchMap(([job, qr]) => (job ? this.suppliers.list([job.job.schemeId]) : of([] as SupplierSummary[])).pipe(map((sups) => ({ job, qr, sups })))),
+    );
+  });
 
-  protected readonly loading = computed(() => this.page.status() === 'loading' || this.result() === undefined);
-  protected readonly failed = computed(() => this.page.status() === 'error' || !!this.result()?.failed);
-  protected readonly job = computed(() => this.result()?.job);
-  protected readonly qr = computed(() => this.result()?.qr);
+  protected readonly loading = this.result.loading;
+  protected readonly failed = this.result.failed;
+  protected readonly job = computed(() => this.result.value()?.job);
+  protected readonly qr = computed(() => this.result.value()?.qr);
 
   /** Businesses the agency already works with (a Supplier record linked to the party). */
-  private readonly linkedParties = computed(() => new Set((this.result()?.sups ?? []).map((s) => s.supplier.partyId).filter(Boolean)));
+  private readonly linkedParties = computed(() => new Set((this.result.value()?.sups ?? []).map((s) => s.supplier.partyId).filter(Boolean)));
 
   protected readonly canAct = computed(() => this.session.can('Maintenance.Manage'));
   protected readonly limit = DELEGATED_LIMIT;
@@ -87,7 +80,7 @@ export class QuoteComparePage {
         fastest: new Date(q.completeBy).getTime() === fastest,
         responseHours: hours,
         compliant: profile ? complianceOk(profile) : false,
-        disclosure: disclosureFor(v.request, q, existing),
+        disclosure: v.disclosure[q.partyId],
       };
     });
   });
@@ -160,9 +153,8 @@ export class QuoteComparePage {
     const v = this.qr();
     if (!job || !v) return;
     this.busy.set(true);
-    const c = profile.party.contact;
     this.suppliers
-      .linkParty({ partyId: profile.party.id, name: profile.party.tradingName, trades: [v.request.category], contactName: c.name, phone: c.phone, email: c.email, schemeId: job.schemeId })
+      .linkParty({ partyId: profile.party.id, name: profile.party.tradingName, trades: [v.request.category], schemeId: job.schemeId })
       .pipe(
         concatMap((supplierId) =>
           this.jobs.act(job.ref, {

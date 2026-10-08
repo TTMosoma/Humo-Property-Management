@@ -1,10 +1,10 @@
-@if (page.status() === 'loading' || summary() === undefined) {
+@if (summary.loading()) {
   <ui-skeleton variant="tiles" [count]="5" />
   <div class="gap"></div>
   <ui-skeleton [count]="6" />
-} @else if (page.status() === 'error' || summary() === null) {
-  <div class="surface"><ui-error-state title="We couldn’t load this unit" (retry)="page.retry()" /></div>
-} @else if (summary() === false) {
+} @else if (summary.failed()) {
+  <div class="surface"><ui-error-state title="We couldn’t load this unit" (retry)="summary.retry()" /></div>
+} @else if (summary.value() === false) {
   <div class="surface">
     <ui-empty-state illustration="not-found" title="We couldn’t find that unit" message="Check the unit number, or search for it with Ctrl K (e.g. “KC 42”)." />
   </div>
@@ -129,9 +129,9 @@
       <h2 class="section-title">Activity</h2>
       <app-log-note [unitId]="s.unit.id" [personId]="s.owners[0]?.id" />
       <div class="tl">
-        @if (timeline() === null) {
-          <ui-error-state variant="inline" title="Activity unavailable" message="The rest of the page still works." (retry)="page.retry()" />
-        } @else if (timeline() === undefined) {
+        @if (timeline.failed()) {
+          <ui-error-state variant="inline" title="Activity unavailable" message="The rest of the page still works." (retry)="timeline.retry()" />
+        } @else if (timeline.loading()) {
           <ui-skeleton [count]="4" />
         } @else {
           <ui-timeline [events]="timelineEvents()" />

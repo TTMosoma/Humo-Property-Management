@@ -14,10 +14,10 @@ Identity → Role (active assignment) → Permissions → Scope → Entitlements
 
 | Layer | Question | Where it lives |
 |---|---|---|
-| **Identity** | Who is the authenticated person? | `Identity` (`domain/models/persona.ts`). There is exactly one per human. |
+| **Identity** | Who is the authenticated person? | `Identity` (`domain/models/identity.ts`). There is exactly one per human, with a status (invited, active, suspended, deactivated) and `OrganisationMembership`s. |
 | **Role** | Which hat are they wearing right now? | `RoleAssignment.role`. A person holds several and switches between them. |
 | **Permissions** | What can that role do? | `ROLE_PERMISSIONS` and `PERMISSIONS` (`domain/models/permission.ts`), plus individual `grants`. |
-| **Scope** | Where can they do it? | `RoleAssignment.agencyId`, `schemeIds` and `unitLabel`. |
+| **Scope** | Where can they do it? | `RoleAssignment.scope`: an explicit type (`platform`, `organisation`, `schemes`, `unit`, `party`) with `organisationId`, `schemeIds`, `unitId` or `partyId`. |
 | **Entitlements** | Does the customer's plan include the feature? | `PLAN_FEATURES` (`domain/models/entitlement.ts`). |
 | **Context** | What is in focus right now? | Active assignment plus the scheme scope chip (`ScopeService`). |
 | **Audit** | What did they actually do? | `AuditEvent` (`domain/models/audit.ts`). It is written by the API, never by the browser. |

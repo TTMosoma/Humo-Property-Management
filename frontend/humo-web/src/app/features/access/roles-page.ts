@@ -17,6 +17,7 @@ import {
   ROLE_META,
   ROLE_PERMISSIONS,
   packageById,
+  activeAssignments,
 } from '../../domain';
 import { SessionService } from '../../core/session/session.service';
 import { PageHeader } from '../../ui/page-header/page-header';
@@ -46,7 +47,7 @@ export class RolesPage {
   protected readonly session = inject(SessionService);
   private readonly people = toSignal(
     inject(AccessDataSource)
-      .directory(this.session.agency()?.id ?? '')
+      .directory(this.session.organisation()?.id ?? '')
       .pipe(catchError(() => of([] as Identity[]))),
     { initialValue: [] as Identity[] },
   );
@@ -58,10 +59,10 @@ export class RolesPage {
   protected readonly scopeText = SCOPE_TEXT;
 
   protected readonly holders = computed(() => {
-    const agency = this.session.agency()?.id;
+    const agency = this.session.organisation()?.id;
     const counts = new Map<CustomerRole, number>();
     for (const p of this.people()) {
-      for (const r of new Set(p.memberships.filter((m) => m.agencyId === agency).map((m) => m.role as CustomerRole))) {
+      for (const r of new Set(activeAssignments(p).filter((m) => m.scope.organisationId === agency).map((m) => m.role as CustomerRole))) {
         counts.set(r, (counts.get(r) ?? 0) + 1);
       }
     }

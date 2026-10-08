@@ -5,7 +5,7 @@
 />
 
 @if (failed()) {
-  <ui-error-state (retry)="page.retry()" />
+  <ui-error-state (retry)="result.retry()" />
 } @else if (loading()) {
   <ui-skeleton variant="tiles" [count]="6" />
 } @else if (!mine().length) {
@@ -14,9 +14,9 @@
   @switch (view()) {
     @case ('health') {
       <div class="accounts">
-        @for (c of accounts(); track c.agencyId) {
+        @for (c of accounts(); track c.organisationId) {
           @let w = weakest(c);
-          <a class="acct surface" [routerLink]="['/platform/customers', c.agencyId]">
+          <a class="acct surface" [routerLink]="['/platform/customers', c.organisationId]">
             <ui-score-ring [score]="c.health.score" />
             <span class="a-main">
               <span class="a-name">{{ c.name }}</span>
@@ -33,9 +33,9 @@
         <table>
           <thead><tr><th>Customer</th><th>Package</th><th>Add-ons</th><th>Active / seats</th><th>Renews</th><th class="end">MRR</th></tr></thead>
           <tbody>
-            @for (c of renewals(); track c.agencyId) {
+            @for (c of renewals(); track c.organisationId) {
               <tr>
-                <td><a [routerLink]="['/platform/customers', c.agencyId]" [queryParams]="{ view: 'subscription' }">{{ c.name }}</a></td>
+                <td><a [routerLink]="['/platform/customers', c.organisationId]" [queryParams]="{ view: 'subscription' }">{{ c.name }}</a></td>
                 <td>{{ shortPackage(c.subscription.packageId) }}</td>
                 <td class="muted">{{ addOnNames(c) || '—' }}</td>
                 <td>{{ c.snapshot.activeUsers30d }} / {{ c.subscription.seats }}</td>
@@ -50,7 +50,7 @@
     @case ('opportunities') {
       <div class="convos">
         @for (x of allOpportunities(); track x.o.id) {
-          <a class="convo surface" [routerLink]="['/platform/customers', x.c.agencyId]" [attr.data-strength]="x.o.strength">
+          <a class="convo surface" [routerLink]="['/platform/customers', x.c.organisationId]" [attr.data-strength]="x.o.strength">
             <span class="c-top">
               <span class="c-name">{{ x.c.name }}</span>
               <span class="strength">{{ x.o.kind === 'adoption' ? 'Training' : x.o.strength }}</span>
@@ -66,11 +66,11 @@
     @case ('support') {
       <h2 class="section-title first">Tickets & escalations</h2>
       <ul class="needs surface">
-        @for (x of tickets(); track x.c.agencyId + x.t.id) {
+        @for (x of tickets(); track x.c.organisationId + x.t.id) {
           <li [attr.data-tone]="x.t.severity === 'critical' ? 'danger' : 'info'">
             <span class="n-icon"><ion-icon [name]="x.t.severity === 'critical' ? 'alert-circle-outline' : 'chatbox-ellipses-outline'" aria-hidden="true" /></span>
             <span class="n-text">
-              <a [routerLink]="['/platform/customers', x.c.agencyId]">{{ x.t.title }}</a>
+              <a [routerLink]="['/platform/customers', x.c.organisationId]">{{ x.t.title }}</a>
               <span class="n-detail">{{ x.c.name }} · {{ x.t.id }} · {{ x.t.status === 'escalated' ? 'Escalated to ' + x.t.owner : x.t.status === 'waiting-on-customer' ? 'Waiting on the customer' : 'With ' + x.t.owner }} · opened {{ relativeTime(x.t.openedAt) }}</span>
             </span>
           </li>
@@ -84,7 +84,7 @@
           <li data-tone="info">
             <span class="n-icon"><ion-icon name="hand-right-outline" aria-hidden="true" /></span>
             <span class="n-text">
-              <a [routerLink]="['/platform/customers', x.c.agencyId]">{{ x.c.name }} — {{ x.r.addOn ?? x.r.package ?? 'upgrade' }}</a>
+              <a [routerLink]="['/platform/customers', x.c.organisationId]">{{ x.c.name }} — {{ x.r.addOn ?? x.r.package ?? 'upgrade' }}</a>
               <span class="n-detail">{{ x.r.requestedBy }} · {{ relativeTime(x.r.at) }} · {{ x.r.status }}</span>
             </span>
           </li>
@@ -113,7 +113,7 @@
           <li [attr.data-tone]="n.tone">
             <span class="n-icon"><ion-icon [name]="n.icon" aria-hidden="true" /></span>
             <span class="n-text">
-              <a [routerLink]="['/platform/customers', n.c.agencyId]">{{ n.title }}</a>
+              <a [routerLink]="['/platform/customers', n.c.organisationId]">{{ n.title }}</a>
               <span class="n-detail">{{ n.detail }}</span>
             </span>
           </li>
@@ -127,7 +127,7 @@
       <h2 class="section-title">Worth a conversation</h2>
       <div class="convos">
         @for (x of conversations(); track x.o.id) {
-          <a class="convo surface" [routerLink]="['/platform/customers', x.c.agencyId]" [attr.data-strength]="x.o.strength">
+          <a class="convo surface" [routerLink]="['/platform/customers', x.c.organisationId]" [attr.data-strength]="x.o.strength">
             <span class="c-top">
               <span class="c-name">{{ x.c.name }}</span>
               <span class="strength">{{ x.o.strength }}</span>
@@ -144,8 +144,8 @@
 
   <h2 class="section-title">All my accounts</h2>
   <div class="accounts">
-    @for (c of accounts(); track c.agencyId) {
-      <a class="acct surface" [routerLink]="['/platform/customers', c.agencyId]">
+    @for (c of accounts(); track c.organisationId) {
+      <a class="acct surface" [routerLink]="['/platform/customers', c.organisationId]">
         <ui-score-ring [score]="c.health.score" />
         <span class="a-main">
           <span class="a-name">{{ c.name }}</span>

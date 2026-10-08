@@ -36,8 +36,8 @@ import { Logo } from '../../ui/brand/logo';
       </nav>
       <div class="who">
         <span class="biz">{{ business() }}</span>
-        <button type="button" class="avatar" [cdkMenuTriggerFor]="account" [attr.aria-label]="session.persona().name + ', ' + business() + '. Account menu'">
-          {{ session.persona().initials }}
+        <button type="button" class="avatar" [cdkMenuTriggerFor]="account" [attr.aria-label]="session.identity().name + ', ' + business() + '. Account menu'">
+          {{ session.identity().initials }}
         </button>
       </div>
     </header>
@@ -45,8 +45,8 @@ import { Logo } from '../../ui/brand/logo';
     <ng-template #account>
       <div class="menu-panel account" cdkMenu>
         <div class="acc-head">
-          <strong>{{ session.persona().name }}</strong>
-          <span>{{ session.persona().email }}</span>
+          <strong>{{ session.identity().name }}</strong>
+          <span>{{ session.identity().email }}</span>
           <span class="acc-biz">{{ business() }} · Humo Contractor</span>
         </div>
         <div class="menu-divider"></div>
@@ -119,7 +119,7 @@ import { Logo } from '../../ui/brand/logo';
 export class ContractorShell {
   protected readonly session = inject(SessionService);
   protected readonly signOut = inject(SignOutService);
-  protected readonly business = computed(() => this.session.membership().label);
+  protected readonly business = computed(() => this.session.assignment().label);
   protected readonly links = [
     { label: 'Dashboard', route: '/contractor', icon: 'speedometer-outline', exact: true },
     { label: 'Quote requests', route: '/contractor/requests', icon: 'document-text-outline', exact: false },

@@ -5,7 +5,7 @@ import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, debounceTime, map, of, switchMap } from 'rxjs';
 import { MatchView, ReceiptDataSource, ReceiptView, UnitDataSource, UnitSummary } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
-import { pageState } from '../../core/prototype/page-state';
+import { loadable } from '../../core/data/loadable';
 import { ScopeNotice } from '../../core/scope/scope-notice';
 import { ScopeService } from '../../core/scope/scope.service';
 import { ViewTabs } from '../../ui/data-table/view-tabs';
@@ -41,7 +41,6 @@ export class ReceiptsPage {
   private readonly units = inject(UnitDataSource);
   private readonly feedback = inject(FeedbackService);
   protected readonly scope = inject(ScopeService);
-  protected readonly page = pageState();
 
   protected readonly view = signal<'open' | 'suspense' | 'allocated'>('open');
   protected readonly selectedId = signal<string | null>(this.route.snapshot.queryParamMap.get('receipt'));
@@ -51,20 +50,11 @@ export class ReceiptsPage {
   protected readonly splitting = signal(false);
   protected readonly split = signal<SplitLine[]>([]);
 
-  private readonly result = toSignal(
-    toObservable(this.scope.effectiveIds).pipe(
-      switchMap((ids) =>
-        this.receipts.list(ids).pipe(
-          map((rows) => ({ rows, failed: false })),
-          catchError(() => of({ rows: [] as ReceiptView[], failed: true })),
-        ),
-      ),
-    ),
-  );
+  protected readonly result = loadable(() => this.receipts.list(this.scope.effectiveIds()).pipe(map((rows) => ({ rows }))));
 
-  protected readonly loading = computed(() => this.page.status() === 'loading' || this.result() === undefined);
-  protected readonly failed = computed(() => this.page.status() === 'error' || !!this.result()?.failed);
-  private readonly all = computed(() => (this.page.forceEmpty() ? [] : (this.result()?.rows ?? [])));
+  protected readonly loading = this.result.loading;
+  protected readonly failed = this.result.failed;
+  private readonly all = computed(() => ((this.result.value()?.rows ?? [])));
 
   protected readonly list = computed(() => {
     const status = this.view() === 'open' ? 'unallocated' : this.view() === 'suspense' ? 'suspense' : 'allocated';

@@ -1,5 +1,5 @@
 @if (failed()) {
-  <ui-error-state (retry)="page.retry()" />
+  <ui-error-state (retry)="result.retry()" />
 } @else if (!p()) {
   <ui-skeleton variant="tiles" [count]="4" />
 } @else {

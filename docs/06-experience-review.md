@@ -45,7 +45,7 @@ Products differ by layout, not by palette:
 
 | State | Treatment |
 |---|---|
-| Loading / empty / error | `pageState()`, skeletons, typed empty states and error-with-retry on every data page |
+| Loading / empty / error | `loadable()` (state from the real request), skeletons, typed empty states and error-with-retry on every data page |
 | Permission denied | "You don't have access", plus "Switch role to …" when another of your roles can open it |
 | **Feature unavailable** | A locked navigation entry (not hidden). The page says "{Feature} — not included in your current plan" with what it does. Administrators get **Request upgrade**; others are told to ask their administrator. |
 | No scope assigned | Dashboard: "No schemes assigned to you yet" |

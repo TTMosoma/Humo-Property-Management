@@ -13,11 +13,13 @@ import {
  * Ports for Slice A. Each is a thin, task-shaped contract; the in-memory
  * versions live in mock/, HTTP versions will call the .NET API.
  * Queries are live: they emit again when the underlying data changes
- * (e.g. an allocation updates every open account view).
+ * (e.g. an allocation updates every open account view). Over HTTP that is
+ * re-fetch on change — see core/data/data-changes.ts.
  */
 export abstract class UnitDataSource {
   abstract list(schemeIds: string[]): Observable<UnitSummary[]>;
   abstract get(schemeId: string, unitNumber: string): Observable<UnitSummary | undefined>;
+  abstract byId(unitId: string): Observable<UnitSummary | undefined>;
   /** "KC 42", "kingfisher 42", "KC-042", "unit 42" … */
   abstract search(query: string, schemeIds: string[], limit?: number): Observable<UnitSummary[]>;
 }

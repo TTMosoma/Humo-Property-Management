@@ -3,7 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { ROLE_LABELS, Role, Scheme } from '../../domain';
-import { pageState } from '../../core/prototype/page-state';
+import { PrototypeStateService } from '../../core/prototype/prototype-state.service';
 import { Illustration } from '../../ui/illustration/illustration';
 import { PageHeader } from '../../ui/page-header/page-header';
 import { EmptyState } from '../../ui/states/empty-state';
@@ -44,7 +44,8 @@ const CHECKPOINTS: Record<number, string> = {
 })
 export class PlannedPage {
   private readonly route = inject(ActivatedRoute);
-  protected readonly page = pageState();
+  /** A placeholder for a screen not built yet: it previews the simulated state, there's no request. */
+  protected readonly view = inject(PrototypeStateService).viewState;
 
   private readonly data = toSignal(this.route.data, { initialValue: this.route.snapshot.data });
   private readonly title$ = toSignal(this.route.title, { initialValue: this.route.snapshot.title });

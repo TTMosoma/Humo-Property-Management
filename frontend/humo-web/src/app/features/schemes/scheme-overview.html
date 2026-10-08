@@ -1,4 +1,4 @@
-@switch (page.status()) {
+@switch (unitRows.status()) {
   @case ('loading') {
     <div class="grid">
       <ui-skeleton [count]="6" />
@@ -6,7 +6,7 @@
     </div>
   }
   @case ('error') {
-    <div class="surface"><ui-error-state title="We couldn’t load this scheme’s overview" (retry)="page.retry()" /></div>
+    <div class="surface"><ui-error-state title="We couldn’t load this scheme’s overview" (retry)="unitRows.retry()" /></div>
   }
   @default {
     <div class="grid">
@@ -80,7 +80,7 @@
             </dl>
           </section>
         } @else {
-          <ui-error-state variant="inline" title="Health figures unavailable" message="The rest of the overview still works." (retry)="page.retry()" />
+          <ui-error-state variant="inline" title="Health figures unavailable" message="The rest of the overview still works." (retry)="healthLoad.retry()" />
         }
 
         @if (units(); as u) {

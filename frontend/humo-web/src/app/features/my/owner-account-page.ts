@@ -1,11 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { catchError, map, of, switchMap } from 'rxjs';
-import { AccountDataSource, TimelineDataSource, UnitDataSource, periodLabel, periodOf } from '../../domain';
+import { map, switchMap, throwError } from 'rxjs';
+import { AccountDataSource, ApiError, TimelineDataSource, UnitDataSource, periodLabel, periodOf } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
-import { pageState } from '../../core/prototype/page-state';
+import { loadable } from '../../core/data/loadable';
+import { RoleSwitcher } from '../../core/session/role-switcher';
 import { SessionService } from '../../core/session/session.service';
 import { RandPipe, formatDate } from '../../ui/format/money';
 import { PageHeader } from '../../ui/page-header/page-header';
@@ -29,24 +29,26 @@ export class OwnerAccountPage {
   private readonly accounts = inject(AccountDataSource);
   private readonly timeline = inject(TimelineDataSource);
   private readonly feedback = inject(FeedbackService);
-  protected readonly page = pageState();
 
-  private readonly key = computed(() => {
-    const m = this.session.membership();
-    return { schemeId: m.schemeIds[0], number: (m.unitLabel ?? '').replace(/\D/g, '') };
+  private readonly switcher = inject(RoleSwitcher);
+
+  /** The owner's unit (from the active assignment) and its levy account. Missing either is an error here. */
+  protected readonly result = loadable(() => {
+    const unitId = this.session.assignment().scope.unitId ?? '';
+    return this.units.byId(unitId).pipe(
+      switchMap((summary) => {
+        if (!summary) return throwError(() => new ApiError('not-found', 'Unit not found'));
+        return this.accounts.get(summary.account.id).pipe(
+          map((detail) => {
+            if (!detail) throw new ApiError('not-found', 'Account not found');
+            return { summary, detail };
+          }),
+        );
+      }),
+    );
   });
-
-  protected readonly summary = toSignal(
-    toObservable(this.key).pipe(
-      switchMap((k) => this.units.get(k.schemeId, k.number).pipe(map((s) => s ?? null), catchError(() => of(null)))),
-    ),
-  );
-
-  protected readonly detail = toSignal(
-    toObservable(this.summary).pipe(
-      switchMap((s) => (s ? this.accounts.get(s.account.id).pipe(map((d) => d ?? null), catchError(() => of(null))) : of(s))),
-    ),
-  );
+  protected readonly summary = computed(() => this.result.value()?.summary);
+  protected readonly detail = computed(() => this.result.value()?.detail);
 
   protected readonly paidOpen = signal(false);
   protected readonly paidText = signal('');
@@ -60,7 +62,7 @@ export class OwnerAccountPage {
   });
 
   protected readonly recent = computed(() => this.detail()?.transactions.slice(0, 8) ?? []);
-  protected readonly otherUnits = computed(() => this.session.memberships().filter((m) => m.role === 'owner' && m.id !== this.session.membership().id));
+  protected readonly otherUnits = computed(() => this.session.assignments().filter((m) => m.role === 'owner' && m.id !== this.session.assignment().id));
 
   protected readonly formatDate = formatDate;
   protected readonly periodLabel = periodLabel;
@@ -71,8 +73,9 @@ export class OwnerAccountPage {
     return formatDate(d.toISOString());
   }
 
+  /** Each unit is its own assignment: switching unit is a role switch that stays on this page. */
   protected switchUnit(id: string): void {
-    this.session.switchMembership(id);
+    this.switcher.switchTo(id, '/my/account');
   }
 
   protected sendPaid(): void {

@@ -4,7 +4,7 @@
   [subtitle]="
     platform
       ? 'Every agency and every Humo staff action, including impersonation. Records are written by Humo’s servers and can’t be edited.'
-      : 'What happened in ' + (session.agency()?.shortName ?? 'your agency') + ' — by your team, and by Humo staff when they help you. Records can’t be edited or deleted.'
+      : 'What happened in ' + (session.organisation()?.shortName ?? 'your agency') + ' — by your team, and by Humo staff when they help you. Records can’t be edited or deleted.'
   "
 >
   <button type="button" class="btn btn-secondary" (click)="exportLog()" [disabled]="exporting() || !rows().length">
@@ -34,7 +34,7 @@
   @if (platform) {
     <select [value]="state().agency ?? ''" (change)="set('agency', $any($event.target).value)" aria-label="Agency">
       <option value="">All agencies</option>
-      @for (a of agencies; track a.id) {
+      @for (a of agencies(); track a.id) {
         <option [value]="a.id">{{ a.shortName }}</option>
       }
       <option value="humo">Humo platform only</option>
@@ -76,7 +76,7 @@
 </div>
 
 @if (failed()) {
-  <ui-error-state (retry)="page.retry()" />
+  <ui-error-state (retry)="result.retry()" />
 } @else if (loading()) {
   <ui-skeleton [count]="8" />
 } @else if (!rows().length) {
@@ -103,7 +103,7 @@
                   }
                   <span class="role">{{ roleLabels[e.role] }}</span>
                   @if (platform) {
-                    <span class="role">{{ agencyName(e.agencyId) }}</span>
+                    <span class="role">{{ agencyName(e.organisationId) }}</span>
                   }
                 </span>
                 <span class="what">
@@ -146,7 +146,7 @@
                   <div class="hl"><dt>Acting as</dt><dd>{{ e.actingAs.name }} (impersonated)</dd></div>
                 }
                 <div><dt>Role</dt><dd>{{ roleLabels[e.role] }}</dd></div>
-                <div><dt>Organisation</dt><dd>{{ agencyName(e.agencyId) }}</dd></div>
+                <div><dt>Organisation</dt><dd>{{ agencyName(e.organisationId) }}</dd></div>
                 @if (schemeName(e.schemeId); as s) {
                   <div><dt>Scope</dt><dd>{{ s }}</dd></div>
                 }

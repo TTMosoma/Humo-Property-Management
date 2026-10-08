@@ -1,10 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { catchError, map, of, switchMap } from 'rxjs';
-import { AccessDataSource, Identity, ROLE_LABELS, RoleFamily } from '../../domain';
-import { pageState } from '../../core/prototype/page-state';
+import { AccessDataSource, IDENTITY_STATUS_LABELS, Identity, ROLE_LABELS, RoleFamily, activeAssignments } from '../../domain';
+import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
 import { CellDef, ColumnDef, DataTable } from '../../ui/data-table/data-table';
 import { urlState } from '../../ui/data-table/url-state';
@@ -14,6 +12,7 @@ import { PageHeader } from '../../ui/page-header/page-header';
 import { EmptyState } from '../../ui/states/empty-state';
 import { ErrorState } from '../../ui/states/error-state';
 import { Skeleton } from '../../ui/states/skeleton';
+import { StatusPill } from '../../ui/status-pill/status-pill';
 import { AccessDrawer } from './access-drawer';
 import { FAMILY_LABELS, familyOf, roleColor } from './access-view';
 
@@ -23,7 +22,7 @@ import { FAMILY_LABELS, familyOf, roleColor } from './access-view';
  */
 @Component({
   selector: 'app-users-page',
-  imports: [PageHeader, ViewTabs, DataTable, CellDef, EmptyState, ErrorState, Skeleton, IonIcon, RouterLink],
+  imports: [PageHeader, ViewTabs, DataTable, CellDef, EmptyState, ErrorState, Skeleton, IonIcon, RouterLink, StatusPill],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './users-page.html',
   styleUrl: './users-page.scss',
@@ -32,29 +31,19 @@ export class UsersPage {
   private readonly access = inject(AccessDataSource);
   private readonly drawer = inject(DrawerService);
   protected readonly session = inject(SessionService);
-  protected readonly page = pageState();
 
   protected readonly state = urlState({ view: 'agency', q: null });
-  private readonly agencyId = computed(() => this.session.agency()?.id ?? '');
+  private readonly organisationId = computed(() => this.session.organisation()?.id ?? '');
 
-  private readonly result = toSignal(
-    toObservable(this.agencyId).pipe(
-      switchMap((id) =>
-        this.access.directory(id).pipe(
-          map((people) => ({ people, failed: false })),
-          catchError(() => of({ people: [] as Identity[], failed: true })),
-        ),
-      ),
-    ),
-  );
+  protected readonly result = loadable(() => this.access.directory(this.organisationId()));
 
-  protected readonly loading = computed(() => this.page.status() === 'loading' || this.result() === undefined);
-  protected readonly failed = computed(() => this.page.status() === 'error' || !!this.result()?.failed);
-  private readonly people = computed(() => (this.page.forceEmpty() ? [] : (this.result()?.people ?? [])));
+  protected readonly loading = this.result.loading;
+  protected readonly failed = this.result.failed;
+  private readonly people = computed(() => this.result.value() ?? []);
 
   protected readonly tabs = computed(() => {
     const all = this.people();
-    const n = (f: RoleFamily) => all.filter((p) => familyOf(p, this.agencyId()) === f).length;
+    const n = (f: RoleFamily) => all.filter((p) => familyOf(p, this.organisationId()) === f).length;
     return (['agency', 'governance', 'resident', 'supplier'] as RoleFamily[]).map((f) => ({ id: f, label: FAMILY_LABELS[f], count: n(f) }));
   });
 
@@ -62,7 +51,7 @@ export class UsersPage {
     const { view, q } = this.state();
     const needle = (q ?? '').trim().toLowerCase();
     return this.people()
-      .filter((p) => familyOf(p, this.agencyId()) === view)
+      .filter((p) => familyOf(p, this.organisationId()) === view)
       .filter((p) => !needle || p.name.toLowerCase().includes(needle) || p.email.toLowerCase().includes(needle))
       .sort((a, b) => a.name.localeCompare(b.name));
   });
@@ -75,10 +64,15 @@ export class UsersPage {
 
   protected readonly rowId = (r: Identity) => r.id;
   protected readonly roleLabels = ROLE_LABELS;
+
   protected readonly roleColor = roleColor;
 
+  protected statusLabel(i: Identity): string {
+    return IDENTITY_STATUS_LABELS[i.status];
+  }
+
   protected assignments(i: Identity) {
-    return i.memberships.filter((m) => m.agencyId === this.agencyId());
+    return activeAssignments(i).filter((m) => m.scope.organisationId === this.organisationId());
   }
 
   protected set(key: 'view' | 'q', value: string | null): void {

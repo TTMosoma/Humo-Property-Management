@@ -1,4 +1,20 @@
-import { Identity } from '../../domain';
+import { Identity, IdentityStatus, RoleAssignment, ScopeType, isHumoRole } from '../../domain';
+import { SCHEMES } from './schemes';
+
+/** Seed shape: scope fields written flat for readability; `toIdentity` builds the real model. */
+interface SeedAssignment extends Omit<RoleAssignment, 'scope' | 'status'> {
+  organisationId: string | null;
+  schemeIds: string[];
+  partyId?: string;
+  /** Owners and tenants: "Unit 42" in the scheme above. */
+  unit?: string;
+  status?: RoleAssignment['status'];
+}
+
+interface SeedIdentity extends Omit<Identity, 'assignments' | 'memberships' | 'status'> {
+  status?: IdentityStatus;
+  assignments: SeedAssignment[];
+}
 
 const KC = 'kingfisher-court';
 const JOHAN_SCHEMES = [
@@ -17,7 +33,7 @@ const JOHAN_SCHEMES = [
  * `demo: true` identities appear in the prototype toolbar's "Sign in as" list;
  * the rest exist so Users & access and impersonation have a realistic directory.
  */
-export const PERSONAS: Identity[] = [
+const SEED: SeedIdentity[] = [
   // ---------------- Humo (internal) ----------------
   {
     id: 'p-terry',
@@ -26,11 +42,11 @@ export const PERSONAS: Identity[] = [
     email: 'terry@humo.example',
     kind: 'humo',
     demo: true,
-    memberships: [
+    assignments: [
       {
         id: 'm-terry',
         role: 'system-admin',
-        agencyId: null,
+        organisationId: null,
         schemeIds: [],
         label: 'Platform operations · impersonation authorised',
         grants: ['System.Impersonate'],
@@ -46,8 +62,8 @@ export const PERSONAS: Identity[] = [
     email: 'lerato.dube@humo.example',
     kind: 'humo',
     demo: true,
-    memberships: [
-      { id: 'm-lerato', role: 'humo-support', agencyId: null, schemeIds: [], label: 'Customer support', grantedBy: 'Terry Mosoma', grantedAt: '2026-03-02T09:00:00+02:00' },
+    assignments: [
+      { id: 'm-lerato', role: 'humo-support', organisationId: null, schemeIds: [], label: 'Customer support', grantedBy: 'Terry Mosoma', grantedAt: '2026-03-02T09:00:00+02:00' },
     ],
   },
 
@@ -59,21 +75,22 @@ export const PERSONAS: Identity[] = [
     initials: 'SJ',
     email: 'sarah.jacobs@acacia-ma.example',
     kind: 'customer',
+    title: 'Operations Director',
     staffId: 'staff-sarah',
     demo: true,
-    memberships: [
+    assignments: [
       {
         id: 'm-sarah-pm',
         role: 'portfolio-manager',
-        agencyId: 'acacia',
+        organisationId: 'acacia',
         schemeIds: ['protea-gardens', 'parkhurst-lofts', 'greenstone-commons'],
         label: 'Protea Gardens, Parkhurst Lofts, Greenstone Commons',
         grantedBy: 'Thandeka Mokoena',
         grantedAt: '2025-08-01T09:00:00+02:00',
       },
-      { id: 'm-sarah-finance', role: 'finance', agencyId: 'acacia', schemeIds: [], label: 'All schemes', grantedBy: 'Thandeka Mokoena', grantedAt: '2025-08-01T09:00:00+02:00' },
-      { id: 'm-sarah-admin', role: 'agency-admin', agencyId: 'acacia', schemeIds: [], label: 'Acacia Managing Agents', grantedBy: 'Thandeka Mokoena', grantedAt: '2026-02-14T09:00:00+02:00' },
-      { id: 'm-sarah-trustee', role: 'trustee', agencyId: 'acacia', schemeIds: [KC], label: 'Kingfisher Court', grantedBy: 'Thandeka Mokoena', grantedAt: '2026-04-20T09:00:00+02:00' },
+      { id: 'm-sarah-finance', role: 'finance', organisationId: 'acacia', schemeIds: [], label: 'All schemes', grantedBy: 'Thandeka Mokoena', grantedAt: '2025-08-01T09:00:00+02:00' },
+      { id: 'm-sarah-admin', role: 'agency-admin', organisationId: 'acacia', schemeIds: [], label: 'Acacia Managing Agents', grantedBy: 'Thandeka Mokoena', grantedAt: '2026-02-14T09:00:00+02:00' },
+      { id: 'm-sarah-trustee', role: 'trustee', organisationId: 'acacia', schemeIds: [KC], label: 'Kingfisher Court', grantedBy: 'Thandeka Mokoena', grantedAt: '2026-04-20T09:00:00+02:00' },
     ],
   },
   {
@@ -82,10 +99,11 @@ export const PERSONAS: Identity[] = [
     initials: 'TM',
     email: 'thandeka@acacia-ma.example',
     kind: 'customer',
+    title: 'Director',
     staffId: 'staff-thandeka',
     demo: true,
-    memberships: [
-      { id: 'm-thandeka', role: 'agency-admin', agencyId: 'acacia', schemeIds: [], label: 'Director · Acacia Managing Agents', grantedBy: 'Humo onboarding', grantedAt: '2025-06-01T09:00:00+02:00' },
+    assignments: [
+      { id: 'm-thandeka', role: 'agency-admin', organisationId: 'acacia', schemeIds: [], label: 'Director · Acacia Managing Agents', grantedBy: 'Humo onboarding', grantedAt: '2025-06-01T09:00:00+02:00' },
     ],
   },
   {
@@ -94,10 +112,11 @@ export const PERSONAS: Identity[] = [
     initials: 'JM',
     email: 'johan@acacia-ma.example',
     kind: 'customer',
+    title: 'Portfolio Manager',
     staffId: 'staff-johan',
     demo: true,
-    memberships: [
-      { id: 'm-johan', role: 'portfolio-manager', agencyId: 'acacia', schemeIds: JOHAN_SCHEMES, label: '8 schemes', grantedBy: 'Thandeka Mokoena', grantedAt: '2025-06-03T09:00:00+02:00' },
+    assignments: [
+      { id: 'm-johan', role: 'portfolio-manager', organisationId: 'acacia', schemeIds: JOHAN_SCHEMES, label: '8 schemes', grantedBy: 'Thandeka Mokoena', grantedAt: '2025-06-03T09:00:00+02:00' },
     ],
   },
   {
@@ -106,10 +125,11 @@ export const PERSONAS: Identity[] = [
     initials: 'PN',
     email: 'priya@acacia-ma.example',
     kind: 'customer',
+    title: 'Senior Accountant',
     staffId: 'staff-priya',
     demo: true,
-    memberships: [
-      { id: 'm-priya', role: 'finance', agencyId: 'acacia', schemeIds: [], label: 'Senior Accountant · All schemes', grantedBy: 'Thandeka Mokoena', grantedAt: '2025-06-03T09:00:00+02:00' },
+    assignments: [
+      { id: 'm-priya', role: 'finance', organisationId: 'acacia', schemeIds: [], label: 'Senior Accountant · All schemes', grantedBy: 'Thandeka Mokoena', grantedAt: '2025-06-03T09:00:00+02:00' },
     ],
   },
   {
@@ -118,10 +138,13 @@ export const PERSONAS: Identity[] = [
     initials: 'BN',
     email: 'bongani@acacia-ma.example',
     kind: 'customer',
+    title: 'Maintenance Coordinator',
     staffId: 'staff-bongani',
     demo: true,
-    memberships: [
-      { id: 'm-bongani', role: 'operations', agencyId: 'acacia', schemeIds: JOHAN_SCHEMES, label: 'Maintenance Coordinator · 8 schemes', grantedBy: 'Thandeka Mokoena', grantedAt: '2026-05-11T09:00:00+02:00' },
+    assignments: [
+      { id: 'm-bongani', role: 'operations', organisationId: 'acacia', schemeIds: JOHAN_SCHEMES, label: 'Maintenance Coordinator · 8 schemes', grantedBy: 'Thandeka Mokoena', grantedAt: '2026-05-11T09:00:00+02:00' },
+      // History: a temporary cover assignment that has ended (assignments end; they are never deleted).
+      { id: 'm-bongani-cover', role: 'portfolio-manager', organisationId: 'acacia', schemeIds: ['craighall-mews'], label: 'Covering Craighall Mews', grantedBy: 'Thandeka Mokoena', grantedAt: '2026-03-02T09:00:00+02:00', status: 'ended', endedBy: 'Thandeka Mokoena', endedAt: '2026-04-30T17:00:00+02:00' },
     ],
   },
   {
@@ -133,9 +156,9 @@ export const PERSONAS: Identity[] = [
     kind: 'customer',
     personId: 'per-sipho',
     demo: true,
-    memberships: [
-      { id: 'm-sipho-trustee', role: 'trustee', agencyId: 'acacia', schemeIds: [KC], label: 'Chairperson · Kingfisher Court', grantedBy: 'Johan van der Merwe', grantedAt: '2025-11-20T18:00:00+02:00' },
-      { id: 'm-sipho-owner', role: 'owner', agencyId: 'acacia', schemeIds: [KC], unitLabel: 'Unit 12', label: 'Unit 12, Kingfisher Court', grantedBy: 'Johan van der Merwe', grantedAt: '2025-06-10T09:00:00+02:00' },
+    assignments: [
+      { id: 'm-sipho-trustee', role: 'trustee', organisationId: 'acacia', schemeIds: [KC], label: 'Chairperson · Kingfisher Court', grantedBy: 'Johan van der Merwe', grantedAt: '2025-11-20T18:00:00+02:00' },
+      { id: 'm-sipho-owner', role: 'owner', organisationId: 'acacia', schemeIds: [KC], unit: 'Unit 12', label: 'Unit 12, Kingfisher Court', grantedBy: 'Johan van der Merwe', grantedAt: '2025-06-10T09:00:00+02:00' },
     ],
   },
   {
@@ -147,9 +170,9 @@ export const PERSONAS: Identity[] = [
     kind: 'customer',
     personId: 'per-anele',
     demo: true,
-    memberships: [
-      { id: 'm-anele-kc', role: 'owner', agencyId: 'acacia', schemeIds: [KC], unitLabel: 'Unit 42', label: 'Unit 42, Kingfisher Court', grantedBy: 'Johan van der Merwe', grantedAt: '2025-06-10T09:00:00+02:00' },
-      { id: 'm-anele-de', role: 'owner', agencyId: 'acacia', schemeIds: ['stellenbosch-oaks'], unitLabel: 'Unit 7', label: 'Unit 7, Die Eike', grantedBy: 'Naledi Sithole', grantedAt: '2025-09-01T09:00:00+02:00' },
+    assignments: [
+      { id: 'm-anele-kc', role: 'owner', organisationId: 'acacia', schemeIds: [KC], unit: 'Unit 42', label: 'Unit 42, Kingfisher Court', grantedBy: 'Johan van der Merwe', grantedAt: '2025-06-10T09:00:00+02:00' },
+      { id: 'm-anele-de', role: 'owner', organisationId: 'acacia', schemeIds: ['stellenbosch-oaks'], unit: 'Unit 7', label: 'Unit 7, Die Eike', grantedBy: 'Naledi Sithole', grantedAt: '2025-09-01T09:00:00+02:00' },
     ],
   },
   {
@@ -160,8 +183,8 @@ export const PERSONAS: Identity[] = [
     kind: 'customer',
     personId: 'per-ruan',
     demo: true,
-    memberships: [
-      { id: 'm-ruan', role: 'tenant', agencyId: 'acacia', schemeIds: [KC], unitLabel: 'Unit 17', label: 'Unit 17, Kingfisher Court', grantedBy: 'Johan van der Merwe', grantedAt: '2026-02-01T09:00:00+02:00' },
+    assignments: [
+      { id: 'm-ruan', role: 'tenant', organisationId: 'acacia', schemeIds: [KC], unit: 'Unit 17', label: 'Unit 17, Kingfisher Court', grantedBy: 'Johan van der Merwe', grantedAt: '2026-02-01T09:00:00+02:00' },
     ],
   },
 
@@ -174,8 +197,8 @@ export const PERSONAS: Identity[] = [
     email: 'themba@secureaccess.example',
     kind: 'customer',
     demo: true,
-    memberships: [
-      { id: 'm-themba', role: 'supplier', agencyId: null, partyId: 'party-secureaccess', schemeIds: [], label: 'SecureAccess Systems', grantedBy: 'Self-registered on Humo Contractor', grantedAt: '2025-09-14T09:00:00+02:00' },
+    assignments: [
+      { id: 'm-themba', role: 'supplier', organisationId: null, partyId: 'party-secureaccess', schemeIds: [], label: 'SecureAccess Systems', grantedBy: 'Self-registered on Humo Contractor', grantedAt: '2025-09-14T09:00:00+02:00' },
     ],
   },
 
@@ -186,12 +209,13 @@ export const PERSONAS: Identity[] = [
     initials: 'NS',
     email: 'naledi@acacia-ma.example',
     kind: 'customer',
+    title: 'Portfolio Manager',
     staffId: 'staff-naledi',
-    memberships: [
+    assignments: [
       {
         id: 'm-naledi',
         role: 'portfolio-manager',
-        agencyId: 'acacia',
+        organisationId: 'acacia',
         schemeIds: ['jacaranda-heights', 'waterkloof-ridge', 'silverlakes-manor', 'centurion-palms', 'linden-court', 'sea-point-atlantic', 'stellenbosch-oaks', 'durbanville-heights'],
         label: '8 schemes',
         grantedBy: 'Thandeka Mokoena',
@@ -205,12 +229,13 @@ export const PERSONAS: Identity[] = [
     initials: 'KM',
     email: 'kabelo@acacia-ma.example',
     kind: 'customer',
+    title: 'Portfolio Manager',
     staffId: 'staff-kabelo',
-    memberships: [
+    assignments: [
       {
         id: 'm-kabelo',
         role: 'portfolio-manager',
-        agencyId: 'acacia',
+        organisationId: 'acacia',
         schemeIds: ['protea-gardens', 'umhlanga-ridge', 'ballito-dunes', 'parkhurst-lofts', 'greenstone-commons', 'benoni-lakeside', 'bedfordview-place', 'kloof-forest'],
         label: '8 schemes',
         grantedBy: 'Thandeka Mokoena',
@@ -224,9 +249,10 @@ export const PERSONAS: Identity[] = [
     initials: 'ZD',
     email: 'zanele@acacia-ma.example',
     kind: 'customer',
+    title: 'Credit Controller',
     staffId: 'staff-zanele',
-    memberships: [
-      { id: 'm-zanele', role: 'finance', agencyId: 'acacia', schemeIds: [], label: 'Credit Controller · All schemes', grantedBy: 'Thandeka Mokoena', grantedAt: '2025-07-15T09:00:00+02:00' },
+    assignments: [
+      { id: 'm-zanele', role: 'finance', organisationId: 'acacia', schemeIds: [], label: 'Credit Controller · All schemes', grantedBy: 'Thandeka Mokoena', grantedAt: '2025-07-15T09:00:00+02:00' },
     ],
   },
   {
@@ -235,8 +261,8 @@ export const PERSONAS: Identity[] = [
     initials: 'MS',
     email: 'mpho.sebe@mail.example',
     kind: 'customer',
-    memberships: [
-      { id: 'm-mpho', role: 'trustee', agencyId: 'acacia', schemeIds: ['the-willows'], label: 'Trustee · The Willows', grantedBy: 'Johan van der Merwe', grantedAt: '2026-03-18T18:00:00+02:00' },
+    assignments: [
+      { id: 'm-mpho', role: 'trustee', organisationId: 'acacia', schemeIds: ['the-willows'], label: 'Trustee · The Willows', grantedBy: 'Johan van der Merwe', grantedAt: '2026-03-18T18:00:00+02:00' },
     ],
   },
   {
@@ -245,8 +271,21 @@ export const PERSONAS: Identity[] = [
     initials: 'KP',
     email: 'kevin@randplumbing.example',
     kind: 'customer',
-    memberships: [
-      { id: 'm-kevin', role: 'supplier', agencyId: null, partyId: 'party-rand-plumbing', schemeIds: [], label: 'Rand Plumbing & Drainage', grantedBy: 'Self-registered on Humo Contractor', grantedAt: '2026-06-02T09:00:00+02:00' },
+    assignments: [
+      { id: 'm-kevin', role: 'supplier', organisationId: null, partyId: 'party-rand-plumbing', schemeIds: [], label: 'Rand Plumbing & Drainage', grantedBy: 'Self-registered on Humo Contractor', grantedAt: '2026-06-02T09:00:00+02:00' },
+    ],
+  },
+  {
+    // Invited, hasn't signed in yet: the role is ready for them when they accept.
+    id: 'p-karabo',
+    name: 'Karabo Dlamini',
+    initials: 'KD',
+    email: 'karabo@acacia-ma.example',
+    kind: 'customer',
+    status: 'invited',
+    title: 'Portfolio Manager',
+    assignments: [
+      { id: 'm-karabo', role: 'portfolio-manager', organisationId: 'acacia', schemeIds: ['bedfordview-place'], label: 'Bedfordview Place', grantedBy: 'Thandeka Mokoena', grantedAt: '2026-10-06T10:00:00+02:00' },
     ],
   },
   {
@@ -255,8 +294,8 @@ export const PERSONAS: Identity[] = [
     initials: 'AV',
     email: 'annette@fynbos-pa.example',
     kind: 'customer',
-    memberships: [
-      { id: 'm-annette', role: 'agency-admin', agencyId: 'fynbos', schemeIds: [], label: 'Principal · Fynbos Property Admin', grantedBy: 'Humo onboarding', grantedAt: '2026-01-20T09:00:00+02:00' },
+    assignments: [
+      { id: 'm-annette', role: 'agency-admin', organisationId: 'fynbos', schemeIds: [], label: 'Principal · Fynbos Property Admin', grantedBy: 'Humo onboarding', grantedAt: '2026-01-20T09:00:00+02:00' },
     ],
   },
   {
@@ -266,8 +305,8 @@ export const PERSONAS: Identity[] = [
     email: 'dumisani@humo.example',
     kind: 'humo',
     demo: true,
-    memberships: [
-      { id: 'm-dumisani', role: 'humo-account-manager', agencyId: null, schemeIds: [], label: 'Gauteng & KZN accounts', grantedBy: 'Terry Mosoma', grantedAt: '2026-02-02T09:00:00+02:00' },
+    assignments: [
+      { id: 'm-dumisani', role: 'humo-account-manager', organisationId: null, schemeIds: [], label: 'Gauteng & KZN accounts', grantedBy: 'Terry Mosoma', grantedAt: '2026-02-02T09:00:00+02:00' },
     ],
   },
   {
@@ -277,9 +316,42 @@ export const PERSONAS: Identity[] = [
     email: 'nomsa@humo.example',
     kind: 'humo',
     demo: true,
-    memberships: [
-      { id: 'm-nomsa', role: 'humo-executive', agencyId: null, schemeIds: [], label: 'Chief Operating Officer', grantedBy: 'Terry Mosoma', grantedAt: '2026-01-12T09:00:00+02:00' },
-      { id: 'm-nomsa-admin', role: 'system-admin', agencyId: null, schemeIds: [], label: 'Platform operations', grantedBy: 'Terry Mosoma', grantedAt: '2026-01-12T09:00:00+02:00' },
+    assignments: [
+      { id: 'm-nomsa', role: 'humo-executive', organisationId: null, schemeIds: [], label: 'Chief Operating Officer', grantedBy: 'Terry Mosoma', grantedAt: '2026-01-12T09:00:00+02:00' },
+      { id: 'm-nomsa-admin', role: 'system-admin', organisationId: null, schemeIds: [], label: 'Platform operations', grantedBy: 'Terry Mosoma', grantedAt: '2026-01-12T09:00:00+02:00' },
     ],
   },
 ];
+
+/** "Unit 42" in Kingfisher Court → the unit's id, "unit-kc-042". */
+function unitIdFor(schemeId: string, unit: string): string {
+  const code = SCHEMES.find((x) => x.id === schemeId)?.code ?? schemeId;
+  return `unit-${code.toLowerCase()}-${unit.replace(/\D/g, '').padStart(3, '0')}`;
+}
+
+function toAssignment(a: SeedAssignment): RoleAssignment {
+  const { organisationId, schemeIds, partyId, unit, status, ...rest } = a;
+  const type: ScopeType = isHumoRole(a.role) ? 'platform' : partyId ? 'party' : unit ? 'unit' : schemeIds.length ? 'schemes' : 'organisation';
+  return {
+    ...rest,
+    status: status ?? 'active',
+    scope: { type, organisationId, schemeIds, ...(unit ? { unitId: unitIdFor(schemeIds[0], unit) } : {}), ...(partyId ? { partyId } : {}) },
+  };
+}
+
+function toIdentity(seed: SeedIdentity): Identity {
+  const assignments = seed.assignments.map(toAssignment);
+  const orgs = [...new Set(assignments.map((a) => a.scope.organisationId).filter((x): x is string => !!x))];
+  return {
+    ...seed,
+    status: seed.status ?? 'active',
+    assignments,
+    memberships: orgs.map((organisationId) => ({
+      organisationId,
+      status: 'active',
+      since: assignments.filter((a) => a.scope.organisationId === organisationId).map((a) => a.grantedAt ?? '').sort()[0],
+    })),
+  };
+}
+
+export const PERSONAS: Identity[] = SEED.map(toIdentity);

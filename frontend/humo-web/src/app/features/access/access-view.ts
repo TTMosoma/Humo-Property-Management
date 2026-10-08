@@ -1,4 +1,4 @@
-import { Identity, ROLE_LABELS, ROLE_META, RoleAssignment, RoleFamily } from '../../domain';
+import { Identity, ROLE_LABELS, ROLE_META, RoleAssignment, RoleFamily, activeAssignments } from '../../domain';
 
 /** Shared helpers for the access screens. */
 
@@ -11,9 +11,9 @@ export function assignmentTitle(a: RoleAssignment): string {
 }
 
 /** Which tab a person falls under in Users & access (by their most senior assignment). */
-export function familyOf(i: Identity, agencyId: string | null): RoleFamily {
+export function familyOf(i: Identity, organisationId: string | null): RoleFamily {
   const order: RoleFamily[] = ['agency', 'governance', 'supplier', 'resident'];
-  const fams = i.memberships.filter((m) => agencyId === null || m.agencyId === agencyId).map((m) => ROLE_META[m.role].family);
+  const fams = activeAssignments(i).filter((m) => organisationId === null || m.scope.organisationId === organisationId).map((m) => ROLE_META[m.role].family);
   return order.find((f) => fams.includes(f)) ?? 'resident';
 }
 

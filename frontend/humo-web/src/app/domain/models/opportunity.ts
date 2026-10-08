@@ -17,7 +17,7 @@ export type OpportunityRuleId = 'governance-addon' | 'advanced-reporting-addon' 
 
 export interface Opportunity {
   id: string;
-  agencyId: string;
+  organisationId: string;
   rule: OpportunityRuleId;
   kind: OpportunityKind;
   title: string;
@@ -38,7 +38,7 @@ export interface OpportunityContext {
 export interface OpportunityRule {
   id: OpportunityRuleId;
   description: string;
-  detect(ctx: OpportunityContext): Omit<Opportunity, 'id' | 'agencyId' | 'rule'> | null;
+  detect(ctx: OpportunityContext): Omit<Opportunity, 'id' | 'organisationId' | 'rule'> | null;
 }
 
 export const OPPORTUNITY_RULES: OpportunityRule[] = [
@@ -101,7 +101,7 @@ export function detectOpportunities(ctx: OpportunityContext, rules = OPPORTUNITY
   return rules
     .map((r) => {
       const found = r.detect(ctx);
-      return found ? { ...found, id: `${ctx.subscription.agencyId}:${r.id}`, agencyId: ctx.subscription.agencyId, rule: r.id } : null;
+      return found ? { ...found, id: `${ctx.subscription.organisationId}:${r.id}`, organisationId: ctx.subscription.organisationId, rule: r.id } : null;
     })
     .filter((o): o is Opportunity => !!o);
 }
@@ -109,7 +109,7 @@ export function detectOpportunities(ctx: OpportunityContext, rules = OPPORTUNITY
 /** Where a customer asked for something themselves (from a nudge or the Plan page). */
 export interface UpgradeRequest {
   id: string;
-  agencyId: string;
+  organisationId: string;
   addOn?: AddOnId;
   package?: PackageId;
   requestedBy: string;

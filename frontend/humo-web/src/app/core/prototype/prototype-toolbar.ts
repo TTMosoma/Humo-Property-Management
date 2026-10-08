@@ -1,7 +1,8 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { Identity, ROLE_LABELS } from '../../domain';
+import { Identity, ROLE_LABELS, SessionDataSource, activeAssignments } from '../../domain';
 import { PlatformStore } from '../../mock/db/platform-store';
 import { SessionService } from '../session/session.service';
 import { PrototypeStateService, ViewState } from './prototype-state.service';
@@ -22,6 +23,9 @@ export class PrototypeToolbar {
   protected readonly proto = inject(PrototypeStateService);
   private readonly router = inject(Router);
   private readonly platform = inject(PlatformStore);
+  private readonly sessions = inject(SessionDataSource);
+
+  protected readonly personas = toSignal(this.sessions.demoIdentities(), { initialValue: [] as Identity[] });
 
   protected readonly open = signal(false);
   protected readonly roleLabels = ROLE_LABELS;
@@ -39,14 +43,26 @@ export class PrototypeToolbar {
   }
 
   protected rolesOf(p: Identity): string {
-    return p.memberships.map((m) => ROLE_LABELS[m.role]).join(' · ');
+    return activeAssignments(p).map((m) => ROLE_LABELS[m.role]).join(' · ');
   }
 
   protected choosePersona(id: string): void {
     this.open.set(false);
     if (id === this.session.actor().id && !this.session.isImpersonating()) return;
-    this.session.switchPersona(id);
     this.proto.viewState.set('live');
-    this.router.navigateByUrl(this.session.homeRoute());
+    this.sessions.signIn(id).subscribe(() => {
+      this.session.signedInAgain();
+      this.router.navigateByUrl(this.session.homeRoute());
+    });
+  }
+
+  /**
+   * The simulated state lives in the fake network, so the page has to ask
+   * again: re-create the routed page so its requests go out under the new state.
+   */
+  protected setState(state: ViewState): void {
+    this.proto.viewState.set(state);
+    const url = this.router.url;
+    this.router.navigateByUrl('/not-found', { skipLocationChange: true }).then(() => this.router.navigateByUrl(url));
   }
 }

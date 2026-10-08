@@ -15,7 +15,7 @@ import {
   SensitiveAction,
 } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
-import { pageState } from '../../core/prototype/page-state';
+import { loadable } from '../../core/data/loadable';
 import { StepUpService } from '../../core/security/step-up.service';
 import { SessionService } from '../../core/session/session.service';
 import { formatDate } from '../../ui/format/money';
@@ -43,37 +43,28 @@ export class SecurityPage {
   private readonly stepUp = inject(StepUpService);
   private readonly feedback = inject(FeedbackService);
   protected readonly session = inject(SessionService);
-  protected readonly page = pageState();
 
   /** Always the human at the keyboard — never the impersonated user. */
   private readonly identityId = computed(() => this.session.actor().id);
 
-  private readonly result = toSignal(
-    toObservable(this.identityId).pipe(
-      switchMap((id) =>
-        this.data.profile(id).pipe(
-          map((p) => ({ profile: p, failed: false })),
-          catchError(() => of({ profile: null as SecurityProfile | null, failed: true })),
-        ),
-      ),
-    ),
-  );
+  protected readonly result = loadable(() => this.data.profile(this.identityId()).pipe(map((profile) => ({ profile }))));
   protected readonly activity = toSignal(
     toObservable(this.identityId).pipe(
-      switchMap((id) => this.audit.query({ agencyId: null, identityId: id, category: 'security' }).pipe(catchError(() => of([] as AuditEvent[])))),
+      switchMap((id) => this.audit.query({ organisationId: null, identityId: id, category: 'security' }).pipe(catchError(() => of([] as AuditEvent[])))),
       map((events) => events.filter((e) => e.actor.identityId === this.identityId()).slice(0, 6)),
     ),
     { initialValue: [] as AuditEvent[] },
   );
 
-  protected readonly loading = computed(() => this.page.status() === 'loading' || this.result() === undefined);
-  protected readonly failed = computed(() => this.page.status() === 'error' || !!this.result()?.failed);
-  protected readonly profile = computed(() => this.result()?.profile ?? null);
+  protected readonly loading = this.result.loading;
+  protected readonly failed = this.result.failed;
+  protected readonly profile = computed(() => this.result.value()?.profile ?? null);
   protected readonly otherSessions = computed(() => (this.profile()?.sessions ?? []).filter((s) => !s.current).length);
 
   /** Only the sensitive actions this person could ever perform, across all their roles. */
   protected readonly sensitive = computed<SensitiveAction[]>(() => {
-    const held = new Set<Permission>(this.session.actor().memberships.flatMap((m) => [...ROLE_PERMISSIONS[m.role], ...(m.grants ?? [])]));
+    // The actor's own permissions across every role they hold, as the server reported them.
+    const held = { has: (p: Permission) => this.session.actorCan(p) };
     const needs: [SensitiveAction, Permission | null][] = [
       ['release-payment', 'Payables.Release'],
       ['approve-large-amount', 'Approvals.Decide'],

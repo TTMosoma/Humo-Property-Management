@@ -7,7 +7,7 @@ import { AttentionService } from '../../core/attention/attention.service';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { ScopeService } from '../../core/scope/scope.service';
 import { SessionService } from '../../core/session/session.service';
-import { STAFF, personName } from '../../mock/fixtures/staff';
+import { organisationTeam } from '../../core/session/team';
 import { Drawer } from '../../ui/drawer/drawer';
 import { RandPipe, formatDate } from '../../ui/format/money';
 import { StatusPill } from '../../ui/status-pill/status-pill';
@@ -74,7 +74,7 @@ import { workItemView } from './work-item-view';
         <div class="menu-panel" cdkMenu>
           <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="assign(myStaffId())">Assign to me</button>
           <div class="menu-divider"></div>
-          @for (s of staff; track s.id) {
+          @for (s of staff(); track s.id) {
             <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="assign(s.id)">
               {{ s.name }} <span class="menu-item-meta">{{ s.title }}</span>
             </button>
@@ -106,15 +106,16 @@ export class WorkItemPreview {
   private readonly scope = inject(ScopeService);
   private readonly feedback = inject(FeedbackService);
 
-  protected readonly staff = STAFF;
+  private readonly team = organisationTeam();
+  protected readonly staff = this.team.staff;
   protected readonly formatDate = formatDate;
 
   /** Live: reflects decisions/completions made while the drawer is open. */
   protected readonly item = computed(() => this.attention.visible().find((w) => w.id === this.data.id));
   protected readonly view = computed(() => (this.item() ? workItemView(this.item()!) : null));
   protected readonly scheme = computed(() => this.scope.findScheme(this.item()?.schemeId));
-  protected readonly assignee = computed(() => personName(this.item()?.assigneeId));
-  protected readonly myStaffId = computed(() => this.session.persona().staffId ?? this.session.persona().id);
+  protected readonly assignee = computed(() => this.team.nameOf(this.item()?.assigneeId));
+  protected readonly myStaffId = computed(() => this.session.identity().staffId ?? this.session.identity().id);
 
   protected complete(): void {
     const id = this.data.id;
@@ -130,7 +131,7 @@ export class WorkItemPreview {
 
   protected assign(staffId: string): void {
     this.attention.assign([this.data.id], staffId).subscribe({
-      next: () => this.feedback.success(`Assigned to ${personName(staffId)}`),
+      next: () => this.feedback.success(`Assigned to ${this.team.nameOf(staffId)}`),
       error: () => this.feedback.error('Couldn’t reassign. Try again.'),
     });
   }

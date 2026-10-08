@@ -28,7 +28,7 @@
   @if (session.isImpersonating()) {
     <span class="imp-note">
       <ion-icon name="eye-outline" aria-hidden="true" />
-      You’re verifying as <strong>{{ actor.name }}</strong>, not as {{ session.persona().name }}.
+      You’re verifying as <strong>{{ actor.name }}</strong>, not as {{ session.identity().name }}.
     </span>
   }
 </div>

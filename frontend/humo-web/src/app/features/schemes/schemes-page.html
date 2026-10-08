@@ -3,19 +3,19 @@
 <ui-view-tabs label="Scheme views" [tabs]="tabs()" [active]="state().view ?? 'all'" (activeChange)="patch({ view: $event })" />
 <ui-filter-bar
   searchLabel="Search by name, code, suburb or manager…"
-  [filters]="filters"
+  [filters]="filters()"
   [values]="{ type: state().type, province: state().province, manager: state().manager, health: state().health }"
   (valuesChange)="setFilters($event)"
   [search]="state().q ?? ''"
   (searchChange)="patch({ q: $event })"
 />
 
-@switch (page.status()) {
+@switch (status()) {
   @case ('loading') {
     <ui-skeleton [count]="8" />
   }
   @case ('error') {
-    <div class="surface"><ui-error-state title="We couldn’t load your schemes" (retry)="page.retry()" /></div>
+    <div class="surface"><ui-error-state title="We couldn’t load your schemes" (retry)="retry()" /></div>
   }
   @default {
     @if (rows().length === 0) {
@@ -24,7 +24,7 @@
           <ui-empty-state kind="first-use" illustration="building" title="No pinned schemes yet" message="Pin the schemes you work on most and they’ll appear in the sidebar for one-click access.">
             <button type="button" class="btn btn-secondary" (click)="patch({ view: 'all' })">Browse all schemes</button>
           </ui-empty-state>
-        } @else if (allRows().length === 0 || page.forceEmpty()) {
+        } @else if (allRows().length === 0) {
           <ui-empty-state kind="first-use" illustration="building" title="Add your first scheme" message="Bring in a scheme with its units and owners — from a spreadsheet or your previous system — and Humo Property Management builds the rest.">
             <button type="button" class="btn btn-primary" disabled title="Arrives with onboarding">Import schemes</button>
           </ui-empty-state>
@@ -52,6 +52,9 @@
             <div class="scheme-text">
               <div class="name">
                 {{ r.scheme.name }}
+                @if (r.scheme.status !== 'active') {
+                  <ui-status-pill [label]="schemeStatus(r)" tone="neutral" />
+                }
                 <ui-status-pill class="rating" [label]="ratingOf(r).label" [tone]="ratingOf(r).tone" />
               </div>
               <div class="sub">{{ r.scheme.code }} · {{ r.scheme.type }} · {{ r.scheme.suburb }}, {{ r.scheme.city }}</div>

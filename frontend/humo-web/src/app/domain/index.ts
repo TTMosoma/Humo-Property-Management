@@ -1,8 +1,8 @@
 export * from './models/role';
-export * from './models/agency';
+export * from './models/organisation';
 export * from './models/scheme';
 export * from './models/scheme-health';
-export * from './models/persona';
+export * from './models/identity';
 export * from './models/notification';
 export * from './models/work-item';
 export * from './ports/scheme-data-source';
@@ -28,3 +28,6 @@ export * from './models/opportunity';
 export * from './models/nudge';
 export * from './models/platform';
 export * from './ports/platform-data-sources';
+export * from './ports/session-data-source';
+export * from './ports/organisation-data-sources';
+export * from './ports/api-error';

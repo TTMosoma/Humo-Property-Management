@@ -3,7 +3,7 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, map, of, switchMap } from 'rxjs';
 import { Scheme, UnitDataSource, UnitSummary } from '../../domain';
-import { pageState } from '../../core/prototype/page-state';
+import { loadable } from '../../core/data/loadable';
 import { ScopeNotice } from '../../core/scope/scope-notice';
 import { ScopeService } from '../../core/scope/scope.service';
 import { CellDef, ColumnDef, DataTable } from '../../ui/data-table/data-table';
@@ -41,7 +41,6 @@ export class UnitsPage {
   private readonly data = inject(UnitDataSource);
   private readonly drawer = inject(DrawerService);
   protected readonly scope = inject(ScopeService);
-  protected readonly page = pageState();
 
   /** Set when shown as a scheme's tab. */
   protected readonly fixedScheme = toSignal(this.route.data.pipe(map((d) => d['scheme'] as Scheme | undefined)), {
@@ -57,20 +56,11 @@ export class UnitsPage {
     return fixed ? [fixed.id] : this.scope.effectiveIds();
   });
 
-  private readonly result = toSignal(
-    toObservable(this.schemeIds).pipe(
-      switchMap((ids) =>
-        this.data.list(ids).pipe(
-          map((rows) => ({ rows, failed: false })),
-          catchError(() => of({ rows: [] as UnitSummary[], failed: true })),
-        ),
-      ),
-    ),
-  );
+  protected readonly result = loadable(() => this.data.list(this.schemeIds()).pipe(map((rows) => ({ rows }))));
 
-  protected readonly loading = computed(() => this.page.status() === 'loading' || this.result() === undefined);
-  protected readonly failed = computed(() => this.page.status() === 'error' || !!this.result()?.failed);
-  private readonly all = computed(() => this.result()?.rows ?? []);
+  protected readonly loading = this.result.loading;
+  protected readonly failed = this.result.failed;
+  private readonly all = computed(() => this.result.value()?.rows ?? []);
 
   private readonly byView = computed(() => {
     const rows = this.all();
@@ -87,7 +77,6 @@ export class UnitsPage {
   });
 
   protected readonly filtered = computed(() => {
-    if (this.page.forceEmpty()) return [];
     const s = this.state();
     const q = (s.q ?? '').toLowerCase().trim();
     const num = /^\d+$/.test(q) ? q : null;

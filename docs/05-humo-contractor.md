@@ -34,7 +34,7 @@ Humo Platform
 - **Two scopes of reputation:**
   - **Agency-level** (this agency's history with them): on the PM Supplier.
   - **Humo-wide** (all customers): on the Humo Contractor profile.
-- **Identities:** a contractor's Humo identity is **not owned by an agency**. The role assignment has `agencyId: null` and a `partyId`.
+- **Identities:** a contractor's Humo identity is **not owned by an agency**. The role assignment's scope is `{ type: 'party', organisationId: null, partyId }`.
 
 ## 3. Models
 

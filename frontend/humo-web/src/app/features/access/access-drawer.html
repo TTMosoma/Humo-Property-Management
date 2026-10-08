@@ -23,16 +23,30 @@
         @if (!isSelf()) {
           @if (confirmRemove() === m.id) {
             <span class="confirm">
-              <button type="button" class="btn btn-danger btn-sm" (click)="remove(m)">Remove</button>
+              <button type="button" class="btn btn-danger btn-sm" (click)="remove(m)">End role</button>
               <button type="button" class="btn btn-ghost btn-sm" (click)="confirmRemove.set(null)">Keep</button>
             </span>
           } @else {
-            <button type="button" class="btn btn-ghost btn-sm" (click)="confirmRemove.set(m.id)" [attr.aria-label]="'Remove ' + roleLabels[m.role]">Remove</button>
+            <button type="button" class="btn btn-ghost btn-sm" (click)="confirmRemove.set(m.id)" [attr.aria-label]="'End ' + roleLabels[m.role]">End</button>
           }
         }
       </li>
     }
   </ul>
+
+  @if (ended().length) {
+    <details class="history">
+      <summary>Ended roles ({{ ended().length }})</summary>
+      <ul>
+        @for (m of ended(); track m.id) {
+          <li>
+            <span class="r-name">{{ roleLabels[m.role] }}</span> · {{ m.label }}
+            <span class="r-by">Ended{{ m.endedAt ? ' ' + formatDate(m.endedAt, true) : '' }}{{ m.endedBy ? ' by ' + m.endedBy : '' }}</span>
+          </li>
+        }
+      </ul>
+    </details>
+  }
 
   @if (!isSelf()) {
     @if (!adding()) {
@@ -55,6 +69,7 @@
             }
           </select>
           <span class="f-help">{{ meta().summary }}</span>
+          <ui-field-error [errors]="errors()" field="role" />
         </label>
 
         @if (role() === 'agency-admin') {
@@ -66,11 +81,12 @@
 
         @switch (meta().scopeKind) {
           @case ('agency') {
-            <div class="f-static"><span class="f-label">Applies to</span>All of {{ session.agency()?.shortName }}</div>
+            <div class="f-static"><span class="f-label">Applies to</span>All of {{ session.organisation()?.shortName }}</div>
           }
           @case ('schemes') {
             <div class="field">
               <span class="f-label">{{ role() === 'trustee' ? 'Scheme (one board per assignment)' : 'Where it applies' }}</span>
+              <ui-field-error [errors]="errors()" field="scope" />
               @if (role() !== 'trustee') {
                 <label class="opt"><input type="radio" name="all" [checked]="allSchemes()" (change)="allSchemes.set(true)" /> All schemes, including new ones</label>
                 <label class="opt"><input type="radio" name="all" [checked]="!allSchemes()" (change)="allSchemes.set(false)" /> Selected schemes</label>
@@ -104,7 +120,8 @@
             </div>
             <label class="field">
               <span class="f-label">Unit</span>
-              <input type="text" placeholder="e.g. 42" [value]="unit()" (input)="unit.set($any($event.target).value)" />
+              <input type="text" placeholder="e.g. 42" [value]="unit()" (input)="unit.set($any($event.target).value); errors.set({})" [attr.aria-invalid]="!!errors()['unit']" />
+              <ui-field-error [errors]="errors()" field="unit" />
             </label>
           }
           @case ('supplier') {

@@ -1,11 +1,11 @@
 <ui-page-header
   eyebrow="Settings"
   title="Plan & features"
-  [subtitle]="'What ' + (session.agency()?.shortName ?? 'your agency') + ' has in Humo Property Management, and where each feature comes from.' + (plan() ? ' Your Humo account manager is ' + plan()!.accountManager + '.' : '')"
+  [subtitle]="'What ' + (session.organisation()?.shortName ?? 'your agency') + ' has in Humo Property Management, and where each feature comes from.' + (plan() ? ' Your Humo account manager is ' + plan()!.accountManager + '.' : '')"
 />
 
 @if (failed()) {
-  <ui-error-state (retry)="page.retry()" />
+  <ui-error-state (retry)="result.retry()" />
 } @else if (loading()) {
   <ui-skeleton variant="tiles" [count]="3" />
 } @else {

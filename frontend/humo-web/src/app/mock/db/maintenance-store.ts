@@ -20,7 +20,7 @@ import {
   supplierCompliance,
 } from '../../domain';
 import { formatRand } from '../../ui/format/money';
-import { personName } from '../fixtures/staff';
+import { personName, portfolioManagerOf } from '../fixtures/staff';
 import { MockDb } from './mock-db';
 import { round2, seeded } from './random';
 import { seedMaintenance } from './seed-maintenance';
@@ -191,7 +191,7 @@ export class MaintenanceStore {
       stage: 'reported',
       reportedBy: input.reportedBy,
       reportedAt: now,
-      assigneeId: input.reportedBy.role === 'staff' ? this.db.scheme(input.schemeId).portfolioManagerId : null,
+      assigneeId: input.reportedBy.role === 'staff' ? (portfolioManagerOf(input.schemeId)?.staffId ?? null) : null,
       photos: input.photoCaptions.map((caption, i) => ({ id: `${ref}-p${i + 1}`, caption, takenAt: now, by: input.reportedBy.name, stage: 'report' })),
       quotes: [],
       budgetCategory: `Maintenance — ${input.category.toLowerCase()}`,
@@ -222,7 +222,7 @@ export class MaintenanceStore {
   }
 
   /** Find or start the agency's supplier relationship with a Humo Contractor party. */
-  linkParty(input: { partyId: string; name: string; trades: Supplier['trades']; contactName: string; phone: string; email: string; schemeId: string }): string {
+  linkParty(input: { partyId: string; name: string; trades: Supplier['trades']; schemeId: string }, contact: { name: string; phone: string; email: string }): string {
     const existing = this.suppliers.find((s) => s.partyId === input.partyId);
     if (existing) {
       if (!existing.schemeIds.includes(input.schemeId)) existing.schemeIds.push(input.schemeId);
@@ -234,9 +234,9 @@ export class MaintenanceStore {
       partyId: input.partyId,
       name: input.name,
       trades: input.trades,
-      contactName: input.contactName,
-      phone: input.phone,
-      email: input.email,
+      contactName: contact.name,
+      phone: contact.phone,
+      email: contact.email,
       bankAccount: 'To be confirmed',
       bankVerified: false,
       schemeIds: [input.schemeId],

@@ -1,7 +1,8 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, of } from 'rxjs';
-import { Scheme, SchemeDataSource, isHumoRole } from '../../domain';
+import { Scheme, SchemeDataSource, coversAllSchemes, isHumoRole } from '../../domain';
+import { loadable } from '../data/loadable';
 import { safeStorage } from '../prototype/safe-storage';
 import { SessionService } from '../session/session.service';
 
@@ -35,12 +36,13 @@ function writeSession(key: string, value: string | null): void {
 @Injectable({ providedIn: 'root' })
 export class ScopeService {
   private readonly session = inject(SessionService);
+  private readonly source = inject(SchemeDataSource);
 
-  /** Loaded once for the shell; independent of the page-level error simulator. */
-  private readonly allSchemes = toSignal(
-    inject(SchemeDataSource).list().pipe(catchError(() => of([] as Scheme[]))),
-    { initialValue: [] as Scheme[] },
-  );
+  /** Loaded once for the shell. Pages that list schemes show its state (and can retry it). */
+  private readonly schemes = loadable(() => this.source.list());
+  private readonly allSchemes = computed(() => this.schemes.value() ?? []);
+  readonly status = this.schemes.status;
+  readonly retry = () => this.schemes.retry();
 
   /**
    * Schemes the active assignment covers. "Role determines what someone can do;
@@ -48,11 +50,11 @@ export class ScopeService {
    * extra (temporary) assignment, not a wider role.
    */
   readonly accessible = computed<Scheme[]>(() => {
-    const m = this.session.membership();
+    const m = this.session.assignment();
     if (isHumoRole(m.role)) return [];
-    const inAgency = this.allSchemes().filter((s) => s.agencyId === m.agencyId);
-    if (m.schemeIds.length === 0) return inAgency;
-    return inAgency.filter((s) => m.schemeIds.includes(s.id));
+    const inAgency = this.allSchemes().filter((s) => s.organisationId === m.scope.organisationId);
+    if (coversAllSchemes(m)) return inAgency;
+    return inAgency.filter((s) => m.scope.schemeIds.includes(s.id));
   });
 
   /** Whether this membership can change scope (staff) or is fixed to its scheme(s). */
@@ -63,7 +65,7 @@ export class ScopeService {
   readonly scopeId = computed<string | null>(() => {
     const ids = this.accessible().map((s) => s.id);
     if (!this.canChangeScope()) {
-      const own = this.session.membership().schemeIds;
+      const own = this.session.assignment().scope.schemeIds;
       return own.length === 1 ? own[0] : null;
     }
     const chosen = this.chosenId();
@@ -83,11 +85,11 @@ export class ScopeService {
 
   readonly pinnedIds = computed<string[]>(() => {
     // Pins belong to an assignment: Sarah's Portfolio Manager pins aren't her Finance pins.
-    const stored = this.pinnedStore()[this.session.membership().id];
+    const stored = this.pinnedStore()[this.session.assignment().id];
     if (stored) return stored;
     // Sensible default: a portfolio manager's assigned schemes; otherwise the first few in the agency.
-    const m = this.session.membership();
-    if (this.session.isStaff() && m.schemeIds.length <= 8) return m.schemeIds;
+    const m = this.session.assignment();
+    if (this.session.isStaff() && m.scope.schemeIds.length <= 8) return m.scope.schemeIds;
     return [];
   });
 
@@ -112,7 +114,7 @@ export class ScopeService {
   }
 
   togglePin(id: string): void {
-    const key = this.session.membership().id;
+    const key = this.session.assignment().id;
     const current = this.pinnedIds();
     const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
     this.pinnedStore.update((s) => ({ ...s, [key]: next }));

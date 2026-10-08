@@ -13,7 +13,7 @@
     <div class="label-caps group-label" id="proto-persona">Sign in as</div>
     <p class="hint">One identity per person. People with several roles switch between them from their name in the top bar.</p>
     <div class="personas" role="radiogroup" aria-labelledby="proto-persona">
-      @for (p of session.personas(); track p.id) {
+      @for (p of personas(); track p.id) {
         <button
           type="button"
           role="radio"
@@ -28,8 +28,8 @@
               @if (p.kind === 'humo') {
                 <span class="multi humo">Humo</span>
               }
-              @if (p.memberships.length > 1) {
-                <span class="multi">{{ p.memberships.length }} roles</span>
+              @if (p.assignments.length > 1) {
+                <span class="multi">{{ p.assignments.length }} roles</span>
               }
             </span>
             <span class="who">{{ rolesOf(p) }}</span>
@@ -45,7 +45,7 @@
           type="button"
           role="radio"
           [attr.aria-checked]="proto.viewState() === s.value"
-          (click)="proto.viewState.set(s.value)"
+          (click)="setState(s.value)"
         >
           {{ s.label }}
         </button>

@@ -1,5 +1,6 @@
 import { Observable } from 'rxjs';
 import {
+  ContactDisclosure,
   ContractorEndorsement,
   ContractorProfile,
   ContractorQuote,
@@ -13,7 +14,10 @@ import {
 export interface QuoteRequestView {
   request: QuoteRequest;
   quotes: ContractorQuote[];
+  /** By party id. `party.contact` is present only where `disclosure` allows it. */
   profiles: Record<string, ContractorProfile>;
+  /** By party id: whether the customer may see direct contact details yet, and why. Decided by the server. */
+  disclosure: Record<string, ContactDisclosure>;
   events: QuoteLifecycleEvent[];
 }
 

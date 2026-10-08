@@ -11,7 +11,7 @@ import { EntitlementSet, FeatureModule, MODULE_KEY_FEATURE } from './entitlement
 
 /** Usage analytics for one customer over the last 30 days (mock today, event pipeline later). */
 export interface UsageSnapshot {
-  agencyId: string;
+  organisationId: string;
   at: string;
   seats: number;
   activeUsers30d: number;
@@ -60,7 +60,7 @@ export interface ModuleAdoption {
 }
 
 export interface AccountHealth {
-  agencyId: string;
+  organisationId: string;
   score: number;
   band: HealthBand;
   signals: HealthSignal[];
@@ -137,7 +137,7 @@ export function calculateHealth(s: UsageSnapshot, ent: EntitlementSet, weights =
 
   const score = clamp(signals.reduce((n, sig) => n + sig.score * sig.weight, 0));
   return {
-    agencyId: s.agencyId,
+    organisationId: s.organisationId,
     score,
     band: bandOf(score),
     signals,

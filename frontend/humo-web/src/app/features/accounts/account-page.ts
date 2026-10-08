@@ -5,7 +5,7 @@ import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, map, of, switchMap } from 'rxjs';
 import { AccountDataSource, ReceiptDataSource, ReceiptView, Transaction, UnitDataSource, periodLabel, periodOf } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
-import { pageState } from '../../core/prototype/page-state';
+import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
 import { AgeingBar } from '../../ui/ageing/ageing-bar';
 import { CellDef, ColumnDef, DataTable } from '../../ui/data-table/data-table';
@@ -35,27 +35,25 @@ export class AccountPage {
   private readonly receipts = inject(ReceiptDataSource);
   private readonly feedback = inject(FeedbackService);
   protected readonly session = inject(SessionService);
-  protected readonly page = pageState();
 
   private readonly key = toSignal(
     this.route.paramMap.pipe(map((p) => ({ schemeId: p.get('schemeId')!, number: p.get('unitId')! }))),
     { initialValue: { schemeId: this.route.snapshot.paramMap.get('schemeId')!, number: this.route.snapshot.paramMap.get('unitId')! } },
   );
 
-  protected readonly summary = toSignal(
-    toObservable(this.key).pipe(
-      switchMap((k) => this.units.get(k.schemeId, k.number).pipe(map((s) => s ?? (false as const)), catchError(() => of(null)))),
-    ),
-  );
+  protected readonly summary = loadable(() => {
+    const k = this.key();
+    return this.units.get(k.schemeId, k.number).pipe(map((s) => s ?? (false as const)));
+  });
 
   protected readonly detail = toSignal(
-    toObservable(this.summary).pipe(
+    toObservable(this.summary.value).pipe(
       switchMap((s) => (s ? this.accounts.get(s.account.id).pipe(map((d) => d ?? null), catchError(() => of(null))) : of(undefined))),
     ),
   );
 
   protected readonly suggestions = toSignal(
-    toObservable(this.summary).pipe(
+    toObservable(this.summary.value).pipe(
       switchMap((s) => (s ? this.receipts.suggestedFor(s.account.id).pipe(catchError(() => of([] as ReceiptView[]))) : of([] as ReceiptView[]))),
     ),
     { initialValue: [] as ReceiptView[] },
@@ -104,7 +102,7 @@ export class AccountPage {
   });
 
   protected readonly chain = computed(() => {
-    const s = this.summary();
+    const s = this.summary.value();
     return s ? unitChain(s, s.account) : [];
   });
 
@@ -127,7 +125,7 @@ export class AccountPage {
   }
 
   protected allocateHere(v: ReceiptView): void {
-    const s = this.summary();
+    const s = this.summary.value();
     if (!s) return;
     this.busyReceipt.set(v.receipt.id);
     this.receipts.allocate(v.receipt.id, [{ accountId: s.account.id, amount: v.receipt.amount }], false).subscribe({

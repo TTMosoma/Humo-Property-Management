@@ -2,7 +2,7 @@ import { Invoice, Job, JobEvent, JobStage, PaymentBatch, Priority, Quote, Scheme
 import { formatRand } from '../../ui/format/money';
 import { SCHEME_HEALTH } from '../fixtures/scheme-health';
 import { SCHEMES } from '../fixtures/schemes';
-import { personName } from '../fixtures/staff';
+import { personName, portfolioManagerOf } from '../fixtures/staff';
 import { pick, round2, seeded } from './random';
 
 function day(offset: number, hour = 9): string {
@@ -292,7 +292,7 @@ export function seedMaintenance(units: Unit[]): MaintenanceSeed {
       stage: s.stage,
       reportedBy: s.reportedBy,
       reportedAt,
-      assigneeId: s.stage === 'reported' ? null : scheme.portfolioManagerId,
+      assigneeId: s.stage === 'reported' ? null : (portfolioManagerOf(scheme.id)?.staffId ?? null),
       photos: (s.photos ?? []).map((caption, i) => ({ id: `${s.ref}-p${i + 1}`, caption, takenAt: reportedAt, by: s.reportedBy.name, stage: 'report' })),
       quotes,
       supplierId: s.supplierId,
@@ -305,7 +305,7 @@ export function seedMaintenance(units: Unit[]): MaintenanceSeed {
     if (s.stage === 'approval') {
       job.approval = { status: 'pending', workItemId: s.approvalWorkItemId };
     } else if (afterApproval && recommended) {
-      const by = s.withinDelegation ? personName(scheme.portfolioManagerId) : 'Trustees (2 of 3)';
+      const by = s.withinDelegation ? personName((portfolioManagerOf(scheme.id)?.staffId ?? null)) : 'Trustees (2 of 3)';
       job.approval = { status: 'approved', decidedBy: by, decidedAt: day(-s.reportedAgo + 2, 15), withinDelegation: !!s.withinDelegation };
     }
     if (afterApproval && s.scheduledIn !== undefined) {
@@ -316,7 +316,7 @@ export function seedMaintenance(units: Unit[]): MaintenanceSeed {
       job.photos.push({ id: `${s.ref}-c1`, caption: 'Completed work', takenAt: job.completion.completedAt, by: 'Supplier', stage: 'completion' });
     }
     if (['verified', 'invoiced', 'paid', 'closed'].includes(s.stage)) {
-      job.verification = { at: day((s.scheduledIn ?? -2) + 1, 12), by: unit ? 'Owner' : personName(scheme.portfolioManagerId), outcome: 'fixed' };
+      job.verification = { at: day((s.scheduledIn ?? -2) + 1, 12), by: unit ? 'Owner' : personName((portfolioManagerOf(scheme.id)?.staffId ?? null)), outcome: 'fixed' };
     }
     job.events = history(job, suppliers);
     return job;
@@ -358,7 +358,7 @@ export function seedMaintenance(units: Unit[]): MaintenanceSeed {
         priority: pick(r, ['normal', 'normal', 'high', 'low'] as Priority[]),
         stage,
         reportedAgo: closed ? 30 + Math.floor(r() * 120) : 1 + Math.floor(r() * 12),
-        reportedBy: unit ? { name: 'Owner', role: 'owner' } : { name: personName(scheme.portfolioManagerId), role: 'staff' },
+        reportedBy: unit ? { name: 'Owner', role: 'owner' } : { name: personName((portfolioManagerOf(scheme.id)?.staffId ?? null)), role: 'staff' },
         quotes: stage === 'reported' ? [] : stage === 'quoting' ? [{ supplierId: supplier?.id ?? 'sup-mabaso-building' }] : [{ supplierId: supplier?.id ?? 'sup-mabaso-building', amount, recommended: true }],
         supplierId: ['scheduled', 'in-progress', 'completed', 'closed'].includes(stage) ? supplier?.id : undefined,
         withinDelegation: true,

@@ -15,11 +15,12 @@ import {
   SchemeHealth,
   WORK_TYPE_LABELS,
   WorkItem,
+  coversAllSchemes,
   urgencyOf,
 } from '../../domain';
 import { AttentionService } from '../../core/attention/attention.service';
 import { PRODUCT } from '../../core/product/product';
-import { pageState } from '../../core/prototype/page-state';
+import { loadable } from '../../core/data/loadable';
 import { ScopeService } from '../../core/scope/scope.service';
 import { SessionService } from '../../core/session/session.service';
 import { dueLabel, formatDate, formatRand } from '../../ui/format/money';
@@ -74,7 +75,6 @@ export class DashboardPage {
   private readonly payablesDs = inject(PayablesDataSource);
   protected readonly session = inject(SessionService);
   protected readonly scope = inject(ScopeService);
-  protected readonly page = pageState();
 
   private readonly can = {
     money: computed(() => this.session.can('Accounts.View') || this.session.role() === 'trustee'),
@@ -84,35 +84,30 @@ export class DashboardPage {
     receipts: computed(() => this.session.hasFeature('payment-allocation') && this.session.can('Receipts.Allocate')),
   };
 
-  private readonly data = toSignal(
-    toObservable(this.scope.effectiveIds).pipe(
-      switchMap((ids) =>
-        combineLatest([
-          this.schemesDs.health(),
-          this.can.maintenance() ? this.jobsDs.list(ids) : of([] as JobSummary[]),
-          this.can.payables() ? this.payablesDs.invoices(ids) : of([] as InvoiceView[]),
-        ]).pipe(
-          map(([health, jobs, invoices]) => ({ health: health.filter((h) => ids.includes(h.schemeId)), jobs, invoices, failed: false })),
-          catchError(() => of({ health: [] as SchemeHealth[], jobs: [] as JobSummary[], invoices: [] as InvoiceView[], failed: true })),
-        ),
-      ),
-    ),
-  );
+  /** Only asks for what this role may see and the plan includes; re-asks when the scope chip changes. */
+  protected readonly data = loadable(() => {
+    const ids = this.scope.effectiveIds();
+    return combineLatest([
+      this.schemesDs.health(),
+      this.can.maintenance() ? this.jobsDs.list(ids) : of([] as JobSummary[]),
+      this.can.payables() ? this.payablesDs.invoices(ids) : of([] as InvoiceView[]),
+    ]).pipe(map(([health, jobs, invoices]) => ({ health: health.filter((h) => ids.includes(h.schemeId)), jobs, invoices })));
+  });
 
-  protected readonly loading = computed(() => this.page.status() === 'loading' || this.data() === undefined);
-  protected readonly failed = computed(() => this.page.status() === 'error' || !!this.data()?.failed);
+  protected readonly loading = this.data.loading;
+  protected readonly failed = this.data.failed;
   protected readonly noScope = computed(() => (this.session.isStaff() || this.session.role() === 'trustee') && this.scope.accessible().length === 0);
 
   protected readonly greeting = computed(() => {
     const h = new Date().getHours();
-    return `${h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'}, ${this.session.persona().name.split(' ')[0]}`;
+    return `${h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'}, ${this.session.identity().name.split(' ')[0]}`;
   });
 
   protected readonly context = computed(() => {
     const s = this.scope.scheme();
     const n = this.scope.accessible().length;
-    const where = s ? s.name : this.session.membership().schemeIds.length === 0 ? 'All schemes' : `${n} ${n === 1 ? 'scheme' : 'schemes'}`;
-    return `${ROLE_LABELS[this.session.role()]} · ${this.session.agency()?.shortName ?? ''} · ${where}`;
+    const where = s ? s.name : coversAllSchemes(this.session.assignment()) ? 'All schemes' : `${n} ${n === 1 ? 'scheme' : 'schemes'}`;
+    return `${ROLE_LABELS[this.session.role()]} · ${this.session.organisation()?.shortName ?? ''} · ${where}`;
   });
 
   /** The few things that will hurt if not done soon: overdue and due-today, from the Attention model. */
@@ -128,8 +123,8 @@ export class DashboardPage {
   });
   protected readonly attentionTotal = computed(() => this.attention.myTasks().length + this.attention.pendingApprovals().length);
 
-  private readonly health = computed(() => this.data()?.health ?? []);
-  private readonly openJobs = computed(() => (this.data()?.jobs ?? []).filter((j) => isOpenJob(j.job)));
+  private readonly health = computed(() => this.data.value()?.health ?? []);
+  private readonly openJobs = computed(() => (this.data.value()?.jobs ?? []).filter((j) => isOpenJob(j.job)));
 
   protected readonly tiles = computed<Tile[]>(() => {
     const c = this.attention.counts();
@@ -146,7 +141,7 @@ export class DashboardPage {
       const ninety = h.reduce((n, x) => n + x.accounts90Plus, 0);
       tiles.push({
         id: 'arrears', label: 'Outstanding balances', value: rand(arrears), sub: `${ninety} accounts over 90 days`,
-        route: role === 'trustee' ? `/schemes/${this.session.membership().schemeIds[0]}/overview` : '/finance/credit-control', tone: ninety ? 'attention' : 'calm', icon: 'wallet-outline',
+        route: role === 'trustee' ? `/schemes/${this.session.assignment().scope.schemeIds[0]}/overview` : '/finance/credit-control', tone: ninety ? 'attention' : 'calm', icon: 'wallet-outline',
       });
     }
     if (this.can.receipts()) {
@@ -158,7 +153,7 @@ export class DashboardPage {
       tiles.push({ id: 'jobs', label: 'Maintenance', value: String(jobs.length), sub: overdue ? `${overdue} overdue` : 'open jobs, none overdue', route: '/maintenance', query: overdue ? { view: 'overdue' } : undefined, tone: overdue ? 'attention' : 'calm', icon: 'construct-outline' });
     }
     if (this.can.payables()) {
-      const inv = this.data()?.invoices ?? [];
+      const inv = this.data.value()?.invoices ?? [];
       const waiting = inv.filter((i) => i.invoice.status === 'awaiting-approval').length;
       const ready = inv.filter((i) => i.invoice.status === 'approved').length;
       tiles.push({ id: 'payables', label: 'Supplier invoices', value: String(waiting + ready), sub: `${waiting} awaiting approval · ${ready} ready to pay`, route: '/finance/payables', query: { view: waiting ? 'approval' : 'ready' }, tone: waiting ? 'attention' : 'calm', icon: 'receipt-outline' });

@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, map, of } from 'rxjs';
 import { PlatformCustomer, PlatformDataSource } from '../../domain';
-import { pageState } from '../../core/prototype/page-state';
+import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
 import { CellDef, ColumnDef, DataTable } from '../../ui/data-table/data-table';
 import { urlState } from '../../ui/data-table/url-state';
@@ -33,18 +33,12 @@ export class CustomersPage {
   private readonly data = inject(PlatformDataSource);
   private readonly router = inject(Router);
   protected readonly session = inject(SessionService);
-  protected readonly page = pageState();
   protected readonly state = urlState({ view: 'all', q: null, pkg: null });
 
-  private readonly result = toSignal(
-    this.data.customers().pipe(
-      map((customers) => ({ customers, failed: false })),
-      catchError(() => of({ customers: [] as PlatformCustomer[], failed: true })),
-    ),
-  );
-  protected readonly loading = computed(() => this.page.status() === 'loading' || this.result() === undefined);
-  protected readonly failed = computed(() => this.page.status() === 'error' || !!this.result()?.failed);
-  private readonly all = computed(() => (this.page.forceEmpty() ? [] : (this.result()?.customers ?? [])));
+  protected readonly result = loadable(() => this.data.customers().pipe(map((customers) => ({ customers }))));
+  protected readonly loading = this.result.loading;
+  protected readonly failed = this.result.failed;
+  private readonly all = computed(() => ((this.result.value()?.customers ?? [])));
 
   protected readonly revenue = computed(() => this.session.can('Platform.Revenue.View'));
   protected readonly operational = computed(() => this.session.can('Platform.Support.Assist'));
@@ -55,7 +49,7 @@ export class CustomersPage {
     return this.all().filter(
       (c) =>
         (!pkg || c.subscription.packageId === pkg) &&
-        (!needle || [c.name, c.city, c.province, c.accountManager, c.agencyId].some((x) => x.toLowerCase().includes(needle))),
+        (!needle || [c.name, c.city, c.province, c.accountManager, c.organisationId].some((x) => x.toLowerCase().includes(needle))),
     );
   });
 
@@ -96,7 +90,7 @@ export class CustomersPage {
     ...(this.revenue() ? [{ key: 'mrr', header: 'MRR', align: 'end' as const, width: '110px', sort: (r: PlatformCustomer) => r.subscription.mrr }] : []),
   ]);
 
-  protected readonly rowId = (r: PlatformCustomer) => r.agencyId;
+  protected readonly rowId = (r: PlatformCustomer) => r.organisationId;
   protected readonly shortPackage = shortPackage;
   protected readonly addOnName = addOnName;
   protected readonly rand = (n: number, compact = false) => formatRand(n, { compact, cents: false });
@@ -116,6 +110,6 @@ export class CustomersPage {
   }
 
   protected open(c: PlatformCustomer): void {
-    this.router.navigate(['/platform/customers', c.agencyId]);
+    this.router.navigate(['/platform/customers', c.organisationId]);
   }
 }

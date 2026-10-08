@@ -1,8 +1,8 @@
-@if (page.status() === 'loading' || result() === undefined) {
+@if (result.loading()) {
   <ui-skeleton variant="tiles" [count]="4" />
-} @else if (page.status() === 'error' || result() === null) {
-  <div class="surface"><ui-error-state title="We couldn’t load this customer" (retry)="page.retry()" /></div>
-} @else if (result() === false) {
+} @else if (result.failed()) {
+  <div class="surface"><ui-error-state title="We couldn’t load this customer" (retry)="result.retry()" /></div>
+} @else if (result.value() === false) {
   <div class="surface"><ui-empty-state illustration="not-found" title="We couldn’t find that customer"><a class="btn btn-primary" routerLink="/platform/customers">All customers</a></ui-empty-state></div>
 } @else {
   @let cu = c()!;
@@ -15,6 +15,9 @@
         <span class="pkg">{{ packageName(cu.subscription.packageId) }}</span>
         @for (a of cu.subscription.addOns; track a.addOnId) {
           <span class="addon">+ {{ addOnName(a.addOnId) }}</span>
+        }
+        @if (cu.status !== 'active') {
+          <ui-status-pill [label]="orgStatus(cu)" [tone]="cu.status === 'onboarding' ? 'info' : 'danger'" />
         }
         <ui-status-pill [label]="statusLabel[cu.subscription.status]" [tone]="statusTone[cu.subscription.status]" />
         <ui-status-pill [label]="bandLabel[cu.health.band]" [tone]="bandTone[cu.health.band]" />
@@ -32,7 +35,7 @@
         <a class="btn btn-secondary btn-sm" routerLink="/platform/users" [queryParams]="{ q: cu.name }"><ion-icon name="people-outline" aria-hidden="true" /> Users</a>
       }
       @if (session.can('Platform.Audit')) {
-        <a class="btn btn-ghost btn-sm" routerLink="/platform/audit" [queryParams]="{ agency: cu.agencyId }"><ion-icon name="document-lock-outline" aria-hidden="true" /> Activity</a>
+        <a class="btn btn-ghost btn-sm" routerLink="/platform/audit" [queryParams]="{ agency: cu.organisationId }"><ion-icon name="document-lock-outline" aria-hidden="true" /> Activity</a>
       }
     </div>
   </header>

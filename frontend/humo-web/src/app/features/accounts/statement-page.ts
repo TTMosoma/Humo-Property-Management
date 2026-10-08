@@ -1,11 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, ParamMap, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { catchError, map, of, switchMap } from 'rxjs';
+import { map, of, switchMap } from 'rxjs';
 import { AccountDataSource, UnitDataSource, periodLabel } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
-import { pageState } from '../../core/prototype/page-state';
+import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
 import { Logo } from '../../ui/brand/logo';
 import { RandPipe, formatDate } from '../../ui/format/money';
@@ -33,7 +33,6 @@ export class StatementPage {
   private readonly accounts = inject(AccountDataSource);
   private readonly feedback = inject(FeedbackService);
   protected readonly session = inject(SessionService);
-  protected readonly page = pageState();
 
   /** Staff reach this via /schemes/:schemeId/units/:unitId/…; owners via /my/statements/:period (their own unit). */
   private readonly key = toSignal(this.route.paramMap.pipe(map((p) => this.keyFrom(p))), {
@@ -42,19 +41,18 @@ export class StatementPage {
 
   protected readonly isOwnerView = computed(() => !this.route.snapshot.paramMap.get('schemeId'));
 
-  protected readonly summary = toSignal(
-    toObservable(this.key).pipe(
-      switchMap((k) => this.units.get(k.schemeId, k.number).pipe(map((s) => s ?? null), catchError(() => of(null)))),
-    ),
-  );
-
-  protected readonly view = toSignal(
-    toObservable(computed(() => ({ s: this.summary(), period: this.key().period }))).pipe(
-      switchMap(({ s, period }) =>
-        s ? this.accounts.statement(s.account.id, period).pipe(map((v) => v ?? null), catchError(() => of(null))) : of(s === null ? null : undefined),
+  /** The unit, then its statement for the period. A missing unit or statement is "not found", not an error. */
+  protected readonly result = loadable(() => {
+    const k = this.key();
+    const unit$ = k.unitId ? this.units.byId(k.unitId) : this.units.get(k.schemeId, k.number);
+    return unit$.pipe(
+      switchMap((summary) =>
+        summary ? this.accounts.statement(summary.account.id, k.period).pipe(map((view) => ({ summary, view }))) : of({ summary, view: undefined }),
       ),
-    ),
-  );
+    );
+  });
+  protected readonly summary = computed(() => this.result.value()?.summary);
+  protected readonly view = computed(() => this.result.value()?.view);
 
   protected readonly chain = computed(() => {
     const s = this.summary();
@@ -65,13 +63,11 @@ export class StatementPage {
   protected readonly links = links;
   protected readonly formatDate = formatDate;
 
-  private keyFrom(p: ParamMap): { schemeId: string; number: string; period: string } {
-    const m = this.session.membership();
-    return {
-      schemeId: p.get('schemeId') ?? m.schemeIds[0],
-      number: p.get('unitId') ?? (m.unitLabel ?? '').replace(/\D/g, ''),
-      period: p.get('period')!,
-    };
+  /** Staff: the unit from the URL. Owners: the unit their assignment is for. */
+  private keyFrom(p: ParamMap): { schemeId: string; number: string; unitId?: string; period: string } {
+    const schemeId = p.get('schemeId');
+    if (schemeId) return { schemeId, number: p.get('unitId') ?? '', period: p.get('period')! };
+    return { schemeId: '', number: '', unitId: this.session.assignment().scope.unitId, period: p.get('period')! };
   }
 
   protected print(): void {

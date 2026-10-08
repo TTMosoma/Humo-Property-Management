@@ -1,8 +1,8 @@
-@if (page.status() === 'loading' || result() === undefined) {
+@if (result.loading()) {
   <ui-skeleton variant="tiles" [count]="5" />
-} @else if (page.status() === 'error' || result() === null) {
-  <div class="surface"><ui-error-state title="We couldn’t load this supplier" (retry)="page.retry()" /></div>
-} @else if (result() === false) {
+} @else if (result.failed()) {
+  <div class="surface"><ui-error-state title="We couldn’t load this supplier" (retry)="result.retry()" /></div>
+} @else if (result.value() === false) {
   <div class="surface"><ui-empty-state illustration="not-found" title="We couldn’t find that supplier"><a class="btn btn-primary" routerLink="/suppliers">All suppliers</a></ui-empty-state></div>
 } @else {
   @let d = detail()!;
@@ -89,7 +89,7 @@
           <ct-endorsed-by class="endorsed" [profile]="np" />
           <p class="muted small">Reputation across every Humo customer they work for. Your own numbers with them are on the left.</p>
           @if (endorsedByUs()) {
-            <p class="ok"><ion-icon name="thumbs-up-outline" aria-hidden="true" /> {{ session.agency()?.shortName }} has endorsed them.</p>
+            <p class="ok"><ion-icon name="thumbs-up-outline" aria-hidden="true" /> {{ session.organisation()?.shortName }} has endorsed them.</p>
           } @else if (canEndorse()) {
             @if (endorsing()) {
               <label class="endorse">

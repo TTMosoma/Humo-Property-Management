@@ -109,9 +109,10 @@ export abstract class SupplierDataSource {
   abstract changeBankDetails(supplierId: string): Observable<void>;
   /**
    * Start (or find) the agency's supplier relationship with a Humo Contractor
-   * business — e.g. when awarding work to a contractor invited by email.
+   * business — e.g. when awarding work to a contractor invited by email. The
+   * server copies the business's contact details across; the client never sends them.
    */
-  abstract linkParty(input: { partyId: string; name: string; trades: Supplier['trades']; contactName: string; phone: string; email: string; schemeId: string }): Observable<string>;
+  abstract linkParty(input: { partyId: string; name: string; trades: Supplier['trades']; schemeId: string }): Observable<string>;
 }
 
 export abstract class PayablesDataSource {

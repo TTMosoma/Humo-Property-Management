@@ -35,7 +35,7 @@
 @if (loading()) {
   <ui-skeleton [count]="8" />
 } @else if (failed()) {
-  <div class="surface"><ui-error-state title="We couldn’t load jobs" (retry)="page.retry()" /></div>
+  <div class="surface"><ui-error-state title="We couldn’t load jobs" (retry)="result.retry()" /></div>
 } @else if (rows().length === 0) {
   <div class="surface">
     @if (state().q || state().priority || state().category || state().scheme) {

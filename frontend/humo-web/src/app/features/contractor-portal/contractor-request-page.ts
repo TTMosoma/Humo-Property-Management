@@ -3,10 +3,12 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, map, of, switchMap } from 'rxjs';
+import { FieldErrors, describeFailure, fieldErrorsOf } from '../../domain';
 import { ContractorPortal } from '../../domain/contractor';
 import { FeedbackService } from '../../core/feedback/feedback.service';
-import { pageState } from '../../core/prototype/page-state';
+import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
+import { FieldError } from '../../ui/form/field-error';
 import { formatDate, formatRand } from '../../ui/format/money';
 import { EmptyState } from '../../ui/states/empty-state';
 import { ErrorState } from '../../ui/states/error-state';
@@ -21,7 +23,7 @@ const iso = (days: number) => new Date(Date.now() + days * 86_400_000).toISOStri
  */
 @Component({
   selector: 'app-contractor-request-page',
-  imports: [EmptyState, ErrorState, Skeleton, IonIcon, RouterLink],
+  imports: [EmptyState, ErrorState, Skeleton, IonIcon, RouterLink, FieldError],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './contractor-request-page.html',
   styleUrl: './contractor-request-page.scss',
@@ -30,14 +32,14 @@ export class ContractorRequestPage {
   private readonly portal = inject(ContractorPortal);
   private readonly feedback = inject(FeedbackService);
   protected readonly session = inject(SessionService);
-  protected readonly page = pageState();
 
-  private readonly partyId = this.session.membership().partyId ?? '';
+  private readonly partyId = this.session.assignment().scope.partyId ?? '';
   private readonly id = toSignal(inject(ActivatedRoute).paramMap.pipe(map((p) => p.get('id')!)), { initialValue: '' });
-  protected readonly result = toSignal(
-    toObservable(this.id).pipe(switchMap((id) => this.portal.request(this.partyId, id).pipe(map((v) => v ?? (false as const)), catchError(() => of(null))))),
-  );
-  protected readonly v = computed(() => this.result() || undefined);
+  protected readonly result = loadable(() => {
+    const id = this.id();
+    return this.portal.request(this.partyId, id).pipe(map((v) => v ?? (false as const)));
+  });
+  protected readonly v = computed(() => this.result.value() || undefined);
   protected readonly photoSlots = computed(() => Array.from({ length: this.v()?.request.photos ?? 0 }, (_, i) => i));
 
   protected readonly amount = signal('');
@@ -49,6 +51,8 @@ export class ContractorRequestPage {
   protected readonly declining = signal(false);
   protected readonly declineReason = signal('');
   protected readonly busy = signal(false);
+  /** What the server said about the last attempt, per field. */
+  protected readonly errors = signal<FieldErrors>({});
 
   protected readonly workList = computed(() => this.work().split('\n').map((x) => x.trim()).filter(Boolean));
   protected readonly valid = computed(() => Number(this.amount()) > 0 && this.workList().length > 0 && this.completeBy() >= this.startBy());
@@ -64,6 +68,7 @@ export class ContractorRequestPage {
 
   protected set(sig: 'amount' | 'work' | 'exclusions' | 'startBy' | 'completeBy' | 'guarantee' | 'declineReason', e: Event): void {
     this[sig].set((e.target as HTMLInputElement).value);
+    this.errors.set({});
   }
 
   protected submit(): void {
@@ -85,9 +90,11 @@ export class ContractorRequestPage {
           this.busy.set(false);
           this.feedback.success(`Quote sent to ${v.request.customerName}. You’ll see when they’ve viewed it.`);
         },
-        error: () => {
+        // The form keeps everything; problems show next to the fields.
+        error: (e) => {
           this.busy.set(false);
-          this.feedback.error('Your quote wasn’t sent. Try again.');
+          this.errors.set(fieldErrorsOf(e));
+          this.feedback.error(describeFailure(e, 'Your quote wasn’t sent'));
         },
       });
   }
@@ -100,7 +107,7 @@ export class ContractorRequestPage {
         this.declining.set(false);
         this.feedback.success('Thanks for letting them know. Declining quickly counts towards your response rate.');
       },
-      error: () => this.feedback.error('That didn’t send.'),
+      error: (e) => this.feedback.error(describeFailure(e, 'That didn’t send')),
     });
   }
 }

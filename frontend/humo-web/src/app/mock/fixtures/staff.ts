@@ -1,25 +1,29 @@
-export interface StaffMember {
-  id: string;
-  name: string;
-  initials: string;
-  title: string;
+import { Identity, StaffRef, activeAssignments } from '../../domain';
+import { PERSONAS } from './personas';
+
+/**
+ * Mock-server helpers for names and managers, derived from the identities —
+ * the same joins the API does. Feature code never imports this file.
+ */
+
+/** The longest-standing active portfolio manager covering a scheme. */
+export function portfolioManagerOf(schemeId: string, identities: Identity[] = PERSONAS): StaffRef | null {
+  const candidates = identities
+    .filter((i) => i.status === 'active')
+    .flatMap((i) =>
+      activeAssignments(i)
+        .filter((a) => a.role === 'portfolio-manager' && a.scope.schemeIds.includes(schemeId))
+        .map((a) => ({ i, at: a.grantedAt ?? '' })),
+    )
+    .sort((a, b) => a.at.localeCompare(b.at));
+  const first = candidates[0]?.i;
+  return first ? { identityId: first.id, staffId: first.staffId, name: first.name } : null;
 }
 
-/** Acacia Managing Agents' team. Ids match Scheme.portfolioManagerId and work item assignees. */
-export const STAFF: StaffMember[] = [
-  { id: 'staff-thandeka', name: 'Thandeka Mokoena', initials: 'TM', title: 'Director' },
-  { id: 'staff-johan', name: 'Johan van der Merwe', initials: 'JM', title: 'Portfolio Manager' },
-  { id: 'staff-naledi', name: 'Naledi Sithole', initials: 'NS', title: 'Portfolio Manager' },
-  { id: 'staff-kabelo', name: 'Kabelo Molefe', initials: 'KM', title: 'Portfolio Manager' },
-  { id: 'staff-priya', name: 'Priya Naidoo', initials: 'PN', title: 'Senior Accountant' },
-  { id: 'staff-zanele', name: 'Zanele Dlamini', initials: 'ZD', title: 'Credit Controller' },
-  { id: 'staff-sarah', name: 'Sarah Jacobs', initials: 'SJ', title: 'Operations Director' },
-  { id: 'staff-bongani', name: 'Bongani Ndlovu', initials: 'BN', title: 'Maintenance Coordinator' },
-];
-
-const OTHERS: Record<string, string> = { 'p-sipho': 'Sipho Khumalo (trustee)' };
-
+/** Assignee id (staff id or identity id) → name, for read models and activity logs. */
 export function personName(id: string | null | undefined): string {
   if (!id) return 'Unassigned';
-  return STAFF.find((s) => s.id === id)?.name ?? OTHERS[id] ?? id;
+  const i = PERSONAS.find((p) => p.staffId === id || p.id === id);
+  if (!i) return id;
+  return i.staffId ? i.name : `${i.name} (${activeAssignments(i).some((a) => a.role === 'trustee') ? 'trustee' : 'resident'})`;
 }

@@ -1,5 +1,6 @@
 import { AccountHealth, UsageSnapshot } from './account-health';
-import { EntitlementSet, PackageId, Subscription } from './entitlement';
+import { Entitlement, PackageId, Subscription } from './entitlement';
+import { OrganisationStatus } from './organisation';
 import { Opportunity, UpgradeRequest } from './opportunity';
 
 /**
@@ -7,7 +8,7 @@ import { Opportunity, UpgradeRequest } from './opportunity';
  * subscriptions and how they're doing. Customer-facing Humo PM never sees this.
  */
 export interface PlatformCustomer {
-  agencyId: string;
+  organisationId: string;
   name: string;
   city: string;
   province: string;
@@ -15,8 +16,11 @@ export interface PlatformCustomer {
   /** Humo Account Manager (identity id) and display name. */
   accountManagerId: string;
   accountManager: string;
+  /** The organisation's lifecycle (distinct from the subscription's commercial status). */
+  status: OrganisationStatus;
   subscription: Subscription;
-  entitlements: EntitlementSet;
+  /** Effective entitlements, as the API sends them (wrap with `entitlementSet()` for lookups). */
+  entitlements: Entitlement[];
   snapshot: UsageSnapshot;
   health: AccountHealth;
   opportunities: Opportunity[];
@@ -27,7 +31,7 @@ export interface PlatformCustomer {
 
 export interface SupportTicket {
   id: string;
-  agencyId: string;
+  organisationId: string;
   title: string;
   severity: 'critical' | 'normal';
   status: 'open' | 'escalated' | 'waiting-on-customer';
@@ -76,12 +80,12 @@ export interface BusinessOverview {
 
 /** The customer's own view of their subscription: no health scores, opportunities or contract values. */
 export interface CustomerPlan {
-  agencyId: string;
+  organisationId: string;
   packageId: PackageId;
   status: Subscription['status'];
   renewsAt: string;
   addOns: Subscription['addOns'];
-  entitlements: EntitlementSet;
+  entitlements: Entitlement[];
   accountManager: string;
   requests: UpgradeRequest[];
 }

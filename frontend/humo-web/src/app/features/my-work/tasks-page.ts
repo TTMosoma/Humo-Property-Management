@@ -4,11 +4,11 @@ import { IonIcon } from '@ionic/angular/standalone';
 import { WORK_TYPE_AREA, WorkItem, isOpen, urgencyOf } from '../../domain';
 import { AttentionService } from '../../core/attention/attention.service';
 import { FeedbackService } from '../../core/feedback/feedback.service';
-import { pageState } from '../../core/prototype/page-state';
+import { loadable } from '../../core/data/loadable';
 import { ScopeNotice } from '../../core/scope/scope-notice';
 import { ScopeService } from '../../core/scope/scope.service';
 import { SessionService } from '../../core/session/session.service';
-import { STAFF, personName } from '../../mock/fixtures/staff';
+import { organisationTeam } from '../../core/session/team';
 import { BulkBar } from '../../ui/data-table/bulk-bar';
 import { CellDef, ColumnDef, DataTable } from '../../ui/data-table/data-table';
 import { FilterBar, FilterDef } from '../../ui/data-table/filter-bar';
@@ -40,17 +40,17 @@ import { SmartNudge } from '../shared/smart-nudge';
   styleUrl: './tasks-page.scss',
 })
 export class TasksPage {
-  private readonly attention = inject(AttentionService);
+  protected readonly attention = inject(AttentionService);
   private readonly scope = inject(ScopeService);
   private readonly drawer = inject(DrawerService);
   private readonly feedback = inject(FeedbackService);
   protected readonly session = inject(SessionService);
-  protected readonly page = pageState();
 
   protected readonly state = urlState({ view: 'mine', q: '', area: null, scheme: null, assignee: null });
   protected readonly selected = signal<string[]>([]);
   protected readonly activeId = signal<string | null>(null);
-  protected readonly staff = STAFF;
+  private readonly team = organisationTeam();
+  protected readonly staff = this.team.staff;
   protected readonly areaIcon = AREA_ICON;
 
   private readonly allTasks = computed(() => this.attention.visible().filter((w) => w.kind === 'task'));
@@ -71,7 +71,6 @@ export class TasksPage {
   });
 
   protected readonly rows = computed(() => {
-    if (this.page.forceEmpty()) return [];
     const s = this.state();
     const q = (s.q ?? '').toLowerCase().trim();
     return this.byView()
@@ -120,7 +119,7 @@ export class TasksPage {
       defs.push({
         key: 'assignee',
         label: 'Assignee',
-        options: [{ value: 'none', label: 'Unassigned' }, ...STAFF.map((s) => ({ value: s.id, label: s.name }))],
+        options: [{ value: 'none', label: 'Unassigned' }, ...this.staff().map((s) => ({ value: s.id, label: s.name }))],
       });
     }
     return defs;
@@ -140,7 +139,7 @@ export class TasksPage {
     { key: 'task', header: 'Task', mobile: 'title', sort: (w) => w.title },
     { key: 'scheme', header: 'Scheme', width: '20%', mobile: 'meta', sort: (w) => this.schemeName(w.schemeId) },
     { key: 'due', header: 'Due', width: '160px', sort: (w) => w.dueAt },
-    { key: 'assignee', header: 'Assigned to', width: '180px', sort: (w) => personName(w.assigneeId) },
+    { key: 'assignee', header: 'Assigned to', width: '180px', sort: (w) => this.team.nameOf(w.assigneeId) },
   ];
 
   protected readonly rowId = (w: WorkItem) => w.id;
@@ -155,11 +154,11 @@ export class TasksPage {
   }
 
   protected assigneeName(id: string | null): string {
-    return personName(id);
+    return this.team.nameOf(id);
   }
 
   protected initials(id: string | null): string {
-    return STAFF.find((s) => s.id === id)?.initials ?? (id ? '•' : '—');
+    return this.team.initialsOf(id);
   }
 
   protected setView(view: string): void {
@@ -205,7 +204,7 @@ export class TasksPage {
     this.attention.assign(ids, staffId).subscribe({
       next: () => {
         this.selected.set([]);
-        this.feedback.success(`${ids.length} reassigned to ${personName(staffId)}`);
+        this.feedback.success(`${ids.length} reassigned to ${this.team.nameOf(staffId)}`);
       },
       error: () => this.feedback.error('Couldn’t reassign. Try again.'),
     });

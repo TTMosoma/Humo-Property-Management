@@ -1,8 +1,8 @@
-@if (page.status() === 'error' || result() === null) {
-  <ui-error-state (retry)="page.retry()" />
-} @else if (page.status() === 'loading' || result() === undefined) {
+@if (result.failed()) {
+  <ui-error-state (retry)="result.retry()" />
+} @else if (result.loading()) {
   <ui-skeleton variant="tiles" [count]="3" />
-} @else if (result() === false) {
+} @else if (result.value() === false) {
   <ui-empty-state illustration="not-found" title="This request isn’t available" message="It may have been withdrawn, or it wasn’t sent to your business.">
     <a class="btn btn-primary" routerLink="/contractor/requests">Your quote requests</a>
   </ui-empty-state>
@@ -66,10 +66,12 @@
         <label class="field">
           <span class="f-label">Total price, incl. VAT</span>
           <span class="rand"><span>R</span><input type="number" min="0" step="100" [value]="amount()" (input)="set('amount', $event)" placeholder="0" /></span>
+          <ui-field-error [errors]="errors()" field="amount" />
         </label>
         <label class="field">
           <span class="f-label">What you’ll do (one line per item)</span>
           <textarea rows="5" [value]="work()" (input)="set('work', $event)"></textarea>
+          <ui-field-error [errors]="errors()" field="work" />
         </label>
         <label class="field">
           <span class="f-label">Exclusions (optional)</span>
@@ -77,8 +79,8 @@
         </label>
         <div class="row">
           <label class="field"><span class="f-label">Can start</span><input type="date" [value]="startBy()" (input)="set('startBy', $event)" /></label>
-          <label class="field"><span class="f-label">Complete by</span><input type="date" [value]="completeBy()" (input)="set('completeBy', $event)" /></label>
-          <label class="field"><span class="f-label">Guarantee (months)</span><input type="number" min="0" [value]="guarantee()" (input)="set('guarantee', $event)" /></label>
+          <label class="field"><span class="f-label">Complete by</span><input type="date" [value]="completeBy()" (input)="set('completeBy', $event)" /><ui-field-error [errors]="errors()" field="completeBy" /></label>
+          <label class="field"><span class="f-label">Guarantee (months)</span><input type="number" min="0" [value]="guarantee()" (input)="set('guarantee', $event)" /><ui-field-error [errors]="errors()" field="guarantee" /></label>
         </div>
         <div class="actions">
           <button type="button" class="btn btn-primary" [disabled]="!valid() || busy()" (click)="submit()">Send quote</button>

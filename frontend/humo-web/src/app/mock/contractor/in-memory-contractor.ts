@@ -13,9 +13,10 @@ import {
   QuoteRequestView,
   QuoteSubmission,
   WorkOrder,
+  disclosureFor,
 } from '../../domain/contractor';
 import { JobStage, PolicyError } from '../../domain';
-import { SessionService } from '../../core/session/session.service';
+import { MockAuthSession } from '../server/mock-auth-session';
 import { MaintenanceStore } from '../db/maintenance-store';
 import { MockDb } from '../db/mock-db';
 import { mockResponder } from '../mock-latency';
@@ -39,18 +40,31 @@ const FROM_JOB: Partial<Record<JobStage, WorkOrder['status']>> = {
 export class InMemoryContractorNetwork extends ContractorNetwork {
   private readonly store = inject(ContractorStore);
   private readonly gateway = inject(MockGateway);
-  private readonly session = inject(SessionService);
+  private readonly session = inject(MockAuthSession);
+  private readonly maintenance = inject(MaintenanceStore);
   private readonly respond = mockResponder();
   private readonly state$ = toObservable(
     computed(() => ({ profiles: this.store.profiles(), requests: this.store.requests(), quotes: this.store.quotes(), events: this.store.events() })),
   );
 
   profile(partyId: string): Observable<ContractorProfile | undefined> {
-    return this.state$.pipe(switchMap((s) => this.respond(s.profiles.find((p) => p.party.id === partyId))));
+    return this.state$.pipe(switchMap((s) => this.respond(this.forCustomer(s.profiles.find((p) => p.party.id === partyId)))));
   }
 
   profiles(partyIds: string[]): Observable<ContractorProfile[]> {
-    return this.state$.pipe(switchMap((s) => this.respond(s.profiles.filter((p) => partyIds.includes(p.party.id)))));
+    return this.state$.pipe(switchMap((s) => this.respond(s.profiles.filter((p) => partyIds.includes(p.party.id)).map((p) => this.forCustomer(p)!))));
+  }
+
+  /** Businesses the customer already works with (a supplier record linked to the party). */
+  private worksWith(partyId: string): boolean {
+    return this.maintenance.suppliers.some((s) => s.partyId === partyId);
+  }
+
+  /** A profile as a customer may see it: no direct contact details without a relationship. */
+  private forCustomer(p: ContractorProfile | undefined, visible = p ? this.worksWith(p.party.id) : false): ContractorProfile | undefined {
+    if (!p || visible) return p;
+    const { contact: _hidden, ...party } = p.party;
+    return { ...p, party };
   }
 
   quoteRequestFor(source: { product: 'humo-pm'; ref: string }): Observable<QuoteRequestView | undefined> {
@@ -67,7 +81,7 @@ export class InMemoryContractorNetwork extends ContractorNetwork {
   }
 
   createQuoteRequest(input: NewQuoteRequest): Observable<string> {
-    const by = this.session.persona().name;
+    const by = this.session.current.identity.name;
     return this.gateway.command({ action: `Requested quotes through Humo Contractor: ${input.title}`, resource: 'Quote request', permission: 'Maintenance.Manage' }, () => {
       const id = this.store.nextId('QR');
       const now = new Date().toISOString();
@@ -83,11 +97,11 @@ export class InMemoryContractorNetwork extends ContractorNetwork {
   }
 
   markViewed(quoteRequestId: string, quoteIds: string[]): void {
-    if (this.session.isImpersonating()) return;
+    if (!!this.session.current.impersonation) return;
     const seen = new Set(this.store.events().filter((e) => e.type === 'quote-viewed' && e.quoteRequestId === quoteRequestId).map((e) => e.quoteId));
     const request = this.store.requests().find((r) => r.id === quoteRequestId);
     for (const q of this.store.quotes().filter((x) => quoteIds.includes(x.id) && !seen.has(x.id))) {
-      this.store.emit({ type: 'quote-viewed', quoteRequestId, customerId: request?.customerId ?? '', partyId: q.partyId, quoteId: q.id, actor: this.session.persona().name });
+      this.store.emit({ type: 'quote-viewed', quoteRequestId, customerId: request?.customerId ?? '', partyId: q.partyId, quoteId: q.id, actor: this.session.current.identity.name });
     }
   }
 
@@ -100,7 +114,7 @@ export class InMemoryContractorNetwork extends ContractorNetwork {
   }
 
   accept(quoteRequestId: string, quoteId: string): Observable<void> {
-    const by = this.session.persona().name;
+    const by = this.session.current.identity.name;
     const quote = this.store.quotes().find((q) => q.id === quoteId);
     const request = this.store.requests().find((r) => r.id === quoteRequestId);
     return this.gateway
@@ -124,7 +138,7 @@ export class InMemoryContractorNetwork extends ContractorNetwork {
   }
 
   endorse(partyId: string, customerId: string, customerName: string, note: string, completedJobs: number): Observable<void> {
-    const by = this.session.persona().name;
+    const by = this.session.current.identity.name;
     return this.gateway
       .command({ action: 'Endorsed a contractor on Humo Contractor', resource: 'Contractor', resourceId: partyId, permission: 'Suppliers.Manage' }, () => {
         // The rule that makes endorsements meaningful: a real relationship, once per customer.
@@ -138,8 +152,13 @@ export class InMemoryContractorNetwork extends ContractorNetwork {
   private view(request: QuoteRequest): QuoteRequestView {
     const quotes = this.store.quotes().filter((q) => q.quoteRequestId === request.id);
     const ids = new Set([...request.invitations.map((i) => i.partyId), ...quotes.map((q) => q.partyId)]);
-    const profiles = Object.fromEntries(this.store.profiles().filter((p) => ids.has(p.party.id)).map((p) => [p.party.id, p]));
-    return { request, quotes, profiles, events: this.store.events().filter((e) => e.quoteRequestId === request.id) };
+    const disclosure = Object.fromEntries(
+      [...ids].map((id) => [id, disclosureFor(request, quotes.find((q) => q.partyId === id && q.status !== 'withdrawn'), this.worksWith(id))]),
+    );
+    const profiles = Object.fromEntries(
+      this.store.profiles().filter((p) => ids.has(p.party.id)).map((p) => [p.party.id, this.forCustomer(p, disclosure[p.party.id].contactVisible)!]),
+    );
+    return { request, quotes, profiles, disclosure, events: this.store.events().filter((e) => e.quoteRequestId === request.id) };
   }
 }
 
@@ -149,7 +168,7 @@ export class InMemoryContractorPortal extends ContractorPortal {
   private readonly maintenance = inject(MaintenanceStore);
   private readonly db = inject(MockDb);
   private readonly gateway = inject(MockGateway);
-  private readonly session = inject(SessionService);
+  private readonly session = inject(MockAuthSession);
   private readonly respond = mockResponder();
   private readonly state$ = toObservable(
     computed(() => ({ profiles: this.store.profiles(), requests: this.store.requests(), quotes: this.store.quotes(), workOrders: this.store.workOrders(), events: this.store.events() })),
@@ -212,13 +231,32 @@ export class InMemoryContractorPortal extends ContractorPortal {
   submitQuote(partyId: string, quoteRequestId: string, sub: QuoteSubmission): Observable<void> {
     const request = this.store.requests().find((r) => r.id === quoteRequestId);
     return this.gateway
-      .command({ action: `Submitted a quote for ${request?.title}`, resource: 'Quote', resourceId: quoteRequestId, amount: sub.amount, permission: 'Contractor.Respond' }, () => {
+      .command(
+        {
+          action: `Submitted a quote for ${request?.title}`,
+          resource: 'Quote',
+          resourceId: quoteRequestId,
+          amount: sub.amount,
+          permission: 'Contractor.Respond',
+          // The API checks the offer is complete and makes sense before the customer sees it.
+          validate: () => {
+            const e: Record<string, string> = {};
+            if (!(sub.amount > 0)) e['amount'] = 'Enter the total price.';
+            else if (sub.amount > 10_000_000) e['amount'] = 'That looks too high. Check the amount (in rands, incl. VAT).';
+            if (!sub.proposedWork.length) e['work'] = 'List at least one thing you’ll do.';
+            if (new Date(sub.completeBy) < new Date(sub.startBy)) e['completeBy'] = 'The completion date is before the start date.';
+            if (sub.guaranteeMonths < 0 || sub.guaranteeMonths > 120) e['guarantee'] = 'Use 0–120 months.';
+            return e;
+          },
+        },
+        () => {
         if (!request || request.status !== 'open') throw new PolicyError('forbidden', 'This request is closed');
         const id = this.store.nextId('CQ');
         this.store.addQuote({ ...sub, id, quoteRequestId, partyId, submittedAt: new Date().toISOString(), status: 'submitted' });
         this.setInvitation(partyId, quoteRequestId, 'quoted');
-        this.store.emit({ type: 'quote-submitted', quoteRequestId, customerId: request.customerId, partyId, quoteId: id, amount: sub.amount, actor: this.session.persona().name });
-      })
+        this.store.emit({ type: 'quote-submitted', quoteRequestId, customerId: request.customerId, partyId, quoteId: id, amount: sub.amount, actor: this.session.current.identity.name });
+        },
+      )
       .pipe(map(() => undefined));
   }
 
@@ -227,7 +265,7 @@ export class InMemoryContractorPortal extends ContractorPortal {
     return this.gateway
       .command({ action: `Declined to quote: ${request?.title}`, resource: 'Quote', resourceId: quoteRequestId, permission: 'Contractor.Respond' }, () => {
         this.setInvitation(partyId, quoteRequestId, 'declined', reason);
-        this.store.emit({ type: 'quote-declined', quoteRequestId, customerId: request?.customerId ?? '', partyId, actor: this.session.persona().name });
+        this.store.emit({ type: 'quote-declined', quoteRequestId, customerId: request?.customerId ?? '', partyId, actor: this.session.current.identity.name });
       })
       .pipe(map(() => undefined));
   }

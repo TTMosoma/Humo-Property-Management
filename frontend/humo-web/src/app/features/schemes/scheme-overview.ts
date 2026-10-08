@@ -6,7 +6,7 @@ import { catchError, map, of, switchMap } from 'rxjs';
 import { Scheme, SchemeDataSource, SchemeHealth, UnitDataSource, UnitSummary, Urgency, WorkItem, urgencyOf } from '../../domain';
 import { SessionService } from '../../core/session/session.service';
 import { AttentionService } from '../../core/attention/attention.service';
-import { pageState } from '../../core/prototype/page-state';
+import { loadable } from '../../core/data/loadable';
 import { DrawerService } from '../../ui/drawer/drawer.service';
 import { RandPipe, formatDate } from '../../ui/format/money';
 import { EmptyState } from '../../ui/states/empty-state';
@@ -33,7 +33,6 @@ export class SchemeOverview {
   private readonly data = inject(SchemeDataSource);
   private readonly attention = inject(AttentionService);
   private readonly drawer = inject(DrawerService);
-  protected readonly page = pageState();
   protected readonly session = inject(SessionService);
   private readonly unitData = inject(UnitDataSource);
 
@@ -41,19 +40,15 @@ export class SchemeOverview {
     initialValue: this.route.snapshot.data['scheme'] as Scheme,
   });
 
-  private readonly allHealth = toSignal(this.data.health().pipe(catchError(() => of([] as SchemeHealth[]))), {
-    initialValue: [] as SchemeHealth[],
-  });
-  protected readonly health = computed(() => this.allHealth().find((h) => h.schemeId === this.scheme()?.id));
+  /** Health figures are optional here: if they fail, the rest of the overview still works. */
+  protected readonly healthLoad = loadable(() => this.data.health());
+  protected readonly health = computed(() => (this.healthLoad.value() ?? []).find((h) => h.schemeId === this.scheme()?.id));
 
-  private readonly unitRows = toSignal(
-    toObservable(computed(() => this.scheme()?.id)).pipe(
-      switchMap((id) => (id ? this.unitData.list([id]).pipe(catchError(() => of(null))) : of(null))),
-    ),
-  );
+  /** The unit roll is the overview's main content; its state is the page's state. */
+  protected readonly unitRows = loadable(() => this.unitData.list([this.scheme().id]));
 
   protected readonly units = computed(() => {
-    const rows = this.unitRows() as UnitSummary[] | null | undefined;
+    const rows = this.unitRows.value() as UnitSummary[] | undefined;
     if (!rows) return null;
     return {
       total: rows.length,
@@ -65,7 +60,6 @@ export class SchemeOverview {
   });
 
   protected readonly groups = computed(() => {
-    if (this.page.forceEmpty()) return [];
     const items = this.attention.openForScheme(this.scheme()?.id ?? '');
     const order: Urgency[] = ['overdue', 'today', 'week', 'later'];
     return order

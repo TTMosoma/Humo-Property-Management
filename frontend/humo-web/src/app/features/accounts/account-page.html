@@ -1,10 +1,10 @@
-@if (page.status() === 'loading' || summary() === undefined || detail() === undefined) {
+@if (summary.loading() || detail() === undefined) {
   <ui-skeleton variant="tiles" [count]="4" />
   <div class="gap"></div>
   <ui-skeleton [count]="8" />
-} @else if (page.status() === 'error' || summary() === null || detail() === null) {
-  <div class="surface"><ui-error-state title="We couldn’t load this account" (retry)="page.retry()" /></div>
-} @else if (summary() === false) {
+} @else if (summary.failed() || detail() === null) {
+  <div class="surface"><ui-error-state title="We couldn’t load this account" (retry)="summary.retry()" /></div>
+} @else if (summary.value() === false) {
   <div class="surface"><ui-empty-state illustration="not-found" title="We couldn’t find that account" /></div>
 } @else {
   @let d = detail()!;

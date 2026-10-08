@@ -53,7 +53,7 @@
       <div class="trial">
         <select (change)="trialFeature.set($any($event.target).value)" aria-label="Feature">
           @for (f of trialable; track f.key) {
-            <option [value]="f.key" [selected]="f.key === trialFeature()" [disabled]="cu.entitlements.has(f.key)">{{ f.label }}{{ cu.entitlements.has(f.key) ? ' (on)' : '' }}</option>
+            <option [value]="f.key" [selected]="f.key === trialFeature()" [disabled]="entitled().has(f.key)">{{ f.label }}{{ entitled().has(f.key) ? ' (on)' : '' }}</option>
           }
         </select>
         <select (change)="trialDays.set(+$any($event.target).value)" aria-label="Length">
@@ -61,7 +61,7 @@
           <option value="30" selected>30 days</option>
           <option value="60">60 days</option>
         </select>
-        <button type="button" class="btn btn-secondary btn-sm" (click)="grantTrial()" [disabled]="!reasonOk() || busy() || cu.entitlements.has(trialFeature())">Grant trial</button>
+        <button type="button" class="btn btn-secondary btn-sm" (click)="grantTrial()" [disabled]="!reasonOk() || busy() || entitled().has(trialFeature())">Grant trial</button>
       </div>
       @for (o of cu.subscription.overrides; track o.feature) {
         <div class="override">

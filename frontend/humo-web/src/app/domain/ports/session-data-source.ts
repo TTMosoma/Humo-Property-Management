@@ -1,0 +1,47 @@
+import { Observable } from 'rxjs';
+import { ImpersonationSession } from '../models/audit';
+import { Entitlement, Subscription } from '../models/entitlement';
+import { Identity, RoleAssignment } from '../models/identity';
+import { Organisation } from '../models/organisation';
+import { Permission } from '../models/permission';
+
+/**
+ * "Who am I, right now?" — the session bootstrap (`GET /me` on the API).
+ *
+ * The server works all of this out from the token: the client never computes
+ * its own permissions or entitlements, it renders what it is told. Role
+ * switching, impersonation and sign-out change the server session (through
+ * AccessDataSource) and this stream emits the new state.
+ */
+export interface CurrentSession {
+  signedIn: boolean;
+  /** The authenticated human. Never changes when switching role. */
+  actor: Identity;
+  /** The identity the app is rendered for: the actor, or the impersonated user. */
+  identity: Identity;
+  /** Assignments the identity can switch between (only the impersonated one while impersonating). */
+  assignments: RoleAssignment[];
+  activeAssignmentId: string;
+  /** Effective permissions of the active assignment (role + grants − impersonation limits). */
+  permissions: Permission[];
+  /** The actor's own permissions across their assignments (e.g. System.Impersonate). */
+  actorPermissions: Permission[];
+  /** The organisation of the active assignment; null for Humo staff and contractors. */
+  organisation: Organisation | null;
+  /** The organisation's subscription and effective entitlements; null when no customer plan applies. */
+  subscription: Subscription | null;
+  entitlements: Entitlement[] | null;
+  impersonation: ImpersonationSession | null;
+}
+
+export abstract class SessionDataSource {
+  /** Live: emits the current session, and again whenever it changes. */
+  abstract current(): Observable<CurrentSession>;
+  /**
+   * Prototype stand-in for the identity provider's sign-in (passkey / Humo
+   * Mobile). In production this is a redirect, not an API call.
+   */
+  abstract signIn(identityId?: string): Observable<void>;
+  /** Prototype only: identities offered in "Sign in as". */
+  abstract demoIdentities(): Observable<Identity[]>;
+}

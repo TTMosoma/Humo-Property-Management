@@ -7,7 +7,7 @@
 @if (loading()) {
   <ui-skeleton [count]="7" />
 } @else if (failed()) {
-  <div class="surface"><ui-error-state title="We couldn’t load payables" (retry)="page.retry()" /></div>
+  <div class="surface"><ui-error-state title="We couldn’t load payables" (retry)="result.retry()" /></div>
 } @else if (state().view === 'batches') {
   @for (b of batches(); track b.batch.id) {
     <section class="batch surface">

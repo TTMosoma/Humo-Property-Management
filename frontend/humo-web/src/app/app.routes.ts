@@ -578,9 +578,9 @@ export const routes: Routes = [
                 loadComponent: () => import('./features/platform/customers-page').then((m) => m.CustomersPage),
               },
               {
-                path: ':agencyId',
+                path: ':organisationId',
                 title: 'Customer',
-                data: { roles: HUMO, breadcrumb: (_: unknown, p: Record<string, string>) => p['agencyId'] },
+                data: { roles: HUMO, breadcrumb: (_: unknown, p: Record<string, string>) => p['organisationId'] },
                 loadComponent: () => import('./features/platform/customer-page').then((m) => m.CustomerPage),
               },
             ],

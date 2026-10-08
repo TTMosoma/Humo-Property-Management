@@ -14,7 +14,8 @@ import {
   SupplierDetail,
   SupplierSummary,
 } from '../../domain';
-import { SessionService } from '../../core/session/session.service';
+import { MockAuthSession } from '../server/mock-auth-session';
+import { ContractorStore } from '../contractor/contractor-store';
 import { MaintenanceStore } from '../db/maintenance-store';
 import { MockDb } from '../db/mock-db';
 import { mockResponder } from '../mock-latency';
@@ -41,7 +42,7 @@ const JOB_VERB: Record<JobAction['type'], string> = {
 abstract class Live {
   protected readonly db = inject(MockDb);
   protected readonly store = inject(MaintenanceStore);
-  protected readonly session = inject(SessionService);
+  protected readonly session = inject(MockAuthSession);
   protected readonly respond = mockResponder();
   protected readonly gateway = inject(MockGateway);
 
@@ -58,7 +59,7 @@ abstract class Live {
   }
 
   protected get by(): string {
-    return this.session.persona().name;
+    return this.session.current.identity.name;
   }
 }
 
@@ -81,8 +82,25 @@ export class InMemoryJobDataSource extends Live implements JobDataSource {
   }
 
   create(input: NewJobInput): Observable<string> {
-    const permission: Permission = this.session.isResident() ? 'Resident.Requests' : 'Maintenance.Log';
-    return this.command({ action: 'Logged a maintenance request', resource: 'Job', schemeId: input.schemeId, permission }, () => this.store.create(input, this.by));
+    const permission: Permission = ['owner', 'tenant'].includes(this.session.assignment().role) ? 'Resident.Requests' : 'Maintenance.Log';
+    return this.command(
+      {
+        action: 'Logged a maintenance request',
+        resource: 'Job',
+        schemeId: input.schemeId,
+        permission,
+        validate: () => {
+          const e: Record<string, string> = {};
+          const title = input.title.trim();
+          if (title.length < 4) e['title'] = 'Use a few words, e.g. “Geyser leaking”.';
+          else if (title.length > 80) e['title'] = 'Keep the title under 80 characters; put the detail in the description.';
+          if (!input.unitId && !input.location.trim()) e['location'] = 'Say where on the property it is.';
+          if (input.unitId && !this.db.units.some((u) => u.id === input.unitId && u.schemeId === input.schemeId)) e['unit'] = 'That unit isn’t in this scheme.';
+          return e;
+        },
+      },
+      () => this.store.create(input, this.by),
+    );
   }
 
   act(ref: string, action: JobAction): Observable<void> {
@@ -96,6 +114,8 @@ export class InMemoryJobDataSource extends Live implements JobDataSource {
 
 @Injectable()
 export class InMemorySupplierDataSource extends Live implements SupplierDataSource {
+  private readonly contractors = inject(ContractorStore);
+
   list(schemeIds: string[]): Observable<SupplierSummary[]> {
     return this.live(() => this.store.suppliersFor(schemeIds));
   }
@@ -116,7 +136,11 @@ export class InMemorySupplierDataSource extends Live implements SupplierDataSour
   linkParty(input: Parameters<SupplierDataSource['linkParty']>[0]): Observable<string> {
     return this.command(
       { action: `Added ${input.name} as a supplier (from Humo Contractor)`, resource: 'Supplier', resourceId: input.partyId, permission: 'Suppliers.Manage' },
-      () => this.store.linkParty(input),
+      () => {
+        // Server-side join: the business's own contact details, from Humo Contractor.
+        const contact = this.contractors.profiles().find((p) => p.party.id === input.partyId)?.party.contact;
+        return this.store.linkParty(input, contact ?? { name: input.name, phone: '', email: '' });
+      },
     );
   }
 

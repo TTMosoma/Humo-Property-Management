@@ -20,7 +20,7 @@ import {
 } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { SessionService } from '../../core/session/session.service';
-import { STAFF } from '../../mock/fixtures/staff';
+import { organisationTeam } from '../../core/session/team';
 import { RandPipe, formatDate, formatRand } from '../../ui/format/money';
 import { StatusPill } from '../../ui/status-pill/status-pill';
 import { ApprovalCard } from '../my-work/approval-card';
@@ -57,7 +57,9 @@ export class JobNextStep {
     { initialValue: null },
   );
 
-  protected readonly staff = STAFF.filter((s) => s.title !== 'Senior Accountant' && s.title !== 'Credit Controller');
+  /** People who can own a maintenance job: portfolio managers, operations and administrators. */
+  private readonly team = organisationTeam();
+  protected readonly staff = computed(() => this.team.staff().filter((m) => m.roles.some((r) => r === 'portfolio-manager' || r === 'operations' || r === 'agency-admin')));
   protected readonly trades = TRADES;
   protected readonly priorities = Object.keys(PRIORITY_LABEL) as Priority[];
   protected readonly priorityLabel = PRIORITY_LABEL;
@@ -102,7 +104,7 @@ export class JobNextStep {
   private reset(d: JobDetail, key: string): void {
     if (key === this.lastKey) return;
     this.lastKey = key;
-    this.assignee.set(d.job.assigneeId ?? d.scheme.portfolioManagerId);
+    this.assignee.set(d.job.assigneeId ?? d.scheme.portfolioManager?.staffId ?? '');
     this.priority.set(d.job.priority);
     this.category.set(d.job.category);
     this.chosenSuppliers.set(this.compliantCandidates(d).slice(0, 2).map((s) => s.id));

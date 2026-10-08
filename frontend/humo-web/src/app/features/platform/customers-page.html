@@ -24,7 +24,7 @@
 </div>
 
 @if (failed()) {
-  <ui-error-state (retry)="page.retry()" />
+  <ui-error-state (retry)="result.retry()" />
 } @else if (loading()) {
   <ui-skeleton [count]="8" />
 } @else if (!rows().length) {
@@ -33,7 +33,7 @@
   <ui-data-table [rows]="rows()" [columns]="columns()" [rowId]="rowId" caption="Customers" (rowClick)="open($event)">
     <ng-template uiCell="customer" let-r>
       <div class="name">{{ r.name }}</div>
-      <div class="sub">{{ r.city }} · <code>{{ r.agencyId }}</code></div>
+      <div class="sub">{{ r.city }} · <code>{{ r.organisationId }}</code></div>
     </ng-template>
     <ng-template uiCell="package" let-r>
       <div class="pkg" [attr.data-pkg]="r.subscription.packageId">{{ shortPackage(r.subscription.packageId) }}</div>

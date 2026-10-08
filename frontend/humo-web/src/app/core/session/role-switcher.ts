@@ -26,18 +26,18 @@ export class RoleSwitcher {
   readonly lastChange = signal<RoleChange | null>(null);
 
   switchTo(assignmentId: string, navigateTo?: string): void {
-    if (assignmentId === this.session.membership().id || this.switching()) return;
+    if (assignmentId === this.session.assignment().id || this.switching()) return;
     this.switching.set(assignmentId);
     this.access.switchRole(assignmentId).subscribe({
+      // The server re-scopes the session; /me already reflects the new assignment.
       next: () => {
         this.switching.set(null);
-        this.session.switchMembership(assignmentId);
-        this.lastChange.set({ assignment: this.session.membership(), at: Date.now() });
+        this.lastChange.set({ assignment: this.session.assignment(), at: Date.now() });
         this.router.navigateByUrl(navigateTo ?? this.session.homeRoute());
       },
       error: () => {
         this.switching.set(null);
-        const a = this.session.memberships().find((m) => m.id === assignmentId);
+        const a = this.session.assignments().find((m) => m.id === assignmentId);
         this.feedback.error(`Couldn’t switch to ${a ? ROLE_LABELS[a.role] : 'that role'}. You’re still working as ${ROLE_LABELS[this.session.role()]}.`);
       },
     });

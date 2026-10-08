@@ -15,7 +15,7 @@ import {
   UnitDataSource,
   UnitSummary,
 } from '../../domain';
-import { SessionService } from '../../core/session/session.service';
+import { MockAuthSession } from '../server/mock-auth-session';
 import { MockDb } from '../db/mock-db';
 import { mockResponder } from '../mock-latency';
 import { CommandSpec, MockGateway } from '../server/mock-gateway';
@@ -42,6 +42,13 @@ export class InMemoryUnitDataSource extends UnitDataSource {
   get(schemeId: string, unitNumber: string): Observable<UnitSummary | undefined> {
     return live(this.db, this.respond, () => {
       const unit = this.db.findUnit(schemeId, unitNumber);
+      return unit ? this.db.unitSummary(unit) : undefined;
+    });
+  }
+
+  byId(unitId: string): Observable<UnitSummary | undefined> {
+    return live(this.db, this.respond, () => {
+      const unit = this.db.units.find((u) => u.id === unitId);
       return unit ? this.db.unitSummary(unit) : undefined;
     });
   }
@@ -89,7 +96,7 @@ export class InMemoryAccountDataSource extends AccountDataSource {
 @Injectable()
 export class InMemoryReceiptDataSource extends ReceiptDataSource {
   private readonly db = inject(MockDb);
-  private readonly session = inject(SessionService);
+  private readonly session = inject(MockAuthSession);
   private readonly gateway = inject(MockGateway);
   private readonly respond = mockResponder();
 
@@ -108,7 +115,7 @@ export class InMemoryReceiptDataSource extends ReceiptDataSource {
   allocate(receiptId: string, allocations: { accountId: string; amount: number }[], rememberPayer: boolean): Observable<void> {
     const amount = allocations.reduce((n, a) => n + a.amount, 0);
     const to = allocations.map((a) => this.db.accounts.get(a.accountId)?.accountNo ?? a.accountId).join(', ');
-    return this.command({ action: `Allocated receipt to ${to}`, amount, ...this.receiptSpec(receiptId) }, () => this.db.allocate(receiptId, allocations, rememberPayer, this.session.persona().name));
+    return this.command({ action: `Allocated receipt to ${to}`, amount, ...this.receiptSpec(receiptId) }, () => this.db.allocate(receiptId, allocations, rememberPayer, this.session.current.identity.name));
   }
 
   unallocate(receiptId: string): Observable<void> {
@@ -116,7 +123,7 @@ export class InMemoryReceiptDataSource extends ReceiptDataSource {
   }
 
   moveToSuspense(receiptId: string): Observable<void> {
-    return this.command({ action: 'Moved receipt to suspense', ...this.receiptSpec(receiptId) }, () => this.db.moveToSuspense(receiptId, this.session.persona().name));
+    return this.command({ action: 'Moved receipt to suspense', ...this.receiptSpec(receiptId) }, () => this.db.moveToSuspense(receiptId, this.session.current.identity.name));
   }
 
   /** Commands apply only after the simulated request succeeds (and the API's policy allows them). */
@@ -133,7 +140,7 @@ export class InMemoryReceiptDataSource extends ReceiptDataSource {
 @Injectable()
 export class InMemoryTimelineDataSource extends TimelineDataSource {
   private readonly db = inject(MockDb);
-  private readonly session = inject(SessionService);
+  private readonly session = inject(MockAuthSession);
   private readonly gateway = inject(MockGateway);
   private readonly respond = mockResponder();
 
@@ -147,7 +154,7 @@ export class InMemoryTimelineDataSource extends TimelineDataSource {
 
   addNote(note: Omit<Note, 'id' | 'at' | 'author'>): Observable<void> {
     return this.gateway
-      .command({ action: 'Logged a note', resource: 'Note', permission: 'Notes.Add' }, () => this.db.addNote(note, this.session.persona().name))
+      .command({ action: 'Logged a note', resource: 'Note', permission: 'Notes.Add' }, () => this.db.addNote(note, this.session.current.identity.name))
       .pipe(map(() => undefined));
   }
 }

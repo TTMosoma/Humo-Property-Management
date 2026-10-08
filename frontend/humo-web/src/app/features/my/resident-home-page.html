@@ -1,10 +1,10 @@
 <header class="head">
   <h1>Hi {{ firstName() }}</h1>
-  <p class="muted">{{ where() }} · managed by {{ session.agency()?.shortName }}</p>
+  <p class="muted">{{ where() }} · managed by {{ session.organisation()?.shortName }}</p>
 </header>
 
 @if (failed()) {
-  <ui-error-state (retry)="page.retry()" />
+  <ui-error-state (retry)="result.retry()" />
 } @else if (loading()) {
   <ui-skeleton variant="tiles" [count]="3" />
 } @else {

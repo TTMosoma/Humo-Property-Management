@@ -11,7 +11,7 @@
     <ui-empty-state title="No schemes assigned to you yet" message="Your role is set up, but it doesn’t cover any schemes. Ask your agency administrator to assign the schemes you work on." />
   </div>
 } @else if (failed()) {
-  <ui-error-state (retry)="page.retry()" />
+  <ui-error-state (retry)="data.retry()" />
 } @else if (loading()) {
   <ui-skeleton variant="tiles" [count]="6" />
 } @else {

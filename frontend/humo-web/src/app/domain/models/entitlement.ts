@@ -220,7 +220,7 @@ export interface SubscriptionAddOn {
 }
 
 export interface Subscription {
-  agencyId: string;
+  organisationId: string;
   packageId: PackageId;
   status: SubscriptionStatus;
   startedAt: string;
@@ -298,11 +298,19 @@ export function resolveEntitlements(sub: Subscription | undefined, now = new Dat
     }
   }
 
-  const all = FEATURES.map((f) => map.get(f.key)!);
+  return entitlementSet(FEATURES.map((f) => map.get(f.key)!));
+}
+
+/**
+ * Entitlements travel as a plain list (that's what the API sends); this wraps
+ * one for lookups. Unknown features count as off.
+ */
+export function entitlementSet(all: Entitlement[]): EntitlementSet {
+  const map = new Map(all.map((e) => [e.feature, e]));
   return {
     all,
     has: (f) => map.get(f)?.enabled ?? false,
-    get: (f) => map.get(f)!,
+    get: (f) => map.get(f) ?? { feature: f, enabled: false, source: 'none', sourceLabel: 'Not included' },
   };
 }
 

@@ -3,7 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { map } from 'rxjs';
-import { ROLE_LABELS } from '../../domain';
+import { Identity, ROLE_LABELS, SessionDataSource, activeAssignments } from '../../domain';
 import { HUMO_PRODUCTS, HumoProductId } from '../../core/product/product';
 import { SessionService } from '../../core/session/session.service';
 import { Logo } from '../../ui/brand/logo';
@@ -42,11 +42,11 @@ import { Logo } from '../../ui/brand/logo';
         <details class="proto">
           <summary>Prototype: sign in as someone else</summary>
           <ul>
-            @for (p of session.personas(); track p.id) {
+            @for (p of personas(); track p.id) {
               <li>
                 <button type="button" (click)="signInAs(p.id)">
                   <span class="av">{{ p.initials }}</span>
-                  <span class="who"><strong>{{ p.name }}</strong><span>{{ rolesOf(p.memberships) }}</span></span>
+                  <span class="who"><strong>{{ p.name }}</strong><span>{{ rolesOf(p) }}</span></span>
                 </button>
               </li>
             }
@@ -84,29 +84,34 @@ import { Logo } from '../../ui/brand/logo';
 })
 export class SignedOutPage {
   protected readonly session = inject(SessionService);
+  private readonly sessions = inject(SessionDataSource);
   private readonly router = inject(Router);
+  protected readonly personas = toSignal(this.sessions.demoIdentities(), { initialValue: [] as Identity[] });
   private readonly params = toSignal(inject(ActivatedRoute).queryParamMap.pipe(map((p) => ({ product: p.get('product'), name: p.get('name') }))));
 
   protected readonly product = computed(() => HUMO_PRODUCTS[(this.params()?.product as HumoProductId) ?? 'property-management'] ?? HUMO_PRODUCTS['property-management']);
   protected readonly name = computed(() => this.params()?.name ?? '');
   protected readonly signingIn = signal(false);
 
-  protected rolesOf(m: { role: keyof typeof ROLE_LABELS }[]): string {
-    return m.map((x) => ROLE_LABELS[x.role]).join(' · ');
+  protected rolesOf(p: Identity): string {
+    return activeAssignments(p).map((x) => ROLE_LABELS[x.role]).join(' · ');
   }
 
   /** Simulated passkey sign-in, back to the product they came from. */
   protected signInAgain(target?: HumoProductId): void {
     this.signingIn.set(true);
-    setTimeout(() => {
-      this.session.signIn();
-      this.go(target ?? this.product().id);
-    }, 900);
+    setTimeout(() => this.signIn(undefined, target ?? this.product().id), 900);
   }
 
   protected signInAs(id: string): void {
-    this.session.signIn(id);
-    this.go(this.product().id);
+    this.signIn(id, this.product().id);
+  }
+
+  private signIn(identityId: string | undefined, product: HumoProductId): void {
+    this.sessions.signIn(identityId).subscribe(() => {
+      this.session.signedInAgain();
+      this.go(product);
+    });
   }
 
   /** The role decides which product is home (a contractor's is Humo Contractor). */

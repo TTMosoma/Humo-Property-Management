@@ -2,14 +2,16 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, output, si
 import { Router } from '@angular/router';
 import { CdkMenu, CdkMenuGroup, CdkMenuItem, CdkMenuItemRadio, CdkMenuTrigger } from '@angular/cdk/menu';
 import { IonIcon } from '@ionic/angular/standalone';
-import { AppNotification, NotificationKind, ROLE_LABELS, ROLE_META, Role, RoleAssignment } from '../../../domain';
-import { NOTIFICATIONS } from '../../../mock/fixtures/notifications';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { catchError, of } from 'rxjs';
+import { AppNotification, NotificationDataSource, NotificationKind, ROLE_LABELS, ROLE_META, Role, RoleAssignment } from '../../../domain';
 import { relativeTime } from '../../../ui/format/relative-time';
 import { PrototypeStateService, ThemePref } from '../../prototype/prototype-state.service';
 import { ScopeService } from '../../scope/scope.service';
 import { ImpersonationService } from '../../security/impersonation.service';
 import { RoleSwitcher } from '../../session/role-switcher';
 import { SignOutService } from '../../session/sign-out.service';
+import { visibleOrganisations } from '../../session/organisations';
 import { SessionService } from '../../session/session.service';
 
 interface QuickAction {
@@ -55,6 +57,9 @@ export class Topbar {
   protected readonly signOut = inject(SignOutService);
   protected readonly impersonation = inject(ImpersonationService);
   private readonly router = inject(Router);
+  private readonly notificationSource = inject(NotificationDataSource);
+  /** Humo staff's support-view picker. */
+  protected readonly organisations = visibleOrganisations();
 
   readonly showMenuButton = input(false);
   readonly openMenu = output<void>();
@@ -81,7 +86,7 @@ export class Topbar {
   protected readonly firstName = computed(() => this.session.actor().name.split(' ')[0]);
 
   /** The scheme an owner, tenant or trustee belongs to. */
-  protected readonly ownScheme = computed(() => this.scope.findScheme(this.session.membership().schemeIds[0]));
+  protected readonly ownScheme = computed(() => this.scope.findScheme(this.session.assignment().scope.schemeIds[0]));
 
   /** Schemes for the scope menu: pinned first, then the rest. */
   protected readonly scopeOptions = computed(() => {
@@ -90,16 +95,9 @@ export class Topbar {
     return { pinned, others: this.scope.accessible().filter((s) => !pinnedIds.has(s.id)) };
   });
 
-  // Notifications are filtered by audience, scheme access and (for residents) unit.
-  private readonly readIds = signal<Set<string>>(new Set());
-  protected readonly notifications = computed<AppNotification[]>(() => {
-    const m = this.session.membership();
-    const schemes = new Set(this.scope.accessible().map((s) => s.id));
-    const read = this.readIds();
-    return NOTIFICATIONS.filter((n) => n.audience.includes(m.role))
-      .filter((n) => n.schemeId === null || schemes.has(n.schemeId))
-      .filter((n) => !n.unitLabel || n.unitLabel === m.unitLabel)
-      .map((n) => (read.has(n.id) ? { ...n, read: true } : n));
+  // The server picks the audience (role, scheme access and, for residents, unit) and re-sends on role change.
+  protected readonly notifications = toSignal(this.notificationSource.list().pipe(catchError(() => of([] as AppNotification[]))), {
+    initialValue: [] as AppNotification[],
   });
   protected readonly unread = computed(() => this.notifications().filter((n) => !n.read).length);
 
@@ -114,12 +112,12 @@ export class Topbar {
   }
 
   protected openNotification(n: AppNotification): void {
-    this.readIds.update((s) => new Set(s).add(n.id));
+    this.notificationSource.markRead([n.id]).subscribe();
     this.router.navigateByUrl(n.link);
   }
 
   protected markAllRead(): void {
-    this.readIds.set(new Set(this.notifications().map((n) => n.id)));
+    this.notificationSource.markRead(this.notifications().map((n) => n.id)).subscribe();
   }
 
   protected switchRole(id: string): void {

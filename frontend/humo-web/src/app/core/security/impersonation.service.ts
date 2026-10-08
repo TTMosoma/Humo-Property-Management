@@ -51,7 +51,7 @@ export class ImpersonationService {
             next: (s) => {
               this.busy.set(false);
               this.scope.setScope(null);
-              this.session.impersonation.set(s);
+              // The server session now renders the target; /me reflects it.
               this.router.navigateByUrl(this.session.homeRoute());
             },
             error: () => this.busy.set(false),
@@ -65,20 +65,19 @@ export class ImpersonationService {
   exit(): void {
     const imp = this.session.impersonation();
     if (!imp) return;
-    const name = this.session.persona().name;
+    const name = this.session.identity().name;
     const role = ROLE_LABELS[this.session.role()];
     this.busy.set(true);
     this.access.endImpersonation(imp.id).subscribe({
       next: () => this.finish(name, role),
-      // Ending must always work locally, even if the API is unreachable; the server session expires on its own.
+      // Ending must always work for the person, even if the response is lost; the server ends it on receipt.
       error: () => this.finish(name, role),
     });
   }
 
   private finish(name: string, role: string): void {
     this.busy.set(false);
-    this.session.impersonation.set(null);
-    this.session.stepUpProof.set(null);
+    this.session.forgetLocalState();
     this.scope.setScope(null);
     this.router.navigateByUrl('/platform/users');
     this.feedback.info(`Impersonation ended. You’re back as ${this.session.actor().name} — you were viewing as ${name} (${role}).`);

@@ -1,41 +1,27 @@
 import { Observable } from 'rxjs';
 import { AuditEvent, AuditQuery, ImpersonationMode, ImpersonationReason, ImpersonationSession } from '../models/audit';
-import { Identity, RoleAssignment } from '../models/persona';
+import { AssignmentScope, Identity, RoleAssignment } from '../models/identity';
 import { SecurityProfile, StepUpMethod, StepUpRequest, StepUpResult } from '../models/security';
-
-/**
- * Why the API refused a command. The UI hides what a person can't do, but the
- * API is the security boundary: it re-checks role permissions, scope,
- * entitlements, impersonation mode and step-up freshness on every command.
- */
-export type PolicyDenial = 'observe-only' | 'forbidden' | 'step-up-required' | 'not-entitled';
-
-export class PolicyError extends Error {
-  constructor(
-    readonly code: PolicyDenial,
-    message: string,
-  ) {
-    super(message);
-    this.name = 'PolicyError';
-  }
-}
 
 export interface NewAssignment {
   role: RoleAssignment['role'];
-  agencyId: string | null;
-  schemeIds: string[];
-  unitLabel?: string;
+  scope: AssignmentScope;
   label: string;
 }
 
-/** Identities, their role assignments, role switching and impersonation sessions. */
+/**
+ * Identities, their role assignments, role switching and impersonation sessions.
+ * Session-changing commands (switchRole, signOut, impersonation) change what
+ * SessionDataSource.current() emits next.
+ */
 export abstract class AccessDataSource {
   /** Customer identities with at least one assignment in the agency (null = every agency). */
-  abstract directory(agencyId: string | null): Observable<Identity[]>;
+  abstract directory(organisationId: string | null): Observable<Identity[]>;
   /** Humo's own staff and their internal roles. */
   abstract humoTeam(): Observable<Identity[]>;
   abstract assign(identityId: string, assignment: NewAssignment): Observable<void>;
-  abstract revoke(identityId: string, assignmentId: string): Observable<void>;
+  /** Ends the assignment (it stays in the person's history; nothing is deleted). */
+  abstract endAssignment(identityId: string, assignmentId: string): Observable<void>;
   /** The API validates the identity holds the assignment and issues a token for it. */
   abstract switchRole(assignmentId: string): Observable<void>;
   /** Ends the Humo session server-side (all products) and records it. */

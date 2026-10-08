@@ -59,6 +59,7 @@
     } @else {
       <label class="field">Where on the property?
         <input type="text" placeholder="e.g. Main gate, pool, Block B stairwell" [value]="location()" (input)="location.set($any($event.target).value)" />
+        <ui-field-error [errors]="serverErrors()" field="location" />
       </label>
     }
   </section>
@@ -75,7 +76,8 @@
       }
     </div>
     <label class="field">Short title
-      <input type="text" maxlength="80" placeholder="e.g. Geyser leaking into the ceiling" [value]="title()" (input)="title.set($any($event.target).value)" />
+      <input type="text" maxlength="80" placeholder="e.g. Geyser leaking into the ceiling" [value]="title()" (input)="title.set($any($event.target).value)" [attr.aria-invalid]="!!serverErrors()['title']" />
+      <ui-field-error [errors]="serverErrors()" field="title" />
     </label>
     <label class="field">Describe it <span class="opt">(optional)</span>
       <textarea rows="3" placeholder="What happened, since when, and anything we should know about access." [value]="description()" (input)="description.set($any($event.target).value)"></textarea>
@@ -100,7 +102,7 @@
         </label>
         <label class="field">Reported by
           <select [value]="reporterRole()" (change)="reporterRole.set($any($event.target).value)">
-            <option value="staff">Me ({{ session.persona().name }})</option>
+            <option value="staff">Me ({{ session.identity().name }})</option>
             <option value="owner">An owner</option>
             <option value="tenant">A tenant</option>
             <option value="trustee">A trustee</option>

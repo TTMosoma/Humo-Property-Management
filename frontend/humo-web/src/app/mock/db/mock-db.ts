@@ -19,6 +19,7 @@ import {
   WorkItem,
 } from '../../domain';
 import { SCHEMES } from '../fixtures/schemes';
+import { portfolioManagerOf } from '../fixtures/staff';
 import { createWorkItems } from '../fixtures/work-items';
 import { Ledger, RawTransaction, buildStatement, generateLedger, withBalances } from './ledger';
 import { daysAgo, periodLabel, periodOf, round2, seeded } from './random';
@@ -42,7 +43,8 @@ export class MockDb {
   /** Emits after every change; live queries re-run on it. */
   readonly changes$ = new BehaviorSubject(0);
 
-  readonly schemes = new Map<string, Scheme>(SCHEMES.map((s) => [s.id, s]));
+  /** With each scheme's manager joined in from role assignments, as the API's read models do. */
+  readonly schemes = new Map<string, Scheme>(SCHEMES.map((s) => [s.id, { ...s, portfolioManager: portfolioManagerOf(s.id) }]));
   readonly units: Unit[];
   readonly unitById = new Map<string, Unit>();
   readonly persons = new Map<string, Person>();

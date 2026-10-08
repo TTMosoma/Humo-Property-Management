@@ -19,7 +19,7 @@
         <span class="role-ack-icon"><ion-icon [name]="ack.icon" aria-hidden="true" /></span>
         <span>
           You’re now working as <strong>{{ ack.role }}</strong> · {{ ack.scope }}.
-          <span class="role-ack-sub">Navigation, queues and actions now match this role. You’re still signed in as {{ session.persona().name }}.</span>
+          <span class="role-ack-sub">Navigation, queues and actions now match this role. You’re still signed in as {{ session.identity().name }}.</span>
         </span>
         <button type="button" class="btn btn-ghost btn-icon btn-sm" (click)="switcher.dismiss()" aria-label="Dismiss">
           <ion-icon name="close-outline" aria-hidden="true" />
@@ -30,7 +30,7 @@
       <div class="support-banner" role="status">
         <ion-icon name="eye-outline" aria-hidden="true" />
         <span>Support view: <strong>{{ a.name }}</strong>. Read-only — every page you open is logged for the agency’s audit trail.</span>
-        <button type="button" (click)="session.viewAgency(null)">Exit support view</button>
+        <button type="button" (click)="session.viewOrganisation(null)">Exit support view</button>
       </div>
     }
     <main class="content" #scroller>

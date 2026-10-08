@@ -46,8 +46,12 @@ export interface BusinessParty {
   established: number;
   /** Year it joined Humo. */
   onHumoSince: number;
-  /** Shown only once a relationship allows it (see ContactDisclosure). */
-  contact: { name: string; phone: string; email: string };
+  /**
+   * Direct contact details. The server leaves them out unless the viewer may
+   * see them (the business itself, a customer it already works with, or after
+   * a quote is accepted — see ContactDisclosure). Never hidden by the UI alone.
+   */
+  contact?: { name: string; phone: string; email: string };
 }
 
 /** A service the business offers, with a typical lead time. */

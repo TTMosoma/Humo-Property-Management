@@ -3,9 +3,9 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, map, of, switchMap } from 'rxjs';
-import { ADD_ONS, MODULE_LABELS, Opportunity, PlatformCustomer, PlatformDataSource, UpgradeRequest, packageById } from '../../domain';
+import { ADD_ONS, MODULE_LABELS, ORGANISATION_STATUS_LABELS, Opportunity, PlatformCustomer, PlatformDataSource, UpgradeRequest, packageById, entitlementSet } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
-import { pageState } from '../../core/prototype/page-state';
+import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
 import { ScoreRing, Sparkline } from '../../ui/charts/charts';
 import { urlState } from '../../ui/data-table/url-state';
@@ -38,19 +38,21 @@ export class CustomerPage {
   private readonly drawer = inject(DrawerService);
   private readonly feedback = inject(FeedbackService);
   protected readonly session = inject(SessionService);
-  protected readonly page = pageState();
   protected readonly state = urlState({ view: 'overview' });
 
-  private readonly id = toSignal(inject(ActivatedRoute).paramMap.pipe(map((p) => p.get('agencyId')!)), { initialValue: '' });
-  protected readonly result = toSignal(
-    toObservable(this.id).pipe(
-      switchMap((id) => this.data.customer(id).pipe(map((c) => c ?? (false as const)), catchError(() => of(null)))),
-    ),
-  );
+  private readonly id = toSignal(inject(ActivatedRoute).paramMap.pipe(map((p) => p.get('organisationId')!)), { initialValue: '' });
+  protected readonly result = loadable(() => {
+    const id = this.id();
+    return this.data.customer(id).pipe(map((c) => c ?? (false as const)));
+  });
   protected readonly c = computed(() => {
-    const r = this.result();
+    const r = this.result.value();
     return r ? r : undefined;
   });
+
+  protected orgStatus(c: PlatformCustomer): string {
+    return ORGANISATION_STATUS_LABELS[c.status];
+  }
 
   protected readonly revenue = computed(() => this.session.can('Platform.Revenue.View'));
   protected readonly canManage = computed(() => this.session.can('Platform.Subscriptions.Manage'));
@@ -64,7 +66,7 @@ export class CustomerPage {
 
   protected readonly modules = computed(() => {
     const c = this.c();
-    return c ? moduleRows(c.entitlements) : [];
+    return c ? moduleRows(entitlementSet(c.entitlements)) : [];
   });
 
   protected readonly adoption = computed(() =>
@@ -110,7 +112,7 @@ export class CustomerPage {
 
   protected manage(): void {
     const c = this.c();
-    if (c) this.drawer.open(ManageFeaturesDrawer, { agencyId: c.agencyId }, `Manage features for ${c.name}`);
+    if (c) this.drawer.open(ManageFeaturesDrawer, { organisationId: c.organisationId }, `Manage features for ${c.name}`);
   }
 
   protected setRequest(r: UpgradeRequest, status: UpgradeRequest['status']): void {

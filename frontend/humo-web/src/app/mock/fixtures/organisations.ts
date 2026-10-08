@@ -1,9 +1,11 @@
-import { Agency } from '../../domain';
+import { Organisation } from '../../domain';
 
-/** Fictional agencies. Real customers (e.g. Tshikrand) would simply be additional records here. */
-export const AGENCIES: Agency[] = [
+/** Customer organisations (all managing agencies today). Real customers (e.g. Tshikrand) are simply more records here. */
+export const ORGANISATIONS: Organisation[] = [
   {
     id: 'acacia',
+    kind: 'managing-agency',
+    status: 'active',
     name: 'Acacia Managing Agents (Pty) Ltd',
     shortName: 'Acacia Managing Agents',
     city: 'Johannesburg',
@@ -13,6 +15,8 @@ export const AGENCIES: Agency[] = [
   },
   {
     id: 'fynbos',
+    kind: 'managing-agency',
+    status: 'active',
     name: 'Fynbos Property Administrators',
     shortName: 'Fynbos Property Admin',
     city: 'Cape Town',
@@ -22,6 +26,8 @@ export const AGENCIES: Agency[] = [
   },
   {
     id: 'umgeni',
+    kind: 'managing-agency',
+    status: 'active',
     name: 'Umgeni Body Corporate Services',
     shortName: 'Umgeni BC Services',
     city: 'Durban',
@@ -32,6 +38,8 @@ export const AGENCIES: Agency[] = [
   {
     // The launch customer — just another agency record, never special-cased in code.
     id: 'tshikrand',
+    kind: 'managing-agency',
+    status: 'active',
     name: 'Tshikrand Property Management (Pty) Ltd',
     shortName: 'Tshikrand',
     city: 'Pretoria',

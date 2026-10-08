@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { WorkItem, WorkItemType, isOpen, urgencyOf } from '../../domain';
 import { AttentionService } from '../../core/attention/attention.service';
-import { pageState } from '../../core/prototype/page-state';
+import { loadable } from '../../core/data/loadable';
 import { ScopeNotice } from '../../core/scope/scope-notice';
 import { ScopeService } from '../../core/scope/scope.service';
 import { SessionService } from '../../core/session/session.service';
@@ -48,12 +48,12 @@ const TYPE_FILTER: { value: string; label: string; types: WorkItemType[] }[] = [
       (searchChange)="patch({ q: $event })"
     />
 
-    @switch (page.status()) {
+    @switch (attention.status()) {
       @case ('loading') {
         <ui-skeleton variant="tiles" [count]="3" />
       }
       @case ('error') {
-        <div class="surface"><ui-error-state title="We couldn’t load approvals" (retry)="page.retry()" /></div>
+        <div class="surface"><ui-error-state title="We couldn’t load approvals" (retry)="attention.retry()" /></div>
       }
       @default {
         @if (items().length === 0) {
@@ -92,11 +92,10 @@ const TYPE_FILTER: { value: string; label: string; types: WorkItemType[] }[] = [
   `,
 })
 export class ApprovalsPage {
-  private readonly attention = inject(AttentionService);
+  protected readonly attention = inject(AttentionService);
   private readonly scope = inject(ScopeService);
   private readonly drawer = inject(DrawerService);
   protected readonly session = inject(SessionService);
-  protected readonly page = pageState();
 
   protected readonly state = urlState({ view: 'mine', q: '', type: null, scheme: null });
 
@@ -114,7 +113,6 @@ export class ApprovalsPage {
   });
 
   protected readonly items = computed<WorkItem[]>(() => {
-    if (this.page.forceEmpty()) return [];
     const s = this.state();
     const types = TYPE_FILTER.find((t) => t.value === s.type)?.types;
     const q = (s.q ?? '').toLowerCase().trim();

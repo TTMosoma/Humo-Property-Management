@@ -4,7 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, map, of } from 'rxjs';
 import { ContractorDashboard, ContractorPortal, QuoteRequest, WorkOrder } from '../../domain/contractor';
-import { pageState } from '../../core/prototype/page-state';
+import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
 import { formatDate, formatRand } from '../../ui/format/money';
 import { relativeTime } from '../../ui/format/relative-time';
@@ -37,19 +37,13 @@ const WO_LABEL: Record<WorkOrder['status'], string> = {
 export class ContractorHomePage {
   private readonly portal = inject(ContractorPortal);
   protected readonly session = inject(SessionService);
-  protected readonly page = pageState();
   protected readonly view = (inject(ActivatedRoute).snapshot.data['view'] as 'dashboard' | 'requests' | 'jobs') ?? 'dashboard';
 
-  private readonly partyId = this.session.membership().partyId ?? '';
-  private readonly result = toSignal(
-    this.portal.dashboard(this.partyId).pipe(
-      map((d) => ({ d, failed: false })),
-      catchError(() => of({ d: undefined as ContractorDashboard | undefined, failed: true })),
-    ),
-  );
-  protected readonly loading = computed(() => this.page.status() === 'loading' || this.result() === undefined);
-  protected readonly failed = computed(() => this.page.status() === 'error' || !!this.result()?.failed);
-  protected readonly d = computed(() => this.result()?.d);
+  private readonly partyId = this.session.assignment().scope.partyId ?? '';
+  protected readonly result = loadable(() => this.portal.dashboard(this.partyId).pipe(map((d) => ({ d }))));
+  protected readonly loading = this.result.loading;
+  protected readonly failed = this.result.failed;
+  protected readonly d = computed(() => this.result.value()?.d);
 
   protected readonly today = computed(() => {
     const end = new Date();

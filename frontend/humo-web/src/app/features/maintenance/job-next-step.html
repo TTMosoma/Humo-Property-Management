@@ -15,7 +15,7 @@
         <div class="form-grid">
           <label>Assigned to
             <select [value]="assignee()" (change)="assignee.set($any($event.target).value)">
-              @for (s of staff; track s.id) { <option [value]="s.id">{{ s.name }}</option> }
+              @for (s of staff(); track s.id) { <option [value]="s.id" [selected]="s.id === assignee()">{{ s.name }}</option> }
             </select>
           </label>
           <label>Priority

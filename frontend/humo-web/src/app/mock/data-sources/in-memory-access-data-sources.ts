@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, Injector, inject } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Observable, delay, map, of, switchMap, throwError, timer } from 'rxjs';
 import {
@@ -6,6 +6,8 @@ import {
   AuditDataSource,
   AuditEvent,
   AuditQuery,
+  CurrentSession,
+  FieldErrors,
   IMPERSONATION_REASONS,
   Identity,
   ImpersonationSession,
@@ -15,30 +17,34 @@ import {
   SENSITIVE_ACTION_LABELS,
   SecurityDataSource,
   SecurityProfile,
+  SessionDataSource,
   StepUpAuthenticator,
   StepUpMethod,
   StepUpRequest,
   StepUpResult,
+  activeAssignments,
   isHumoRole,
 } from '../../domain';
-import { SessionService } from '../../core/session/session.service';
 import { PrototypeStateService } from '../../core/prototype/prototype-state.service';
 import { AccessStore } from '../db/access-store';
 import { mockResponder } from '../mock-latency';
+import { MockAuthSession } from '../server/mock-auth-session';
 import { MockGateway } from '../server/mock-gateway';
 
 @Injectable()
 export class InMemoryAccessDataSource extends AccessDataSource {
   private readonly store = inject(AccessStore);
-  private readonly session = inject(SessionService);
+  private readonly auth = inject(MockAuthSession);
   private readonly gateway = inject(MockGateway);
   private readonly respond = mockResponder();
   private readonly identities$ = toObservable(this.store.identities);
 
-  directory(agencyId: string | null): Observable<Identity[]> {
+  directory(organisationId: string | null): Observable<Identity[]> {
     return this.identities$.pipe(
       switchMap((all) =>
-        this.respond(all.filter((i) => i.kind === 'customer' && (agencyId === null || i.memberships.some((m) => m.agencyId === agencyId)))),
+        this.respond(
+          all.filter((i) => i.kind === 'customer' && (organisationId === null || i.memberships.some((m) => m.organisationId === organisationId && m.status !== 'ended'))),
+        ),
       ),
     );
   }
@@ -59,23 +65,31 @@ export class InMemoryAccessDataSource extends AccessDataSource {
           category: 'security',
           permission: humo ? 'Platform.ManageHumoRoles' : a.role === 'agency-admin' ? 'Users.ManageAdmins' : 'Users.Manage',
           stepUp: true,
+          validate: (): FieldErrors | null => {
+            if (a.scope.type === 'schemes' && a.scope.schemeIds.length === 0) return { scope: 'Choose at least one scheme.' };
+            if (a.scope.type === 'unit' && !a.scope.unitId) return { unit: 'Choose the unit.' };
+            const duplicate = target && activeAssignments(target).some(
+              (x) => x.role === a.role && x.scope.type === a.scope.type && x.scope.organisationId === a.scope.organisationId && x.scope.schemeIds.join() === a.scope.schemeIds.join() && x.scope.unitId === a.scope.unitId,
+            );
+            return duplicate ? { role: `${target!.name} already has this role here.` } : null;
+          },
         },
         () => {
           // The API also refuses self-escalation, whatever the caller's role.
-          if (identityId === this.session.actor().id) throw new PolicyError('forbidden', 'You can’t change your own roles');
-          this.store.assign(identityId, a, this.session.actor().name);
+          if (identityId === this.auth.actor().id) throw new PolicyError('forbidden', 'You can’t change your own roles');
+          this.store.assign(identityId, a, this.auth.actor().name);
         },
       )
       .pipe(map(() => undefined));
   }
 
-  revoke(identityId: string, assignmentId: string): Observable<void> {
+  endAssignment(identityId: string, assignmentId: string): Observable<void> {
     const target = this.store.identity(identityId);
-    const a = target?.memberships.find((m) => m.id === assignmentId);
+    const a = target?.assignments.find((m) => m.id === assignmentId);
     return this.gateway
       .command(
         {
-          action: `Removed ${a ? ROLE_LABELS[a.role] + ' · ' + a.label : 'a role'} from ${target?.name}`,
+          action: `Ended ${a ? ROLE_LABELS[a.role] + ' · ' + a.label : 'a role'} for ${target?.name}`,
           resource: 'Role assignment',
           resourceId: assignmentId,
           category: 'security',
@@ -83,52 +97,53 @@ export class InMemoryAccessDataSource extends AccessDataSource {
           stepUp: true,
         },
         () => {
-          if (identityId === this.session.actor().id) throw new PolicyError('forbidden', 'You can’t change your own roles');
-          this.store.revoke(identityId, assignmentId);
+          if (identityId === this.auth.actor().id) throw new PolicyError('forbidden', 'You can’t change your own roles');
+          this.store.end(identityId, assignmentId, this.auth.actor().name);
         },
       )
       .pipe(map(() => undefined));
   }
 
   switchRole(assignmentId: string): Observable<void> {
-    const a = this.session.persona().memberships.find((m) => m.id === assignmentId);
+    const a = this.auth.current.assignments.find((m) => m.id === assignmentId);
     if (!a) return throwError(() => new PolicyError('forbidden', 'Not one of your roles'));
     return this.gateway
       .command(
         { action: `Switched role to ${ROLE_LABELS[a.role]}`, resource: 'Role assignment', resourceId: assignmentId, category: 'security', allowedWhileObserving: true },
-        () => undefined,
+        // The API issues a token scoped to the new assignment.
+        () => void this.auth.switchAssignment(assignmentId),
       )
       .pipe(map(() => undefined));
   }
 
   signOut(fromProduct: string): Observable<void> {
-    const imp = this.session.isImpersonating();
-    return this.gateway
-      .command(
-        {
-          action: imp ? `Signed out of Humo from ${fromProduct} (impersonation ended)` : `Signed out of Humo from ${fromProduct}`,
-          resource: 'Session',
-          resourceId: 's-current',
-          category: 'security',
-          allowedWhileObserving: true,
-        },
-        () => undefined,
-      )
-      .pipe(map(() => undefined));
+    const imp = !!this.auth.current.impersonation;
+    // The server ends the session as soon as it hears about it, even if the response is lost.
+    this.gateway.audit(
+      {
+        action: imp ? `Signed out of Humo from ${fromProduct} (impersonation ended)` : `Signed out of Humo from ${fromProduct}`,
+        resource: 'Session',
+        resourceId: 's-current',
+        category: 'security',
+      },
+      'success',
+    );
+    this.auth.signOut();
+    return this.respond(undefined);
   }
 
   startImpersonation(input: Parameters<AccessDataSource['startImpersonation']>[0]): Observable<ImpersonationSession> {
-    const actor = this.session.actor();
+    const actor = this.auth.actor();
     const target = this.store.identity(input.targetId);
-    const assignment = target?.memberships.find((m) => m.id === input.targetAssignmentId);
-    const allowed = this.session.actorCan('System.Impersonate');
-    const proofNeeded = input.mode === 'act' && !this.session.stepUpFresh();
+    const assignment = target ? activeAssignments(target).find((m) => m.id === input.targetAssignmentId) : undefined;
+    const allowed = this.auth.current.actorPermissions.includes('System.Impersonate');
+    const proofNeeded = input.mode === 'act' && !this.auth.stepUpFresh();
     const base = {
       category: 'impersonation' as const,
       actor: { identityId: actor.id, name: actor.name },
       actingAs: target ? { identityId: target.id, name: target.name } : undefined,
       role: assignment?.role ?? 'system-admin',
-      agencyId: assignment?.agencyId ?? null,
+      organisationId: assignment?.scope.organisationId ?? null,
       resource: 'Identity',
       resourceId: input.targetId,
       impersonation: { mode: input.mode, reason: input.reason, note: [input.ticket, input.note].filter(Boolean).join(' · ') || undefined },
@@ -155,27 +170,29 @@ export class InMemoryAccessDataSource extends AccessDataSource {
     };
     return this.respond(session).pipe(
       map((s) => {
-        const proof = this.session.stepUpProof();
+        const proof = this.auth.stepUpProof();
         this.store.record({
           ...base,
           action: `Started impersonation (${input.mode === 'act' ? 'Act' : 'Observe'} · ${IMPERSONATION_REASONS[input.reason]})`,
           result: 'success',
           stepUp: input.mode === 'act' && proof?.method ? { method: proof.method, device: proof.device } : undefined,
         });
+        this.auth.startImpersonation(s);
         return s;
       }),
     );
   }
 
   endImpersonation(sessionId: string): Observable<void> {
-    const imp = this.session.impersonation();
+    const imp = this.auth.current.impersonation;
     const minutes = imp ? Math.max(1, Math.round((Date.now() - new Date(imp.startedAt).getTime()) / 60_000)) : 0;
-    return this.gateway
-      .command(
-        { action: `Ended impersonation (${minutes} min)`, resource: 'Identity', resourceId: imp?.targetId ?? sessionId, category: 'impersonation', allowedWhileObserving: true },
-        () => undefined,
-      )
-      .pipe(map(() => undefined));
+    // Ending always succeeds server-side, even if the response is lost on the way back.
+    this.gateway.audit(
+      { action: `Ended impersonation (${minutes} min)`, resource: 'Identity', resourceId: imp?.targetId ?? sessionId, category: 'impersonation' },
+      'success',
+    );
+    this.auth.endImpersonation();
+    return this.respond(undefined);
   }
 }
 
@@ -192,7 +209,7 @@ export class InMemoryAuditDataSource extends AuditDataSource {
         this.respond(
           all.filter(
             (e) =>
-              (q.agencyId === null || e.agencyId === q.agencyId) &&
+              (q.organisationId === null || e.organisationId === q.organisationId) &&
               (!q.category || e.category === q.category) &&
               (!q.identityId || e.actor.identityId === q.identityId || e.actingAs?.identityId === q.identityId),
           ),
@@ -202,9 +219,9 @@ export class InMemoryAuditDataSource extends AuditDataSource {
   }
 
   export(q: AuditQuery): Observable<string> {
-    const file = `humo-audit-${q.agencyId ?? 'platform'}-${new Date().toISOString().slice(0, 10)}.csv`;
+    const file = `humo-audit-${q.organisationId ?? 'platform'}-${new Date().toISOString().slice(0, 10)}.csv`;
     return this.gateway.command(
-      { action: `Exported the audit log (${q.category ?? 'all events'})`, resource: 'Export', resourceId: file, category: 'security', permission: q.agencyId === null ? 'Platform.Audit' : 'Audit.View', stepUp: true },
+      { action: `Exported the audit log (${q.category ?? 'all events'})`, resource: 'Export', resourceId: file, category: 'security', permission: q.organisationId === null ? 'Platform.Audit' : 'Audit.View', stepUp: true },
       () => file,
     );
   }
@@ -261,7 +278,7 @@ export class InMemoryStepUpAuthenticator extends StepUpAuthenticator {
   private readonly store = inject(AccessStore);
   private readonly proto = inject(PrototypeStateService);
   /** The step-up is always for the human at the keyboard, never the impersonated user. */
-  private readonly session = inject(SessionService);
+  private readonly auth = inject(MockAuthSession);
 
   methods(identityId: string): Observable<{ method: StepUpMethod; device: string }[]> {
     const p = this.store.security()[identityId];
@@ -276,12 +293,13 @@ export class InMemoryStepUpAuthenticator extends StepUpAuthenticator {
   verify(method: StepUpMethod, request: StepUpRequest): Observable<StepUpResult> {
     const ms = method === 'passkey' ? 1400 : 2800;
     const failed = this.proto.viewState() === 'error';
-    return this.methods(this.session.actor().id).pipe(
+    return this.methods(this.auth.actor().id).pipe(
       delay(ms),
       map((all) => {
         const device = all.find((m) => m.method === method)?.device;
         const result: StepUpResult = { verified: !failed, method, device, at: new Date().toISOString() };
         this.recordProof(request, result);
+        this.auth.recordProof(result);
         return result;
       }),
     );
@@ -289,15 +307,13 @@ export class InMemoryStepUpAuthenticator extends StepUpAuthenticator {
 
   /** The API records every step-up attempt as a security event. */
   private recordProof(request: StepUpRequest, result: StepUpResult): void {
-    const actor = this.session.actor();
-    const imp = this.session.impersonation();
-    const persona = this.session.persona();
+    const s = this.auth.current;
     this.store.record({
       category: 'security',
-      actor: { identityId: actor.id, name: actor.name },
-      actingAs: imp ? { identityId: persona.id, name: persona.name } : undefined,
-      role: this.session.role(),
-      agencyId: this.session.agency()?.id ?? null,
+      actor: { identityId: s.actor.id, name: s.actor.name },
+      actingAs: s.impersonation ? { identityId: s.identity.id, name: s.identity.name } : undefined,
+      role: this.auth.assignment().role,
+      organisationId: s.organisation?.id ?? null,
       action: result.verified
         ? `Verified identity · ${SENSITIVE_ACTION_LABELS[request.action]}`
         : `Step-up verification failed · ${SENSITIVE_ACTION_LABELS[request.action]}`,
@@ -307,6 +323,30 @@ export class InMemoryStepUpAuthenticator extends StepUpAuthenticator {
       session: { ip: '196.21.45.10', device: 'Chrome on Windows 11', sessionId: 's-current' },
     });
   }
-
 }
 
+/**
+ * GET /me. Not delayed or failed by the prototype's state simulator: the
+ * shell needs it to render at all (a real app shows a full-page error instead).
+ */
+@Injectable()
+export class InMemorySessionDataSource extends SessionDataSource {
+  private readonly auth = inject(MockAuthSession);
+  private readonly store = inject(AccessStore);
+  /** Looked up when needed: the gateway reads the client's scope, which depends on the session. */
+  private readonly injector = inject(Injector);
+
+  current(): Observable<CurrentSession> {
+    return this.auth.session$.asObservable();
+  }
+
+  signIn(identityId?: string): Observable<void> {
+    this.auth.signIn(identityId);
+    this.injector.get(MockGateway).audit({ action: 'Signed in to Humo with a passkey', resource: 'Session', resourceId: 's-current', category: 'security' }, 'success');
+    return of(undefined);
+  }
+
+  demoIdentities(): Observable<Identity[]> {
+    return of(this.store.identities().filter((i) => i.demo && i.status === 'active'));
+  }
+}

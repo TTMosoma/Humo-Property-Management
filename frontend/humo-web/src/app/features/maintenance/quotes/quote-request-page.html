@@ -6,10 +6,12 @@
   subtitle="Describe the work once. The contractors you invite quote in Humo Contractor, and you compare their offers side by side. Only the businesses you invite see this request."
 />
 
-@if (d === null || page.status() === 'error') {
-  <ui-error-state (retry)="page.retry()" />
-} @else if (d === undefined) {
+@if (result.failed()) {
+  <ui-error-state (retry)="result.retry()" />
+} @else if (result.loading()) {
   <ui-skeleton variant="tiles" [count]="3" />
+} @else if (!d) {
+  <ui-empty-state illustration="not-found" title="We couldn’t find that job" />
 } @else {
   <div class="layout">
     <section class="surface form">

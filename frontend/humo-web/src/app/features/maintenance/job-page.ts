@@ -5,7 +5,7 @@ import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, map, of, switchMap } from 'rxjs';
 import { JobDataSource, JobEvent, PRIORITY_LABEL, TimelineEvent, TimelineKind, supplierCompliance } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
-import { pageState } from '../../core/prototype/page-state';
+import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
 import { RandPipe, formatDate, formatRand } from '../../ui/format/money';
 import { PhotoTile } from '../../ui/photo/photo-tile';
@@ -49,21 +49,19 @@ export class JobPage {
   private readonly jobs = inject(JobDataSource);
   private readonly feedback = inject(FeedbackService);
   protected readonly session = inject(SessionService);
-  protected readonly page = pageState();
 
   private readonly ref = toSignal(this.route.paramMap.pipe(map((p) => p.get('requestId')!)), {
     initialValue: this.route.snapshot.paramMap.get('requestId')!,
   });
 
   /** undefined = loading; null = failed; false = not found. */
-  protected readonly result = toSignal(
-    toObservable(this.ref).pipe(
-      switchMap((ref) => this.jobs.get(ref).pipe(map((d) => d ?? (false as const)), catchError(() => of(null)))),
-    ),
-  );
+  protected readonly result = loadable(() => {
+    const ref = this.ref();
+    return this.jobs.get(ref).pipe(map((d) => d ?? (false as const)));
+  });
 
   protected readonly detail = computed(() => {
-    const r = this.result();
+    const r = this.result.value();
     return r ? r : undefined;
   });
 

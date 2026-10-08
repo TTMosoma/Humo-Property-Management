@@ -6,9 +6,10 @@ import { catchError, concatMap, map, of, switchMap } from 'rxjs';
 import { ContractorNetwork, ContractorProfile } from '../../../domain/contractor';
 import { JobDataSource, JobDetail } from '../../../domain';
 import { FeedbackService } from '../../../core/feedback/feedback.service';
-import { pageState } from '../../../core/prototype/page-state';
+import { loadable } from '../../../core/data/loadable';
 import { SessionService } from '../../../core/session/session.service';
 import { PageHeader } from '../../../ui/page-header/page-header';
+import { EmptyState } from '../../../ui/states/empty-state';
 import { ErrorState } from '../../../ui/states/error-state';
 import { Skeleton } from '../../../ui/states/skeleton';
 import { EndorsedBy, VerificationBadge, complianceOk } from '../../contractor-shared/contractor-ui';
@@ -25,7 +26,7 @@ const DEFAULT_REQUIREMENTS: Record<string, string[]> = {
  */
 @Component({
   selector: 'app-quote-request-page',
-  imports: [PageHeader, VerificationBadge, EndorsedBy, ErrorState, Skeleton, IonIcon, RouterLink],
+  imports: [PageHeader, VerificationBadge, EndorsedBy, EmptyState, ErrorState, Skeleton, IonIcon, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './quote-request-page.html',
   styleUrl: './quote-request-page.scss',
@@ -36,12 +37,10 @@ export class QuoteRequestPage {
   private readonly feedback = inject(FeedbackService);
   private readonly router = inject(Router);
   protected readonly session = inject(SessionService);
-  protected readonly page = pageState();
 
   protected readonly ref = toSignal(inject(ActivatedRoute).paramMap.pipe(map((p) => p.get('requestId')!)), { initialValue: '' });
-  protected readonly detail = toSignal(
-    toObservable(this.ref).pipe(switchMap((ref) => this.jobs.get(ref).pipe(catchError(() => of(null))))),
-  );
+  protected readonly result = loadable(() => this.jobs.get(this.ref()));
+  protected readonly detail = computed(() => this.result.value());
   /** The agency's suppliers for this trade at this scheme, with their Humo profiles. */
   protected readonly candidates = toSignal(
     toObservable(computed(() => this.detail() ?? null)).pipe(
@@ -96,8 +95,8 @@ export class QuoteRequestPage {
     this.busy.set(true);
     this.network
       .createQuoteRequest({
-        customerId: this.session.agency()?.id ?? '',
-        customerName: this.session.agency()?.shortName ?? '',
+        customerId: this.session.organisation()?.id ?? '',
+        customerName: this.session.organisation()?.shortName ?? '',
         site: { name: d.scheme.name, suburb: d.scheme.suburb, city: d.scheme.city },
         source: { product: 'humo-pm', ref: d.job.ref },
         title: this.title().trim(),
