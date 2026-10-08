@@ -14,7 +14,7 @@ export type FormValues = Record<string, string>;
 export interface FormField {
   key: string;
   label: string;
-  type: 'text' | 'email' | 'tel' | 'number' | 'date' | 'textarea' | 'select';
+  type: 'text' | 'email' | 'tel' | 'number' | 'date' | 'textarea' | 'select' | 'color';
   required?: boolean;
   options?: { value: string; label: string }[];
   help?: string;

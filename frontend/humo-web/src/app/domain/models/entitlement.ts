@@ -41,6 +41,9 @@ export type Feature =
   | 'whatsapp'
   | 'documents'
   | 'storage-extra'
+  | 'document-templates-premium'
+  | 'document-branding'
+  | 'document-templates-custom'
   // Governance & compliance
   | 'governance'
   | 'trustee-management'
@@ -106,6 +109,9 @@ export const FEATURES: FeatureDef[] = [
   { key: 'whatsapp', module: 'communications', label: 'WhatsApp', description: 'Send notices and reminders on WhatsApp.' },
   { key: 'documents', module: 'documents', label: 'Documents', description: 'Document library with visibility rules.' },
   { key: 'storage-extra', module: 'documents', label: 'Additional storage', description: 'More document storage.' },
+  { key: 'document-templates-premium', module: 'documents', label: 'Premium document templates', description: 'Professional and detailed layouts for statements and other documents.' },
+  { key: 'document-branding', module: 'documents', label: 'Document branding', description: 'Your logo, colours and font on the documents you send.' },
+  { key: 'document-templates-custom', module: 'documents', label: 'Custom document templates', description: 'Your organisation’s own template: layout, colours, wording and legal text.' },
   { key: 'governance', module: 'governance', label: 'Governance', description: 'Trustee workflows in one place.' },
   { key: 'trustee-management', module: 'governance', label: 'Trustee management', description: 'Boards, terms and trustee roles.' },
   { key: 'meetings', module: 'governance', label: 'Meetings', description: 'Agendas, packs, minutes, resolutions and actions.' },
@@ -163,7 +169,7 @@ export const PACKAGES: Package[] = [
     extends: 'essentials',
     features: [
       'levies', 'billing', 'statements', 'payment-allocation', 'debtors', 'credit-control', 'payables', 'suppliers', 'contractors',
-      'maintenance-advanced', 'reporting-financial', 'budgets', 'team-management',
+      'maintenance-advanced', 'reporting-financial', 'budgets', 'team-management', 'document-templates-premium', 'document-branding',
     ],
   },
   {
@@ -174,12 +180,12 @@ export const PACKAGES: Package[] = [
     extends: 'professional',
     features: [
       'governance', 'trustee-management', 'meetings', 'agm-sgm', 'compliance', 'reporting-advanced', 'permissions-advanced',
-      'integrations', 'api', 'automation', 'analytics-advanced',
+      'integrations', 'api', 'automation', 'analytics-advanced', 'document-templates-custom',
     ],
   },
 ];
 
-export type AddOnId = 'governance' | 'advanced-reporting' | 'storage' | 'api-access' | 'whatsapp' | 'advanced-automation' | 'integrations';
+export type AddOnId = 'governance' | 'advanced-reporting' | 'storage' | 'api-access' | 'whatsapp' | 'advanced-automation' | 'integrations' | 'document-branding-pack';
 
 /** Features sold independently of the package. */
 export interface AddOn {
@@ -197,6 +203,7 @@ export const ADD_ONS: AddOn[] = [
   { id: 'whatsapp', name: 'WhatsApp', description: 'Notices and reminders on WhatsApp.', features: ['whatsapp'] },
   { id: 'advanced-automation', name: 'Advanced Automation', description: 'Automated multi-step workflows.', features: ['automation', 'automation-advanced'] },
   { id: 'integrations', name: 'Integrations', description: 'Accounting and banking connectors.', features: ['integrations'] },
+  { id: 'document-branding-pack', name: 'Document & Branding Pack', description: 'Premium document templates and your own branding on documents.', features: ['document-templates-premium', 'document-branding'] },
 ];
 
 // ---------------------------------------------------------------- Subscription

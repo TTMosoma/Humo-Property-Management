@@ -1,0 +1,137 @@
+<ui-page-header
+  eyebrow="Settings"
+  title="Documents & templates"
+  subtitle="How the documents you send look: the template each one uses, the details printed on them and your branding. Documents already issued never change."
+/>
+
+@if (!registry.loaded()) {
+  <ui-skeleton variant="tiles" [count]="3" />
+} @else {
+  @let s = registry.settings()!;
+
+  <!-- Defaults per document type -->
+  <section class="block surface" aria-labelledby="defaults-h">
+    <h2 id="defaults-h" class="block-title">Default templates</h2>
+    <p class="block-sub">New documents of each type use this template. Staff can still preview a document in any template your plan includes.</p>
+    <ul class="types">
+      @for (r of rows(); track r.def.type) {
+        <li class="type" [class.later]="!r.def.implemented">
+          <div class="t-main">
+            <span class="t-name">{{ r.def.label }}</span>
+            <span class="t-desc">{{ r.def.description }}</span>
+          </div>
+          @if (r.def.implemented && r.current) {
+            <div class="t-current">
+              <strong>{{ r.current.name }}</strong>
+              @if (tierLabel(r.current) !== r.current.name) {
+                <span class="muted">{{ tierLabel(r.current) }}</span>
+              }
+            </div>
+            <div class="t-act">
+              @if (canEdit() && r.choices > 1) {
+                <button type="button" class="btn btn-secondary btn-sm" (click)="changeDefault(r.def.type)">Change</button>
+              }
+            </div>
+          } @else {
+            <div class="t-current"><ui-status-pill label="Coming later" tone="neutral" /></div>
+            <div class="t-act"></div>
+          }
+        </li>
+      }
+    </ul>
+  </section>
+
+  <!-- The levy statement's templates -->
+  <section class="block surface" aria-labelledby="library-h">
+    <h2 id="library-h" class="block-title">Levy statement templates</h2>
+    <p class="block-sub">Select a template to preview it on one of your real statements.</p>
+    <app-template-picker
+      label="Levy statement templates"
+      [options]="statementTemplates()"
+      [selected]="registry.defaultFor('levy-statement')?.id ?? null"
+      [defaultId]="registry.defaultFor('levy-statement')?.id ?? null"
+      [showPlanned]="true"
+      (choose)="preview($event)"
+    />
+  </section>
+
+  <!-- Contact details and branding -->
+  <section class="block surface" aria-labelledby="brand-h">
+    <div class="block-head">
+      <h2 id="brand-h" class="block-title">Contact details & branding</h2>
+      @if (canEdit()) {
+        <button type="button" class="btn btn-secondary btn-sm" (click)="editBranding()"><ion-icon name="create-outline" aria-hidden="true" /> Edit</button>
+      }
+    </div>
+    <dl class="facts">
+      <dt>Email</dt><dd>{{ s.contact.email }}</dd>
+      <dt>Phone</dt><dd>{{ s.contact.phone }}</dd>
+      <dt>Footer line</dt><dd>{{ s.footerText || '—' }}</dd>
+      <dt>Bank details</dt><dd class="muted">Each scheme’s trust account, from the scheme’s records.</dd>
+    </dl>
+    @if (branded()) {
+      @if (s.branding; as b) {
+        <div class="brand">
+          <span class="swatch" [style.background]="b.palette.primary" [title]="b.palette.primary"></span>
+          <span class="swatch" [style.background]="b.palette.accent" [title]="b.palette.accent"></span>
+          <span class="wordmark" [style.color]="b.palette.primary">{{ b.logo?.text ?? session.organisation()?.shortName }}</span>
+          <span class="muted">{{ fontLabel(b.font) }}</span>
+        </div>
+      } @else {
+        <p class="muted">No branding yet: branded templates use Humo’s colours until you add yours.</p>
+      }
+    } @else {
+      <div class="locked">
+        <ion-icon name="lock-closed-outline" aria-hidden="true" />
+        <div>
+          <strong>Your logo and colours on documents</strong>
+          <p>Available with Professional or the Document &amp; Branding Pack.</p>
+          @if (session.canOpen('Subscription.View')) {
+            <a class="btn btn-ghost btn-sm" routerLink="/settings/plan" [queryParams]="{ feature: 'document-branding' }">Explore Professional</a>
+          }
+        </div>
+      </div>
+    }
+  </section>
+
+  <!-- Enterprise custom template -->
+  <section class="block surface" aria-labelledby="custom-h">
+    <div class="block-head">
+      <h2 id="custom-h" class="block-title">Your custom template</h2>
+      @if (custom() && customEntitled() && canEdit()) {
+        <button type="button" class="btn btn-primary btn-sm" (click)="publish()">Edit and publish a new version</button>
+      }
+    </div>
+    @if (!customEntitled()) {
+      <div class="locked">
+        <ion-icon name="lock-closed-outline" aria-hidden="true" />
+        <div>
+          <strong>Enterprise custom</strong>
+          <p>Create documents using your organisation’s own branding and layout. Available with Enterprise.</p>
+          @if (session.canOpen('Subscription.View')) {
+            <a class="btn btn-ghost btn-sm" routerLink="/settings/plan" [queryParams]="{ feature: 'document-templates-custom' }">Explore Enterprise</a>
+          }
+        </div>
+      </div>
+    } @else if (custom(); as t) {
+      <p class="block-sub">
+        <strong>{{ t.name }}</strong> — {{ t.description }} Each version is kept: documents issued with an earlier version keep rendering exactly as they were sent.
+      </p>
+      <ol class="versions">
+        @for (v of history(); track v.version) {
+          <li class="version">
+            <span class="v-no">v{{ v.version }}</span>
+            <span class="v-main">
+              <span>{{ v.notes }}</span>
+              <span class="muted small">{{ v.publishedBy }} · {{ v.publishedAt ? formatDate(v.publishedAt) : 'Draft' }}</span>
+            </span>
+            <ui-status-pill [label]="v.status === 'published' ? 'Current' : v.status === 'retired' ? 'Earlier version' : 'Draft'" [tone]="v.status === 'published' ? 'success' : 'neutral'" />
+            <button type="button" class="btn btn-ghost btn-sm" (click)="preview(t.id, v.version)">Preview</button>
+          </li>
+        }
+      </ol>
+    } @else {
+      <p class="block-sub">Your plan includes a custom template. Your Humo account manager sets it up with you; after that you change it here.</p>
+    }
+  </section>
+}

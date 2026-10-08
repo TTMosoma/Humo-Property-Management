@@ -13,6 +13,7 @@ import {
   Relationship,
   Scheme,
   StatementView,
+  TrustAccount,
   TimelineEvent,
   Unit,
   UnitSummary,
@@ -235,12 +236,16 @@ export class MockDb {
     const { opening, transactions } = this.ledger(accountId);
     const statement = buildStatement(accountId, opening, transactions, period);
     if (!statement) return undefined;
+    const scheme = this.scheme(account.schemeId);
     return {
       statement,
       account,
       unit: this.unitById.get(account.unitId)!,
-      scheme: this.scheme(account.schemeId),
+      scheme,
       holder: this.persons.get(account.holderPersonId)!,
+      payTo: trustAccountFor(scheme),
+      // Statements in the simulation were all issued with Humo's Standard template, version 1.
+      issuedWith: { templateId: 'levy-statement.standard', version: 1 },
     };
   }
 
@@ -750,4 +755,16 @@ export class MockDb {
     }
     return receipts;
   }
+}
+
+/** Each scheme's trust account (simulated): the bank details printed on its statements. */
+export function trustAccountFor(scheme: Scheme): TrustAccount {
+  const r = seeded(`trust-${scheme.id}`);
+  const digits = Array.from({ length: 9 }, () => Math.floor(r() * 10)).join('');
+  return {
+    bank: 'First National Bank',
+    accountName: `${scheme.name} — Trust Account`,
+    accountNumber: `62 ${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`,
+    branchCode: '250 655',
+  };
 }

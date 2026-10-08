@@ -33,3 +33,5 @@ export * from './ports/organisation-data-sources';
 export * from './ports/api-error';
 export * from './ports/list-query';
 export * from './models/money';
+export * from './models/document';
+export * from './ports/document-data-sources';

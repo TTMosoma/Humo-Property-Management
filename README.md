@@ -190,6 +190,7 @@ Build order follows workflow slices (see `docs/02-ux-review.md` §4.2).
 - [x] Backend readiness (P1) — `GET /me` session bootstrap, Organisation model, identity → membership → assignment with explicit scope and lifecycle states, server-side errors with field messages, request-driven loading states, server-side contact disclosure (`docs/08-api-contract.md`)
 - [x] Backend readiness (P2) — permission-gated routes and navigation, paged list contract, optimistic concurrency versions, money/time transport, catalogue endpoint, prototype tools only with the mock data layer (`docs/08-api-contract.md` §7)
 - [x] Simulation layer — create / edit / archive / restore for organisations, users, schemes, units, people and suppliers through the repository interfaces; dev-only persistence in localStorage with Reset simulation; blind-spot list (`docs/09-simulation.md`)
+- [x] Document templates — document types separate from templates, versioned templates, entitlement-driven tiers (Standard / Premium / Enterprise custom), branding hierarchy; the levy statement is the first template-driven document (`docs/document-template-architecture.md`, `docs/document-template-catalog.md`, `docs/document-pdf-rendering-standard.md`)
 - [ ] Checkpoint 5 — Slice C: Run the trustee meeting (Meeting → Resolution → Action → Completion)
 - [ ] Checkpoint 6 — Credit control & billing run
 - [ ] Checkpoint 7 — Dashboard, Compliance & Documents

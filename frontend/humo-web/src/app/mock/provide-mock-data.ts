@@ -4,6 +4,8 @@ import {
   AccountDataSource,
   AuditDataSource,
   CatalogueDataSource,
+  DocumentTemplateDataSource,
+  PlatformTemplateDataSource,
   NotificationDataSource,
   NudgeDataSource,
   OrganisationDataSource,
@@ -46,6 +48,7 @@ import { ContractorNetwork, ContractorPortal } from '../domain/contractor';
 import { InMemoryContractorNetwork, InMemoryContractorPortal } from './contractor/in-memory-contractor';
 import { InMemoryCatalogueDataSource, InMemoryNudgeDataSource, InMemoryPlanDataSource, InMemoryPlatformDataSource } from './data-sources/in-memory-platform-data-sources';
 import { InMemorySchemeDataSource } from './data-sources/in-memory-scheme-data-source';
+import { InMemoryDocumentTemplateDataSource, InMemoryPlatformTemplateDataSource } from './data-sources/in-memory-document-data-sources';
 import { PrototypeControls } from '../core/prototype/prototype-controls';
 import { MaintenanceStore } from './db/maintenance-store';
 import { MockPrototypeControls } from './prototype/mock-prototype-controls';
@@ -78,6 +81,8 @@ export function provideMockData(): EnvironmentProviders {
     { provide: PlanDataSource, useClass: InMemoryPlanDataSource },
     { provide: NudgeDataSource, useClass: InMemoryNudgeDataSource },
     { provide: CatalogueDataSource, useClass: InMemoryCatalogueDataSource },
+    { provide: DocumentTemplateDataSource, useClass: InMemoryDocumentTemplateDataSource },
+    { provide: PlatformTemplateDataSource, useClass: InMemoryPlatformTemplateDataSource },
     // Humo Contractor — a separate product's capabilities, consumed by Humo PM.
     { provide: ContractorNetwork, useClass: InMemoryContractorNetwork },
     { provide: ContractorPortal, useClass: InMemoryContractorPortal },

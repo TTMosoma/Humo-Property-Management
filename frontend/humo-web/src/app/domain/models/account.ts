@@ -46,6 +46,14 @@ export interface Transaction {
   receiptId?: string;
 }
 
+/** The scheme's trust account that owners pay into: scheme data, never part of a template. */
+export interface TrustAccount {
+  bank: string;
+  accountName: string;
+  accountNumber: string;
+  branchCode: string;
+}
+
 export interface Statement {
   accountId: string;
   /** "2026-10". */

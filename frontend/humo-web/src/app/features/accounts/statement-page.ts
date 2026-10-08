@@ -1,14 +1,15 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, ParamMap, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { map, of, switchMap } from 'rxjs';
-import { AccountDataSource, UnitDataSource, periodLabel } from '../../domain';
+import { AccountDataSource, TEMPLATE_TIERS, UnitDataSource, periodLabel } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
-import { Logo } from '../../ui/brand/logo';
-import { RandPipe, formatDate } from '../../ui/format/money';
+import { DocumentTemplatesService } from '../../core/documents/document-templates.service';
+import { DocumentData, DocumentRenderer } from '../documents/document-renderer';
+import { TemplatePicker } from '../documents/template-picker';
 import { RelationshipChain } from '../../ui/record/relationship-chain';
 import { EmptyState } from '../../ui/states/empty-state';
 import { ErrorState } from '../../ui/states/error-state';
@@ -19,10 +20,15 @@ import { links, unitChain } from './account-view';
  * A levy statement: opening balance, charges, payments, adjustments,
  * interest and closing balance — laid out as the document the owner receives,
  * and printable straight from the browser.
+ *
+ * The statement opens exactly as it was issued (its template and version).
+ * Staff can preview it in any template their plan includes, with the same
+ * data; that changes nothing that was sent. Settings → Documents & templates
+ * links here with ?template= to preview a template on a real statement.
  */
 @Component({
   selector: 'app-statement-page',
-  imports: [RelationshipChain, Logo, EmptyState, ErrorState, Skeleton, IonIcon, RouterLink, RandPipe],
+  imports: [RelationshipChain, DocumentRenderer, TemplatePicker, EmptyState, ErrorState, Skeleton, IonIcon, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './statement-page.html',
   styleUrl: './statement-page.scss',
@@ -33,6 +39,7 @@ export class StatementPage {
   private readonly accounts = inject(AccountDataSource);
   private readonly feedback = inject(FeedbackService);
   protected readonly session = inject(SessionService);
+  protected readonly registry = inject(DocumentTemplatesService);
 
   /** Staff reach this via /schemes/:schemeId/units/:unitId/…; owners via /my/statements/:period (their own unit). */
   private readonly key = toSignal(this.route.paramMap.pipe(map((p) => this.keyFrom(p))), {
@@ -61,7 +68,54 @@ export class StatementPage {
   });
 
   protected readonly links = links;
-  protected readonly formatDate = formatDate;
+
+  // ---- Template: as issued, or a preview in another template the plan includes
+
+  private readonly requested = toSignal(
+    this.route.queryParamMap.pipe(map((p) => (p.get('template') ? { templateId: p.get('template')!, version: Number(p.get('v')) || undefined } : null))),
+    { initialValue: null },
+  );
+  private readonly picked = signal<string | null>(null);
+  protected readonly choosing = signal(false);
+  /** Owners only ever see what they were sent. */
+  protected readonly canPreview = computed(() => !this.isOwnerView() && this.session.can('Accounts.View'));
+  protected readonly options = computed(() => this.registry.forType('levy-statement'));
+  protected readonly defaultTemplate = computed(() => this.registry.defaultFor('levy-statement'));
+
+  /** The template shown: the one picked (if the plan includes it), else as issued. */
+  protected readonly shown = computed(() => {
+    const v = this.view();
+    if (!v) return undefined;
+    const picked = this.picked();
+    const wanted = !this.canPreview() ? null : picked ? { templateId: picked, version: undefined } : this.requested();
+    const usable = wanted && this.options().some((o) => o.template.id === wanted.templateId && o.state === 'available');
+    const sameAsIssued = wanted?.templateId === v.issuedWith.templateId && (wanted.version ?? v.issuedWith.version) === v.issuedWith.version;
+    if (usable && !sameAsIssued) return this.registry.resolve(wanted) ?? this.registry.resolve(v.issuedWith);
+    return this.registry.resolve(v.issuedWith);
+  });
+  protected readonly previewing = computed(() => {
+    const s = this.shown();
+    const v = this.view();
+    return !!s && !!v && (s.template.id !== v.issuedWith.templateId || s.version.version !== v.issuedWith.version);
+  });
+  protected readonly issued = computed(() => {
+    const v = this.view();
+    return v ? this.registry.resolve(v.issuedWith) : undefined;
+  });
+  protected readonly tierLabel = (tier: keyof typeof TEMPLATE_TIERS) => TEMPLATE_TIERS[tier].label;
+
+  protected readonly document = computed<DocumentData | undefined>(() => {
+    const v = this.view();
+    return v ? { type: 'levy-statement', view: v } : undefined;
+  });
+
+  protected choose(id: string): void {
+    this.picked.set(id);
+  }
+
+  protected showIssued(): void {
+    this.picked.set(this.view()?.issuedWith.templateId ?? null);
+  }
 
   /** Staff: the unit from the URL. Owners: the unit their assignment is for. */
   private keyFrom(p: ParamMap): { schemeId: string; number: string; unitId?: string; period: string } {

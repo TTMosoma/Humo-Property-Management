@@ -7,8 +7,6 @@
     <ui-empty-state illustration="not-found" title="No statement for this period" message="Statements are kept for the periods shown on the account." />
   </div>
 } @else {
-  @let v = view()!;
-  @let st = v.statement;
   <div class="toolbar no-print">
     @if (isOwnerView()) {
       <a class="btn btn-ghost btn-sm" routerLink="/my/account"><ion-icon name="chevron-back-outline" aria-hidden="true" /> My account</a>
@@ -23,87 +21,54 @@
     </div>
   </div>
 
-  <article class="sheet" aria-label="Levy statement">
-    <header class="letterhead">
-      <div>
-        <div class="agency">{{ session.organisation()?.name }}</div>
-        <div class="agency-sub">Managing agent for {{ v.scheme.name }} · {{ v.scheme.type }}</div>
-        <div class="agency-sub">accounts&#64;acacia-ma.example · 011 555 0142</div>
-      </div>
-      <div class="doc">
-        <div class="doc-title">Levy statement</div>
-        <div class="doc-period">{{ st.periodLabel }}</div>
-      </div>
-    </header>
-
-    <section class="parties">
-      <div>
-        <div class="label">To</div>
-        <div class="strong">{{ v.holder.displayName }}</div>
-        <div>Unit {{ v.unit.number }}, {{ v.scheme.name }}</div>
-        <div>{{ v.scheme.suburb }}, {{ v.scheme.city }}</div>
-      </div>
-      <dl class="refs">
-        <dt>Account number</dt><dd>{{ v.account.accountNo }}</dd>
-        <dt>Statement date</dt><dd>{{ formatDate(st.issuedOn) }}</dd>
-        <dt>Payment due</dt><dd>{{ formatDate(st.dueOn) }}</dd>
-        <dt>Participation quota</dt><dd>{{ v.unit.participationQuota.toFixed(4) }}%</dd>
-      </dl>
-    </section>
-
-    <section class="summary" aria-label="Summary">
-      <div class="box"><span>Opening balance</span><strong class="money">{{ st.opening | rand }}</strong></div>
-      <div class="box"><span>Charges</span><strong class="money">{{ st.charges | rand }}</strong></div>
-      <div class="box"><span>Payments</span><strong class="money">{{ -st.payments | rand }}</strong></div>
-      <div class="box"><span>Adjustments</span><strong class="money">{{ st.adjustments | rand }}</strong></div>
-      <div class="box"><span>Interest</span><strong class="money">{{ st.interest | rand }}</strong></div>
-      <div class="box total"><span>Amount due</span><strong class="money">{{ st.closing | rand }}</strong></div>
-    </section>
-
-    <table class="lines">
-      <thead>
-        <tr><th>Date</th><th>Description</th><th class="end">Debit</th><th class="end">Credit</th><th class="end">Balance</th></tr>
-      </thead>
-      <tbody>
-        <tr class="bf"><td>{{ formatDate(st.issuedOn) }}</td><td>Balance brought forward</td><td></td><td></td><td class="end money">{{ st.opening | rand }}</td></tr>
-        @for (l of st.lines; track l.id) {
-          <tr>
-            <td>{{ formatDate(l.date) }}</td>
-            <td>{{ l.description }}@if (l.reference) { <span class="ref"> · ref “{{ l.reference }}”</span> }</td>
-            <td class="end money">@if (l.amount > 0) { {{ l.amount | rand }} }</td>
-            <td class="end money">@if (l.amount < 0) { {{ -l.amount | rand }} }</td>
-            <td class="end money">{{ l.balance | rand }}</td>
-          </tr>
-        }
-      </tbody>
-      <tfoot>
-        <tr><td colspan="4">Closing balance</td><td class="end money">{{ st.closing | rand }}</td></tr>
-      </tfoot>
-    </table>
-
-    <!-- Payment instructions and footer stay together: never split across a page. -->
-    <div class="closing">
-      <section class="pay">
-        <div>
-          <div class="label">How to pay</div>
-          <div>EFT to <strong>{{ v.scheme.name }} — Trust Account</strong></div>
-          <div>First National Bank · Account 62 000 000 000 · Branch 250 655</div>
-          <div>Use reference <strong>{{ v.account.accountNo }}</strong> so we can match your payment automatically.</div>
+  @if (canPreview()) {
+    <section class="template-bar no-print" aria-label="Template">
+      <div class="tb-row">
+        <div class="tb-text">
+          @if (shown(); as t) {
+            <span class="tb-label">Template</span>
+            <strong>{{ t.template.name }}</strong>
+            <span class="muted">{{ tierLabel(t.template.tier) === t.template.name ? '' : tierLabel(t.template.tier) + ' · ' }}v{{ t.version.version }}</span>
+            @if (previewing()) {
+              <span class="preview-tag">Preview</span>
+            } @else {
+              <span class="muted">· as issued</span>
+            }
+          }
         </div>
-        @if (st.closing > 0) {
-          <div class="due">
-            <div class="label">Please pay by {{ formatDate(st.dueOn) }}</div>
-            <div class="due-amount money">{{ st.closing | rand }}</div>
-          </div>
-        } @else {
-          <div class="due ok">Nothing to pay — thank you.</div>
+        <div class="tb-actions">
+          @if (previewing()) {
+            <button type="button" class="btn btn-ghost btn-sm" (click)="showIssued()">Show as issued</button>
+          }
+          <button type="button" class="btn btn-secondary btn-sm" [attr.aria-expanded]="choosing()" (click)="choosing.set(!choosing())">
+            <ion-icon name="color-palette-outline" aria-hidden="true" /> {{ choosing() ? 'Done' : 'Preview another template' }}
+          </button>
+        </div>
+      </div>
+      @if (previewing() && issued(); as i) {
+        <p class="tb-note">This statement was issued with {{ i.template.name }} v{{ i.version.version }}. The preview uses the same figures; nothing that was sent changes.</p>
+      } @else if (defaultTemplate(); as def) {
+        @if (def.id !== shown()?.template?.id) {
+          <p class="tb-note">New statements use your default, {{ def.name }}.</p>
         }
-      </section>
+      }
+      @if (choosing()) {
+        <app-template-picker
+          label="Levy statement template"
+          [options]="options()"
+          [selected]="shown()?.template?.id ?? null"
+          [defaultId]="defaultTemplate()?.id ?? null"
+          (choose)="choose($event)"
+        />
+      }
+    </section>
+  }
 
-      <footer class="foot">
-        <span>Queries: reply to this email or call your managing agent. Interest on arrears is charged as set out in the scheme’s rules.</span>
-        <span class="powered">Powered by <ui-logo variant="wordmark" [height]="12" /></span>
-      </footer>
-    </div>
-  </article>
+  @if (shown(); as t) {
+    @if (registry.settings(); as settings) {
+      <app-document-renderer [data]="document()!" [template]="t" [settings]="settings" [organisationName]="session.organisation()?.name ?? ''" />
+    }
+  } @else {
+    <ui-skeleton [count]="10" />
+  }
 }

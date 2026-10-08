@@ -441,6 +441,12 @@ export const routes: Routes = [
             loadComponent: () => import('./features/access/users-page').then((m) => m.UsersPage),
           },
           {
+            path: 'documents',
+            title: 'Documents & templates',
+            data: { permission: 'Documents.Configure', breadcrumb: 'Documents & templates' },
+            loadComponent: () => import('./features/documents/documents-settings-page').then((m) => m.DocumentsSettingsPage),
+          },
+          {
             path: 'plan',
             title: 'Plan & features',
             // Staff can read it (nudges link here); only administrators can ask Humo for more.
@@ -570,6 +576,12 @@ export const routes: Routes = [
                 loadComponent: () => import('./features/platform/customer-page').then((m) => m.CustomerPage),
               },
             ],
+          },
+          {
+            path: 'templates',
+            title: 'Document templates',
+            data: { permission: 'Platform.View', breadcrumb: 'Document templates' },
+            loadComponent: () => import('./features/platform/document-templates-page').then((m) => m.DocumentTemplatesPage),
           },
           {
             path: 'packages',

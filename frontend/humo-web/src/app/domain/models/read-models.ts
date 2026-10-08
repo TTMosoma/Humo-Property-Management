@@ -1,4 +1,5 @@
-import { Account, Statement, Transaction } from './account';
+import { Account, Statement, Transaction, TrustAccount } from './account';
+import { DocumentTemplateRef } from './document';
 import { Person, Relationship } from './person';
 import { Receipt, ReceiptMatch } from './receipt';
 import { Scheme } from './scheme';
@@ -49,6 +50,10 @@ export interface StatementView {
   unit: Unit;
   scheme: Scheme;
   holder: Person;
+  /** Where owners pay: the scheme's trust account. */
+  payTo: TrustAccount;
+  /** The template and version the statement was issued with. It keeps rendering that way after the template changes. */
+  issuedWith: DocumentTemplateRef;
 }
 
 export interface ReceiptView {

@@ -50,6 +50,7 @@ export type Permission =
   | 'Contractor.Respond'
   // Agency administration
   | 'Organisation.Manage'
+  | 'Documents.Configure'
   | 'Notifications.Configure'
   | 'Users.Manage'
   | 'Users.ManageAdmins'
@@ -67,6 +68,7 @@ export type Permission =
   | 'Platform.Subscriptions.View'
   | 'Platform.Subscriptions.Manage'
   | 'Platform.Packages.Manage'
+  | 'Platform.Templates.Manage'
   | 'Platform.Health.View'
   | 'Platform.Revenue.View'
   | 'Platform.Insights.View'
@@ -126,6 +128,7 @@ export const PERMISSIONS: PermissionMeta[] = [
   { id: 'Resident.Requests', area: 'Residents', label: 'Report problems and confirm fixes', mutates: true },
   { id: 'Contractor.Respond', area: 'Residents', label: 'Respond to quote requests and manage work orders (Humo Contractor)', mutates: true },
   { id: 'Organisation.Manage', area: 'Administration', label: 'Edit agency details and trust bank accounts', mutates: true },
+  { id: 'Documents.Configure', area: 'Administration', label: 'Choose default document templates, branding and the agency’s custom template', mutates: true },
   { id: 'Notifications.Configure', area: 'Administration', label: 'Set agency-wide notification rules', mutates: true },
   { id: 'Users.Manage', area: 'Administration', label: 'Assign customer roles and scope', mutates: true, stepUp: true },
   { id: 'Users.ManageAdmins', area: 'Administration', label: 'Add or remove Agency Administrators', mutates: true, stepUp: true },
@@ -141,6 +144,7 @@ export const PERMISSIONS: PermissionMeta[] = [
   { id: 'Platform.Subscriptions.View', area: 'Platform', label: 'View subscriptions and entitlements', mutates: false },
   { id: 'Platform.Subscriptions.Manage', area: 'Platform', label: 'Change packages, add-ons and feature overrides', mutates: true, stepUp: true },
   { id: 'Platform.Packages.Manage', area: 'Platform', label: 'Define packages, add-ons and the feature catalogue', mutates: true, stepUp: true },
+  { id: 'Platform.Templates.Manage', area: 'Platform', label: 'Publish, version and retire Humo document templates', mutates: true },
   { id: 'Platform.Health.View', area: 'Platform', label: 'View account health and adoption', mutates: false },
   { id: 'Platform.Revenue.View', area: 'Platform', label: 'View MRR, ARR and contract values', mutates: false },
   { id: 'Platform.Insights.View', area: 'Platform', label: 'View company-wide business insights', mutates: false },
@@ -179,7 +183,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   'agency-admin': [
     ...STAFF_BASE, 'Approvals.Decide', 'Schemes.Manage', 'Units.Manage', 'People.Manage', 'Accounts.View', 'Finance.View', 'Billing.View', 'Billing.Run', 'Receipts.Allocate',
     'Payables.Prepare', 'Payables.Release', 'Finance.Export', 'Maintenance.Manage', 'Suppliers.Manage', 'Suppliers.ChangeBankDetails',
-    'Meetings.Manage', 'Organisation.Manage', 'Notifications.Configure', 'Users.Manage', 'Users.ManageAdmins', 'Audit.View', 'Subscription.Request',
+    'Meetings.Manage', 'Organisation.Manage', 'Documents.Configure', 'Notifications.Configure', 'Users.Manage', 'Users.ManageAdmins', 'Audit.View', 'Subscription.Request',
   ],
   'portfolio-manager': [
     ...STAFF_BASE, 'Approvals.Decide', 'Units.Manage', 'People.Manage', 'Accounts.View', 'Finance.View', 'Billing.View', 'Maintenance.Manage', 'Suppliers.Manage',
@@ -197,7 +201,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   // Highest operational authority — but impersonation is still an individual grant.
   'system-admin': [
     'Platform.View', 'Platform.Customers.View', 'Platform.Customers.Manage', 'Platform.Customers.Users', 'Platform.Subscriptions.View',
-    'Platform.Subscriptions.Manage', 'Platform.Packages.Manage', 'Platform.Health.View', 'Platform.Revenue.View', 'Platform.Insights.View',
+    'Platform.Subscriptions.Manage', 'Platform.Packages.Manage', 'Platform.Templates.Manage', 'Platform.Health.View', 'Platform.Revenue.View', 'Platform.Insights.View',
     'Platform.Support.Assist', 'Platform.Config.Manage', 'Platform.Operations.View', 'Platform.ManageHumoRoles', 'Platform.Audit', 'Security.ManageOwn',
   ],
   // The customer relationship: onboarding, adoption, health, subscriptions where authorised. No platform config, no Humo roles.

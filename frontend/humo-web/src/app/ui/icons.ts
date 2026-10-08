@@ -1,5 +1,6 @@
 import { addIcons } from 'ionicons';
 import {
+  colorPaletteOutline,
   bulbOutline,
   shieldHalfOutline,
   trendingUpOutline,
@@ -141,6 +142,7 @@ export function registerIcons(): void {
     'chatbubbles-outline': chatbubblesOutline,
     'checkmark-done-outline': checkmarkDoneOutline,
     'checkmark-outline': checkmarkOutline,
+    'color-palette-outline': colorPaletteOutline,
     'chevron-back-outline': chevronBackOutline,
     'chevron-down-outline': chevronDownOutline,
     'chevron-forward-outline': chevronForwardOutline,
