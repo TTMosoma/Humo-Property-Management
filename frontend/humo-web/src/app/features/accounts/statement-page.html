@@ -81,26 +81,29 @@
       </tfoot>
     </table>
 
-    <section class="pay">
-      <div>
-        <div class="label">How to pay</div>
-        <div>EFT to <strong>{{ v.scheme.name }} — Trust Account</strong></div>
-        <div>First National Bank · Account 62 000 000 000 · Branch 250 655</div>
-        <div>Use reference <strong>{{ v.account.accountNo }}</strong> so we can match your payment automatically.</div>
-      </div>
-      @if (st.closing > 0) {
-        <div class="due">
-          <div class="label">Please pay by {{ formatDate(st.dueOn) }}</div>
-          <div class="due-amount money">{{ st.closing | rand }}</div>
+    <!-- Payment instructions and footer stay together: never split across a page. -->
+    <div class="closing">
+      <section class="pay">
+        <div>
+          <div class="label">How to pay</div>
+          <div>EFT to <strong>{{ v.scheme.name }} — Trust Account</strong></div>
+          <div>First National Bank · Account 62 000 000 000 · Branch 250 655</div>
+          <div>Use reference <strong>{{ v.account.accountNo }}</strong> so we can match your payment automatically.</div>
         </div>
-      } @else {
-        <div class="due ok">Nothing to pay — thank you.</div>
-      }
-    </section>
+        @if (st.closing > 0) {
+          <div class="due">
+            <div class="label">Please pay by {{ formatDate(st.dueOn) }}</div>
+            <div class="due-amount money">{{ st.closing | rand }}</div>
+          </div>
+        } @else {
+          <div class="due ok">Nothing to pay — thank you.</div>
+        }
+      </section>
 
-    <footer class="foot">
-      <span>Queries: reply to this email or call your managing agent. Interest on arrears is charged as set out in the scheme’s rules.</span>
-      <span class="powered">Powered by <ui-logo variant="wordmark" [height]="12" /></span>
-    </footer>
+      <footer class="foot">
+        <span>Queries: reply to this email or call your managing agent. Interest on arrears is charged as set out in the scheme’s rules.</span>
+        <span class="powered">Powered by <ui-logo variant="wordmark" [height]="12" /></span>
+      </footer>
+    </div>
   </article>
 }

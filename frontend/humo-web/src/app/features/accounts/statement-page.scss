@@ -16,17 +16,48 @@
   gap: var(--s-2);
 }
 
-// The statement is always a white "paper" sheet, even in dark mode.
+// The statement is an A4 document. Printed (or rendered to PDF by Chromium) it
+// sits inside the @page margins; on screen the same sheet is drawn as a page,
+// with the margins as padding, so the content is the same 182mm wide and
+// wraps in the same places. Only what isn't part of the document (the page's
+// shadow and rounded edge, the app around it) differs between the two.
+$page-margin: 14mm;
+
+@page {
+  size: A4;
+  margin: $page-margin;
+}
+
+// Always a white sheet, even in dark mode, and printed with its colours
+// (the navy "Amount due" box) even when "Background graphics" is off.
 .sheet {
-  max-width: 880px;
+  box-sizing: border-box;
+  width: 210mm;
+  max-width: 100%;
   margin: 0 auto;
-  padding: var(--s-10) var(--s-10) var(--s-8);
+  padding: $page-margin;
   color: #0a1a33;
   background: #fff;
-  border: 1px solid var(--c-border);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-md);
   font-size: var(--fs-sm);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+@media screen {
+  .sheet {
+    min-height: 297mm;
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-md);
+  }
+}
+
+// Blocks that read as one unit move to the next page whole rather than split.
+.letterhead,
+.parties,
+.summary,
+.closing {
+  break-inside: avoid;
 }
 
 .letterhead {
@@ -35,6 +66,7 @@
   gap: var(--s-6);
   padding-bottom: var(--s-5);
   border-bottom: 3px solid #041b40;
+  break-after: avoid;
 }
 
 .agency {
@@ -103,9 +135,11 @@
   }
 }
 
+// Three across, two rows: on an A4 page six across leaves ~110px a box, which
+// clips amounts of R 100 000 and more.
 .summary {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   border: 1px solid #e0e6ee;
   border-radius: var(--r);
   overflow: hidden;
@@ -118,8 +152,12 @@
   padding: var(--s-3);
   border-right: 1px solid #e0e6ee;
 
-  &:last-child {
+  &:nth-child(3n) {
     border-right: 0;
+  }
+
+  &:nth-child(-n + 3) {
+    border-bottom: 1px solid #e0e6ee;
   }
 
   span {
@@ -146,6 +184,22 @@
   margin: var(--s-6) 0;
   border-collapse: collapse;
 
+  // Column headings repeat on every page the table runs onto; a row never splits.
+  thead {
+    display: table-header-group;
+  }
+
+  tr {
+    break-inside: avoid;
+  }
+
+  // The closing balance appears once, after the last row. (Browsers repeat a
+  // <tfoot> at the bottom of every page by default.)
+  tfoot {
+    display: table-row-group;
+    break-before: avoid;
+  }
+
   th {
     padding: var(--s-2);
     font-family: var(--font-display);
@@ -166,6 +220,12 @@
 
   .end {
     text-align: right;
+  }
+
+  // Dates and amounts never wrap; the description takes what's left.
+  td:first-child,
+  .money {
+    white-space: nowrap;
   }
 
   .bf td {
@@ -225,9 +285,12 @@
   gap: 6px;
 }
 
-@media (max-width: 760px) {
+// Phones only: the A4 sheet is too wide for the screen, so it reflows. Screen
+// only — an A4 page is ~720px wide and must never pick up this layout.
+@media screen and (max-width: 760px) {
   .sheet {
-    padding: var(--s-5);
+    min-height: 0;
+    padding: var(--s-4);
   }
 
   .letterhead,
@@ -245,16 +308,38 @@
     grid-template-columns: repeat(2, 1fr);
   }
 
+  .box:nth-child(3n) {
+    border-right: 1px solid #e0e6ee;
+  }
+
+  .box:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .box:nth-child(-n + 4) {
+    border-bottom: 1px solid #e0e6ee;
+  }
+
   .lines {
-    font-size: var(--fs-xs);
+    font-size: var(--fs-2xs);
+
+    // Five columns on a phone: dates may wrap and cells sit closer together.
+    th,
+    td {
+      padding: var(--s-2) var(--s-1);
+    }
+
+    td:first-child {
+      white-space: normal;
+    }
   }
 }
 
+// Printing: the page margins come from @page, so the sheet drops its own.
 @media print {
   .sheet {
+    width: auto;
     max-width: none;
     padding: 0;
-    border: 0;
-    box-shadow: none;
   }
 }
