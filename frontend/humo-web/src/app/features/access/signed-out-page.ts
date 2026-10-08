@@ -5,6 +5,7 @@ import { IonIcon } from '@ionic/angular/standalone';
 import { map } from 'rxjs';
 import { Identity, ROLE_LABELS, SessionDataSource, activeAssignments } from '../../domain';
 import { HUMO_PRODUCTS, HumoProductId } from '../../core/product/product';
+import { PrototypeControls } from '../../core/prototype/prototype-controls';
 import { SessionService } from '../../core/session/session.service';
 import { Logo } from '../../ui/brand/logo';
 
@@ -39,6 +40,7 @@ import { Logo } from '../../ui/brand/logo';
           }
         }
 
+        @if (prototype) {
         <details class="proto">
           <summary>Prototype: sign in as someone else</summary>
           <ul>
@@ -52,6 +54,7 @@ import { Logo } from '../../ui/brand/logo';
             }
           </ul>
         </details>
+        }
       </section>
       <p class="foot">Humo · {{ product().name }}</p>
     </main>
@@ -85,6 +88,8 @@ import { Logo } from '../../ui/brand/logo';
 export class SignedOutPage {
   protected readonly session = inject(SessionService);
   private readonly sessions = inject(SessionDataSource);
+  /** "Sign in as someone else" is a prototype tool, shown only with the mock data layer. */
+  protected readonly prototype = inject(PrototypeControls, { optional: true });
   private readonly router = inject(Router);
   protected readonly personas = toSignal(this.sessions.demoIdentities(), { initialValue: [] as Identity[] });
   private readonly params = toSignal(inject(ActivatedRoute).queryParamMap.pipe(map((p) => ({ product: p.get('product'), name: p.get('name') }))));

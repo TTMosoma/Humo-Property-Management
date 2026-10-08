@@ -13,7 +13,7 @@
     <section>
       <h3 class="label-caps">Package</h3>
       <div class="pkgs">
-        @for (p of packages; track p.id) {
+        @for (p of packages(); track p.id) {
           <label class="pkg" [class.on]="selectedPkg() === p.id" [class.current]="cu.subscription.packageId === p.id">
             <input type="radio" name="pkg" [checked]="selectedPkg() === p.id" (change)="pkg.set(p.id)" />
             <strong>{{ p.name.replace('Humo ', '') }}</strong>
@@ -34,7 +34,7 @@
     <section>
       <h3 class="label-caps">Add-ons</h3>
       <ul class="addons">
-        @for (a of addOns; track a.id) {
+        @for (a of addOns(); track a.id) {
           <li [class.on]="hasAddOn(a)">
             <span class="a-text">
               <strong>{{ a.name }}</strong>
@@ -52,7 +52,7 @@
       <h3 class="label-caps">Trials & overrides</h3>
       <div class="trial">
         <select (change)="trialFeature.set($any($event.target).value)" aria-label="Feature">
-          @for (f of trialable; track f.key) {
+          @for (f of trialable(); track f.key) {
             <option [value]="f.key" [selected]="f.key === trialFeature()" [disabled]="entitled().has(f.key)">{{ f.label }}{{ entitled().has(f.key) ? ' (on)' : '' }}</option>
           }
         </select>
@@ -66,7 +66,7 @@
       @for (o of cu.subscription.overrides; track o.feature) {
         <div class="override">
           <span>
-            <strong>{{ meta[o.feature].label }}</strong> {{ o.enabled ? 'granted' : 'switched off' }}{{ o.expiresAt ? ' until ' + formatDate(o.expiresAt, true) : '' }}
+            <strong>{{ featureLabel(o.feature) }}</strong> {{ o.enabled ? 'granted' : 'switched off' }}{{ o.expiresAt ? ' until ' + formatDate(o.expiresAt, true) : '' }}
             <span class="muted">· {{ o.reason }} · {{ o.by }}</span>
           </span>
           <button type="button" class="btn btn-ghost btn-sm" (click)="clearOverride(o.feature)" [disabled]="busy()">Remove</button>

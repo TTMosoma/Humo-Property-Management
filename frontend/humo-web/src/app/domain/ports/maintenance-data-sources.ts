@@ -1,4 +1,5 @@
 import { Observable } from 'rxjs';
+import { ListQuery, Page } from './list-query';
 import { Invoice, Job, PaymentBatch, Priority } from '../models/job';
 import { Scheme } from '../models/scheme';
 import { DocStatus, Supplier, Trade } from '../models/supplier';
@@ -90,14 +91,15 @@ export type JobAction =
 // ---------------------------------------------------------------- Ports
 
 export abstract class JobDataSource {
-  abstract list(schemeIds: string[]): Observable<JobSummary[]>;
+  abstract list(schemeIds: string[], query?: ListQuery): Observable<Page<JobSummary>>;
   abstract get(ref: string): Observable<JobDetail | undefined>;
   abstract search(query: string, schemeIds: string[], limit?: number): Observable<JobSummary[]>;
   /** A resident's own requests (reported by them, or for their unit). */
   abstract forResident(personId: string, unitId?: string): Observable<JobSummary[]>;
   /** Returns the new job's reference. */
   abstract create(input: NewJobInput): Observable<string>;
-  abstract act(ref: string, action: JobAction): Observable<void>;
+  /** `expectedVersion`: the record's version as shown; the API answers 409 (conflict) if it has changed since. */
+  abstract act(ref: string, action: JobAction, expectedVersion?: number): Observable<void>;
 }
 
 export abstract class SupplierDataSource {
@@ -121,5 +123,5 @@ export abstract class PayablesDataSource {
   /** Groups approved invoices of one scheme into a batch and sends it for (dual) approval. */
   abstract createBatch(invoiceIds: string[]): Observable<string>;
   /** After approval: the EFT batch is released to the bank. */
-  abstract releaseBatch(batchId: string): Observable<void>;
+  abstract releaseBatch(batchId: string, expectedVersion?: number): Observable<void>;
 }

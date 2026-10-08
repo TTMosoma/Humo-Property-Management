@@ -164,7 +164,7 @@ export class PlatformStore {
     this.seeds.update((all) =>
       all.map((c) => {
         if (c.organisationId !== organisationId) return c;
-        const sub = { ...c.subscription, addOns: [...c.subscription.addOns], overrides: [...c.subscription.overrides] };
+        const sub = { ...c.subscription, version: c.subscription.version + 1, addOns: [...c.subscription.addOns], overrides: [...c.subscription.overrides] };
         switch (change.type) {
           case 'package':
             sub.packageId = change.packageId;

@@ -150,7 +150,7 @@ export class AccessDrawer {
     const name = this.identity()?.name ?? 'this person';
     this.confirmRemove.set(null);
     this.stepUp
-      .guard({ action: 'change-roles', detail: `End ${ROLE_LABELS[m.role]} · ${m.label} for ${name}` }, () => this.access.endAssignment(this.input.identityId, m.id))
+      .guard({ action: 'change-roles', detail: `End ${ROLE_LABELS[m.role]} · ${m.label} for ${name}` }, () => this.access.endAssignment(this.input.identityId, m.id, m.version))
       .subscribe({
         next: () => this.feedback.success(`Ended ${ROLE_LABELS[m.role]} for ${name}. It takes effect on their next request and stays in their access history.`),
         error: (e) => this.feedback.error(describeFailure(e, 'The role wasn’t ended')),

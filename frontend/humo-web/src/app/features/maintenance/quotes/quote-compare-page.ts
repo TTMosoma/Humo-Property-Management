@@ -134,7 +134,8 @@ export class QuoteComparePage {
     // Opening the comparison is a lifecycle event ("Quote viewed") — contractors see it.
     effect(() => {
       const v = this.qr();
-      if (v && this.canAct() && v.quotes.length) this.network.markViewed(v.request.id, v.quotes.map((q) => q.id));
+      // Best effort: failing to record the view mustn't disturb the comparison.
+      if (v && this.canAct() && v.quotes.length) this.network.markViewed(v.request.id, v.quotes.map((q) => q.id)).subscribe({ error: () => undefined });
     });
   }
 
@@ -159,7 +160,7 @@ export class QuoteComparePage {
         concatMap((supplierId) =>
           this.jobs.act(job.ref, {
             type: 'award-network-quote', supplierId, amount: q.amount, guaranteeMonths: q.guaranteeMonths, quoteRequestId: v.request.id, compared: v.quotes.length, completeBy: q.completeBy,
-          }),
+          }, job.version),
         ),
         concatMap(() => this.network.accept(v.request.id, q.id)),
       )

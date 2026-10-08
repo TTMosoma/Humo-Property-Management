@@ -45,7 +45,7 @@ export class SchemeOverview {
   protected readonly health = computed(() => (this.healthLoad.value() ?? []).find((h) => h.schemeId === this.scheme()?.id));
 
   /** The unit roll is the overview's main content; its state is the page's state. */
-  protected readonly unitRows = loadable(() => this.unitData.list([this.scheme().id]));
+  protected readonly unitRows = loadable(() => this.unitData.list([this.scheme().id]).pipe(map((p) => p.items)));
 
   protected readonly units = computed(() => {
     const rows = this.unitRows.value() as UnitSummary[] | undefined;

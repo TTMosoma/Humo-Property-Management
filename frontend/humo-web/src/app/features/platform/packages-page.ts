@@ -1,14 +1,12 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { CatalogueService } from '../../core/catalogue/catalogue.service';
 import { IonIcon } from '@ionic/angular/standalone';
 import {
-  ADD_ONS,
   DEFAULT_HEALTH_WEIGHTS,
-  FEATURES,
   FeatureModule,
   MODULE_LABELS,
   NUDGES,
   OPPORTUNITY_RULES,
-  PACKAGES,
   ROLE_LABELS,
   Role,
   packageFeatures,
@@ -31,22 +29,25 @@ const MODULES: FeatureModule[] = ['portfolio', 'finance', 'maintenance', 'commun
   styleUrl: './packages-page.scss',
 })
 export class PackagesPage {
+  protected readonly catalogue = inject(CatalogueService);
   protected readonly session = inject(SessionService);
-  protected readonly packages = PACKAGES;
-  protected readonly addOns = ADD_ONS;
+  protected readonly packages = this.catalogue.packages;
+  protected readonly addOns = this.catalogue.addOns;
   protected readonly nudges = NUDGES;
   protected readonly rules = OPPORTUNITY_RULES;
   protected readonly roleLabel = (r: Role) => ROLE_LABELS[r];
   protected readonly weights = Object.entries(DEFAULT_HEALTH_WEIGHTS).map(([k, w]) => ({ key: k.replace('-', ' '), w: Math.round(w * 100) }));
 
-  private readonly included = new Map(PACKAGES.map((p) => [p.id, packageFeatures(p.id)]));
-  protected readonly groups = MODULES.map((m) => ({ module: m, label: MODULE_LABELS[m], features: FEATURES.filter((f) => f.module === m) }));
+  private readonly included = computed(() => new Map(this.packages().map((p) => [p.id, this.catalogue.packageFeatures(p.id)])));
+  protected readonly groups = computed(() =>
+    MODULES.map((m) => ({ module: m, label: MODULE_LABELS[m], features: this.catalogue.features().filter((f) => f.module === m) })),
+  );
 
   protected has(pkg: string, feature: string): boolean {
-    return this.included.get(pkg as never)?.has(feature as never) ?? false;
+    return this.included().get(pkg as never)?.has(feature as never) ?? false;
   }
 
   protected addOnFor(feature: string): string | null {
-    return ADD_ONS.find((a) => a.features.includes(feature as never))?.name ?? null;
+    return this.catalogue.addOnFor(feature)?.name ?? null;
   }
 }

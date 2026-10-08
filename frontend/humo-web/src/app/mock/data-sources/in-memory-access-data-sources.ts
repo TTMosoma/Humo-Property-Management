@@ -11,7 +11,9 @@ import {
   IMPERSONATION_REASONS,
   Identity,
   ImpersonationSession,
+  ListQuery,
   NewAssignment,
+  Page,
   PolicyError,
   ROLE_LABELS,
   SENSITIVE_ACTION_LABELS,
@@ -28,6 +30,7 @@ import {
 import { PrototypeStateService } from '../../core/prototype/prototype-state.service';
 import { AccessStore } from '../db/access-store';
 import { mockResponder } from '../mock-latency';
+import { toPage } from '../mock-page';
 import { MockAuthSession } from '../server/mock-auth-session';
 import { MockGateway } from '../server/mock-gateway';
 
@@ -83,7 +86,7 @@ export class InMemoryAccessDataSource extends AccessDataSource {
       .pipe(map(() => undefined));
   }
 
-  endAssignment(identityId: string, assignmentId: string): Observable<void> {
+  endAssignment(identityId: string, assignmentId: string, expectedVersion?: number): Observable<void> {
     const target = this.store.identity(identityId);
     const a = target?.assignments.find((m) => m.id === assignmentId);
     return this.gateway
@@ -95,6 +98,7 @@ export class InMemoryAccessDataSource extends AccessDataSource {
           category: 'security',
           permission: a && isHumoRole(a.role) ? 'Platform.ManageHumoRoles' : a?.role === 'agency-admin' ? 'Users.ManageAdmins' : 'Users.Manage',
           stepUp: true,
+          version: { expected: expectedVersion, current: a?.version },
         },
         () => {
           if (identityId === this.auth.actor().id) throw new PolicyError('forbidden', 'You can’t change your own roles');
@@ -203,15 +207,18 @@ export class InMemoryAuditDataSource extends AuditDataSource {
   private readonly respond = mockResponder();
   private readonly events$ = toObservable(this.store.audit);
 
-  query(q: AuditQuery): Observable<AuditEvent[]> {
+  query(q: AuditQuery, list?: ListQuery): Observable<Page<AuditEvent>> {
     return this.events$.pipe(
       switchMap((all) =>
         this.respond(
-          all.filter(
+          toPage(
+            all.filter(
             (e) =>
               (q.organisationId === null || e.organisationId === q.organisationId) &&
               (!q.category || e.category === q.category) &&
               (!q.identityId || e.actor.identityId === q.identityId || e.actingAs?.identityId === q.identityId),
+            ),
+            list,
           ),
         ),
       ),

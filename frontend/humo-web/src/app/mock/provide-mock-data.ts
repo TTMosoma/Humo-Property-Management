@@ -3,6 +3,7 @@ import {
   AccessDataSource,
   AccountDataSource,
   AuditDataSource,
+  CatalogueDataSource,
   NotificationDataSource,
   NudgeDataSource,
   OrganisationDataSource,
@@ -43,9 +44,11 @@ import {
 import { InMemoryNotificationDataSource, InMemoryOrganisationDataSource } from './data-sources/in-memory-organisation-data-sources';
 import { ContractorNetwork, ContractorPortal } from '../domain/contractor';
 import { InMemoryContractorNetwork, InMemoryContractorPortal } from './contractor/in-memory-contractor';
-import { InMemoryNudgeDataSource, InMemoryPlanDataSource, InMemoryPlatformDataSource } from './data-sources/in-memory-platform-data-sources';
+import { InMemoryCatalogueDataSource, InMemoryNudgeDataSource, InMemoryPlanDataSource, InMemoryPlatformDataSource } from './data-sources/in-memory-platform-data-sources';
 import { InMemorySchemeDataSource } from './data-sources/in-memory-scheme-data-source';
+import { PrototypeControls } from '../core/prototype/prototype-controls';
 import { MaintenanceStore } from './db/maintenance-store';
+import { MockPrototypeControls } from './prototype/mock-prototype-controls';
 import { InMemoryWorkItemDataSource } from './data-sources/in-memory-work-item-data-source';
 
 /**
@@ -74,9 +77,12 @@ export function provideMockData(): EnvironmentProviders {
     { provide: PlatformDataSource, useClass: InMemoryPlatformDataSource },
     { provide: PlanDataSource, useClass: InMemoryPlanDataSource },
     { provide: NudgeDataSource, useClass: InMemoryNudgeDataSource },
+    { provide: CatalogueDataSource, useClass: InMemoryCatalogueDataSource },
     // Humo Contractor — a separate product's capabilities, consumed by Humo PM.
     { provide: ContractorNetwork, useClass: InMemoryContractorNetwork },
     { provide: ContractorPortal, useClass: InMemoryContractorPortal },
+    // Prototype-only review tools (toolbar, "sign in as"). Not provided by the HTTP data layer.
+    { provide: PrototypeControls, useClass: MockPrototypeControls },
     // Start the maintenance store eagerly so approvals decided anywhere update their jobs.
     provideAppInitializer(() => void inject(MaintenanceStore)),
   ]);

@@ -46,7 +46,7 @@ const NAMED: CustomerSeed[] = [
   {
     organisationId: 'tshikrand', name: 'Tshikrand', city: 'Pretoria', province: 'Gauteng', customerSince: iso(16),
     accountManagerId: 'p-dumisani', accountManager: 'Dumisani Ngcobo',
-    subscription: { organisationId: 'tshikrand', packageId: 'professional', status: 'active', startedAt: iso(16), renewsAt: inMonths(8), addOns: [], overrides: [], mrr: 24_800, seats: 22 },
+    subscription: { version: 1, organisationId: 'tshikrand', packageId: 'professional', status: 'active', startedAt: iso(16), renewsAt: inMonths(8), addOns: [], overrides: [], mrr: 24_800, seats: 22 },
     snapshot: {
       organisationId: 'tshikrand', at: new Date().toISOString(), seats: 22, activeUsers30d: 16, loginsPerUserWeek: 3.6,
       moduleUsage: usage({ portfolio: 92, finance: 96, maintenance: 88, communications: 80, documents: 71, governance: 12, reporting: 64 }),
@@ -58,7 +58,7 @@ const NAMED: CustomerSeed[] = [
   {
     organisationId: 'acacia', name: 'Acacia Managing Agents', city: 'Johannesburg', province: 'Gauteng', customerSince: iso(17),
     accountManagerId: 'p-dumisani', accountManager: 'Dumisani Ngcobo',
-    subscription: { organisationId: 'acacia', packageId: 'professional', status: 'active', startedAt: iso(17), renewsAt: inMonths(7), addOns: [], overrides: [], mrr: 15_900, seats: 14 },
+    subscription: { version: 1, organisationId: 'acacia', packageId: 'professional', status: 'active', startedAt: iso(17), renewsAt: inMonths(7), addOns: [], overrides: [], mrr: 15_900, seats: 14 },
     snapshot: {
       organisationId: 'acacia', at: new Date().toISOString(), seats: 14, activeUsers30d: 11, loginsPerUserWeek: 4.2,
       moduleUsage: usage({ portfolio: 88, finance: 91, maintenance: 84, communications: 62, documents: 48, governance: 21, reporting: 22 }),
@@ -70,7 +70,7 @@ const NAMED: CustomerSeed[] = [
   {
     organisationId: 'umgeni', name: 'Umgeni BC Services', city: 'Durban', province: 'KwaZulu-Natal', customerSince: iso(11),
     accountManagerId: 'p-dumisani', accountManager: 'Dumisani Ngcobo',
-    subscription: {
+    subscription: { version: 1,
       organisationId: 'umgeni', packageId: 'professional', status: 'active', startedAt: iso(11), renewsAt: inMonths(1, 15),
       addOns: [{ addOnId: 'governance', since: iso(4) }], overrides: [], mrr: 17_600, seats: 12,
     },
@@ -85,7 +85,7 @@ const NAMED: CustomerSeed[] = [
   {
     organisationId: 'fynbos', name: 'Fynbos Property Admin', city: 'Cape Town', province: 'Western Cape', customerSince: iso(8),
     accountManagerId: 'am-carla', accountManager: 'Carla de Wet',
-    subscription: {
+    subscription: { version: 1,
       organisationId: 'fynbos', packageId: 'essentials', status: 'past-due', startedAt: iso(8), renewsAt: inMonths(4), addOns: [],
       overrides: [{ feature: 'payment-allocation', enabled: true, reason: 'Trial while they evaluate Professional', by: 'Carla de Wet', at: iso(0, 1), expiresAt: inMonths(1, 1) }],
       mrr: 4_200, seats: 6,
@@ -151,7 +151,7 @@ function generate(): CustomerSeed[] {
     out.push({
       organisationId, name, city: CITY[province] ?? place, province, customerSince: iso(months),
       accountManagerId: am.id, accountManager: am.name,
-      subscription: {
+      subscription: { version: 1,
         organisationId, packageId, status: e < 0.42 && r() < 0.5 ? 'past-due' : months < 1 ? 'trial' : 'active', startedAt: iso(months),
         renewsAt: inMonths(1 + Math.floor(r() * 11), 1 + Math.floor(r() * 27)), addOns, overrides: [], mrr: Math.round(baseMrr), seats,
       },

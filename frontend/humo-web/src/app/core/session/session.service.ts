@@ -20,7 +20,7 @@ import {
 /** Shown only for the instant before /me answers; guards keep the shell closed until then. */
 const SIGNED_OUT: CurrentSession = (() => {
   const nobody: Identity = { id: 'anonymous', name: '', initials: '', email: '', kind: 'customer', status: 'active', memberships: [], assignments: [] };
-  const none: RoleAssignment = { id: 'none', role: 'tenant', scope: { type: 'organisation', organisationId: null, schemeIds: [] }, label: '', status: 'active' };
+  const none: RoleAssignment = { id: 'none', role: 'tenant', scope: { type: 'organisation', organisationId: null, schemeIds: [] }, label: '', status: 'active', version: 0 };
   return {
     signedIn: false,
     actor: nobody,
@@ -28,6 +28,7 @@ const SIGNED_OUT: CurrentSession = (() => {
     assignments: [none],
     activeAssignmentId: none.id,
     permissions: [],
+    pagePermissions: [],
     actorPermissions: [],
     organisation: null,
     subscription: null,
@@ -93,6 +94,7 @@ export class SessionService {
   /** Effective permissions in this moment. */
   readonly permissions = computed<Set<Permission>>(() => new Set(this.snapshot().permissions));
   private readonly actorPermissions = computed<Set<Permission>>(() => new Set(this.snapshot().actorPermissions));
+  private readonly pagePermissions = computed<Set<Permission>>(() => new Set(this.snapshot().pagePermissions));
 
   /** Ids that work items may be assigned to for this person (staff id and identity id). */
   readonly selfIds = computed(() => [this.identity().staffId, this.identity().id].filter((x): x is string => !!x));
@@ -130,6 +132,11 @@ export class SessionService {
     return this.permissions().has(permission);
   }
 
+  /** May the active assignment open pages that need this permission? (Observe impersonation still can.) */
+  canOpen(permission: Permission): boolean {
+    return this.pagePermissions().has(permission);
+  }
+
   /** The actor's own permission, regardless of impersonation (e.g. System.Impersonate). */
   actorCan(permission: Permission): boolean {
     return this.actorPermissions().has(permission);
@@ -144,10 +151,6 @@ export class SessionService {
   stepUpFresh(): boolean {
     const p = this.stepUpProof();
     return !!p?.verified && Date.now() - new Date(p.at).getTime() < STEP_UP_FRESH_MS;
-  }
-
-  hasRole(roles: readonly Role[] | undefined): boolean {
-    return !roles || roles.includes(this.role());
   }
 
   /** Humo staff: look at one customer organisation in support view (null returns to the platform view). */

@@ -15,7 +15,7 @@
     <thead>
       <tr>
         <th scope="col">Feature</th>
-        @for (p of packages; track p.id) {
+        @for (p of packages(); track p.id) {
           <th scope="col">
             <span class="p-name" [attr.data-pkg]="p.id">{{ p.name.replace('Humo ', '') }}</span>
             <span class="p-tag">{{ p.tagline }}</span>
@@ -24,7 +24,7 @@
         <th scope="col">Also as add-on</th>
       </tr>
     </thead>
-    @for (g of groups; track g.module) {
+    @for (g of groups(); track g.module) {
       <tbody>
         <tr class="area"><th scope="rowgroup" colspan="5">{{ g.label }}</th></tr>
         @for (f of g.features; track f.key) {
@@ -33,7 +33,7 @@
               <span class="f-label">{{ f.label }}</span>
               <span class="f-desc">{{ f.description }}</span>
             </th>
-            @for (p of packages; track p.id) {
+            @for (p of packages(); track p.id) {
               <td>
                 @if (has(p.id, f.key)) {
                   <ion-icon class="yes" name="checkmark-circle" [attr.aria-label]="'Included in ' + p.name" />
@@ -52,7 +52,7 @@
 
 <h2 class="section-title">Add-ons</h2>
 <div class="cards">
-  @for (a of addOns; track a.id) {
+  @for (a of addOns(); track a.id) {
     <article class="card surface">
       <h3>{{ a.name }}</h3>
       <p>{{ a.description }}</p>

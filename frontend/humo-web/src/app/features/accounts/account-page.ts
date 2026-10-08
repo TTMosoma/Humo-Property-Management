@@ -3,7 +3,7 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, map, of, switchMap } from 'rxjs';
-import { AccountDataSource, ReceiptDataSource, ReceiptView, Transaction, UnitDataSource, periodLabel, periodOf } from '../../domain';
+import { AccountDataSource, ReceiptDataSource, ReceiptView, Transaction, UnitDataSource, periodLabel, periodOf, sumRands } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
@@ -82,8 +82,8 @@ export class AccountPage {
     const current = d.statementPeriods[0];
     const lines = d.transactions.filter((t) => periodOf(t.date) === current);
     const opening = lines.length ? lines[lines.length - 1].balance - lines[lines.length - 1].amount : d.account.balance;
-    const charges = lines.filter((t) => t.amount > 0).reduce((s, t) => s + t.amount, 0);
-    const credits = lines.filter((t) => t.amount < 0).reduce((s, t) => s + t.amount, 0);
+    const charges = sumRands(lines.filter((t) => t.amount > 0).map((t) => t.amount));
+    const credits = sumRands(lines.filter((t) => t.amount < 0).map((t) => t.amount));
     return { month: periodLabel(current, false), opening, charges, credits, closing: d.account.balance, items: lines.filter((t) => t.amount > 0).reverse() };
   });
 
@@ -128,7 +128,7 @@ export class AccountPage {
     const s = this.summary.value();
     if (!s) return;
     this.busyReceipt.set(v.receipt.id);
-    this.receipts.allocate(v.receipt.id, [{ accountId: s.account.id, amount: v.receipt.amount }], false).subscribe({
+    this.receipts.allocate(v.receipt.id, [{ accountId: s.account.id, amount: v.receipt.amount }], false, v.receipt.version).subscribe({
       next: () => {
         this.busyReceipt.set(null);
         this.feedback.success(`Allocated ${formatRand(v.receipt.amount)} to ${s.account.accountNo}`, () =>

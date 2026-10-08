@@ -22,8 +22,13 @@ export interface CurrentSession {
   /** Assignments the identity can switch between (only the impersonated one while impersonating). */
   assignments: RoleAssignment[];
   activeAssignmentId: string;
-  /** Effective permissions of the active assignment (role + grants − impersonation limits). */
+  /** What the active assignment may do right now (role + grants − impersonation limits). */
   permissions: Permission[];
+  /**
+   * The same before impersonation limits: which pages it may open. Observe
+   * impersonation can open every page the user can, but change nothing.
+   */
+  pagePermissions: Permission[];
   /** The actor's own permissions across their assignments (e.g. System.Impersonate). */
   actorPermissions: Permission[];
   /** The organisation of the active assignment; null for Humo staff and contractors. */

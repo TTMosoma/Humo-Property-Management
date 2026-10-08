@@ -60,7 +60,7 @@ Sarah Jacobs has **one** identity with four assignments:
 - **`System.Impersonate`** is in **no** role's defaults. It is granted to named individuals: Terry has it; Nomsa (also a System Administrator) does not.
 - **Feature code** asks `session.can('Maintenance.Manage')` and similar, rather than testing role names.
 
-⚑ **Decision — routes stay role-gated for now.** Pages and navigation are still declared per role, plus a `feature` entitlement where relevant. Actions are permission-gated. Moving route guards to permissions is easy once the API's policy names are final.
+**Routes and navigation are permission-gated** (P2 cleanup). Each route declares `data.permission` (plus `feature` where relevant), and `accessGuard` checks it. Each navigation entry names the same permission. Roles appear only as `audience` on a few Humo console entries, a presentation choice for roles that share a permission but have different menus. Area permissions (`Work.View`, `Portfolio.Browse`, `Billing.View`, `Governance.View`…) reproduce the previous role lists exactly, so profiles can become configurable without touching routes. `canOpen(p)` (which pages) is separate from `can(p)` (what you can do now): Observe impersonation can open everything the user can, but can't change anything.
 
 ## 4. Scope and context
 

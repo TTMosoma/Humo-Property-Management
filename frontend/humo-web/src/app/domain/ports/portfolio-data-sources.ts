@@ -1,4 +1,5 @@
 import { Observable } from 'rxjs';
+import { ListQuery, Page } from './list-query';
 import { Note, TimelineEvent } from '../models/timeline';
 import {
   AccountDetail,
@@ -17,7 +18,7 @@ import {
  * re-fetch on change — see core/data/data-changes.ts.
  */
 export abstract class UnitDataSource {
-  abstract list(schemeIds: string[]): Observable<UnitSummary[]>;
+  abstract list(schemeIds: string[], query?: ListQuery): Observable<Page<UnitSummary>>;
   abstract get(schemeId: string, unitNumber: string): Observable<UnitSummary | undefined>;
   abstract byId(unitId: string): Observable<UnitSummary | undefined>;
   /** "KC 42", "kingfisher 42", "KC-042", "unit 42" … */
@@ -25,7 +26,7 @@ export abstract class UnitDataSource {
 }
 
 export abstract class PersonDataSource {
-  abstract list(schemeIds: string[]): Observable<PersonSummary[]>;
+  abstract list(schemeIds: string[], query?: ListQuery): Observable<Page<PersonSummary>>;
   abstract get(personId: string): Observable<PersonSummary | undefined>;
   abstract search(query: string, schemeIds: string[], limit?: number): Observable<PersonSummary[]>;
 }
@@ -36,13 +37,14 @@ export abstract class AccountDataSource {
 }
 
 export abstract class ReceiptDataSource {
-  abstract list(schemeIds: string[]): Observable<ReceiptView[]>;
+  abstract list(schemeIds: string[], query?: ListQuery): Observable<Page<ReceiptView>>;
   abstract matches(receiptId: string): Observable<MatchView[]>;
   /** Unallocated receipts whose best match is this account ("did they pay and we missed it?"). */
   abstract suggestedFor(accountId: string): Observable<ReceiptView[]>;
-  abstract allocate(receiptId: string, allocations: { accountId: string; amount: number }[], rememberPayer: boolean): Observable<void>;
-  abstract unallocate(receiptId: string): Observable<void>;
-  abstract moveToSuspense(receiptId: string): Observable<void>;
+  /** `expectedVersion`: the record's version as shown; the API answers 409 (conflict) if it has changed since. */
+  abstract allocate(receiptId: string, allocations: { accountId: string; amount: number }[], rememberPayer: boolean, expectedVersion?: number): Observable<void>;
+  abstract unallocate(receiptId: string, expectedVersion?: number): Observable<void>;
+  abstract moveToSuspense(receiptId: string, expectedVersion?: number): Observable<void>;
 }
 
 export abstract class TimelineDataSource {

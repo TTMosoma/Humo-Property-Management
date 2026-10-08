@@ -279,7 +279,7 @@ export function seedMaintenance(units: Unit[]): MaintenanceSeed {
       recommended: q.recommended,
     }));
     const recommended = quotes.find((q) => q.recommended);
-    const job: Job = {
+    const job: Job = { version: 1,
       id: 'job-' + s.ref.toLowerCase(),
       ref: s.ref,
       schemeId: s.schemeId,
@@ -366,7 +366,7 @@ export function seedMaintenance(units: Unit[]): MaintenanceSeed {
         completion: 'Work completed and tested.',
       });
       if (closed && supplier) {
-        const inv: Invoice = {
+        const inv: Invoice = { version: 1,
           id: `INV-${19000 + jobs.length}`,
           supplierId: supplier.id,
           schemeId: scheme.id,
@@ -389,10 +389,10 @@ export function seedMaintenance(units: Unit[]): MaintenanceSeed {
 
   // ---- Invoices tied to the Approvals queue ----
   invoices.push(
-    { id: 'INV-20951', supplierId: 'sup-rand-plumbing', schemeId: 'the-willows', jobId: 'job-mr-1003', description: 'Geyser replacement, Unit 23', amount: 14850, approvedAmount: 14850, receivedAt: day(-3), dueAt: day(27), status: 'awaiting-approval', approvalWorkItemId: 'w10' },
-    { id: 'INV-20960', supplierId: 'sup-liftco', schemeId: 'rosebank-terraces', jobId: 'job-mr-0990', description: 'Lift motor repair (Block A)', amount: 31200, approvedAmount: 27800, receivedAt: day(-6), dueAt: day(24), status: 'awaiting-approval', approvalWorkItemId: 'w12' },
-    { id: 'INV-20944', supplierId: 'sup-secure-rite', schemeId: 'kingfisher-court', contractRef: 'SEC-2025-03', description: 'Guarding services — October', amount: 21450, receivedAt: day(-2), dueAt: day(28), status: 'awaiting-approval', approvalWorkItemId: 'w09' },
-    { id: 'INV-20957', supplierId: 'sup-greenleaf', schemeId: 'ballito-dunes', contractRef: 'GL-2024-11', description: 'Garden services — October', amount: 9800, receivedAt: day(-2), dueAt: day(28), status: 'awaiting-approval', approvalWorkItemId: 'w11' },
+    { version: 1, id: 'INV-20951', supplierId: 'sup-rand-plumbing', schemeId: 'the-willows', jobId: 'job-mr-1003', description: 'Geyser replacement, Unit 23', amount: 14850, approvedAmount: 14850, receivedAt: day(-3), dueAt: day(27), status: 'awaiting-approval', approvalWorkItemId: 'w10' },
+    { version: 1, id: 'INV-20960', supplierId: 'sup-liftco', schemeId: 'rosebank-terraces', jobId: 'job-mr-0990', description: 'Lift motor repair (Block A)', amount: 31200, approvedAmount: 27800, receivedAt: day(-6), dueAt: day(24), status: 'awaiting-approval', approvalWorkItemId: 'w12' },
+    { version: 1, id: 'INV-20944', supplierId: 'sup-secure-rite', schemeId: 'kingfisher-court', contractRef: 'SEC-2025-03', description: 'Guarding services — October', amount: 21450, receivedAt: day(-2), dueAt: day(28), status: 'awaiting-approval', approvalWorkItemId: 'w09' },
+    { version: 1, id: 'INV-20957', supplierId: 'sup-greenleaf', schemeId: 'ballito-dunes', contractRef: 'GL-2024-11', description: 'Garden services — October', amount: 9800, receivedAt: day(-2), dueAt: day(28), status: 'awaiting-approval', approvalWorkItemId: 'w11' },
   );
 
   // ---- Payment batch PB-0412 (Kingfisher Court): nine approved invoices = R 58 940.20 ----
@@ -410,17 +410,17 @@ export function seedMaintenance(units: Unit[]): MaintenanceSeed {
   batchItems.push(['sup-cape-seal', 'Roof inspection report', round2(58940.2 - sum)]);
   const batchInvoiceIds = batchItems.map(([supplierId, description, amount], i) => {
     const id = `INV-2083${i}`;
-    invoices.push({ id, supplierId, schemeId: 'kingfisher-court', description, amount, receivedAt: day(-14 + i), dueAt: day(7), status: 'in-batch', batchId: 'PB-0412', contractRef: 'Sundry' });
+    invoices.push({ version: 1, id, supplierId, schemeId: 'kingfisher-court', description, amount, receivedAt: day(-14 + i), dueAt: day(7), status: 'in-batch', batchId: 'PB-0412', contractRef: 'Sundry' });
     return id;
   });
   const batches: PaymentBatch[] = [
-    { id: 'PB-0412', schemeId: 'kingfisher-court', invoiceIds: batchInvoiceIds, total: 58940.2, createdAt: day(-1, 16), createdBy: 'Priya Naidoo', status: 'awaiting-approval', approvalWorkItemId: 'w08' },
+    { version: 1, id: 'PB-0412', schemeId: 'kingfisher-court', invoiceIds: batchInvoiceIds, total: 58940.2, createdAt: day(-1, 16), createdBy: 'Priya Naidoo', status: 'awaiting-approval', approvalWorkItemId: 'w08' },
   ];
 
   // A few approved invoices ready for the next batch.
   invoices.push(
-    { id: 'INV-20970', supplierId: 'sup-aquacare', schemeId: 'kingfisher-court', description: 'Pool chemicals — October', amount: 1240, receivedAt: day(-4), dueAt: day(26), status: 'approved', contractRef: 'Sundry' },
-    { id: 'INV-20972', supplierId: 'sup-pestaway', schemeId: 'the-willows', description: 'Rodent baiting, refuse area', amount: 1680, receivedAt: day(-5), dueAt: day(25), status: 'approved', contractRef: 'Sundry' },
+    { version: 1, id: 'INV-20970', supplierId: 'sup-aquacare', schemeId: 'kingfisher-court', description: 'Pool chemicals — October', amount: 1240, receivedAt: day(-4), dueAt: day(26), status: 'approved', contractRef: 'Sundry' },
+    { version: 1, id: 'INV-20972', supplierId: 'sup-pestaway', schemeId: 'the-willows', description: 'Rodent baiting, refuse area', amount: 1680, receivedAt: day(-5), dueAt: day(25), status: 'approved', contractRef: 'Sundry' },
   );
 
   return { suppliers, jobs, invoices, batches };

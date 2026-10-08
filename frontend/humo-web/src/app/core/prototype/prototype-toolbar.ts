@@ -3,13 +3,13 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { Identity, ROLE_LABELS, SessionDataSource, activeAssignments } from '../../domain';
-import { PlatformStore } from '../../mock/db/platform-store';
 import { SessionService } from '../session/session.service';
+import { PrototypeControls } from './prototype-controls';
 import { PrototypeStateService, ViewState } from './prototype-state.service';
 
 /**
  * Floating review panel: switch persona/role and force page states.
- * Prototype-only: remove together with core/prototype when the backend exists.
+ * Shown only when the data layer provides PrototypeControls (the mock does; HTTP doesn't).
  */
 @Component({
   selector: 'app-prototype-toolbar',
@@ -22,7 +22,7 @@ export class PrototypeToolbar {
   protected readonly session = inject(SessionService);
   protected readonly proto = inject(PrototypeStateService);
   private readonly router = inject(Router);
-  private readonly platform = inject(PlatformStore);
+  private readonly controls = inject(PrototypeControls);
   private readonly sessions = inject(SessionDataSource);
 
   protected readonly personas = toSignal(this.sessions.demoIdentities(), { initialValue: [] as Identity[] });
@@ -38,7 +38,7 @@ export class PrototypeToolbar {
 
   /** Nudges remember being seen or dismissed; this lets a reviewer see them again. */
   protected resetNudges(): void {
-    this.platform.resetNudges();
+    this.controls.resetNudges();
     this.open.set(false);
   }
 

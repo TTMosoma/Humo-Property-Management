@@ -51,7 +51,7 @@ export class AuditPage {
 
   private readonly query = computed<AuditQuery>(() => ({ organisationId: this.platform ? null : (this.session.organisation()?.id ?? '') }));
 
-  protected readonly result = loadable(() => this.data.query(this.query()));
+  protected readonly result = loadable(() => this.data.query(this.query()).pipe(map((p) => p.items)));
 
   protected readonly loading = this.result.loading;
   protected readonly failed = this.result.failed;

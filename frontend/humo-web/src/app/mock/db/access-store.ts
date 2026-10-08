@@ -71,7 +71,7 @@ export class AccessStore {
 
   assign(identityId: string, input: NewAssignment, by: string): RoleAssignment {
     const at = new Date().toISOString();
-    const assignment: RoleAssignment = { ...input, id: `m-new-${this.seq++}`, status: 'active', grantedBy: by, grantedAt: at };
+    const assignment: RoleAssignment = { version: 1, ...input, id: `m-new-${this.seq++}`, status: 'active', grantedBy: by, grantedAt: at };
     const org = input.scope.organisationId;
     this.identities.update((all) =>
       all.map((i) => {
@@ -94,7 +94,7 @@ export class AccessStore {
     this.identities.update((all) =>
       all.map((i) =>
         i.id === identityId
-          ? { ...i, assignments: i.assignments.map((m) => (m.id === assignmentId ? { ...m, status: 'ended' as const, endedBy: by, endedAt: at } : m)) }
+          ? { ...i, assignments: i.assignments.map((m) => (m.id === assignmentId ? { ...m, version: m.version + 1, status: 'ended' as const, endedBy: by, endedAt: at } : m)) }
           : i,
       ),
     );

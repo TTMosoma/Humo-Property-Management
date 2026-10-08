@@ -2,7 +2,7 @@ import { Identity, IdentityStatus, RoleAssignment, ScopeType, isHumoRole } from 
 import { SCHEMES } from './schemes';
 
 /** Seed shape: scope fields written flat for readability; `toIdentity` builds the real model. */
-interface SeedAssignment extends Omit<RoleAssignment, 'scope' | 'status'> {
+interface SeedAssignment extends Omit<RoleAssignment, 'scope' | 'status' | 'version'> {
   organisationId: string | null;
   schemeIds: string[];
   partyId?: string;
@@ -334,6 +334,7 @@ function toAssignment(a: SeedAssignment): RoleAssignment {
   const type: ScopeType = isHumoRole(a.role) ? 'platform' : partyId ? 'party' : unit ? 'unit' : schemeIds.length ? 'schemes' : 'organisation';
   return {
     ...rest,
+    version: 1,
     status: status ?? 'active',
     scope: { type, organisationId, schemeIds, ...(unit ? { unitId: unitIdFor(schemeIds[0], unit) } : {}), ...(partyId ? { partyId } : {}) },
   };

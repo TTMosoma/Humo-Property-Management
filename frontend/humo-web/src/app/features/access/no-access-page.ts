@@ -1,8 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { CatalogueService } from '../../core/catalogue/catalogue.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Route, Router, RouterLink } from '@angular/router';
 import { Location } from '@angular/common';
-import { FEATURE_META, Feature, ROLE_LABELS, Role } from '../../domain';
+import { Feature, Permission, ROLE_LABELS, ROLE_PERMISSIONS } from '../../domain';
 import { RoleSwitcher } from '../../core/session/role-switcher';
 import { SessionService } from '../../core/session/session.service';
 import { EmptyState } from '../../ui/states/empty-state';
@@ -38,6 +39,7 @@ import { EmptyState } from '../../ui/states/empty-state';
   `,
 })
 export class NoAccessPage {
+  protected readonly catalogue = inject(CatalogueService);
   protected readonly session = inject(SessionService);
   private readonly switcher = inject(RoleSwitcher);
   private readonly router = inject(Router);
@@ -47,14 +49,14 @@ export class NoAccessPage {
   private readonly from = computed(() => this.params()?.get('from') ?? '');
   protected readonly featureLabel = computed(() => {
     const f = this.planFeature();
-    return f ? (FEATURE_META[f]?.label ?? f) : '';
+    return f ? this.catalogue.featureLabel(f) : '';
   });
   protected readonly planFeature = computed(() => this.params()?.get('feature') as Feature | null);
 
   protected readonly message = computed(() => {
     const feature = this.planFeature();
     if (feature) {
-      const what = FEATURE_META[feature]?.description ?? '';
+      const what = this.catalogue.feature(feature)?.description ?? '';
       const who = this.session.can('Subscription.Request') ? 'You can ask your Humo account manager about adding it — nothing changes until you agree.' : 'Your agency administrator can ask Humo about adding it.';
       return `${what} ${who}`.trim();
     }
@@ -67,11 +69,19 @@ export class NoAccessPage {
     return `As ${role}, this page isn’t available to you. If you need it for your work, ask ${admin} to change your access.`;
   });
 
-  /** Another membership of the same person that is allowed to open the page. */
+  /**
+   * Another of the person's roles that can open the page. Worked out from the
+   * published role → permission table, which the client keeps for explanations;
+   * the switch itself is checked by the API.
+   */
   protected readonly alternative = computed(() => {
-    const allowed = this.rolesFor(this.from());
-    if (!allowed || this.planFeature()) return null;
-    return this.session.assignments().find((m) => m.id !== this.session.assignment().id && allowed.includes(m.role)) ?? null;
+    const needed = this.permissionFor(this.from());
+    if (!needed || this.planFeature()) return null;
+    return (
+      this.session
+        .assignments()
+        .find((m) => m.id !== this.session.assignment().id && (ROLE_PERMISSIONS[m.role].includes(needed) || !!m.grants?.includes(needed))) ?? null
+    );
   });
 
   protected switchTo(id: string): void {
@@ -82,11 +92,11 @@ export class NoAccessPage {
     this.location.back();
   }
 
-  /** Finds the deepest route roles for a URL by walking the router config. */
-  private rolesFor(url: string): Role[] | null {
+  /** Finds the deepest route permission for a URL by walking the router config. */
+  private permissionFor(url: string): Permission | null {
     const segments = url.split(/[?#]/)[0].split('/').filter(Boolean);
-    let routes: Route[] | undefined = this.router.config[0]?.children;
-    let roles: Role[] | null = null;
+    let routes: Route[] | undefined = this.router.config.find((r) => r.path === '' && r.children)?.children;
+    let permission: Permission | null = null;
     let i = 0;
     while (routes && i <= segments.length) {
       const seg = segments[i];
@@ -95,11 +105,11 @@ export class NoAccessPage {
         routes.find((r) => r.path?.startsWith(':')) ??
         (i === segments.length ? routes.find((r) => r.path === '') : undefined);
       if (!match) break;
-      const own = match.data?.['roles'] as Role[] | undefined;
-      if (own) roles = own;
+      const own = match.data?.['permission'] as Permission | undefined;
+      if (own) permission = own;
       routes = match.children;
       i += match.path === '' ? 1 : (match.path?.split('/').length ?? 1);
     }
-    return roles;
+    return permission;
   }
 }

@@ -52,7 +52,7 @@ export class JobsPage {
 
   private readonly schemeIds = computed(() => (this.fixedScheme() ? [this.fixedScheme()!.id] : this.scope.effectiveIds()));
 
-  protected readonly result = loadable(() => this.data.list(this.schemeIds()));
+  protected readonly result = loadable(() => this.data.list(this.schemeIds()).pipe(map((p) => p.items)));
 
   protected readonly loading = this.result.loading;
   protected readonly failed = this.result.failed;

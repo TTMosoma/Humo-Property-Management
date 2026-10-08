@@ -140,7 +140,7 @@ export class JobPage {
     const text = this.comment().trim();
     const d = this.detail();
     if (!text || !d) return;
-    this.jobs.act(d.job.ref, { type: 'comment', text }).subscribe({
+    this.jobs.act(d.job.ref, { type: 'comment', text }, d.job.version).subscribe({
       next: () => {
         this.comment.set('');
         this.feedback.success('Comment added');

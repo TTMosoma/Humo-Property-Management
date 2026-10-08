@@ -1,6 +1,6 @@
 import { Injectable, computed, inject } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
-import { Observable, map, switchMap } from 'rxjs';
+import { Observable, defer, map, of, switchMap } from 'rxjs';
 import {
   ContractorDashboard,
   ContractorEndorsement,
@@ -96,13 +96,18 @@ export class InMemoryContractorNetwork extends ContractorNetwork {
     });
   }
 
-  markViewed(quoteRequestId: string, quoteIds: string[]): void {
-    if (!!this.session.current.impersonation) return;
-    const seen = new Set(this.store.events().filter((e) => e.type === 'quote-viewed' && e.quoteRequestId === quoteRequestId).map((e) => e.quoteId));
-    const request = this.store.requests().find((r) => r.id === quoteRequestId);
-    for (const q of this.store.quotes().filter((x) => quoteIds.includes(x.id) && !seen.has(x.id))) {
-      this.store.emit({ type: 'quote-viewed', quoteRequestId, customerId: request?.customerId ?? '', partyId: q.partyId, quoteId: q.id, actor: this.session.current.identity.name });
-    }
+  /** Recorded on subscribe, like a POST. Impersonation never counts as the customer having looked. */
+  markViewed(quoteRequestId: string, quoteIds: string[]): Observable<void> {
+    return defer(() => {
+      if (!this.session.current.impersonation) {
+        const seen = new Set(this.store.events().filter((e) => e.type === 'quote-viewed' && e.quoteRequestId === quoteRequestId).map((e) => e.quoteId));
+        const request = this.store.requests().find((r) => r.id === quoteRequestId);
+        for (const q of this.store.quotes().filter((x) => quoteIds.includes(x.id) && !seen.has(x.id))) {
+          this.store.emit({ type: 'quote-viewed', quoteRequestId, customerId: request?.customerId ?? '', partyId: q.partyId, quoteId: q.id, actor: this.session.current.identity.name });
+        }
+      }
+      return of(undefined);
+    });
   }
 
   setRecommended(quoteRequestId: string, quoteId: string): Observable<void> {

@@ -1,4 +1,4 @@
-import { Feature, Role } from '../../domain';
+import { Feature, Permission, Role } from '../../domain';
 import type { AttentionKey } from '../attention/attention.service';
 
 export interface NavLink {
@@ -6,7 +6,10 @@ export interface NavLink {
   label: string;
   icon?: string;
   route: string;
-  roles: readonly Role[];
+  /** Who may see it: the permission its route needs. */
+  permission: Permission;
+  /** Presentation only: limit the entry to these roles' menus (access is still the permission). */
+  audience?: readonly Role[];
   /** The plan feature it needs. Not entitled → shown locked (it explains and offers an upgrade request). */
   feature?: Feature;
   /** Set at runtime: the role may use it, but the plan doesn't include it. */

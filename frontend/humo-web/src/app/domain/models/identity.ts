@@ -37,6 +37,8 @@ export type AssignmentStatus = 'active' | 'ended';
 
 export interface RoleAssignment {
   id: string;
+  /** Concurrency token: send it back with commands that change this record. The API answers 409 if someone changed it first. */
+  version: number;
   role: Role;
   scope: AssignmentScope;
   /** Short description shown in the role switcher, e.g. "Chairperson · Kingfisher Court". */

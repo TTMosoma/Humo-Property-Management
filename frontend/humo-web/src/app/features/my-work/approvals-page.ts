@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { WorkItem, WorkItemType, isOpen, urgencyOf } from '../../domain';
+import { WorkItem, WorkItemType, isOpen, urgencyOf, sumRands } from '../../domain';
 import { AttentionService } from '../../core/attention/attention.service';
 import { loadable } from '../../core/data/loadable';
 import { ScopeNotice } from '../../core/scope/scope-notice';
@@ -127,7 +127,7 @@ export class ApprovalsPage {
       );
   });
 
-  protected readonly total = computed(() => this.items().reduce((n, w) => n + (w.amount ?? 0), 0));
+  protected readonly total = computed(() => sumRands(this.items().map((w) => w.amount ?? 0)));
 
   protected readonly tabs = computed(() => [
     { id: 'mine', label: 'Waiting for me', count: this.attention.pendingApprovals().length },

@@ -72,6 +72,8 @@ export interface JobEvent {
 
 export interface Job {
   id: string;
+  /** Concurrency token: send it back with commands that change this record. The API answers 409 if someone changed it first. */
+  version: number;
   /** "MR-1042" */
   ref: string;
   schemeId: string;
@@ -105,6 +107,8 @@ export interface Job {
 
 export interface Invoice {
   id: string;
+  /** Concurrency token: send it back with commands that change this record. The API answers 409 if someone changed it first. */
+  version: number;
   supplierId: string;
   schemeId: string;
   jobId?: string;
@@ -124,6 +128,8 @@ export interface Invoice {
 
 export interface PaymentBatch {
   id: string;
+  /** Concurrency token: send it back with commands that change this record. The API answers 409 if someone changed it first. */
+  version: number;
   schemeId: string;
   invoiceIds: string[];
   total: number;

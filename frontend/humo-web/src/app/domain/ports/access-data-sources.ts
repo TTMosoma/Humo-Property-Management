@@ -1,4 +1,5 @@
 import { Observable } from 'rxjs';
+import { ListQuery, Page } from './list-query';
 import { AuditEvent, AuditQuery, ImpersonationMode, ImpersonationReason, ImpersonationSession } from '../models/audit';
 import { AssignmentScope, Identity, RoleAssignment } from '../models/identity';
 import { SecurityProfile, StepUpMethod, StepUpRequest, StepUpResult } from '../models/security';
@@ -21,7 +22,7 @@ export abstract class AccessDataSource {
   abstract humoTeam(): Observable<Identity[]>;
   abstract assign(identityId: string, assignment: NewAssignment): Observable<void>;
   /** Ends the assignment (it stays in the person's history; nothing is deleted). */
-  abstract endAssignment(identityId: string, assignmentId: string): Observable<void>;
+  abstract endAssignment(identityId: string, assignmentId: string, expectedVersion?: number): Observable<void>;
   /** The API validates the identity holds the assignment and issues a token for it. */
   abstract switchRole(assignmentId: string): Observable<void>;
   /** Ends the Humo session server-side (all products) and records it. */
@@ -38,7 +39,8 @@ export abstract class AccessDataSource {
 }
 
 export abstract class AuditDataSource {
-  abstract query(query: AuditQuery): Observable<AuditEvent[]>;
+  /** Newest first. */
+  abstract query(query: AuditQuery, list?: ListQuery): Observable<Page<AuditEvent>>;
   /** Sensitive: needs step-up. Returns the export's file name. */
   abstract export(query: AuditQuery): Observable<string>;
 }

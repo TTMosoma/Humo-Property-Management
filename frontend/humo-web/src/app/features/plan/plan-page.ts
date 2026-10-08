@@ -1,9 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { CatalogueService } from '../../core/catalogue/catalogue.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, map, of } from 'rxjs';
-import { ADD_ONS, AddOnId, CustomerPlan, FEATURE_META, Feature, PlanDataSource, UpgradeRequest, packageById, tierOf, entitlementSet } from '../../domain';
+import { AddOnId, Feature, PlanDataSource, UpgradeRequest, entitlementSet } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
@@ -13,7 +14,7 @@ import { PageHeader } from '../../ui/page-header/page-header';
 import { ErrorState } from '../../ui/states/error-state';
 import { Skeleton } from '../../ui/states/skeleton';
 import { StatusPill } from '../../ui/status-pill/status-pill';
-import { STATUS_LABEL, STATUS_TONE, moduleRows } from '../platform/platform-view';
+import { STATUS_LABEL, STATUS_TONE } from '../platform/platform-view';
 
 /**
  * Settings › Plan & features — the customer's own view. It shows what the
@@ -28,6 +29,7 @@ import { STATUS_LABEL, STATUS_TONE, moduleRows } from '../platform/platform-view
   styleUrl: './plan-page.scss',
 })
 export class PlanPage {
+  protected readonly catalogue = inject(CatalogueService);
   private readonly data = inject(PlanDataSource);
   private readonly feedback = inject(FeedbackService);
   protected readonly session = inject(SessionService);
@@ -43,11 +45,11 @@ export class PlanPage {
 
   protected readonly rows = computed(() => {
     const p = this.plan();
-    return p ? moduleRows(entitlementSet(p.entitlements)).filter((r) => r.module !== 'platform') : [];
+    return p ? this.catalogue.moduleRows(entitlementSet(p.entitlements)).filter((r) => r.module !== 'platform') : [];
   });
   protected readonly focusModule = computed(() => {
     const f = this.focus();
-    return f ? FEATURE_META[f]?.module : null;
+    return f ? this.catalogue.feature(f)?.module : null;
   });
 
   protected readonly canRequest = computed(() => this.session.can('Subscription.Request'));
@@ -59,22 +61,22 @@ export class PlanPage {
   protected readonly statusTone = STATUS_TONE;
   protected readonly formatDate = formatDate;
   protected readonly relativeTime = relativeTime;
-  protected readonly packageName = (id: CustomerPlan['packageId']) => packageById(id).name;
-  protected readonly addOnName = (id: AddOnId) => ADD_ONS.find((a) => a.id === id)?.name ?? id;
+  protected readonly packageName = this.catalogue.packageName;
+  protected readonly addOnName = this.catalogue.addOnName;
 
   /** How a module could be added: as an add-on, or from a higher package. */
   protected howToGet(module: string): { addOn?: AddOnId; label: string } {
     const row = this.rows().find((r) => r.module === module);
     const missing = row?.features.find((f) => !f.enabled)?.key as Feature | undefined;
     if (!missing) return { label: '' };
-    const addOn = ADD_ONS.find((a) => a.features.includes(missing));
+    const addOn = this.catalogue.addOnFor(missing);
     if (addOn) return { addOn: addOn.id, label: `Available as the ${addOn.name} add-on` };
-    const tier = tierOf(missing);
+    const tier = this.catalogue.tierOf(missing);
     return { label: tier ? `Included in ${tier.name}` : '' };
   }
 
   protected requestLabel(r: UpgradeRequest): string {
-    return r.addOn ? `${this.addOnName(r.addOn)} add-on` : r.package ? packageById(r.package).name : 'Upgrade';
+    return r.addOn ? `${this.addOnName(r.addOn)} add-on` : r.package ? this.packageName(r.package) : 'Upgrade';
   }
 
   protected ask(module: string): void {

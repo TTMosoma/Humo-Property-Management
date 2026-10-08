@@ -1,9 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { CatalogueService } from '../../core/catalogue/catalogue.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, map, of } from 'rxjs';
-import { ADD_ONS, Opportunity, PlatformCustomer, PlatformDataSource, packageById } from '../../domain';
+import { Opportunity, PlatformCustomer, PlatformDataSource } from '../../domain';
 import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
 import { ScoreRing, Sparkline } from '../../ui/charts/charts';
@@ -14,7 +15,7 @@ import { EmptyState } from '../../ui/states/empty-state';
 import { ErrorState } from '../../ui/states/error-state';
 import { Skeleton } from '../../ui/states/skeleton';
 import { StatusPill } from '../../ui/status-pill/status-pill';
-import { BAND_LABEL, BAND_TONE, shortPackage } from './platform-view';
+import { BAND_LABEL, BAND_TONE } from './platform-view';
 
 const DAY = 86_400_000;
 
@@ -31,6 +32,7 @@ const DAY = 86_400_000;
   styleUrl: './accounts-page.scss',
 })
 export class AccountsPage {
+  protected readonly catalogue = inject(CatalogueService);
   private readonly data = inject(PlatformDataSource);
   protected readonly session = inject(SessionService);
 
@@ -43,7 +45,7 @@ export class AccountsPage {
     support: { title: 'Support & requests', sub: 'Open tickets, escalations and upgrade requests across your accounts.' },
   };
 
-  protected readonly result = loadable(() => this.data.customers().pipe(map((all) => ({ all }))));
+  protected readonly result = loadable(() => this.data.customers().pipe(map((p) => ({ all: p.items }))));
   protected readonly loading = this.result.loading;
   protected readonly failed = this.result.failed;
 
@@ -70,7 +72,7 @@ export class AccountsPage {
     const items: { c: PlatformCustomer; icon: string; title: string; detail: string; tone: 'info' | 'warning' | 'danger' }[] = [];
     for (const c of this.mine()) {
       for (const r of c.requests.filter((x) => x.status === 'new')) {
-        const what = r.addOn ? `${ADD_ONS.find((a) => a.id === r.addOn)?.name} add-on` : r.package ? packageById(r.package).name : 'an upgrade';
+        const what = r.addOn ? `${this.catalogue.addOnName(r.addOn)} add-on` : r.package ? this.catalogue.packageName(r.package) : 'an upgrade';
         items.push({ c, icon: 'hand-right-outline', title: `${c.name} asked about ${what}`, detail: `${r.requestedBy} · ${relativeTime(r.at)}${r.note ? ` · “${r.note}”` : ''}`, tone: 'info' });
       }
       const h = c.health.history;
@@ -126,18 +128,18 @@ export class AccountsPage {
   }
 
   protected addOnNames(c: PlatformCustomer): string {
-    return c.subscription.addOns.map((a) => ADD_ONS.find((x) => x.id === a.addOnId)?.name).join(', ');
+    return c.subscription.addOns.map((a) => this.catalogue.addOnName(a.addOnId)).join(', ');
   }
 
   protected readonly relativeTime = relativeTime;
   protected readonly bandLabel = BAND_LABEL;
   protected readonly bandTone = BAND_TONE;
-  protected readonly shortPackage = shortPackage;
+  protected readonly shortPackage = this.catalogue.shortPackage;
   protected readonly formatDate = formatDate;
   protected readonly rand = (n: number, compact = false) => formatRand(n, { compact, cents: false });
 
   protected oppTitle(o: Opportunity): string {
-    return o.target.addOn ? `${ADD_ONS.find((a) => a.id === o.target.addOn)?.name}` : o.title;
+    return o.target.addOn ? this.catalogue.addOnName(o.target.addOn) : o.title;
   }
 
   protected adoptionOf(c: PlatformCustomer): number {

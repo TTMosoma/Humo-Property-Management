@@ -89,7 +89,7 @@ export class DashboardPage {
     const ids = this.scope.effectiveIds();
     return combineLatest([
       this.schemesDs.health(),
-      this.can.maintenance() ? this.jobsDs.list(ids) : of([] as JobSummary[]),
+      this.can.maintenance() ? this.jobsDs.list(ids).pipe(map((p) => p.items)) : of([] as JobSummary[]),
       this.can.payables() ? this.payablesDs.invoices(ids) : of([] as InvoiceView[]),
     ]).pipe(map(([health, jobs, invoices]) => ({ health: health.filter((h) => ids.includes(h.schemeId)), jobs, invoices })));
   });

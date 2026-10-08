@@ -3,7 +3,7 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, combineLatest, map, of, switchMap } from 'rxjs';
-import { BatchView, InvoiceView, PayablesDataSource } from '../../domain';
+import { BatchView, InvoiceView, PayablesDataSource, sumRands } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { StepUpService } from '../../core/security/step-up.service';
 import { loadable } from '../../core/data/loadable';
@@ -78,7 +78,7 @@ export class PayablesPage {
   });
 
   protected readonly selection = computed(() => this.rows().filter((r) => this.selected().includes(r.invoice.id)));
-  protected readonly selectionTotal = computed(() => this.selection().reduce((s, r) => s + r.invoice.amount, 0));
+  protected readonly selectionTotal = computed(() => sumRands(this.selection().map((r) => r.invoice.amount)));
   protected readonly mixedSchemes = computed(() => new Set(this.selection().map((r) => r.scheme.id)).size > 1);
   protected readonly canPay = computed(() => this.session.can('Payables.Prepare'));
   protected readonly canRelease = computed(() => this.session.can('Payables.Release'));
@@ -128,7 +128,7 @@ export class PayablesPage {
   protected release(b: BatchView): void {
     this.busy.set(true);
     const detail = `Release ${formatRand(b.batch.total)} to ${b.invoices.length} suppliers from ${b.scheme.name}’s trust account`;
-    this.stepUp.guard({ action: 'release-payment', detail }, () => this.data.releaseBatch(b.batch.id)).subscribe({
+    this.stepUp.guard({ action: 'release-payment', detail }, () => this.data.releaseBatch(b.batch.id, b.batch.version)).subscribe({
       complete: () => this.busy.set(false),
       next: () => {
         this.busy.set(false);

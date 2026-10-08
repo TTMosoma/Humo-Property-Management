@@ -1,6 +1,8 @@
 /** A credit on a scheme's trust bank account, imported from the bank statement. */
 export interface Receipt {
   id: string;
+  /** Concurrency token: send it back with commands that change this record. The API answers 409 if someone changed it first. */
+  version: number;
   schemeId: string;
   bankAccount: string;
   /** ISO date. */

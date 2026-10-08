@@ -178,7 +178,7 @@ export class MaintenanceStore {
   create(input: NewJobInput, by: string): string {
     const ref = `MR-${Math.max(...this.jobs.map((j) => Number(j.ref.slice(3)))) + 1}`;
     const now = new Date().toISOString();
-    const job: Job = {
+    const job: Job = { version: 1,
       id: 'job-' + ref.toLowerCase(),
       ref,
       schemeId: input.schemeId,
@@ -258,6 +258,7 @@ export class MaintenanceStore {
   act(ref: string, action: JobAction, by: string): void {
     const job = this.jobs.find((j) => j.ref === ref);
     if (!job) throw new Error(`Unknown job ${ref}`);
+    job.version++;
 
     switch (action.type) {
       case 'triage':
@@ -386,7 +387,7 @@ export class MaintenanceStore {
         const approved = job.quotes.find((q) => q.recommended)?.amount;
         const variance = approved === undefined ? null : round2(action.amount - approved);
         const needsApproval = variance === null || variance > 0;
-        const invoice: Invoice = {
+        const invoice: Invoice = { version: 1,
           id: action.invoiceNo,
           supplierId: job.supplierId!,
           schemeId: job.schemeId,
@@ -467,7 +468,7 @@ export class MaintenanceStore {
       i.status = 'in-batch';
       i.batchId = id;
     });
-    this.batches = [{ id, schemeId, invoiceIds: invoices.map((i) => i.id), total, createdAt: new Date().toISOString(), createdBy: by, status: 'awaiting-approval', approvalWorkItemId: workId }, ...this.batches];
+    this.batches = [{ version: 1, id, schemeId, invoiceIds: invoices.map((i) => i.id), total, createdAt: new Date().toISOString(), createdBy: by, status: 'awaiting-approval', approvalWorkItemId: workId }, ...this.batches];
     this.db.addWork({
       id: workId,
       ref: id,
@@ -496,10 +497,12 @@ export class MaintenanceStore {
   releaseBatch(batchId: string, by: string): void {
     const batch = this.batches.find((b) => b.id === batchId);
     if (!batch || batch.status !== 'approved') throw new Error('Batch is not approved');
+    batch.version++;
     batch.status = 'released';
     batch.releasedAt = new Date().toISOString();
     for (const id of batch.invoiceIds) {
       const inv = this.invoices.find((i) => i.id === id)!;
+      inv.version++;
       inv.status = 'paid';
       inv.paidAt = batch.releasedAt;
       const job = this.jobs.find((j) => j.id === inv.jobId);

@@ -37,6 +37,8 @@ export interface CommandSpec {
   allowedWhileObserving?: boolean;
   /** Server-side validation, after authorisation: field → message, or null when the input is fine. */
   validate?: () => FieldErrors | null;
+  /** Optimistic concurrency: the version the caller saw, and the record's version now. */
+  version?: { expected?: number; current?: number };
 }
 
 const DENIAL_REASON: Record<PolicyDenial, string> = {
@@ -52,8 +54,9 @@ const DENIAL_REASON: Record<PolicyDenial, string> = {
  *   1. authorise (role permission, scope, entitlement) from the token's claims,
  *   2. refuse writes in Observe impersonation,
  *   3. require a fresh step-up proof for sensitive commands,
- *   4. validate the input (422 with field errors),
- *   5. append an audit record naming the actor AND the impersonated user.
+ *   4. check the record hasn't changed since the caller saw it (409),
+ *   5. validate the input (422 with field errors),
+ *   6. append an audit record naming the actor AND the impersonated user.
  *
  * The browser's own checks (SessionService.can) are UX; these are the rules.
  */
@@ -74,6 +77,10 @@ export class MockGateway {
     }
     return this.respond(null).pipe(
       map(() => {
+        const v = spec.version;
+        if (v?.expected !== undefined && v.current !== undefined && v.expected !== v.current) {
+          throw new ApiError('conflict', 'Someone else changed this first');
+        }
         const invalid = spec.validate?.();
         if (invalid && Object.keys(invalid).length) throw new ApiError('validation', 'Some details need attention', invalid);
         try {

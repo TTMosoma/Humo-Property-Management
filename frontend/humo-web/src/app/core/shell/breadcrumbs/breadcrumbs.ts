@@ -3,7 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRouteSnapshot, NavigationEnd, Router, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { filter, map, startWith } from 'rxjs';
-import { Role } from '../../../domain';
+import { Permission } from '../../../domain';
 import { SessionService } from '../../session/session.service';
 
 export interface Crumb {
@@ -65,14 +65,14 @@ export class Breadcrumbs {
     { initialValue: [] as Crumb[] },
   );
 
-  /** A crumb links only if the current role may open it (its own roles, or its index child's). */
+  /** A crumb links only if the active role may open it (its own permission, or its index child's). */
   private canOpen(route: ActivatedRouteSnapshot): boolean {
     const config = route.routeConfig;
     if (!config) return false;
     const index = config.children?.find((c) => c.path === '');
-    const roles = (index?.data?.['roles'] ?? config.data?.['roles']) as Role[] | undefined;
+    const permission = (index?.data?.['permission'] ?? config.data?.['permission']) as Permission | undefined;
     if (!config.component && !config.loadComponent && !index) return false;
-    return this.session.hasRole(roles);
+    return !permission || this.session.canOpen(permission);
   }
 
   private build(root: ActivatedRouteSnapshot): Crumb[] {

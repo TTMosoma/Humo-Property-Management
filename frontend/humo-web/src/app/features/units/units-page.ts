@@ -56,7 +56,7 @@ export class UnitsPage {
     return fixed ? [fixed.id] : this.scope.effectiveIds();
   });
 
-  protected readonly result = loadable(() => this.data.list(this.schemeIds()).pipe(map((rows) => ({ rows }))));
+  protected readonly result = loadable(() => this.data.list(this.schemeIds()).pipe(map((p) => ({ rows: p.items }))));
 
   protected readonly loading = this.result.loading;
   protected readonly failed = this.result.failed;

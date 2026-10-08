@@ -221,6 +221,8 @@ export interface SubscriptionAddOn {
 
 export interface Subscription {
   organisationId: string;
+  /** Concurrency token: send it back with commands that change this record. The API answers 409 if someone changed it first. */
+  version: number;
   packageId: PackageId;
   status: SubscriptionStatus;
   startedAt: string;

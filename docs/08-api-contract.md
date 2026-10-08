@@ -1,6 +1,6 @@
 # 08 — Frontend contract for the .NET backend
 
-Status: **frontend contract frozen after the P1 readiness cleanup** (October 2026). This is what the Angular app expects from the API. The domain models (`domain/models`) and ports (`domain/ports`, `domain/contractor`) are the draft contract; this document records the decisions that aren't obvious from the types.
+Status: **frontend contract frozen after the P1 and P2 readiness cleanups** (October 2026). This is what the Angular app expects from the API. The domain models (`domain/models`) and ports (`domain/ports`, `domain/contractor`) are the draft contract; this document records the decisions that aren't obvious from the types.
 
 ## 1. How the app talks to the backend
 
@@ -21,7 +21,11 @@ Status: **frontend contract frozen after the P1 readiness cleanup** (October 202
 
 - **People:** `actor` (the human at the keyboard), `identity` (whose app it is: the actor, or the person being impersonated) and `impersonation`.
 - **Roles:** `assignments` (the ones they can switch between) and `activeAssignmentId`.
-- **Permissions:** `permissions` for the active assignment, already limited by Observe mode, and `actorPermissions` (for example `System.Impersonate`).
+- **Permissions:**
+  - `permissions`: what the active assignment may do right now, already limited by Observe mode.
+  - `pagePermissions`: the same before Observe limits, which decides the pages it may open.
+  - `actorPermissions`: the actor's own, for example `System.Impersonate`.
+- **Access is by permission, never by role.** Routes declare `data.permission`; navigation entries name the same permission.
 - **Organisation and plan:** `organisation`, `subscription` and `entitlements` (a plain `Entitlement[]`).
 
 **The server computes all of it.** The client never derives permissions from `ROLE_PERMISSIONS` or resolves entitlements itself. Those tables remain in the client only to explain things (Roles & permissions, Plan & features).
@@ -88,12 +92,27 @@ Use ProblemDetails, with a `code` for policy errors and an `errors` map keyed by
 
 `QuoteRequestView.disclosure[partyId]` tells the UI why. `SupplierDataSource.linkParty` doesn't take contact details: the server copies them from the party.
 
-## 7. Not decided yet (P2)
+## 7. Lists, versions, money and the catalogue (P2)
 
-- Paging and query envelopes for long lists (audit, platform customers, receipts, jobs, people, units)
-- `version` fields for optimistic concurrency
-- How money is transported (decimal string or cents)
-- A catalogue endpoint for features, packages and add-ons
-- `markViewed` returning an Observable
-- Gating routes by permission rather than role lists
-- Removing prototype-only controls from production builds
+- **Long lists are paged.**
+  - Audit, platform customers, receipts, jobs, people and units take an optional `ListQuery` (`q`, `filters`, `sort`, `page`, `pageSize`) and return `Page<T>` (`items`, `total`, `page`, `pageSize`).
+  - Screens don't send a page size yet and filter in the browser; the in-memory adapters apply only paging.
+  - When a list outgrows the browser, the screen passes its URL state through as the query.
+- **Optimistic concurrency.**
+  - `Job`, `Invoice`, `PaymentBatch`, `Receipt`, `Subscription` and `RoleAssignment` carry a `version`.
+  - Commands that change them take `expectedVersion`: `JobDataSource.act`, receipt allocation, `releaseBatch`, `changeSubscription` and `endAssignment`. A stale version gets **409**, which the UI shows as "someone else changed it first".
+  - Only the first of a chain of job commands carries the version.
+- **Money** is rands as JSON numbers with at most two decimals (`decimal` / `DECIMAL(18,2)` on the server).
+  - The server computes every total that matters.
+  - The browser adds amounts only for display, through `sumRands` (in cents) (`domain/models/money.ts`).
+- **Time** is ISO 8601: instants with an offset (`2026-10-08T09:30:00+02:00`), calendar dates as plain dates. Screens show local time.
+- **Catalogue.**
+  - `CatalogueDataSource.catalogue()` (GET /catalogue) publishes features, packages and add-ons. `CatalogueService` (`core/catalogue`) loads it once for names, package contents and module rows.
+  - Feature *keys* stay in code, because the app gates on them. Names and packaging are data.
+  - The domain constants are now only the mock server's seed.
+- **Prototype tools** (the toolbar, "Sign in as", the state simulator and nudge reset) appear only when the data layer provides `PrototypeControls`. `provideMockData()` provides it; the HTTP data layer won't.
+
+## 8. Still open
+
+- Custom (configurable) role profiles: the permission model is ready, but there's no UI to edit them.
+- A push channel (SignalR) for work items and notifications changed by other people.

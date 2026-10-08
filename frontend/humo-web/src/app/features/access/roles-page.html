@@ -108,7 +108,7 @@
 <!-- Entitlements -->
 <h2 class="section-title">Your plan: {{ plan() }} <a routerLink="/settings/plan" class="plan-link">Plan & features</a></h2>
 <div class="plan surface">
-  @for (f of features; track f.id) {
+  @for (f of features(); track f.id) {
     <div class="feature" [class.off]="!included(f.id)">
       <ion-icon [name]="included(f.id) ? 'checkmark-circle' : 'remove-circle-outline'" aria-hidden="true" />
       <span>{{ f.label }}</span>

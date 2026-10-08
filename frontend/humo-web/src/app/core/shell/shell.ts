@@ -16,6 +16,7 @@ import { Overlay } from '@angular/cdk/overlay';
 import { IonIcon, IonMenu, IonSplitPane, MenuController } from '@ionic/angular/standalone';
 import { filter } from 'rxjs';
 import { ROLE_LABELS, ROLE_META, coversAllSchemes } from '../../domain';
+import { PrototypeControls } from '../prototype/prototype-controls';
 import { PrototypeToolbar } from '../prototype/prototype-toolbar';
 import { ImpersonationBanner } from '../security/impersonation-banner';
 import { RoleSwitcher } from '../session/role-switcher';
@@ -47,6 +48,8 @@ const DESKTOP_QUERY = '(min-width: 992px)';
   },
 })
 export class Shell {
+  /** Prototype review tools, present only with the mock data layer. */
+  protected readonly prototype = inject(PrototypeControls, { optional: true });
   protected readonly session = inject(SessionService);
   protected readonly switcher = inject(RoleSwitcher);
   private readonly menu = inject(MenuController);

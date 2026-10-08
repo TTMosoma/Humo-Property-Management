@@ -1,9 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { CatalogueService } from '../../core/catalogue/catalogue.service';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, map, of, switchMap } from 'rxjs';
-import { ADD_ONS, MODULE_LABELS, ORGANISATION_STATUS_LABELS, Opportunity, PlatformCustomer, PlatformDataSource, UpgradeRequest, packageById, entitlementSet } from '../../domain';
+import { MODULE_LABELS, ORGANISATION_STATUS_LABELS, Opportunity, PlatformCustomer, PlatformDataSource, UpgradeRequest, entitlementSet } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
@@ -18,7 +19,7 @@ import { ErrorState } from '../../ui/states/error-state';
 import { Skeleton } from '../../ui/states/skeleton';
 import { StatusPill } from '../../ui/status-pill/status-pill';
 import { ManageFeaturesDrawer } from './manage-features-drawer';
-import { BAND_LABEL, BAND_TONE, STATUS_LABEL, STATUS_TONE, addOnName, moduleRows, packageName } from './platform-view';
+import { BAND_LABEL, BAND_TONE, STATUS_LABEL, STATUS_TONE } from './platform-view';
 
 /**
  * A customer, from Humo's side: how they're doing (health, adoption), what
@@ -34,6 +35,7 @@ import { BAND_LABEL, BAND_TONE, STATUS_LABEL, STATUS_TONE, addOnName, moduleRows
   styleUrl: './customer-page.scss',
 })
 export class CustomerPage {
+  protected readonly catalogue = inject(CatalogueService);
   private readonly data = inject(PlatformDataSource);
   private readonly drawer = inject(DrawerService);
   private readonly feedback = inject(FeedbackService);
@@ -66,7 +68,7 @@ export class CustomerPage {
 
   protected readonly modules = computed(() => {
     const c = this.c();
-    return c ? moduleRows(entitlementSet(c.entitlements)) : [];
+    return c ? this.catalogue.moduleRows(entitlementSet(c.entitlements)) : [];
   });
 
   protected readonly adoption = computed(() =>
@@ -80,8 +82,8 @@ export class CustomerPage {
   protected readonly bandTone = BAND_TONE;
   protected readonly statusLabel = STATUS_LABEL;
   protected readonly statusTone = STATUS_TONE;
-  protected readonly packageName = packageName;
-  protected readonly addOnName = addOnName;
+  protected readonly packageName = this.catalogue.packageName;
+  protected readonly addOnName = this.catalogue.addOnName;
   protected readonly formatDate = formatDate;
   protected readonly relativeTime = relativeTime;
   protected readonly rand = (n: number, compact = false) => formatRand(n, { compact, cents: false });
@@ -101,8 +103,8 @@ export class CustomerPage {
   }
 
   protected requestLabel(r: UpgradeRequest): string {
-    if (r.addOn) return `${ADD_ONS.find((a) => a.id === r.addOn)?.name} add-on`;
-    if (r.package) return packageById(r.package).name;
+    if (r.addOn) return `${this.catalogue.addOnName(r.addOn)} add-on`;
+    if (r.package) return this.catalogue.packageName(r.package);
     return 'Upgrade';
   }
 

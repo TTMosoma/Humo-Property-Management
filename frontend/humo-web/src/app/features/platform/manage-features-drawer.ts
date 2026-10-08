@@ -1,8 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { CatalogueService } from '../../core/catalogue/catalogue.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { DIALOG_DATA } from '@angular/cdk/dialog';
 import { IonIcon } from '@ionic/angular/standalone';
-import { ADD_ONS, AddOn, FEATURES, Feature, FEATURE_META, PACKAGES, PackageId, PlatformDataSource, SubscriptionChange, entitlementSet } from '../../domain';
+import { AddOn, Feature, PackageId, PlatformDataSource, SubscriptionChange, entitlementSet } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { StepUpService } from '../../core/security/step-up.service';
 import { Drawer } from '../../ui/drawer/drawer';
@@ -22,6 +23,7 @@ import { formatDate } from '../../ui/format/money';
   styleUrl: './manage-features-drawer.scss',
 })
 export class ManageFeaturesDrawer {
+  protected readonly catalogue = inject(CatalogueService);
   private readonly input = inject<{ organisationId: string }>(DIALOG_DATA);
   private readonly data = inject(PlatformDataSource);
   private readonly stepUp = inject(StepUpService);
@@ -36,10 +38,10 @@ export class ManageFeaturesDrawer {
   protected readonly trialFeature = signal<Feature>('governance');
   protected readonly trialDays = signal(30);
 
-  protected readonly packages = PACKAGES;
-  protected readonly addOns = ADD_ONS;
-  protected readonly trialable = FEATURES.filter((f) => !f.baseline);
-  protected readonly meta = FEATURE_META;
+  protected readonly packages = this.catalogue.packages;
+  protected readonly addOns = this.catalogue.addOns;
+  protected readonly trialable = computed(() => this.catalogue.features().filter((f) => !f.baseline));
+  protected readonly featureLabel = this.catalogue.featureLabel;
   protected readonly formatDate = formatDate;
 
   protected readonly reasonOk = computed(() => this.reason().trim().length >= 8);
@@ -58,7 +60,7 @@ export class ManageFeaturesDrawer {
   protected changePackage(): void {
     const p = this.selectedPkg();
     if (p === this.customer()?.subscription.packageId) return;
-    this.apply({ type: 'package', packageId: p, reason: this.reason().trim() }, `Change package to ${PACKAGES.find((x) => x.id === p)?.name}`);
+    this.apply({ type: 'package', packageId: p, reason: this.reason().trim() }, `Change package to ${this.catalogue.packageName(p)}`);
   }
 
   protected toggleAddOn(a: AddOn): void {
@@ -68,17 +70,17 @@ export class ManageFeaturesDrawer {
 
   protected grantTrial(): void {
     const f = this.trialFeature();
-    this.apply({ type: 'override', feature: f, enabled: true, days: this.trialDays(), reason: this.reason().trim() }, `Grant ${FEATURE_META[f].label} for ${this.trialDays()} days`);
+    this.apply({ type: 'override', feature: f, enabled: true, days: this.trialDays(), reason: this.reason().trim() }, `Grant ${this.catalogue.featureLabel(f)} for ${this.trialDays()} days`);
   }
 
   protected clearOverride(feature: Feature): void {
-    this.apply({ type: 'override', feature, enabled: null, reason: this.reason().trim() || 'Override removed' }, `Remove the override on ${FEATURE_META[feature].label}`);
+    this.apply({ type: 'override', feature, enabled: null, reason: this.reason().trim() || 'Override removed' }, `Remove the override on ${this.catalogue.featureLabel(feature)}`);
   }
 
   private apply(change: SubscriptionChange, detail: string): void {
     const name = this.customer()?.name ?? 'customer';
     this.busy.set(true);
-    this.stepUp.guard({ action: 'change-subscription', detail: `${detail} for ${name}` }, () => this.data.changeSubscription(this.input.organisationId, change)).subscribe({
+    this.stepUp.guard({ action: 'change-subscription', detail: `${detail} for ${name}` }, () => this.data.changeSubscription(this.input.organisationId, change, this.customer()?.subscription.version)).subscribe({
       next: () => {
         this.busy.set(false);
         this.feedback.success(`${detail} — done. ${name} users see the change on their next page.`);

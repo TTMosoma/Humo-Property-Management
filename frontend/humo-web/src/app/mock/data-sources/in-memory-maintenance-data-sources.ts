@@ -2,14 +2,16 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map, switchMap } from 'rxjs';
 import {
   BatchView,
-  Permission,
   InvoiceView,
   JobAction,
   JobDataSource,
   JobDetail,
   JobSummary,
+  ListQuery,
   NewJobInput,
+  Page,
   PayablesDataSource,
+  Permission,
   SupplierDataSource,
   SupplierDetail,
   SupplierSummary,
@@ -19,6 +21,7 @@ import { ContractorStore } from '../contractor/contractor-store';
 import { MaintenanceStore } from '../db/maintenance-store';
 import { MockDb } from '../db/mock-db';
 import { mockResponder } from '../mock-latency';
+import { toPage } from '../mock-page';
 import { CommandSpec, MockGateway } from '../server/mock-gateway';
 
 const JOB_VERB: Record<JobAction['type'], string> = {
@@ -65,8 +68,8 @@ abstract class Live {
 
 @Injectable()
 export class InMemoryJobDataSource extends Live implements JobDataSource {
-  list(schemeIds: string[]): Observable<JobSummary[]> {
-    return this.live(() => this.store.jobsIn(schemeIds));
+  list(schemeIds: string[], query?: ListQuery): Observable<Page<JobSummary>> {
+    return this.live(() => toPage(this.store.jobsIn(schemeIds), query));
   }
 
   get(ref: string): Observable<JobDetail | undefined> {
@@ -103,12 +106,15 @@ export class InMemoryJobDataSource extends Live implements JobDataSource {
     );
   }
 
-  act(ref: string, action: JobAction): Observable<void> {
+  act(ref: string, action: JobAction, expectedVersion?: number): Observable<void> {
     const job = this.store.detail(ref)?.job;
     // Residents answer "Was it fixed?" on their own requests; everything else runs the job.
     const permission: Permission = action.type === 'verify' && !action.onBehalf ? 'Resident.Requests' : 'Maintenance.Manage';
     const amount = action.type === 'record-quote' || action.type === 'capture-invoice' ? action.amount : undefined;
-    return this.command({ action: JOB_VERB[action.type], resource: 'Job', resourceId: ref, schemeId: job?.schemeId, amount, permission }, () => this.store.act(ref, action, this.by));
+    return this.command(
+      { action: JOB_VERB[action.type], resource: 'Job', resourceId: ref, schemeId: job?.schemeId, amount, permission, version: { expected: expectedVersion, current: job?.version } },
+      () => this.store.act(ref, action, this.by),
+    );
   }
 }
 
@@ -180,7 +186,7 @@ export class InMemoryPayablesDataSource extends Live implements PayablesDataSour
     return this.command(spec, () => this.store.createBatch(invoiceIds, this.by));
   }
 
-  releaseBatch(batchId: string): Observable<void> {
+  releaseBatch(batchId: string, expectedVersion?: number): Observable<void> {
     const b = this.store.batchesIn(this.allSchemes()).find((x) => x.batch.id === batchId);
     const spec: CommandSpec = {
       action: 'Released payment batch',
@@ -190,6 +196,7 @@ export class InMemoryPayablesDataSource extends Live implements PayablesDataSour
       schemeId: b?.scheme.id,
       permission: 'Payables.Release',
       feature: 'payables',
+      version: { expected: expectedVersion, current: b?.batch.version },
     };
     return this.command(spec, () => this.store.releaseBatch(batchId, this.by));
   }

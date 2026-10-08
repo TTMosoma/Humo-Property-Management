@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { CatalogueService } from '../../core/catalogue/catalogue.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
@@ -15,7 +16,7 @@ import { EmptyState } from '../../ui/states/empty-state';
 import { ErrorState } from '../../ui/states/error-state';
 import { Skeleton } from '../../ui/states/skeleton';
 import { StatusPill } from '../../ui/status-pill/status-pill';
-import { BAND_LABEL, BAND_TONE, STATUS_LABEL, STATUS_TONE, addOnName, shortPackage } from './platform-view';
+import { BAND_LABEL, BAND_TONE, STATUS_LABEL, STATUS_TONE } from './platform-view';
 
 /**
  * Platform › Customers. Every Humo role sees this list, shaped by permission:
@@ -30,12 +31,13 @@ import { BAND_LABEL, BAND_TONE, STATUS_LABEL, STATUS_TONE, addOnName, shortPacka
   styleUrl: './customers-page.scss',
 })
 export class CustomersPage {
+  protected readonly catalogue = inject(CatalogueService);
   private readonly data = inject(PlatformDataSource);
   private readonly router = inject(Router);
   protected readonly session = inject(SessionService);
   protected readonly state = urlState({ view: 'all', q: null, pkg: null });
 
-  protected readonly result = loadable(() => this.data.customers().pipe(map((customers) => ({ customers }))));
+  protected readonly result = loadable(() => this.data.customers().pipe(map((p) => ({ customers: p.items }))));
   protected readonly loading = this.result.loading;
   protected readonly failed = this.result.failed;
   private readonly all = computed(() => ((this.result.value()?.customers ?? [])));
@@ -91,8 +93,8 @@ export class CustomersPage {
   ]);
 
   protected readonly rowId = (r: PlatformCustomer) => r.organisationId;
-  protected readonly shortPackage = shortPackage;
-  protected readonly addOnName = addOnName;
+  protected readonly shortPackage = this.catalogue.shortPackage;
+  protected readonly addOnName = this.catalogue.addOnName;
   protected readonly rand = (n: number, compact = false) => formatRand(n, { compact, cents: false });
   protected readonly formatDate = formatDate;
   protected readonly num = (n: number) => n.toLocaleString('en-ZA').replace(/,/g, ' ');

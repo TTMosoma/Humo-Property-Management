@@ -1,9 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { CatalogueService } from '../../core/catalogue/catalogue.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, combineLatest, map, of } from 'rxjs';
-import { ADD_ONS, BusinessOverview, MODULE_LABELS, FeatureModule, PlatformCustomer, PlatformDataSource, packageById } from '../../domain';
+import { BusinessOverview, MODULE_LABELS, FeatureModule, PlatformCustomer, PlatformDataSource } from '../../domain';
 import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
 import { AreaChart, BarChart, Sparkline } from '../../ui/charts/charts';
@@ -28,6 +29,7 @@ const num = (n: number) => n.toLocaleString('en-ZA').replace(/,/g, ' ');
   styleUrl: './executive-page.scss',
 })
 export class ExecutivePage {
+  protected readonly catalogue = inject(CatalogueService);
   private readonly data = inject(PlatformDataSource);
   protected readonly session = inject(SessionService);
 
@@ -40,7 +42,7 @@ export class ExecutivePage {
   protected readonly focusTitle = computed(() => ({ revenue: 'Revenue', growth: 'Growth', health: 'Account health', opportunities: 'Expansion opportunities' })[this.focus() ?? ''] ?? 'Business overview');
   protected readonly listSize = computed(() => (this.focus() ? 12 : 4));
 
-  protected readonly result = loadable(() => combineLatest([this.data.overview(), this.data.customers()]).pipe(map(([o, customers]) => ({ o, customers }))));
+  protected readonly result = loadable(() => combineLatest([this.data.overview(), this.data.customers()]).pipe(map(([o, customers]) => ({ o, customers: customers.items }))));
 
   protected readonly loading = this.result.loading;
   protected readonly failed = this.result.failed;
@@ -77,7 +79,7 @@ export class ExecutivePage {
   protected readonly packageRows = computed(() => {
     const o = this.o();
     if (!o) return [];
-    return o.byPackage.map((p) => ({ ...p, name: packageById(p.packageId).name.replace('Humo ', ''), share: (p.mrr / o.mrr) * 100, arpa: p.customers ? p.mrr / p.customers : 0 }));
+    return o.byPackage.map((p) => ({ ...p, name: this.catalogue.shortPackage(p.packageId), share: (p.mrr / o.mrr) * 100, arpa: p.customers ? p.mrr / p.customers : 0 }));
   });
 
   protected readonly growth = computed(() => (this.o()?.history ?? []).map((p, i) => ({ label: this.months()[i], value: p.newCustomers, negative: p.churned })));
@@ -111,7 +113,7 @@ export class ExecutivePage {
     return (this.o()?.expansion.top ?? []).slice(0, this.focus() ? 12 : 6).map((op) => ({
       ...op,
       customer: byId.get(op.organisationId)?.name ?? op.organisationId,
-      what: op.target.addOn ? ADD_ONS.find((a) => a.id === op.target.addOn)?.name : op.target.package ? packageById(op.target.package).name : op.title,
+      what: op.target.addOn ? this.catalogue.addOnName(op.target.addOn) : op.target.package ? this.catalogue.packageName(op.target.package) : op.title,
     }));
   });
 }

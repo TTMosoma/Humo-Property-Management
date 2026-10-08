@@ -43,7 +43,7 @@ export class PlatformUsersPage {
     inject(AuditDataSource)
       .query({ organisationId: null, category: 'impersonation' })
       .pipe(
-        map((all) => all.filter((e) => e.action.startsWith('Started')).slice(0, 5)),
+        map((p) => p.items.filter((e) => e.action.startsWith('Started')).slice(0, 5)),
         catchError(() => of([] as AuditEvent[])),
       ),
     { initialValue: [] as AuditEvent[] },

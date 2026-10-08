@@ -5,13 +5,19 @@ import {
   ADD_ONS,
   AddOnId,
   BusinessOverview,
+  Catalogue,
+  CatalogueDataSource,
   CustomerPlan,
+  FEATURES,
   FEATURE_META,
   Feature,
+  ListQuery,
   NUDGES,
   NudgeDataSource,
   NudgePlacement,
+  PACKAGES,
   PackageId,
+  Page,
   PlanDataSource,
   PlatformCustomer,
   PlatformDataSource,
@@ -21,12 +27,13 @@ import {
   UpgradeRequest,
   evaluateNudge,
   fillNudge,
-  packageById,
   isHumoRole,
+  packageById,
 } from '../../domain';
 import { MockAuthSession } from '../server/mock-auth-session';
 import { PlatformStore } from '../db/platform-store';
 import { mockResponder } from '../mock-latency';
+import { toPage } from '../mock-page';
 import { MockGateway } from '../server/mock-gateway';
 
 function describe(change: SubscriptionChange): string {
@@ -51,8 +58,8 @@ export class InMemoryPlatformDataSource extends PlatformDataSource {
   private readonly customers$ = toObservable(this.store.customers);
   private readonly overview$ = toObservable(this.store.overview);
 
-  customers(): Observable<PlatformCustomer[]> {
-    return this.customers$.pipe(switchMap((c) => this.respond(c)));
+  customers(query?: ListQuery): Observable<Page<PlatformCustomer>> {
+    return this.customers$.pipe(switchMap((c) => this.respond(toPage(c, query))));
   }
 
   customer(organisationId: string): Observable<PlatformCustomer | undefined> {
@@ -63,7 +70,7 @@ export class InMemoryPlatformDataSource extends PlatformDataSource {
     return this.overview$.pipe(switchMap((o) => this.respond(o)));
   }
 
-  changeSubscription(organisationId: string, change: SubscriptionChange): Observable<void> {
+  changeSubscription(organisationId: string, change: SubscriptionChange, expectedVersion?: number): Observable<void> {
     const customer = this.store.customers().find((c) => c.organisationId === organisationId);
     return this.gateway
       .command(
@@ -73,6 +80,7 @@ export class InMemoryPlatformDataSource extends PlatformDataSource {
           resourceId: organisationId,
           category: 'security',
           permission: 'Platform.Subscriptions.Manage',
+          version: { expected: expectedVersion, current: customer?.subscription.version },
         },
         () => {
           // "Where authorised": Account Managers change only the accounts they look after.
@@ -181,5 +189,13 @@ export class InMemoryNudgeDataSource extends NudgeDataSource {
     }
     if (event !== 'learn-more') this.store.sessionNudge = null;
     return of(undefined);
+  }
+}
+
+/** The catalogue, from the seed constants the mock server prices with. */
+@Injectable()
+export class InMemoryCatalogueDataSource extends CatalogueDataSource {
+  catalogue(): Observable<Catalogue> {
+    return of({ features: FEATURES, packages: PACKAGES, addOns: ADD_ONS });
   }
 }

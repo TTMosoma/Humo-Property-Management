@@ -15,6 +15,7 @@ import {
   Quote,
   Supplier,
   Trade,
+  describeFailure,
   docStatus,
   supplierCompliance,
 } from '../../domain';
@@ -271,17 +272,19 @@ export class JobNextStep {
 
   private run(actions: JobAction[], message: string, ref = this.detail().job.ref): void {
     this.busy.set(true);
+    // The first command carries the version on screen; the rest follow on from it.
+    const version = ref === this.detail().job.ref ? this.detail().job.version : undefined;
     const next = (i: number): void => {
       if (i >= actions.length) {
         this.busy.set(false);
         this.feedback.success(message);
         return;
       }
-      this.jobs.act(ref, actions[i]).subscribe({
+      this.jobs.act(ref, actions[i], i === 0 ? version : undefined).subscribe({
         next: () => next(i + 1),
-        error: () => {
+        error: (e) => {
           this.busy.set(false);
-          this.feedback.error('That didn’t save. Nothing was changed — try again.');
+          this.feedback.error(describeFailure(e, 'That didn’t save'));
         },
       });
     };

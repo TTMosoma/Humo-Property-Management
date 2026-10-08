@@ -50,7 +50,12 @@ export class SecurityPage {
   protected readonly result = loadable(() => this.data.profile(this.identityId()).pipe(map((profile) => ({ profile }))));
   protected readonly activity = toSignal(
     toObservable(this.identityId).pipe(
-      switchMap((id) => this.audit.query({ organisationId: null, identityId: id, category: 'security' }).pipe(catchError(() => of([] as AuditEvent[])))),
+      switchMap((id) =>
+        this.audit.query({ organisationId: null, identityId: id, category: 'security' }, { pageSize: 20 }).pipe(
+          map((p) => p.items),
+          catchError(() => of([] as AuditEvent[])),
+        ),
+      ),
       map((events) => events.filter((e) => e.actor.identityId === this.identityId()).slice(0, 6)),
     ),
     { initialValue: [] as AuditEvent[] },

@@ -46,7 +46,7 @@ export abstract class ContractorNetwork {
   abstract quoteRequest(id: string): Observable<QuoteRequestView | undefined>;
   abstract createQuoteRequest(input: NewQuoteRequest): Observable<string>;
   /** Opening a quote is a lifecycle event (the contractor sees "Viewed"). */
-  abstract markViewed(quoteRequestId: string, quoteIds: string[]): void;
+  abstract markViewed(quoteRequestId: string, quoteIds: string[]): Observable<void>;
   abstract setRecommended(quoteRequestId: string, quoteId: string): Observable<void>;
   /** The customer's choice. Other quotes become "not selected". */
   abstract accept(quoteRequestId: string, quoteId: string): Observable<void>;

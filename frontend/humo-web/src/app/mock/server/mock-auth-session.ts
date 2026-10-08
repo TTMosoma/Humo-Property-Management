@@ -158,6 +158,7 @@ export class MockAuthSession {
       assignments,
       activeAssignmentId: active.id,
       permissions,
+      pagePermissions: [...granted],
       actorPermissions,
       organisation,
       subscription,

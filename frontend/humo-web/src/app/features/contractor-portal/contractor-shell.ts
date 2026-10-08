@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { CdkMenu, CdkMenuItem, CdkMenuTrigger } from '@angular/cdk/menu';
 import { IonIcon } from '@ionic/angular/standalone';
+import { PrototypeControls } from '../../core/prototype/prototype-controls';
 import { PrototypeToolbar } from '../../core/prototype/prototype-toolbar';
 import { ImpersonationBanner } from '../../core/security/impersonation-banner';
 import { SessionService } from '../../core/session/session.service';
@@ -75,7 +76,9 @@ import { Logo } from '../../ui/brand/logo';
         </a>
       }
     </nav>
-    <app-prototype-toolbar />
+    @if (prototype) {
+      <app-prototype-toolbar />
+    }
   `,
   styles: `
     :host {
@@ -117,6 +120,7 @@ import { Logo } from '../../ui/brand/logo';
   `,
 })
 export class ContractorShell {
+  protected readonly prototype = inject(PrototypeControls, { optional: true });
   protected readonly session = inject(SessionService);
   protected readonly signOut = inject(SignOutService);
   protected readonly business = computed(() => this.session.assignment().label);

@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { CatalogueService } from '../../core/catalogue/catalogue.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
@@ -8,7 +9,6 @@ import {
   CUSTOMER_ROLES,
   CustomerRole,
   Feature,
-  FEATURES,
   Identity,
   PERMISSIONS,
   Permission,
@@ -16,14 +16,13 @@ import {
   ROLE_LABELS,
   ROLE_META,
   ROLE_PERMISSIONS,
-  packageById,
   activeAssignments,
 } from '../../domain';
 import { SessionService } from '../../core/session/session.service';
 import { PageHeader } from '../../ui/page-header/page-header';
 import { roleColor } from './access-view';
 
-const AREAS: PermissionArea[] = ['Work', 'Portfolio', 'Finance', 'Maintenance', 'Residents', 'Administration'];
+const AREAS: PermissionArea[] = ['Work', 'Portfolio', 'Finance', 'Maintenance', 'Records', 'Residents', 'Administration'];
 const SCOPE_TEXT: Record<string, string> = {
   agency: 'The whole agency',
   schemes: 'All or selected schemes',
@@ -44,6 +43,7 @@ const SCOPE_TEXT: Record<string, string> = {
   styleUrl: './roles-page.scss',
 })
 export class RolesPage {
+  protected readonly catalogue = inject(CatalogueService);
   protected readonly session = inject(SessionService);
   private readonly people = toSignal(
     inject(AccessDataSource)
@@ -76,9 +76,9 @@ export class RolesPage {
 
   protected readonly plan = computed(() => {
     const sub = this.session.subscription();
-    return sub ? packageById(sub.packageId).name : '—';
+    return sub ? this.catalogue.packageName(sub.packageId) : '—';
   });
-  protected readonly features = FEATURES.filter((f) => !f.baseline).map((f) => ({ id: f.key, label: f.label }));
+  protected readonly features = computed(() => this.catalogue.features().filter((f) => !f.baseline).map((f) => ({ id: f.key, label: f.label })));
   protected included(f: Feature): boolean {
     return this.session.hasFeature(f);
   }

@@ -3,7 +3,7 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, debounceTime, map, of, switchMap } from 'rxjs';
-import { MatchView, ReceiptDataSource, ReceiptView, UnitDataSource, UnitSummary } from '../../domain';
+import { MatchView, ReceiptDataSource, ReceiptView, UnitDataSource, UnitSummary, sumRands } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { loadable } from '../../core/data/loadable';
 import { ScopeNotice } from '../../core/scope/scope-notice';
@@ -50,7 +50,7 @@ export class ReceiptsPage {
   protected readonly splitting = signal(false);
   protected readonly split = signal<SplitLine[]>([]);
 
-  protected readonly result = loadable(() => this.receipts.list(this.scope.effectiveIds()).pipe(map((rows) => ({ rows }))));
+  protected readonly result = loadable(() => this.receipts.list(this.scope.effectiveIds()).pipe(map((p) => ({ rows: p.items }))));
 
   protected readonly loading = this.result.loading;
   protected readonly failed = this.result.failed;
@@ -74,7 +74,7 @@ export class ReceiptsPage {
 
   protected readonly totals = computed(() => {
     const open = this.all().filter((v) => v.receipt.status === 'unallocated');
-    return { count: open.length, amount: open.reduce((s, v) => s + v.receipt.amount, 0) };
+    return { count: open.length, amount: sumRands(open.map((v) => v.receipt.amount)) };
   });
 
   protected readonly selected = computed(() => this.all().find((v) => v.receipt.id === this.selectedId()));
@@ -100,7 +100,7 @@ export class ReceiptsPage {
 
   protected readonly splitRemaining = computed(() => {
     const total = this.selected()?.receipt.amount ?? 0;
-    return Math.round((total - this.split().reduce((s, l) => s + (Number(l.amount) || 0), 0)) * 100) / 100;
+    return sumRands([total, ...this.split().map((l) => -(Number(l.amount) || 0))]);
   });
 
   protected readonly links = links;
@@ -177,7 +177,7 @@ export class ReceiptsPage {
     if (!v) return;
     this.busy.set(true);
     const next = this.nextId(v.receipt.id);
-    this.receipts.moveToSuspense(v.receipt.id).subscribe({
+    this.receipts.moveToSuspense(v.receipt.id, v.receipt.version).subscribe({
       next: () => {
         this.busy.set(false);
         this.select(next);
@@ -188,7 +188,7 @@ export class ReceiptsPage {
   }
 
   protected undo(v: ReceiptView): void {
-    this.receipts.unallocate(v.receipt.id).subscribe({
+    this.receipts.unallocate(v.receipt.id, v.receipt.version).subscribe({
       next: () => this.feedback.info(`${formatRand(v.receipt.amount)} is back in “To allocate”`),
       error: () => this.fail(),
     });
@@ -217,7 +217,7 @@ export class ReceiptsPage {
   private commit(v: ReceiptView, allocations: { accountId: string; amount: number }[], message: string): void {
     this.busy.set(true);
     const next = this.nextId(v.receipt.id);
-    this.receipts.allocate(v.receipt.id, allocations, this.remember() && allocations.length === 1).subscribe({
+    this.receipts.allocate(v.receipt.id, allocations, this.remember() && allocations.length === 1, v.receipt.version).subscribe({
       next: () => {
         this.busy.set(false);
         this.select(next);

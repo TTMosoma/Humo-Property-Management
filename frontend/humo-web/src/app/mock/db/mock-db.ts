@@ -415,6 +415,7 @@ export class MockDb {
   allocate(receiptId: string, allocations: { accountId: string; amount: number }[], remember: boolean, by: string): void {
     const receipt = this.receipts.find((r) => r.id === receiptId);
     if (!receipt || receipt.status === 'allocated') return;
+    receipt.version++;
     for (const a of allocations) {
       const account = this.accounts.get(a.accountId)!;
       this.ledger(account.id); // make sure history is generated before the balance changes
@@ -446,6 +447,7 @@ export class MockDb {
   unallocate(receiptId: string): void {
     const receipt = this.receipts.find((r) => r.id === receiptId);
     if (!receipt) return;
+    receipt.version++;
     for (const a of receipt.allocations) {
       const account = this.accounts.get(a.accountId)!;
       this.extraTx.set(account.id, (this.extraTx.get(account.id) ?? []).filter((t) => t.receiptId !== receipt.id));
@@ -461,6 +463,7 @@ export class MockDb {
   moveToSuspense(receiptId: string, by: string): void {
     const receipt = this.receipts.find((r) => r.id === receiptId);
     if (!receipt) return;
+    receipt.version++;
     receipt.status = 'suspense';
     receipt.allocatedBy = by;
     this.syncReceiptWork();
@@ -544,7 +547,7 @@ export class MockDb {
       'waterkloof-ridge': 'ABSA Trust ••7718',
     };
     const add = (schemeId: string, amount: number, reference: string, payer: string, ago: number) =>
-      receipts.push({
+      receipts.push({ version: 1,
         id: `rcpt-${receipts.length + 1}`,
         schemeId,
         bankAccount: bank[schemeId] ?? 'Standard Bank Trust ••2205',
@@ -589,7 +592,7 @@ export class MockDb {
       const payment = this.ledger(account.id).transactions.filter((t) => t.type === 'payment').at(-1);
       if (!payment || receipts.some((x) => x.allocations[0]?.accountId === account.id)) continue;
       const holder = this.persons.get(account.holderPersonId)!;
-      const receipt: Receipt = {
+      const receipt: Receipt = { version: 1,
         id: `rcpt-${receipts.length + 1}`,
         schemeId: account.schemeId,
         bankAccount: bank[account.schemeId] ?? 'Standard Bank Trust ••2205',

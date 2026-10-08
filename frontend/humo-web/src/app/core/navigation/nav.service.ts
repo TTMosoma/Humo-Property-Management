@@ -21,13 +21,13 @@ export class NavService {
     { initialValue: this.router.url },
   );
 
-  /** Navigation filtered to the current role. Groups left with one link collapse into that link. */
+  /** Navigation filtered to what the active role may open. Groups left with one link collapse into that link. */
   readonly sections = computed<NavSection[]>(() => {
     const role = this.session.role();
     const ownScheme = this.session.assignment().scope.schemeIds[0];
-    // Role decides what's offered. The plan doesn't hide things silently: a feature the role
+    // Permission decides what's offered. The plan doesn't hide things silently: a feature the role
     // could use but the plan lacks stays visible, locked, and explains itself when opened.
-    const allowed = (l: NavLink) => l.roles.includes(role);
+    const allowed = (l: NavLink) => this.session.canOpen(l.permission) && (!l.audience || l.audience.includes(role));
     const lock = (l: NavLink): NavLink => (l.feature && !this.session.hasFeature(l.feature) ? { ...l, locked: true } : l);
     return NAV.map((section) => ({
       ...section,

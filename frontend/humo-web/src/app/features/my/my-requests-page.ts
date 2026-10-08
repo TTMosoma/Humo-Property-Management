@@ -176,7 +176,7 @@ export class MyRequestsPage {
 
   protected answer(r: JobSummary, outcome: 'fixed' | 'not-fixed'): void {
     this.busy.set(true);
-    this.jobs.act(r.job.ref, { type: 'verify', outcome, comment: outcome === 'not-fixed' ? this.why() : undefined, onBehalf: false }).subscribe({
+    this.jobs.act(r.job.ref, { type: 'verify', outcome, comment: outcome === 'not-fixed' ? this.why() : undefined, onBehalf: false }, r.job.version).subscribe({
       next: () => {
         this.busy.set(false);
         this.askingWhy.set(null);

@@ -4,7 +4,7 @@ import { CdkMenu, CdkMenuGroup, CdkMenuItem, CdkMenuItemRadio, CdkMenuTrigger } 
 import { IonIcon } from '@ionic/angular/standalone';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, of } from 'rxjs';
-import { AppNotification, NotificationDataSource, NotificationKind, ROLE_LABELS, ROLE_META, Role, RoleAssignment } from '../../../domain';
+import { AppNotification, NotificationDataSource, NotificationKind, Permission, ROLE_LABELS, ROLE_META, RoleAssignment } from '../../../domain';
 import { relativeTime } from '../../../ui/format/relative-time';
 import { PrototypeStateService, ThemePref } from '../../prototype/prototype-state.service';
 import { ScopeService } from '../../scope/scope.service';
@@ -18,19 +18,19 @@ interface QuickAction {
   label: string;
   icon: string;
   route: string;
-  roles: Role[];
+  /** The permission the action needs (the same one its route checks). */
+  permission: Permission;
 }
 
-const STAFF: Role[] = ['agency-admin', 'portfolio-manager', 'finance'];
 
 const QUICK_ACTIONS: QuickAction[] = [
-  { label: 'Log maintenance request', icon: 'construct-outline', route: '/maintenance/new', roles: [...STAFF, 'operations'] },
-  { label: 'Allocate receipts', icon: 'cash-outline', route: '/finance/receipts', roles: ['agency-admin', 'finance'] },
-  { label: 'Start billing run', icon: 'receipt-outline', route: '/finance/billing/new', roles: ['agency-admin', 'finance'] },
-  { label: 'Send a notice', icon: 'megaphone-outline', route: '/communications/compose', roles: STAFF },
-  { label: 'Upload document', icon: 'cloud-upload-outline', route: '/documents', roles: STAFF },
-  { label: 'Schedule meeting', icon: 'calendar-outline', route: '/governance/meetings/new', roles: ['agency-admin', 'portfolio-manager'] },
-  { label: 'Add person', icon: 'person-add-outline', route: '/people/new', roles: ['agency-admin', 'portfolio-manager'] },
+  { label: 'Log maintenance request', icon: 'construct-outline', route: '/maintenance/new', permission: 'Maintenance.Log' },
+  { label: 'Allocate receipts', icon: 'cash-outline', route: '/finance/receipts', permission: 'Receipts.Allocate' },
+  { label: 'Start billing run', icon: 'receipt-outline', route: '/finance/billing/new', permission: 'Billing.Run' },
+  { label: 'Send a notice', icon: 'megaphone-outline', route: '/communications/compose', permission: 'Messages.Reply' },
+  { label: 'Upload document', icon: 'cloud-upload-outline', route: '/documents', permission: 'Documents.View' },
+  { label: 'Schedule meeting', icon: 'calendar-outline', route: '/governance/meetings/new', permission: 'Meetings.Manage' },
+  { label: 'Add person', icon: 'person-add-outline', route: '/people/new', permission: 'People.Manage' },
 ];
 
 const KIND_ICON: Record<NotificationKind, string> = {
@@ -72,7 +72,7 @@ export class Topbar {
 
   // Nothing to create in Observe impersonation: it's read-only.
   protected readonly quickActions = computed(() =>
-    this.session.readOnly() ? [] : QUICK_ACTIONS.filter((a) => a.roles.includes(this.session.role())),
+    this.session.readOnly() ? [] : QUICK_ACTIONS.filter((a) => this.session.can(a.permission)),
   );
 
   /** The accent colour for a role family, e.g. var(--role-agency). */

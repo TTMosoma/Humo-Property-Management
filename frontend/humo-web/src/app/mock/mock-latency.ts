@@ -3,6 +3,13 @@ import { NEVER, Observable, delay, of, switchMap, throwError, timer } from 'rxjs
 import { ApiError } from '../domain';
 import { PrototypeStateService } from '../core/prototype/prototype-state.service';
 
+/** Lists and pages come back empty; single records are unchanged. */
+function emptied<T>(value: T): T {
+  if (Array.isArray(value)) return [] as T;
+  if (value && typeof value === 'object' && Array.isArray((value as { items?: unknown }).items)) return { ...value, items: [], total: 0 } as T;
+  return value;
+}
+
 /**
  * Wraps mock data in an Observable that behaves like a network call: it waits
  * a short, slightly random time. The prototype toolbar's state simulator acts
@@ -24,7 +31,7 @@ export function mockResponder() {
       case 'error':
         return timer(ms).pipe(switchMap(() => throwError(() => new ApiError('network', 'Simulated network error'))));
       case 'empty':
-        return of((Array.isArray(value) ? [] : value) as T).pipe(delay(ms));
+        return of(emptied(value)).pipe(delay(ms));
       default:
         return of(value).pipe(delay(ms));
     }
