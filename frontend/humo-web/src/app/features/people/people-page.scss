@@ -92,3 +92,5 @@
   font-size: var(--fs-sm);
   color: var(--c-text-muted);
 }
+
+.add-bar { display: flex; justify-content: flex-end; margin-bottom: var(--s-3); }

@@ -21,6 +21,8 @@ export const ORGANISATION_STATUS_LABELS: Record<OrganisationStatus, string> = {
 
 export interface Organisation {
   id: string;
+  /** Concurrency token: send it back with commands that change this record. The API answers 409 if someone changed it first. */
+  version: number;
   kind: OrganisationKind;
   status: OrganisationStatus;
   name: string;

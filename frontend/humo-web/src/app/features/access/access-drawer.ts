@@ -24,7 +24,10 @@ import { ScopeService } from '../../core/scope/scope.service';
 import { StepUpService } from '../../core/security/step-up.service';
 import { SessionService } from '../../core/session/session.service';
 import { Drawer } from '../../ui/drawer/drawer';
+import { PrototypeControls } from '../../core/prototype/prototype-controls';
+import { DrawerService } from '../../ui/drawer/drawer.service';
 import { FieldError } from '../../ui/form/field-error';
+import { editPersonDetailsForm, membershipForm } from './user-forms';
 import { formatDate } from '../../ui/format/money';
 import { FAMILY_LABELS, roleColor } from './access-view';
 
@@ -58,6 +61,37 @@ export class AccessDrawer {
   /** Ended assignments stay on record: who held what, and when it stopped. */
   protected readonly ended = computed(() => this.here().filter((m) => m.status === 'ended'));
   protected readonly isSelf = computed(() => this.input.identityId === this.session.actor().id);
+  /** Their membership of this organisation (active, suspended). */
+  protected readonly membership = computed(() => this.identity()?.memberships.find((m) => m.organisationId === this.organisationId));
+  private readonly drawer = inject(DrawerService);
+  /** Prototype only: lets a reviewer play the invitee accepting. */
+  protected readonly prototype = inject(PrototypeControls, { optional: true });
+
+  protected editDetails(): void {
+    const who = this.identity();
+    if (who) editPersonDetailsForm(this.drawer, this.access, who);
+  }
+
+  protected setMembership(status: 'active' | 'suspended' | 'ended'): void {
+    const who = this.identity();
+    if (who) membershipForm(this.drawer, this.access, who, this.organisationId, status);
+  }
+
+  protected resend(): void {
+    const who = this.identity();
+    if (!who) return;
+    this.access.resendInvite(who.id).subscribe({
+      next: () => this.feedback.success(`Invitation sent to ${who.email} again.`),
+      error: (e) => this.feedback.error(describeFailure(e, 'The invitation wasn’t sent')),
+    });
+  }
+
+  protected acceptInvite(): void {
+    const who = this.identity();
+    if (!who || !this.prototype) return;
+    this.prototype.acceptInvite(who.id);
+    this.feedback.success(`${who.name} accepted the invitation and set up a passkey. They can sign in now.`);
+  }
 
   // ---- Add a role ----
   protected readonly adding = signal(false);

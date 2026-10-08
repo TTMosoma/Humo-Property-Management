@@ -2,7 +2,9 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { toSignal } from '@angular/core/rxjs-interop';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, of } from 'rxjs';
+import { Router } from '@angular/router';
 import { SCHEME_STATUS_LABELS, SchemeDataSource, SchemeHealth } from '../../domain';
+import { newSchemeForm } from './scheme-forms';
 import { loadable } from '../../core/data/loadable';
 import { ScopeService } from '../../core/scope/scope.service';
 import { SessionService } from '../../core/session/session.service';
@@ -56,7 +58,14 @@ export class SchemesPage {
     if (this.healthLoad.status() === 'error') this.healthLoad.retry();
   }
 
-  protected readonly allRows = computed(() => toRows(this.scope.accessible(), this.health()));
+  /** Archived schemes only appear in their own view. */
+  protected readonly allRows = computed(() => toRows(this.state().view === 'archived' ? this.scope.inScope().filter((s) => s.status === 'archived') : this.scope.accessible(), this.health()));
+  private readonly archivedCount = computed(() => this.scope.inScope().filter((s) => s.status === 'archived').length);
+  private readonly router = inject(Router);
+
+  protected addScheme(): void {
+    newSchemeForm(this.drawer, this.data, this.router);
+  }
 
   private readonly byView = computed(() => {
     const rows = this.allRows();
@@ -102,7 +111,7 @@ export class SchemesPage {
   });
 
   protected readonly tabs = computed(() => {
-    const rows = this.allRows();
+    const rows = toRows(this.scope.accessible(), this.health());
     const tabs = [
       { id: 'all', label: 'All schemes', count: rows.length },
       { id: 'pinned', label: 'Pinned', count: rows.filter((r) => this.scope.isPinned(r.scheme.id)).length },
@@ -111,6 +120,7 @@ export class SchemesPage {
     if (this.session.role() === 'portfolio-manager') {
       tabs.splice(1, 0, { id: 'mine', label: 'My schemes', count: this.session.assignment().scope.schemeIds.length });
     }
+    if (this.archivedCount() || this.state().view === 'archived') tabs.push({ id: 'archived', label: 'Archived', count: this.archivedCount() });
     return tabs;
   });
 

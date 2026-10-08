@@ -4,7 +4,9 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, map, of } from 'rxjs';
-import { PlatformCustomer, PlatformDataSource } from '../../domain';
+import { AccessDataSource, Identity, OrganisationDataSource, PlatformCustomer, PlatformDataSource, activeAssignments } from '../../domain';
+import { DrawerService } from '../../ui/drawer/drawer.service';
+import { newCustomerForm } from './organisation-forms';
 import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
 import { CellDef, ColumnDef, DataTable } from '../../ui/data-table/data-table';
@@ -34,7 +36,21 @@ export class CustomersPage {
   protected readonly catalogue = inject(CatalogueService);
   private readonly data = inject(PlatformDataSource);
   private readonly router = inject(Router);
+  private readonly drawer = inject(DrawerService);
+  private readonly organisations = inject(OrganisationDataSource);
+  /** Humo Account Managers, for the onboarding form. */
+  private readonly managers = toSignal(
+    inject(AccessDataSource).humoTeam().pipe(
+      map((team) => team.filter((i) => activeAssignments(i).some((a) => a.role === 'humo-account-manager'))),
+      catchError(() => of([] as Identity[])),
+    ),
+    { initialValue: [] as Identity[] },
+  );
   protected readonly session = inject(SessionService);
+
+  protected onboard(): void {
+    newCustomerForm(this.drawer, this.organisations, this.router, this.catalogue.packages(), this.managers(), this.session.actor().id);
+  }
   protected readonly state = urlState({ view: 'all', q: null, pkg: null });
 
   protected readonly result = loadable(() => this.data.customers().pipe(map((p) => ({ customers: p.items }))));

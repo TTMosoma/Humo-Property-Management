@@ -20,6 +20,20 @@ export abstract class AccessDataSource {
   abstract directory(organisationId: string | null): Observable<Identity[]>;
   /** Humo's own staff and their internal roles. */
   abstract humoTeam(): Observable<Identity[]>;
+  /**
+   * Invites someone into the organisation with their first role. They're
+   * `invited` until they accept (and set up a passkey); returns their identity id.
+   * Inviting an email Humo already knows adds the role to that existing identity.
+   */
+  abstract invite(input: { organisationId: string; name: string; email: string; title?: string; assignment: NewAssignment }): Observable<string>;
+  /** Name, email, job title. Credentials are the identity provider's, never edited here. */
+  abstract updateIdentity(identityId: string, details: { name: string; email: string; title?: string }, expectedVersion?: number): Observable<void>;
+  /**
+   * The person's access to one organisation: suspend (paused, roles kept),
+   * reactivate, or end (removed; every role there ends, history stays).
+   */
+  abstract setMembershipStatus(identityId: string, organisationId: string, status: 'active' | 'suspended' | 'ended', reason: string): Observable<void>;
+  abstract resendInvite(identityId: string): Observable<void>;
   abstract assign(identityId: string, assignment: NewAssignment): Observable<void>;
   /** Ends the assignment (it stays in the person's history; nothing is deleted). */
   abstract endAssignment(identityId: string, assignmentId: string, expectedVersion?: number): Observable<void>;

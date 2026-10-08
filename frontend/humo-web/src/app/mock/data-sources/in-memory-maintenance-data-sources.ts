@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map, switchMap } from 'rxjs';
 import {
   BatchView,
+  FieldErrors,
   InvoiceView,
   JobAction,
   JobDataSource,
@@ -12,9 +13,14 @@ import {
   Page,
   PayablesDataSource,
   Permission,
+  SUPPLIER_STATUS_LABELS,
   SupplierDataSource,
   SupplierDetail,
+  SupplierDetails,
+  SupplierDocType,
+  SupplierStatus,
   SupplierSummary,
+  Trade,
 } from '../../domain';
 import { MockAuthSession } from '../server/mock-auth-session';
 import { ContractorStore } from '../contractor/contractor-store';
@@ -118,6 +124,11 @@ export class InMemoryJobDataSource extends Live implements JobDataSource {
   }
 }
 
+const TRADES: Trade[] = [
+  'Plumbing', 'Electrical', 'Roofing & waterproofing', 'Painting', 'Security', 'Gate automation', 'Lifts', 'Gardens', 'Pools', 'Pest control', 'Building', 'Fire equipment',
+];
+const VETTING_DOCS: SupplierDocType[] = ['COIDA letter of good standing', 'Public liability insurance', 'Tax compliance (SARS PIN)', 'B-BBEE certificate', 'Bank confirmation letter'];
+
 @Injectable()
 export class InMemorySupplierDataSource extends Live implements SupplierDataSource {
   private readonly contractors = inject(ContractorStore);
@@ -148,6 +159,86 @@ export class InMemorySupplierDataSource extends Live implements SupplierDataSour
         return this.store.linkParty(input, contact ?? { name: input.name, phone: '', email: '' });
       },
     );
+  }
+
+  create(details: SupplierDetails): Observable<string> {
+    return this.command(
+      { action: `Added supplier ${details.name}`, resource: 'Supplier', permission: 'Suppliers.Manage', feature: 'suppliers', validate: () => this.check(details, null) },
+      () => {
+        const base = `sup-${details.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
+        let id = base;
+        for (let n = 2; this.store.supplier(id); n++) id = `${base}-${n}`;
+        this.store.addSupplier({
+          id,
+          version: 1,
+          ...this.clean(details),
+          bankAccount: 'To be confirmed',
+          bankVerified: false,
+          documents: VETTING_DOCS.map((type) => ({ type, onFile: false })),
+          performance: { jobsCompleted: 0, onTimeRate: 0, avgVariance: 0, verifiedRate: 0 },
+          status: 'active',
+        });
+        return id;
+      },
+    );
+  }
+
+  update(id: string, details: SupplierDetails, expectedVersion?: number): Observable<void> {
+    const s = this.store.supplier(id);
+    return this.command(
+      {
+        action: `Updated supplier details for ${details.name}`,
+        resource: 'Supplier',
+        resourceId: id,
+        permission: 'Suppliers.Manage',
+        version: { expected: expectedVersion, current: s?.version },
+        validate: () => this.check(details, id),
+      },
+      () => this.store.changeSupplier(id, (x) => ({ ...x, ...this.clean(details) })),
+    );
+  }
+
+  setStatus(id: string, status: SupplierStatus, reason: string, expectedVersion?: number): Observable<void> {
+    const s = this.store.supplier(id);
+    const verb = status === 'on-hold' ? 'Put on hold' : status === 'archived' ? 'Archived' : s?.status === 'archived' ? 'Restored' : 'Released hold on';
+    return this.command(
+      {
+        action: `${verb} ${s?.name ?? id} — ${reason}`,
+        resource: 'Supplier',
+        resourceId: id,
+        permission: 'Suppliers.Manage',
+        version: { expected: expectedVersion, current: s?.version },
+        validate: (): FieldErrors | null => {
+          if (!s) return { status: 'That supplier no longer exists.' };
+          if (s.status === status) return { status: `It’s already ${SUPPLIER_STATUS_LABELS[status].toLowerCase()}.` };
+          if (status === 'archived' && this.store.jobs.some((j) => j.supplierId === id && !['closed', 'cancelled', 'paid'].includes(j.stage))) {
+            return { status: 'They still have open jobs. Finish or reassign them first.' };
+          }
+          return reason.trim().length < 5 ? { reason: 'Say why, in a few words. It goes in the audit log.' } : null;
+        },
+      },
+      () => this.store.changeSupplier(id, (x) => ({ ...x, status })),
+    );
+  }
+
+  private clean(d: SupplierDetails): SupplierDetails {
+    return {
+      name: d.name.trim(), trades: d.trades, contactName: d.contactName.trim(), phone: d.phone.trim(), email: d.email.trim(), schemeIds: d.schemeIds,
+      bbbeeLevel: d.bbbeeLevel ? Number(d.bbbeeLevel) : undefined,
+    };
+  }
+
+  private check(d: SupplierDetails, id: string | null): FieldErrors {
+    const e: FieldErrors = {};
+    if (d.name.trim().length < 2) e['name'] = 'Enter the business name.';
+    else if (this.store.suppliers.some((s) => s.id !== id && s.name.toLowerCase() === d.name.trim().toLowerCase())) e['name'] = 'You already have a supplier with this name.';
+    if (!d.trades.length || d.trades.some((t) => !TRADES.includes(t))) e['trades'] = 'Choose what they do.';
+    if (d.contactName.trim().length < 2) e['contactName'] = 'Who do you deal with there?';
+    if (!/^[+\d][\d\s]{8,}$/.test(d.phone.trim())) e['phone'] = 'Enter a phone number, e.g. 082 555 0142.';
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(d.email.trim())) e['email'] = 'Enter an email address for work orders and remittances.';
+    if (!d.schemeIds.length) e['schemeIds'] = 'Choose at least one scheme they work at.';
+    if (d.bbbeeLevel !== undefined && !(Number(d.bbbeeLevel) >= 1 && Number(d.bbbeeLevel) <= 8)) e['bbbeeLevel'] = 'B-BBEE levels run from 1 to 8.';
+    return e;
   }
 
   changeBankDetails(supplierId: string): Observable<void> {

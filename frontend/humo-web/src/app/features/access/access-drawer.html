@@ -3,6 +3,28 @@
 <ui-drawer eyebrow="Users & access" [title]="person?.name ?? 'Person'">
   <div drawerMeta class="meta">{{ person?.email }} · one sign-in, {{ assignments().length }} {{ assignments().length === 1 ? 'role' : 'roles' }} here</div>
 
+  @if (person && !isSelf() && session.can('Users.Manage')) {
+    <div class="person-actions">
+      @if (person.status === 'invited') {
+        <span class="state invited">Invited — hasn’t accepted yet</span>
+        <button type="button" class="btn btn-secondary btn-sm" (click)="resend()"><ion-icon name="mail-outline" aria-hidden="true" /> Resend invitation</button>
+        @if (prototype) {
+          <button type="button" class="btn btn-ghost btn-sm" (click)="acceptInvite()" title="Prototype only">Simulate: invitation accepted</button>
+        }
+      }
+      @if (membership()?.status === 'suspended') {
+        <span class="state suspended">Access suspended</span>
+      }
+      <button type="button" class="btn btn-ghost btn-sm" (click)="editDetails()"><ion-icon name="create-outline" aria-hidden="true" /> Edit details</button>
+      @if (membership()?.status === 'suspended') {
+        <button type="button" class="btn btn-secondary btn-sm" (click)="setMembership('active')">Restore access</button>
+      } @else {
+        <button type="button" class="btn btn-ghost btn-sm" (click)="setMembership('suspended')">Suspend access</button>
+      }
+      <button type="button" class="btn btn-ghost btn-sm danger" (click)="setMembership('ended')">Remove from agency</button>
+    </div>
+  }
+
   @if (isSelf()) {
     <div class="notice">
       <ion-icon name="hand-left-outline" aria-hidden="true" />

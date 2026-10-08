@@ -19,10 +19,11 @@ import {
 
 /** Shown only for the instant before /me answers; guards keep the shell closed until then. */
 const SIGNED_OUT: CurrentSession = (() => {
-  const nobody: Identity = { id: 'anonymous', name: '', initials: '', email: '', kind: 'customer', status: 'active', memberships: [], assignments: [] };
+  const nobody: Identity = { id: 'anonymous', version: 0, name: '', initials: '', email: '', kind: 'customer', status: 'active', memberships: [], assignments: [] };
   const none: RoleAssignment = { id: 'none', role: 'tenant', scope: { type: 'organisation', organisationId: null, schemeIds: [] }, label: '', status: 'active', version: 0 };
   return {
     signedIn: false,
+    blocked: null,
     actor: nobody,
     identity: nobody,
     assignments: [none],
@@ -61,6 +62,8 @@ export class SessionService {
   private readonly forgotten = signal(false);
 
   readonly signedIn = computed(() => this.snapshot().signedIn && !this.forgotten());
+  /** Why access is paused, if it is (an organisation suspended, or the person suspended). */
+  readonly blocked = computed(() => this.snapshot().blocked);
 
   /** Last successful step-up proof, so the UI can skip asking again (the API checks freshness itself). */
   readonly stepUpProof = signal<StepUpResult | null>(null);

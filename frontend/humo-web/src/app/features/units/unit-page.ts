@@ -17,7 +17,9 @@ import {
 import { AttentionService } from '../../core/attention/attention.service';
 import { loadable } from '../../core/data/loadable';
 import { AgeingBar } from '../../ui/ageing/ageing-bar';
+import { SessionService } from '../../core/session/session.service';
 import { DrawerService } from '../../ui/drawer/drawer.service';
+import { editUnitForm } from '../schemes/scheme-forms';
 import { RandPipe, formatDate, formatRand } from '../../ui/format/money';
 import { KeyFact, RecordHeader } from '../../ui/record/record-header';
 import { EmptyState } from '../../ui/states/empty-state';
@@ -50,6 +52,15 @@ export class UnitPage {
   private readonly timelineData = inject(TimelineDataSource);
   private readonly attention = inject(AttentionService);
   private readonly drawer = inject(DrawerService);
+  private readonly sessionService = inject(SessionService);
+
+  protected canEdit(s: UnitSummary): boolean {
+    return this.sessionService.can('Units.Manage') && !this.sessionService.readOnly() && s.scheme.status !== 'closed' && s.scheme.status !== 'archived';
+  }
+
+  protected editUnit(s: UnitSummary): void {
+    editUnitForm(this.drawer, this.units, s.unit, s.scheme.name);
+  }
 
   private readonly key = toSignal(
     this.route.paramMap.pipe(map((p) => ({ schemeId: p.get('schemeId')!, number: p.get('unitId')! }))),

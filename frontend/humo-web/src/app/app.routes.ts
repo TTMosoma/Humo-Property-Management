@@ -1,5 +1,5 @@
 import { inject } from '@angular/core';
-import { ActivatedRouteSnapshot, Route, Routes } from '@angular/router';
+import { ActivatedRouteSnapshot, Route, Router, Routes } from '@angular/router';
 import { accessGuard } from './core/access/access.guard';
 import { signedInGuard, signedOutGuard } from './core/access/signed-in.guard';
 import { SessionService } from './core/session/session.service';
@@ -236,7 +236,7 @@ export const routes: Routes = [
             data: { permission: 'Portfolio.Browse' },
             loadComponent: () => import('./features/people/people-page').then((m) => m.PeoplePage),
           },
-          planned('new', 'Add person', 'People.Manage', 3, 'Add an owner, tenant or trustee and link them to units.'),
+          { path: 'new', redirectTo: () => inject(Router).parseUrl('/people?new=1') },
           {
             path: ':personId',
             title: 'Person',

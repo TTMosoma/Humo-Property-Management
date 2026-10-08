@@ -1,6 +1,14 @@
 @if (!fixedScheme()) {
-  <ui-page-header eyebrow="Portfolio" title="People" subtitle="Owners, tenants and trustees in one directory. One person can hold several roles — each role links to its unit or scheme." />
+  <ui-page-header eyebrow="Portfolio" title="People" subtitle="Owners, tenants and trustees in one directory. One person can hold several roles — each role links to its unit or scheme.">
+    @if (canAdd()) {
+      <button type="button" class="btn btn-primary" (click)="addPerson()"><ion-icon name="person-add-outline" aria-hidden="true" /> Add person</button>
+    }
+  </ui-page-header>
   <app-scope-notice />
+} @else if (canAdd()) {
+  <div class="add-bar">
+    <button type="button" class="btn btn-secondary btn-sm" (click)="addPerson()"><ion-icon name="person-add-outline" aria-hidden="true" /> Add person</button>
+  </div>
 }
 
 <ui-view-tabs label="People views" [tabs]="tabs()" [active]="state().role ?? 'all'" (activeChange)="patch({ role: $event })" />

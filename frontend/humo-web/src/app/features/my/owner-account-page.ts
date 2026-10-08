@@ -57,6 +57,7 @@ export class OwnerAccountPage {
     const d = this.detail();
     if (!d) return null;
     const period = d.statementPeriods[0];
+    if (!period) return null;
     const charges = d.transactions.filter((t) => t.amount > 0 && periodOf(t.date) === period).reverse();
     return { period, label: periodLabel(period, false), charges };
   });

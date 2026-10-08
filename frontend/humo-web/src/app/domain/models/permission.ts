@@ -15,6 +15,8 @@ export type Permission =
   // Portfolio
   | 'Portfolio.View'
   | 'Portfolio.Browse'
+  | 'Schemes.Manage'
+  | 'Units.Manage'
   | 'People.Manage'
   | 'Accounts.View'
   | 'Account.ViewOwn'
@@ -95,7 +97,9 @@ export const PERMISSIONS: PermissionMeta[] = [
   { id: 'Messages.Reply', area: 'Work', label: 'Read and reply to messages; send notices', mutates: true },
   { id: 'Portfolio.View', area: 'Portfolio', label: 'Open the schemes in scope', mutates: false },
   { id: 'Portfolio.Browse', area: 'Portfolio', label: 'Browse every scheme, unit, person and staff member in scope', mutates: false },
-  { id: 'People.Manage', area: 'Portfolio', label: 'Add owners, tenants and trustees', mutates: true },
+  { id: 'Schemes.Manage', area: 'Portfolio', label: 'Add schemes, edit them and change their status', mutates: true },
+  { id: 'Units.Manage', area: 'Portfolio', label: 'Add and edit units', mutates: true },
+  { id: 'People.Manage', area: 'Portfolio', label: 'Add and edit owners, tenants and trustees, and link them to units', mutates: true },
   { id: 'Accounts.View', area: 'Portfolio', label: 'View owner accounts and statements', mutates: false },
   { id: 'Account.ViewOwn', area: 'Residents', label: 'View your own levy account and statements', mutates: false },
   { id: 'Notes.Add', area: 'Portfolio', label: 'Log notes and calls on records', mutates: true },
@@ -173,12 +177,12 @@ const TRUSTEE_VIEW: Permission[] = [
  */
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   'agency-admin': [
-    ...STAFF_BASE, 'Approvals.Decide', 'People.Manage', 'Accounts.View', 'Finance.View', 'Billing.View', 'Billing.Run', 'Receipts.Allocate',
+    ...STAFF_BASE, 'Approvals.Decide', 'Schemes.Manage', 'Units.Manage', 'People.Manage', 'Accounts.View', 'Finance.View', 'Billing.View', 'Billing.Run', 'Receipts.Allocate',
     'Payables.Prepare', 'Payables.Release', 'Finance.Export', 'Maintenance.Manage', 'Suppliers.Manage', 'Suppliers.ChangeBankDetails',
     'Meetings.Manage', 'Organisation.Manage', 'Notifications.Configure', 'Users.Manage', 'Users.ManageAdmins', 'Audit.View', 'Subscription.Request',
   ],
   'portfolio-manager': [
-    ...STAFF_BASE, 'Approvals.Decide', 'People.Manage', 'Accounts.View', 'Finance.View', 'Billing.View', 'Maintenance.Manage', 'Suppliers.Manage',
+    ...STAFF_BASE, 'Approvals.Decide', 'Units.Manage', 'People.Manage', 'Accounts.View', 'Finance.View', 'Billing.View', 'Maintenance.Manage', 'Suppliers.Manage',
     'Meetings.Manage', 'Notifications.Configure',
   ],
   finance: [

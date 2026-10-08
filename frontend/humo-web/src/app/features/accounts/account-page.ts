@@ -78,7 +78,8 @@ export class AccountPage {
   /** "Why is my balance R X?" — this month in one line. */
   protected readonly explain = computed(() => {
     const d = this.detail();
-    if (!d) return null;
+    // A new unit's account has no statements yet: nothing to explain.
+    if (!d || !d.statementPeriods.length) return null;
     const current = d.statementPeriods[0];
     const lines = d.transactions.filter((t) => periodOf(t.date) === current);
     const opening = lines.length ? lines[lines.length - 1].balance - lines[lines.length - 1].amount : d.account.balance;

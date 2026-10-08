@@ -18,9 +18,16 @@
     [chain]="chain()"
     [chainCurrent]="1"
   >
-    <a recordActions class="btn btn-primary" [routerLink]="links.account(s.scheme, s.unit)">
-      <ion-icon name="wallet-outline" aria-hidden="true" /> Account & statements
-    </a>
+    <ng-container recordActions>
+      @if (canEdit(s)) {
+        <button type="button" class="btn btn-secondary" (click)="editUnit(s)"><ion-icon name="create-outline" aria-hidden="true" /> Edit unit</button>
+      }
+      @if (s.owners.length) {
+        <a class="btn btn-primary" [routerLink]="links.account(s.scheme, s.unit)">
+          <ion-icon name="wallet-outline" aria-hidden="true" /> Account & statements
+        </a>
+      }
+    </ng-container>
   </ui-record-header>
 
   <div class="grid">

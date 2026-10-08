@@ -16,7 +16,7 @@ function scheme(
   _seedManager: string,
 ): Scheme {
   // The manager comes from portfolio-manager assignments (see portfolioManagerOf); the seed column documents the intent.
-  return { id, organisationId: 'acacia', name, code, type, status: 'active', suburb, city, province, unitCount, portfolioManager: null };
+  return { id, version: 1, organisationId: 'acacia', name, code, type, status: 'active', suburb, city, province, unitCount, portfolioManager: null };
 }
 
 // 24 schemes, 1 284 units in total, for the demo agency.

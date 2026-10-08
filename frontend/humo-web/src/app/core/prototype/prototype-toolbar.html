@@ -52,7 +52,20 @@
       }
     </div>
 
-    <button type="button" class="btn btn-ghost btn-sm reset" (click)="resetNudges()">Reset Smart Nudges</button>
+    <div class="label-caps group-label">Simulated data</div>
+    <p class="hint">
+      Development / simulation only. Everything you create, edit or archive is kept in this browser until you reset it.
+      <span class="saved">{{ savedNote() }}</span>
+    </p>
+    <div class="sim-actions">
+      @if (!confirmingReset()) {
+        <button type="button" class="btn btn-secondary btn-sm" (click)="confirmingReset.set(true)">Reset simulation…</button>
+      } @else {
+        <button type="button" class="btn btn-danger btn-sm" (click)="resetSimulation()">Reset everything</button>
+        <button type="button" class="btn btn-ghost btn-sm" (click)="confirmingReset.set(false)">Keep my changes</button>
+      }
+      <button type="button" class="btn btn-ghost btn-sm" (click)="resetNudges()">Reset Smart Nudges</button>
+    </div>
 
     <label class="toggle">
       <input type="checkbox" [checked]="proto.latency()" (change)="proto.latency.set(!proto.latency())" />

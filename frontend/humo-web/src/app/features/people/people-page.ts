@@ -1,11 +1,14 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { catchError, map, of, switchMap } from 'rxjs';
-import { PersonDataSource, PersonSummary, RelationshipView, Scheme } from '../../domain';
+import { PersonDataSource, PersonSummary, RelationshipView, Scheme, UnitDataSource } from '../../domain';
 import { loadable } from '../../core/data/loadable';
 import { ScopeNotice } from '../../core/scope/scope-notice';
 import { ScopeService } from '../../core/scope/scope.service';
+import { SessionService } from '../../core/session/session.service';
+import { IonIcon } from '@ionic/angular/standalone';
+import { newPersonForm } from './person-forms';
 import { CellDef, ColumnDef, DataTable } from '../../ui/data-table/data-table';
 import { FilterBar, FilterDef } from '../../ui/data-table/filter-bar';
 import { urlState } from '../../ui/data-table/url-state';
@@ -27,7 +30,7 @@ const PAGE = 50;
  */
 @Component({
   selector: 'app-people-page',
-  imports: [PageHeader, ScopeNotice, ViewTabs, FilterBar, DataTable, CellDef, EmptyState, ErrorState, Skeleton, RouterLink, RandPipe],
+  imports: [PageHeader, ScopeNotice, ViewTabs, FilterBar, DataTable, CellDef, EmptyState, ErrorState, Skeleton, RouterLink, RandPipe, IonIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './people-page.html',
   styleUrl: './people-page.scss',
@@ -37,6 +40,24 @@ export class PeoplePage {
   private readonly data = inject(PersonDataSource);
   private readonly drawer = inject(DrawerService);
   protected readonly scope = inject(ScopeService);
+  private readonly units = inject(UnitDataSource);
+  private readonly router = inject(Router);
+  private readonly sessionService = inject(SessionService);
+  protected readonly canAdd = computed(() => this.sessionService.can('People.Manage') && !this.sessionService.readOnly());
+
+  protected addPerson(): void {
+    newPersonForm(this.drawer, this.data, this.units, this.scope.accessible(), this.router, this.fixedScheme()?.id ?? this.scope.scopeId() ?? undefined);
+  }
+
+  constructor() {
+    // "Add person" from the quick actions arrives as /people?new=1.
+    if (this.route.snapshot.queryParamMap.get('new') === '1' && this.canAdd()) {
+      queueMicrotask(() => {
+        this.addPerson();
+        this.router.navigate([], { relativeTo: this.route, queryParams: { new: null }, queryParamsHandling: 'merge', replaceUrl: true });
+      });
+    }
+  }
 
   protected readonly fixedScheme = toSignal(this.route.data.pipe(map((d) => d['scheme'] as Scheme | undefined)), {
     initialValue: this.route.snapshot.data['scheme'] as Scheme | undefined,

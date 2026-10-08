@@ -95,6 +95,7 @@ export function seedSuppliers(): Supplier[] {
         verifiedRate: Math.round(80 + r() * 19),
       },
       status: s.onHold ? 'on-hold' : 'active',
+      version: 1,
     } satisfies Supplier;
   });
 }

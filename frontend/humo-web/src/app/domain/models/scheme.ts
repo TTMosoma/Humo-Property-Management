@@ -25,6 +25,8 @@ export interface StaffRef {
 /** A community scheme (body corporate, HOA or share block) managed by an organisation. */
 export interface Scheme {
   id: string;
+  /** Concurrency token: send it back with commands that change this record. The API answers 409 if someone changed it first. */
+  version: number;
   organisationId: string;
   name: string;
   /** Short code used in unit/account references, e.g. "KC" → account KC-042. */

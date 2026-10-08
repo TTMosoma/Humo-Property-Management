@@ -15,6 +15,8 @@ import { Permission } from '../models/permission';
  */
 export interface CurrentSession {
   signedIn: boolean;
+  /** Why the person can't work right now, when they can't (shown on the signed-out page). */
+  blocked: 'organisation-suspended' | 'identity-suspended' | 'identity-deactivated' | null;
   /** The authenticated human. Never changes when switching role. */
   actor: Identity;
   /** The identity the app is rendered for: the actor, or the impersonated user. */

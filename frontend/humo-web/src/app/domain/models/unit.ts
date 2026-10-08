@@ -3,6 +3,8 @@ export type Occupancy = 'owner-occupied' | 'tenanted' | 'vacant';
 /** A section (sectional title), erf (HOA) or share block within a scheme. */
 export interface Unit {
   id: string;
+  /** Concurrency token: send it back with commands that change this record. The API answers 409 if someone changed it first. */
+  version: number;
   schemeId: string;
   /** As people say it: "42". */
   number: string;

@@ -1,4 +1,5 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, effect, signal, untracked } from '@angular/core';
+import { simulationStorage } from '../simulation/simulation-storage';
 import {
   ContractorEndorsement,
   ContractorProfile,
@@ -15,16 +16,27 @@ import { seedProfiles, seedQuoteRequests } from './seed-contractors';
  * separate service with its own database; Humo PM talks to it through the
  * ContractorNetwork port only.
  */
+/** DEVELOPMENT / SIMULATION ONLY: the shape saved to localStorage. */
+interface ContractorSnapshot {
+  profiles: ContractorProfile[];
+  endorsements: ContractorEndorsement[];
+  requests: QuoteRequest[];
+  quotes: ContractorQuote[];
+  events: QuoteLifecycleEvent[];
+  workOrders: WorkOrder[];
+  seq: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ContractorStore {
-  private readonly seed = seedProfiles();
+  private readonly saved = simulationStorage.load<ContractorSnapshot>('contractor');
+  private readonly seed = this.saved ?? { ...seedProfiles(), ...seedQuoteRequests(), seq: 1 };
   private readonly base = signal<ContractorProfile[]>(this.seed.profiles);
   readonly endorsements = signal<ContractorEndorsement[]>(this.seed.endorsements);
-  private readonly qr = seedQuoteRequests();
-  readonly requests = signal<QuoteRequest[]>(this.qr.requests);
-  readonly quotes = signal<ContractorQuote[]>(this.qr.quotes);
-  readonly events = signal<QuoteLifecycleEvent[]>(this.qr.events);
-  readonly workOrders = signal<WorkOrder[]>(this.qr.workOrders);
+  readonly requests = signal<QuoteRequest[]>(this.seed.requests);
+  readonly quotes = signal<ContractorQuote[]>(this.seed.quotes);
+  readonly events = signal<QuoteLifecycleEvent[]>(this.seed.events);
+  readonly workOrders = signal<WorkOrder[]>(this.seed.workOrders);
 
   /** Profiles with their endorsements joined and counted. */
   readonly profiles = computed<ContractorProfile[]>(() => {
@@ -35,7 +47,15 @@ export class ContractorStore {
     });
   });
 
-  private seq = 1;
+  private seq = this.seed.seq;
+
+  constructor() {
+    // DEVELOPMENT / SIMULATION ONLY: Humo Contractor's simulated data survives a refresh.
+    effect(() => {
+      const snapshot = { profiles: this.base(), endorsements: this.endorsements(), requests: this.requests(), quotes: this.quotes(), events: this.events(), workOrders: this.workOrders() };
+      untracked(() => simulationStorage.save('contractor', (): ContractorSnapshot => ({ ...snapshot, seq: this.seq })));
+    });
+  }
 
   profile(partyId: string): ContractorProfile | undefined {
     return this.profiles().find((p) => p.party.id === partyId);

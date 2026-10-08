@@ -3,7 +3,9 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, filter, map, of, startWith } from 'rxjs';
-import { Scheme, SchemeDataSource, SchemeHealth } from '../../domain';
+import { SCHEME_STATUS_LABELS, Scheme, SchemeDataSource, SchemeHealth, SchemeStatus } from '../../domain';
+import { DrawerService } from '../../ui/drawer/drawer.service';
+import { STATUS_ACTION, editSchemeForm, nextStatuses, schemeStatusForm } from './scheme-forms';
 import { AttentionService } from '../../core/attention/attention.service';
 import { ScopeService } from '../../core/scope/scope.service';
 import { SessionService } from '../../core/session/session.service';
@@ -34,8 +36,14 @@ import { RATING, collectionTone } from './scheme-view';
         [chain]="chain()"
       >
         <ui-scheme-art recordArt [seed]="s.id" [type]="s.type" />
-        @if (scope.canChangeScope()) {
-          <ng-container recordActions>
+        <ng-container recordActions>
+        @if (canManage() && !session.readOnly()) {
+          <button type="button" class="btn btn-secondary" (click)="edit()"><ion-icon name="create-outline" aria-hidden="true" /> Edit</button>
+          @for (next of nextStatuses(); track next) {
+            <button type="button" class="btn btn-ghost" (click)="changeStatus(next)">{{ s.status === 'archived' ? 'Restore' : s.status === 'closed' && next === 'active' ? 'Reopen' : statusAction[next] }}</button>
+          }
+        }
+        @if (scope.canChangeScope() && s.status !== 'archived') {
           <button
             type="button"
             class="btn"
@@ -57,8 +65,8 @@ import { RATING, collectionTone } from './scheme-view';
           >
             <ion-icon [name]="scope.isPinned(s.id) ? 'star' : 'star-outline'" aria-hidden="true" />
           </button>
-          </ng-container>
         }
+        </ng-container>
       </ui-record-header>
 
       <ui-route-tabs label="Scheme sections" [base]="'/schemes/' + s.id" [tabs]="tabs()" />
@@ -75,12 +83,33 @@ export class SchemeWorkspace {
   private readonly route = inject(ActivatedRoute);
   private readonly data = inject(SchemeDataSource);
   private readonly attention = inject(AttentionService);
-  private readonly session = inject(SessionService);
+  protected readonly session = inject(SessionService);
   protected readonly scope = inject(ScopeService);
 
-  protected readonly scheme = toSignal(this.route.data.pipe(map((d) => d['scheme'] as Scheme)), {
+  private readonly resolved = toSignal(this.route.data.pipe(map((d) => d['scheme'] as Scheme)), {
     initialValue: this.route.snapshot.data['scheme'] as Scheme,
   });
+  /** Live: edits and status changes show straight away (the resolver only checked access). */
+  protected readonly scheme = computed(() => this.scope.findScheme(this.resolved()?.id) ?? this.resolved());
+
+  private readonly drawer = inject(DrawerService);
+  protected readonly canManage = computed(() => this.session.can('Schemes.Manage'));
+  protected readonly lifecycle = computed(() => {
+    const s = this.scheme();
+    return s && s.status !== 'active' ? { label: SCHEME_STATUS_LABELS[s.status], tone: s.status === 'onboarding' || s.status === 'prospect' ? ('info' as const) : ('neutral' as const) } : null;
+  });
+  protected readonly nextStatuses = computed(() => (this.scheme() ? nextStatuses(this.scheme()!) : []));
+  protected readonly statusAction = STATUS_ACTION;
+
+  protected edit(): void {
+    const s = this.scheme();
+    if (s) editSchemeForm(this.drawer, this.data, s);
+  }
+
+  protected changeStatus(status: SchemeStatus): void {
+    const s = this.scheme();
+    if (s) schemeStatusForm(this.drawer, this.data, s, status);
+  }
 
   private readonly allHealth = toSignal(this.data.health().pipe(catchError(() => of([] as SchemeHealth[]))), {
     initialValue: [] as SchemeHealth[],
@@ -102,9 +131,10 @@ export class SchemeWorkspace {
 
   protected readonly scoped = computed(() => this.scope.scopeId() === this.scheme()?.id);
 
+  /** Lifecycle first (it changes what can be done here), then health. */
   protected readonly status = computed(() => {
     const h = this.health();
-    return h ? RATING[h.rating] : null;
+    return this.lifecycle() ?? (h ? RATING[h.rating] : null);
   });
 
   protected readonly facts = computed<KeyFact[]>(() => {

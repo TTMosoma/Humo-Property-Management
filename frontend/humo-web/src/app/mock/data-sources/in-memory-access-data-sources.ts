@@ -56,6 +56,135 @@ export class InMemoryAccessDataSource extends AccessDataSource {
     return this.identities$.pipe(switchMap((all) => this.respond(all.filter((i) => i.kind === 'humo'))));
   }
 
+  invite(input: { organisationId: string; name: string; email: string; title?: string; assignment: NewAssignment }): Observable<string> {
+    const email = input.email.trim().toLowerCase();
+    const existing = this.store.identities().find((i) => i.email.toLowerCase() === email);
+    const a = input.assignment;
+    return this.gateway.command(
+      {
+        action: existing ? `Gave ${existing.name} access: ${ROLE_LABELS[a.role]} · ${a.label}` : `Invited ${input.name.trim()} (${email}) as ${ROLE_LABELS[a.role]} · ${a.label}`,
+        resource: 'Identity',
+        category: 'security',
+        // Humo staff onboarding a customer invite its first administrator; inside an agency, its own administrators do.
+        permission: isHumoRole(this.auth.assignment().role) ? 'Platform.Customers.Manage' : a.role === 'agency-admin' ? 'Users.ManageAdmins' : 'Users.Manage',
+        stepUp: true,
+        validate: (): FieldErrors => {
+          const e: FieldErrors = {};
+          if (input.name.trim().split(/\s+/).length < 2) e['name'] = 'Enter their first name and surname.';
+          if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) e['email'] = 'Enter the email address the invitation goes to.';
+          else if (existing?.kind === 'humo') e['email'] = 'That’s a Humo staff address; Humo roles are granted by Humo.';
+          else if (existing?.memberships.some((m) => m.organisationId === input.organisationId && m.status !== 'ended')) e['email'] = `${existing.name} already has access here. Add the role from their access instead.`;
+          if (a.scope.type === 'schemes' && a.scope.schemeIds.length === 0) e['scope'] = 'Choose at least one scheme.';
+          if (a.scope.type === 'unit' && !a.scope.unitId) e['unit'] = 'Choose the unit.';
+          return e;
+        },
+      },
+      () => {
+        const by = this.auth.actor().name;
+        const now = new Date().toISOString();
+        if (existing) {
+          this.store.changeIdentity(existing.id, (i) => ({
+            ...i,
+            memberships: [...i.memberships.filter((m) => m.organisationId !== input.organisationId), { organisationId: input.organisationId, status: 'active', since: now }],
+          }));
+          this.store.assign(existing.id, a, by);
+          return existing.id;
+        }
+        const name = input.name.trim().replace(/\s+/g, ' ');
+        const parts = name.split(' ');
+        const id = this.store.nextId('p-new');
+        this.store.addIdentity({
+          id,
+          version: 1,
+          name,
+          initials: `${parts[0][0]}${parts.at(-1)![0]}`.toUpperCase(),
+          email,
+          kind: 'customer',
+          status: 'invited',
+          title: input.title?.trim() || undefined,
+          memberships: [{ organisationId: input.organisationId, status: 'active', since: now }],
+          assignments: [],
+        });
+        this.store.assign(id, a, by);
+        return id;
+      },
+    );
+  }
+
+  updateIdentity(identityId: string, details: { name: string; email: string; title?: string }, expectedVersion?: number): Observable<void> {
+    const target = this.store.identity(identityId);
+    const email = details.email.trim().toLowerCase();
+    return this.gateway
+      .command(
+        {
+          action: `Updated ${details.name.trim()}’s details`,
+          resource: 'Identity',
+          resourceId: identityId,
+          permission: 'Users.Manage',
+          version: { expected: expectedVersion, current: target?.version },
+          validate: (): FieldErrors => {
+            const e: FieldErrors = {};
+            if (details.name.trim().split(/\s+/).length < 2) e['name'] = 'Enter their first name and surname.';
+            if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) e['email'] = 'Enter a valid email address.';
+            else if (this.store.identities().some((i) => i.id !== identityId && i.email.toLowerCase() === email)) e['email'] = 'Someone else already signs in with this email.';
+            return e;
+          },
+        },
+        () => {
+          const name = details.name.trim().replace(/\s+/g, ' ');
+          const parts = name.split(' ');
+          this.store.changeIdentity(identityId, (i) => ({ ...i, name, email, title: details.title?.trim() || undefined, initials: `${parts[0][0]}${parts.at(-1)![0]}`.toUpperCase() }));
+        },
+      )
+      .pipe(map(() => undefined));
+  }
+
+  setMembershipStatus(identityId: string, organisationId: string, status: 'active' | 'suspended' | 'ended', reason: string): Observable<void> {
+    const target = this.store.identity(identityId);
+    const verb = status === 'suspended' ? 'Suspended access for' : status === 'ended' ? 'Removed' : 'Restored access for';
+    const isAdmin = !!target && activeAssignments(target).some((x) => x.role === 'agency-admin' && x.scope.organisationId === organisationId);
+    return this.gateway
+      .command(
+        {
+          action: `${verb} ${target?.name ?? identityId}${status === 'ended' ? ' from the organisation' : ''} — ${reason}`,
+          resource: 'Membership',
+          resourceId: identityId,
+          category: 'security',
+          permission: isAdmin ? 'Users.ManageAdmins' : 'Users.Manage',
+          stepUp: true,
+          validate: (): FieldErrors | null => {
+            const m = target?.memberships.find((x) => x.organisationId === organisationId);
+            if (!m) return { status: 'They aren’t a member of this organisation.' };
+            if (m.status === 'ended') return { status: 'Their membership has already ended.' };
+            if (m.status === status) return { status: `Their access is already ${status}.` };
+            return reason.trim().length < 5 ? { reason: 'Say why, in a few words. It goes in the audit log.' } : null;
+          },
+        },
+        () => {
+          // The API also refuses changing your own access, whatever your role.
+          if (identityId === this.auth.actor().id) throw new PolicyError('forbidden', 'You can’t change your own access');
+          this.store.setMembership(identityId, organisationId, status, this.auth.actor().name);
+        },
+      )
+      .pipe(map(() => undefined));
+  }
+
+  resendInvite(identityId: string): Observable<void> {
+    const target = this.store.identity(identityId);
+    return this.gateway
+      .command(
+        {
+          action: `Resent the invitation to ${target?.name} (${target?.email})`,
+          resource: 'Identity',
+          resourceId: identityId,
+          permission: 'Users.Manage',
+          validate: () => (target?.status === 'invited' ? null : { status: 'They’ve already accepted their invitation.' }),
+        },
+        () => undefined,
+      )
+      .pipe(map(() => undefined));
+  }
+
   assign(identityId: string, a: NewAssignment): Observable<void> {
     const target = this.store.identity(identityId);
     const humo = isHumoRole(a.role);

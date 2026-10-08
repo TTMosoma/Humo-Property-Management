@@ -1,5 +1,5 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, untracked } from '@angular/core';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { CdkMenu, CdkMenuItem, CdkMenuTrigger } from '@angular/cdk/menu';
 import { IonIcon } from '@ionic/angular/standalone';
 import { PrototypeControls } from '../../core/prototype/prototype-controls';
@@ -122,6 +122,13 @@ import { Logo } from '../../ui/brand/logo';
 export class ContractorShell {
   protected readonly prototype = inject(PrototypeControls, { optional: true });
   protected readonly session = inject(SessionService);
+  private readonly leaveWhenSignedOut = (() => {
+    const router = inject(Router);
+    // The session can end while you're here: leave for the signed-out page, which explains why.
+    effect(() => {
+      if (!this.session.signedIn()) untracked(() => router.navigate(['/signed-out'], { queryParams: { product: 'contractor' } }));
+    });
+  })();
   protected readonly signOut = inject(SignOutService);
   protected readonly business = computed(() => this.session.assignment().label);
   protected readonly links = [

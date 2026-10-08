@@ -1,4 +1,8 @@
-<ui-page-header eyebrow="Portfolio" title="Schemes" [subtitle]="subtitle()" />
+<ui-page-header eyebrow="Portfolio" title="Schemes" [subtitle]="subtitle()">
+  @if (session.can('Schemes.Manage') && !session.readOnly()) {
+    <button type="button" class="btn btn-primary" (click)="addScheme()"><ion-icon name="add-outline" aria-hidden="true" /> Add scheme</button>
+  }
+</ui-page-header>
 
 <ui-view-tabs label="Scheme views" [tabs]="tabs()" [active]="state().view ?? 'all'" (activeChange)="patch({ view: $event })" />
 <ui-filter-bar

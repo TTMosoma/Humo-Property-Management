@@ -21,9 +21,24 @@ import {
 import { SCHEMES } from '../fixtures/schemes';
 import { portfolioManagerOf } from '../fixtures/staff';
 import { createWorkItems } from '../fixtures/work-items';
+import { entries, simulationStorage } from '../simulation/simulation-storage';
 import { Ledger, RawTransaction, buildStatement, generateLedger, withBalances } from './ledger';
 import { daysAgo, periodLabel, periodOf, round2, seeded } from './random';
 import { ageingFor, monthlyCharges, seedPortfolio, statusFor } from './seed-portfolio';
+
+/** DEVELOPMENT / SIMULATION ONLY: the shape saved to localStorage. */
+interface PortfolioSnapshot {
+  schemes: Scheme[];
+  units: Unit[];
+  persons: Person[];
+  accounts: Account[];
+  relationships: Relationship[];
+  receipts: Receipt[];
+  payerRules: PayerRule[];
+  notes: Note[];
+  workItems: WorkItem[];
+  extraTx: [string, RawTransaction[]][];
+}
 
 function hasWord(text: string, word: string): boolean {
   const w = word.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -61,7 +76,10 @@ export class MockDb {
   workItems: WorkItem[] = createWorkItems();
 
   constructor() {
-    const seed = seedPortfolio();
+    const saved = simulationStorage.load<PortfolioSnapshot>('portfolio');
+    const seed = saved ?? { ...seedPortfolio(), schemes: [...this.schemes.values()] };
+    this.schemes.clear();
+    for (const s of seed.schemes) this.schemes.set(s.id, s);
     this.units = seed.units;
     for (const u of seed.units) this.unitById.set(u.id, u);
     for (const p of seed.persons) this.persons.set(p.id, p);
@@ -69,16 +87,44 @@ export class MockDb {
       this.accounts.set(a.id, a);
       this.accountByUnit.set(a.unitId, a);
     }
-    for (const r of seed.relationships) {
-      if (r.unitId) this.push(this.relsByUnit, r.unitId, r);
-      this.push(this.relsByPerson, r.personId, r);
+    for (const r of seed.relationships) this.indexRelationship(r);
+    if (saved) {
+      this.receipts = saved.receipts;
+      this.payerRules = saved.payerRules;
+      this.notes = saved.notes;
+      this.workItems = saved.workItems;
+      for (const [k, v] of saved.extraTx) this.extraTx.set(k, v);
+    } else {
+      this.receipts = this.seedReceipts();
+      this.syncReceiptWork();
     }
-    this.receipts = this.seedReceipts();
-    this.syncReceiptWork();
   }
 
+  /** Every change ends here: live queries re-run, and the simulation is saved (dev only). */
   touch(): void {
     this.changes$.next(this.changes$.value + 1);
+    simulationStorage.save('portfolio', () => this.snapshot());
+  }
+
+  /** DEVELOPMENT / SIMULATION ONLY: everything this store holds, for localStorage. */
+  private snapshot(): PortfolioSnapshot {
+    return {
+      schemes: [...this.schemes.values()],
+      units: this.units,
+      persons: [...this.persons.values()],
+      accounts: [...this.accounts.values()],
+      relationships: [...new Set([...this.relsByPerson.values()].flat())],
+      receipts: this.receipts,
+      payerRules: this.payerRules,
+      notes: this.notes,
+      workItems: this.workItems,
+      extraTx: entries(this.extraTx),
+    };
+  }
+
+  private indexRelationship(r: Relationship): void {
+    if (r.unitId) this.push(this.relsByUnit, r.unitId, r);
+    this.push(this.relsByPerson, r.personId, r);
   }
 
   // =====================================================================
@@ -89,12 +135,17 @@ export class MockDb {
     return this.schemes.get(id)!;
   }
 
+  /** Relationships in force today (ended ones stay as history). */
+  private current(r: Relationship): boolean {
+    return !r.until || new Date(r.until) >= new Date(new Date().toDateString());
+  }
+
   owners(unitId: string): Person[] {
-    return (this.relsByUnit.get(unitId) ?? []).filter((r) => r.type === 'owner').map((r) => this.persons.get(r.personId)!);
+    return (this.relsByUnit.get(unitId) ?? []).filter((r) => r.type === 'owner' && this.current(r)).map((r) => this.persons.get(r.personId)!);
   }
 
   tenant(unitId: string): Person | undefined {
-    const rel = (this.relsByUnit.get(unitId) ?? []).find((r) => r.type === 'tenant');
+    const rel = (this.relsByUnit.get(unitId) ?? []).find((r) => r.type === 'tenant' && this.current(r));
     return rel ? this.persons.get(rel.personId) : undefined;
   }
 
@@ -142,6 +193,11 @@ export class MockDb {
   ledger(accountId: string): Ledger {
     let base = this.ledgers.get(accountId);
     const account = this.accounts.get(accountId)!;
+    if (!base && account.id.startsWith('acc-new-')) {
+      // A unit added in the simulation starts with a clean account.
+      base = { opening: 0, transactions: [] };
+      this.ledgers.set(accountId, base);
+    }
     if (!base) {
       const unit = this.unitById.get(account.unitId)!;
       const holder = this.persons.get(account.holderPersonId)!;
@@ -157,6 +213,8 @@ export class MockDb {
     const account = this.accounts.get(accountId);
     if (!account) return undefined;
     const unit = this.unitById.get(account.unitId)!;
+    // A new unit has no account holder until an owner is linked.
+    if (!this.persons.has(account.holderPersonId)) return undefined;
     const { opening, transactions } = this.ledger(accountId);
     const tx = withBalances(opening, transactions);
     const periods = [...new Set(tx.map((t) => periodOf(t.date)))].sort().reverse();
@@ -173,7 +231,7 @@ export class MockDb {
 
   statement(accountId: string, period: string): StatementView | undefined {
     const account = this.accounts.get(accountId);
-    if (!account) return undefined;
+    if (!account || !this.persons.has(account.holderPersonId)) return undefined;
     const { opening, transactions } = this.ledger(accountId);
     const statement = buildStatement(accountId, opening, transactions, period);
     if (!statement) return undefined;
@@ -330,7 +388,7 @@ export class MockDb {
     const unit = this.unitById.get(unitId);
     if (!unit) return [];
     const account = this.accountByUnit.get(unitId)!;
-    const holder = this.persons.get(account.holderPersonId)!;
+    const holder = this.persons.get(account.holderPersonId) ?? ({ displayName: 'the owner' } as Person);
     const scheme = this.scheme(unit.schemeId);
     const accountLink = `/schemes/${scheme.id}/units/${unit.number}/account`;
     const events: TimelineEvent[] = [];
@@ -468,6 +526,88 @@ export class MockDb {
     receipt.allocatedBy = by;
     this.syncReceiptWork();
     this.touch();
+  }
+
+  // ---- Schemes, units and people (create / edit / lifecycle) ----
+
+  addScheme(scheme: Scheme): void {
+    this.schemes.set(scheme.id, scheme);
+    this.touch();
+  }
+
+  changeScheme(id: string, apply: (s: Scheme) => Scheme): void {
+    const s = this.schemes.get(id);
+    if (!s) throw new Error(`Unknown scheme ${id}`);
+    this.schemes.set(id, { ...apply(s), version: s.version + 1 });
+    this.touch();
+  }
+
+  /** A new unit and its levy account (no history yet; the holder is set when an owner is linked). */
+  addUnit(schemeId: string, details: Omit<Unit, 'id' | 'schemeId' | 'accountNo' | 'version' | 'parkingBays'>): Unit {
+    const scheme = this.scheme(schemeId);
+    const accountNo = `${scheme.code}-${details.number.replace(/\D/g, '').padStart(3, '0') || details.number.toUpperCase()}`;
+    const unit: Unit = { ...details, id: `unit-${accountNo.toLowerCase()}`, version: 1, schemeId, accountNo, parkingBays: [] };
+    (this.units as Unit[]).push(unit);
+    this.unitById.set(unit.id, unit);
+    const account: Account = {
+      id: `acc-new-${accountNo.toLowerCase()}`, accountNo, unitId: unit.id, schemeId, holderPersonId: '', balance: 0,
+      ageing: { current: 0, d30: 0, d60: 0, d90: 0, d120: 0 }, status: 'up-to-date', debitOrder: false, statementBy: 'email',
+    };
+    this.accounts.set(account.id, account);
+    this.accountByUnit.set(unit.id, account);
+    this.changeScheme(schemeId, (s) => ({ ...s, unitCount: s.unitCount + 1 }));
+    return unit;
+  }
+
+  changeUnit(id: string, apply: (u: Unit) => Unit): void {
+    const index = this.units.findIndex((u) => u.id === id);
+    if (index < 0) throw new Error(`Unknown unit ${id}`);
+    const next = { ...apply(this.units[index]), version: this.units[index].version + 1 };
+    (this.units as Unit[])[index] = next;
+    this.unitById.set(id, next);
+    this.touch();
+  }
+
+  addPerson(person: Person): void {
+    this.persons.set(person.id, person);
+    this.touch();
+  }
+
+  changePerson(id: string, apply: (p: Person) => Person): void {
+    const p = this.persons.get(id);
+    if (!p) throw new Error(`Unknown person ${id}`);
+    this.persons.set(id, { ...apply(p), version: p.version + 1 });
+    this.touch();
+  }
+
+  /** Links a person to a unit (owner, tenant) or a scheme (trustee). A new owner becomes the account holder. */
+  addRelationship(r: Relationship): void {
+    this.indexRelationship(r);
+    if (r.type === 'owner' && r.unitId) {
+      const account = this.accountByUnit.get(r.unitId);
+      if (account && (!account.holderPersonId || !this.owners(r.unitId).some((o) => o.id === account.holderPersonId))) account.holderPersonId = r.personId;
+    }
+    this.touch();
+  }
+
+  /** Ends a relationship on a date; it stays in the person's and the unit's history. */
+  endRelationship(id: string, until: string): Relationship | undefined {
+    const rel = [...this.relsByPerson.values()].flat().find((r) => r.id === id);
+    if (rel) rel.until = until;
+    this.touch();
+    return rel;
+  }
+
+  relationship(id: string): Relationship | undefined {
+    return [...this.relsByPerson.values()].flat().find((r) => r.id === id);
+  }
+
+  /** Ids that don't collide with seeded or previously created ones. */
+  nextId(prefix: string): string {
+    const taken = (id: string) => this.persons.has(id) || this.relationship(id) !== undefined;
+    let n = this.persons.size + 1;
+    while (taken(`${prefix}-${n}`)) n++;
+    return `${prefix}-${n}`;
   }
 
   addNote(note: Omit<Note, 'id' | 'at' | 'author'>, author: string): void {

@@ -1,7 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { AccessDataSource, IDENTITY_STATUS_LABELS, Identity, ROLE_LABELS, RoleFamily, activeAssignments } from '../../domain';
+import { AccessDataSource, IDENTITY_STATUS_LABELS, Identity, ROLE_LABELS, RoleFamily, UnitDataSource, heldAssignments } from '../../domain';
+import { ScopeService } from '../../core/scope/scope.service';
+import { inviteForm } from './user-forms';
 import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
 import { CellDef, ColumnDef, DataTable } from '../../ui/data-table/data-table';
@@ -30,6 +32,8 @@ import { FAMILY_LABELS, familyOf, roleColor } from './access-view';
 export class UsersPage {
   private readonly access = inject(AccessDataSource);
   private readonly drawer = inject(DrawerService);
+  private readonly units = inject(UnitDataSource);
+  private readonly scope = inject(ScopeService);
   protected readonly session = inject(SessionService);
 
   protected readonly state = urlState({ view: 'agency', q: null });
@@ -67,16 +71,25 @@ export class UsersPage {
 
   protected readonly roleColor = roleColor;
 
+  protected suspendedHere(i: Identity): boolean {
+    return i.memberships.some((m) => m.organisationId === this.organisationId() && m.status === 'suspended');
+  }
+
   protected statusLabel(i: Identity): string {
     return IDENTITY_STATUS_LABELS[i.status];
   }
 
   protected assignments(i: Identity) {
-    return activeAssignments(i).filter((m) => m.scope.organisationId === this.organisationId());
+    return heldAssignments(i).filter((m) => m.scope.organisationId === this.organisationId());
   }
 
   protected set(key: 'view' | 'q', value: string | null): void {
     this.state.update((s) => ({ ...s, [key]: value || null }));
+  }
+
+  protected invite(): void {
+    const org = this.session.organisation();
+    if (org) inviteForm(this.drawer, this.access, this.units, org.id, org.shortName, this.scope.accessible());
   }
 
   protected open(i: Identity): void {

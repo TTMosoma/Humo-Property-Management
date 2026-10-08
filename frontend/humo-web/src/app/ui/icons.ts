@@ -123,12 +123,14 @@ import {
   swapVerticalOutline,
   leafOutline,
   bugOutline,
+  linkOutline,
 } from 'ionicons/icons';
 
 /** Registers every icon the app uses (tree-shaken, no runtime fetches). */
 export function registerIcons(): void {
   addIcons({
     'add-outline': addOutline,
+    'link-outline': linkOutline,
     'alert-circle-outline': alertCircleOutline,
     'arrow-forward-outline': arrowForwardOutline,
     'bar-chart-outline': barChartOutline,

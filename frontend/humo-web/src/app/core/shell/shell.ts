@@ -8,6 +8,7 @@ import {
   inject,
   signal,
   viewChild,
+  untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
@@ -86,6 +87,12 @@ export class Shell {
     inject(DestroyRef).onDestroy(() => mq.removeEventListener('change', onChange));
 
     effect(() => safeStorage.set('humo.sidebar', this.collapsed() ? 'collapsed' : 'expanded'));
+
+    // The session can end while you're here (signed out elsewhere, organisation suspended, person
+    // suspended). Like a 401 from the API: leave the product for the signed-out page, which explains why.
+    effect(() => {
+      if (!this.session.signedIn()) untracked(() => this.router.navigate(['/signed-out'], { queryParams: { product: 'property-management' } }));
+    });
 
     effect((onCleanup) => {
       if (!this.switcher.lastChange()) return;

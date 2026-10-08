@@ -1,6 +1,8 @@
 import { Observable } from 'rxjs';
 import { ListQuery, Page } from './list-query';
+import { Person, RelationshipType } from '../models/person';
 import { Note, TimelineEvent } from '../models/timeline';
+import { Unit } from '../models/unit';
 import {
   AccountDetail,
   MatchView,
@@ -17,16 +19,42 @@ import {
  * (e.g. an allocation updates every open account view). Over HTTP that is
  * re-fetch on change — see core/data/data-changes.ts.
  */
+export type UnitDetails = Pick<Unit, 'number' | 'description' | 'sizeM2' | 'participationQuota' | 'monthlyLevy' | 'occupancy'> & { block?: string };
+
+export type PersonDetails = Pick<Person, 'firstName' | 'lastName' | 'kind' | 'email' | 'phone' | 'preferredChannel'> & { postalAddress?: string };
+
+export interface NewRelationship {
+  type: RelationshipType;
+  schemeId: string;
+  /** Owners and tenants. */
+  unitId?: string;
+  /** Trustees: Chairperson, Treasurer, Trustee. */
+  portfolio?: string;
+  since: string;
+  /** Tenants: lease end. */
+  until?: string;
+}
+
 export abstract class UnitDataSource {
   abstract list(schemeIds: string[], query?: ListQuery): Observable<Page<UnitSummary>>;
   abstract get(schemeId: string, unitNumber: string): Observable<UnitSummary | undefined>;
   abstract byId(unitId: string): Observable<UnitSummary | undefined>;
+  /** Adds a unit (and its levy account) to a scheme. Returns the unit id. */
+  abstract create(schemeId: string, details: UnitDetails): Observable<string>;
+  abstract update(unitId: string, details: UnitDetails, expectedVersion?: number): Observable<void>;
   /** "KC 42", "kingfisher 42", "KC-042", "unit 42" … */
   abstract search(query: string, schemeIds: string[], limit?: number): Observable<UnitSummary[]>;
 }
 
 export abstract class PersonDataSource {
   abstract list(schemeIds: string[], query?: ListQuery): Observable<Page<PersonSummary>>;
+  /** Adds someone to the directory, optionally linked straight to a unit or board. Returns the person id. */
+  abstract create(details: PersonDetails, link?: NewRelationship): Observable<string>;
+  abstract update(personId: string, details: PersonDetails, expectedVersion?: number): Observable<void>;
+  /** Owner or tenant of a unit, or trustee of a scheme. */
+  abstract addRelationship(personId: string, link: NewRelationship): Observable<void>;
+  /** Ends it on a date (sold, moved out, stepped down). The history stays. */
+  abstract endRelationship(relationshipId: string, until: string): Observable<void>;
   abstract get(personId: string): Observable<PersonSummary | undefined>;
   abstract search(query: string, schemeIds: string[], limit?: number): Observable<PersonSummary[]>;
 }

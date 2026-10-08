@@ -6,7 +6,11 @@
       ? rows().length + ' customers · ' + num(totals().units) + ' units · ' + rand(totals().mrr) + ' MRR'
       : rows().length + ' customers · ' + num(totals().units) + ' units'
   "
-/>
+>
+  @if (session.can('Platform.Customers.Manage') && !session.readOnly()) {
+    <button type="button" class="btn btn-primary" (click)="onboard()"><ion-icon name="add-outline" aria-hidden="true" /> Onboard customer</button>
+  }
+</ui-page-header>
 
 <ui-view-tabs [tabs]="tabs()" [active]="state().view ?? 'all'" (activeChange)="set('view', $event)" label="Account health" />
 

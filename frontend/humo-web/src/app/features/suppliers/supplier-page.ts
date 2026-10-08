@@ -3,7 +3,10 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, map, of, switchMap } from 'rxjs';
-import { SupplierDataSource, SupplierDocument, docStatus } from '../../domain';
+import { Supplier, SupplierDataSource, SupplierDocument, SupplierStatus, docStatus } from '../../domain';
+import { editSupplierForm, supplierStatusForm } from './supplier-forms';
+import { DrawerService } from '../../ui/drawer/drawer.service';
+import { ScopeService } from '../../core/scope/scope.service';
 import { ContractorNetwork } from '../../domain/contractor';
 import { EndorsedBy, Reputation, VerificationBadge } from '../contractor-shared/contractor-ui';
 import { FeedbackService } from '../../core/feedback/feedback.service';
@@ -34,6 +37,17 @@ export class SupplierPage {
   private readonly stepUp = inject(StepUpService);
   private readonly contractors = inject(ContractorNetwork);
   protected readonly session = inject(SessionService);
+  private readonly drawer = inject(DrawerService);
+  private readonly scope = inject(ScopeService);
+  protected readonly canManage = computed(() => this.session.can('Suppliers.Manage') && !this.session.readOnly());
+
+  protected edit(s: Supplier): void {
+    editSupplierForm(this.drawer, this.data, s, this.scope.accessible());
+  }
+
+  protected setStatus(s: Supplier, status: SupplierStatus): void {
+    supplierStatusForm(this.drawer, this.data, s, status);
+  }
 
   private readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('supplierId')!)), {
     initialValue: this.route.snapshot.paramMap.get('supplierId')!,

@@ -31,6 +31,31 @@
       </div>
     </div>
     <div class="h-actions">
+      @if (org(); as o) {
+        @if (session.can('Platform.Customers.Manage') && !session.readOnly()) {
+          <button type="button" class="btn btn-secondary btn-sm" (click)="editDetails(o)"><ion-icon name="create-outline" aria-hidden="true" /> Edit details</button>
+          @if (o.status === 'onboarding') {
+            <button type="button" class="btn btn-primary btn-sm" (click)="inviteAdmin(o)"><ion-icon name="person-add-outline" aria-hidden="true" /> Invite their administrator</button>
+          }
+          @switch (o.status) {
+            @case ('onboarding') {
+              <button type="button" class="btn btn-secondary btn-sm" (click)="changeStatus(o, 'active')">Mark live</button>
+              <button type="button" class="btn btn-ghost btn-sm" (click)="changeStatus(o, 'archived')">Archive</button>
+            }
+            @case ('active') {
+              <button type="button" class="btn btn-ghost btn-sm" (click)="changeStatus(o, 'suspended')">Suspend</button>
+              <button type="button" class="btn btn-ghost btn-sm" (click)="changeStatus(o, 'archived')">Archive</button>
+            }
+            @case ('suspended') {
+              <button type="button" class="btn btn-secondary btn-sm" (click)="changeStatus(o, 'active')">Reactivate</button>
+              <button type="button" class="btn btn-ghost btn-sm" (click)="changeStatus(o, 'archived')">Archive</button>
+            }
+            @case ('archived') {
+              <button type="button" class="btn btn-secondary btn-sm" (click)="changeStatus(o, 'active')">Restore</button>
+            }
+          }
+        }
+      }
       @if (session.can('Platform.Customers.Users')) {
         <a class="btn btn-secondary btn-sm" routerLink="/platform/users" [queryParams]="{ q: cu.name }"><ion-icon name="people-outline" aria-hidden="true" /> Users</a>
       }

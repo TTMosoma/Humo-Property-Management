@@ -4,6 +4,8 @@
  */
 export interface Person {
   id: string;
+  /** Concurrency token: send it back with commands that change this record. The API answers 409 if someone changed it first. */
+  version: number;
   firstName: string;
   lastName: string;
   /** Companies and trusts own units too. */

@@ -18,7 +18,7 @@ import {
 import { safeStorage } from '../../core/prototype/safe-storage';
 import { AccessStore } from '../db/access-store';
 import { PlatformStore } from '../db/platform-store';
-import { ORGANISATIONS } from '../fixtures/organisations';
+import { OrganisationStore } from '../db/organisation-store';
 
 interface AuthState {
   identityId: string;
@@ -39,6 +39,7 @@ const KEYS = { identity: 'humo.persona', signedOut: 'humo.signedOut', assignment
 export class MockAuthSession {
   private readonly store = inject(AccessStore);
   private readonly platform = inject(PlatformStore);
+  private readonly orgs = inject(OrganisationStore);
 
   private state: AuthState = this.restore();
   /** Server-side record of the latest step-up proof (the API checks its freshness). */
@@ -51,6 +52,7 @@ export class MockAuthSession {
     effect(() => {
       this.store.identities();
       this.platform.seeds();
+      this.orgs.all();
       untracked(() => this.publish());
     });
   }
@@ -138,7 +140,12 @@ export class MockAuthSession {
     const target = impersonation ? this.store.identity(impersonation.targetId) : undefined;
     const identity = target ?? actor;
 
-    const available = activeAssignments(identity);
+    // Server rule: nobody works in a suspended or archived organisation, and suspended people can't sign in at all.
+    const open = (a: RoleAssignment) => {
+      const org = this.orgs.get(a.scope.organisationId);
+      return !org || org.status === 'active' || org.status === 'onboarding';
+    };
+    const available = activeAssignments(identity).filter(open);
     const assignments = target ? available.filter((a) => a.id === impersonation!.targetAssignmentId) : available;
     const active = assignments.find((a) => a.id === this.state.assignmentId) ?? assignments[0] ?? identity.assignments[0];
 
@@ -147,12 +154,19 @@ export class MockAuthSession {
     const permissions = impersonation?.mode === 'observe' ? [...granted].filter((p) => !PERMISSION_META[p].mutates) : [...granted];
     const actorPermissions = [...new Set(activeAssignments(actor).flatMap((a) => [...ROLE_PERMISSIONS[a.role], ...(a.grants ?? [])]))];
 
-    const organisation = ORGANISATIONS.find((o) => o.id === active.scope.organisationId) ?? null;
+    const organisation = this.orgs.get(active.scope.organisationId) ?? null;
+    const blocked: CurrentSession['blocked'] =
+      actor.status === 'suspended' || actor.status === 'deactivated'
+        ? `identity-${actor.status}`
+        : !target && available.length === 0 && activeAssignments(identity).length > 0
+          ? 'organisation-suspended'
+          : null;
     const customerPlan = organisation && !isHumoRole(active.role);
     const subscription = customerPlan ? (this.platform.subscription(organisation.id) ?? null) : null;
 
     return {
-      signedIn: this.state.signedIn && actor.status === 'active',
+      signedIn: this.state.signedIn && actor.status === 'active' && !blocked,
+      blocked,
       actor,
       identity,
       assignments,

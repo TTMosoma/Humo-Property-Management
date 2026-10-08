@@ -4,7 +4,9 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, map, of, switchMap } from 'rxjs';
-import { MODULE_LABELS, ORGANISATION_STATUS_LABELS, Opportunity, PlatformCustomer, PlatformDataSource, UpgradeRequest, entitlementSet } from '../../domain';
+import { AccessDataSource, MODULE_LABELS, ORGANISATION_STATUS_LABELS, Opportunity, Organisation, OrganisationDataSource, OrganisationStatus, PlatformCustomer, PlatformDataSource, UnitDataSource, UpgradeRequest, entitlementSet } from '../../domain';
+import { editOrganisationForm, organisationStatusForm } from './organisation-forms';
+import { inviteForm } from '../access/user-forms';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
@@ -51,6 +53,26 @@ export class CustomerPage {
     const r = this.result.value();
     return r ? r : undefined;
   });
+
+  /** The organisation record (details, lifecycle, version) behind the customer view. */
+  private readonly organisations = inject(OrganisationDataSource);
+  protected readonly org = toSignal(toObservable(this.id).pipe(switchMap((id) => this.organisations.get(id).pipe(catchError(() => of(undefined))))));
+
+  private readonly access = inject(AccessDataSource);
+  private readonly units = inject(UnitDataSource);
+
+  /** Onboarding: the customer's first Agency Administrator, who then invites everyone else. */
+  protected inviteAdmin(o: Organisation): void {
+    inviteForm(this.drawer, this.access, this.units, o.id, o.shortName, [], true);
+  }
+
+  protected editDetails(o: Organisation): void {
+    editOrganisationForm(this.drawer, this.organisations, o);
+  }
+
+  protected changeStatus(o: Organisation, status: OrganisationStatus): void {
+    organisationStatusForm(this.drawer, this.organisations, o, status);
+  }
 
   protected orgStatus(c: PlatformCustomer): string {
     return ORGANISATION_STATUS_LABELS[c.status];

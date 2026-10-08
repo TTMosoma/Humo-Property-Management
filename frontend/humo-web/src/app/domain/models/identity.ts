@@ -84,6 +84,8 @@ export const IDENTITY_STATUS_LABELS: Record<IdentityStatus, string> = {
  */
 export interface Identity {
   id: string;
+  /** Concurrency token: send it back with commands that change this record. The API answers 409 if someone changed it first. */
+  version: number;
   name: string;
   initials: string;
   email: string;
@@ -111,6 +113,15 @@ export function activeAssignments(identity: Identity, now = new Date()): RoleAss
       (a.scope.organisationId === null ||
         identity.memberships.some((m) => m.organisationId === a.scope.organisationId && m.status === 'active')),
   );
+}
+
+/**
+ * Roles the person holds, even while their membership is suspended (they can't
+ * use them until it's restored). For showing someone's access; use
+ * `activeAssignments` for what they can do today.
+ */
+export function heldAssignments(identity: Identity, now = new Date()): RoleAssignment[] {
+  return identity.assignments.filter((a) => a.status === 'active' && (!a.validUntil || new Date(a.validUntil) > now));
 }
 
 /** Does the assignment cover every scheme in its organisation? */

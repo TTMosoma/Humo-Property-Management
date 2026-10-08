@@ -4,6 +4,7 @@ import { Organisation } from '../../domain';
 export const ORGANISATIONS: Organisation[] = [
   {
     id: 'acacia',
+    version: 1,
     kind: 'managing-agency',
     status: 'active',
     name: 'Acacia Managing Agents (Pty) Ltd',
@@ -15,6 +16,7 @@ export const ORGANISATIONS: Organisation[] = [
   },
   {
     id: 'fynbos',
+    version: 1,
     kind: 'managing-agency',
     status: 'active',
     name: 'Fynbos Property Administrators',
@@ -26,6 +28,7 @@ export const ORGANISATIONS: Organisation[] = [
   },
   {
     id: 'umgeni',
+    version: 1,
     kind: 'managing-agency',
     status: 'active',
     name: 'Umgeni Body Corporate Services',
@@ -38,6 +41,7 @@ export const ORGANISATIONS: Organisation[] = [
   {
     // The launch customer — just another agency record, never special-cased in code.
     id: 'tshikrand',
+    version: 1,
     kind: 'managing-agency',
     status: 'active',
     name: 'Tshikrand Property Management (Pty) Ltd',

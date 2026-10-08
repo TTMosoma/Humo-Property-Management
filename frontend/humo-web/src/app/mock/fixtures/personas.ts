@@ -11,7 +11,7 @@ interface SeedAssignment extends Omit<RoleAssignment, 'scope' | 'status' | 'vers
   status?: RoleAssignment['status'];
 }
 
-interface SeedIdentity extends Omit<Identity, 'assignments' | 'memberships' | 'status'> {
+interface SeedIdentity extends Omit<Identity, 'assignments' | 'memberships' | 'status' | 'version'> {
   status?: IdentityStatus;
   assignments: SeedAssignment[];
 }
@@ -345,6 +345,7 @@ function toIdentity(seed: SeedIdentity): Identity {
   const orgs = [...new Set(assignments.map((a) => a.scope.organisationId).filter((x): x is string => !!x))];
   return {
     ...seed,
+    version: 1,
     status: seed.status ?? 'active',
     assignments,
     memberships: orgs.map((organisationId) => ({

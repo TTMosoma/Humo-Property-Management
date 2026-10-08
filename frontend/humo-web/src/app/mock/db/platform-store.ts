@@ -1,4 +1,6 @@
-import { Injectable, computed, effect, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
+import { OrganisationStore } from './organisation-store';
+import { simulationStorage } from '../simulation/simulation-storage';
 import {
   ADD_ONS,
   BusinessOverview,
@@ -68,8 +70,10 @@ function organisationStatus(c: CustomerSeed): OrganisationStatus {
 
 @Injectable({ providedIn: 'root' })
 export class PlatformStore {
-  readonly seeds = signal<CustomerSeed[]>(seedCustomers());
-  readonly requests = signal<UpgradeRequest[]>(seedRequests());
+  private readonly orgs = inject(OrganisationStore);
+  private readonly saved = simulationStorage.load<{ seeds: CustomerSeed[]; requests: UpgradeRequest[] }>('platform');
+  readonly seeds = signal<CustomerSeed[]>(this.saved?.seeds ?? seedCustomers());
+  readonly requests = signal<UpgradeRequest[]>(this.saved?.requests ?? seedRequests());
   /** Persisted so a dismissed nudge stays dismissed across reloads in the prototype. */
   readonly nudges = signal<NudgeState[]>(this.readNudges());
   /** The one nudge served in this browser session: it stays put rather than counting as "ignored". */
@@ -83,7 +87,8 @@ export class PlatformStore {
       const opportunities = detectOpportunities({ snapshot: c.snapshot, entitlements, subscription: c.subscription, health });
       return {
         ...c,
-        status: organisationStatus(c),
+        name: this.orgs.get(c.organisationId)?.shortName ?? c.name,
+        status: this.orgs.get(c.organisationId)?.status ?? organisationStatus(c),
         entitlements: entitlements.all,
         health,
         opportunities,
@@ -152,7 +157,46 @@ export class PlatformStore {
   });
 
   constructor() {
+    // Every customer is an organisation record; the generated book of business gets one too.
+    for (const c of this.seeds()) {
+      if (!this.orgs.get(c.organisationId)) {
+        this.orgs.add({ id: c.organisationId, version: 1, kind: 'managing-agency', status: organisationStatus(c), name: c.name, shortName: c.name, city: c.city, province: c.province, schemeCount: c.snapshot.schemes, unitCount: c.snapshot.units });
+      }
+    }
     effect(() => safeStorage.set('humo.nudges', JSON.stringify(this.nudges())));
+    // DEVELOPMENT / SIMULATION ONLY: subscriptions, accounts and upgrade requests survive a refresh.
+    effect(() => {
+      const snapshot = { seeds: this.seeds(), requests: this.requests() };
+      untracked(() => simulationStorage.save('platform', () => snapshot));
+    });
+  }
+
+  /** A newly onboarded customer: a trial of the chosen package, and no usage yet. */
+  addCustomer(input: { organisationId: string; name: string; city: string; province: string; packageId: PackageId; accountManagerId: string; accountManager: string }): void {
+    const now = new Date();
+    const trialEnds = new Date(now.getTime() + 30 * 86_400_000).toISOString();
+    const usage = Object.fromEntries((['portfolio', 'finance', 'maintenance', 'communications', 'documents', 'governance', 'compliance', 'reporting'] as FeatureModule[]).map((m) => [m, { events30d: 0, expected: 100 }]));
+    const seed: CustomerSeed = {
+      organisationId: input.organisationId,
+      name: input.name,
+      city: input.city,
+      province: input.province,
+      customerSince: now.toISOString(),
+      accountManagerId: input.accountManagerId,
+      accountManager: input.accountManager,
+      subscription: { version: 1, organisationId: input.organisationId, packageId: input.packageId, status: 'trial', startedAt: now.toISOString(), renewsAt: trialEnds, addOns: [], overrides: [], mrr: 0, seats: 5 },
+      snapshot: {
+        organisationId: input.organisationId, at: now.toISOString(), seats: 5, activeUsers30d: 0, loginsPerUserWeek: 0, moduleUsage: usage,
+        workflowsStarted30d: 0, workflowsCompleted30d: 0, openTickets: 0, criticalTickets: 0, paymentStatus: 'current',
+        schemes: 0, units: 0, trustees: 0, meetingsPerYear: 0, reportExports30d: 0, maintenanceRequests30d: 0, receiptsAllocated30d: 0, portalUsers30d: 0, scoreHistory: [],
+      },
+    };
+    this.seeds.update((all) => [seed, ...all]);
+  }
+
+  /** Keeps the customer record's name and location in step with the organisation. */
+  renameCustomer(organisationId: string, details: { name: string; city: string; province: string }): void {
+    this.seeds.update((all) => all.map((c) => (c.organisationId === organisationId ? { ...c, ...details } : c)));
   }
 
   subscription(organisationId: string): Subscription | undefined {

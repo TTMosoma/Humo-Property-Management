@@ -2,7 +2,7 @@ import { Observable } from 'rxjs';
 import { ListQuery, Page } from './list-query';
 import { Invoice, Job, PaymentBatch, Priority } from '../models/job';
 import { Scheme } from '../models/scheme';
-import { DocStatus, Supplier, Trade } from '../models/supplier';
+import { DocStatus, Supplier, SupplierStatus, Trade } from '../models/supplier';
 import { Unit } from '../models/unit';
 import { WorkItem } from '../models/work-item';
 
@@ -88,6 +88,8 @@ export type JobAction =
   | { type: 'comment'; text: string }
   | { type: 'cancel'; reason: string };
 
+export type SupplierDetails = Pick<Supplier, 'name' | 'trades' | 'contactName' | 'phone' | 'email' | 'schemeIds'> & { bbbeeLevel?: number };
+
 // ---------------------------------------------------------------- Ports
 
 export abstract class JobDataSource {
@@ -107,6 +109,11 @@ export abstract class SupplierDataSource {
   abstract get(id: string): Observable<SupplierDetail | undefined>;
   abstract search(query: string, limit?: number): Observable<SupplierSummary[]>;
   abstract requestDocument(supplierId: string, type: string): Observable<void>;
+  /** A supplier the agency vets itself (not through Humo Contractor). Returns its id. */
+  abstract create(details: SupplierDetails): Observable<string>;
+  abstract update(id: string, details: SupplierDetails, expectedVersion?: number): Observable<void>;
+  /** On hold: no new work orders. Archived: no longer used. Restore by setting active. */
+  abstract setStatus(id: string, status: SupplierStatus, reason: string, expectedVersion?: number): Observable<void>;
   /** Sensitive: needs step-up; payments to the supplier are held until the new account is verified. */
   abstract changeBankDetails(supplierId: string): Observable<void>;
   /**

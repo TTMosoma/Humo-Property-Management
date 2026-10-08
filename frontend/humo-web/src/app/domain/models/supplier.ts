@@ -27,6 +27,10 @@ export interface SupplierDocument {
   onFile: boolean;
 }
 
+export type SupplierStatus = 'active' | 'on-hold' | 'archived';
+
+export const SUPPLIER_STATUS_LABELS: Record<SupplierStatus, string> = { active: 'Active', 'on-hold': 'On hold', archived: 'Archived' };
+
 export type DocStatus = 'valid' | 'expiring' | 'expired' | 'missing';
 
 /**
@@ -38,6 +42,8 @@ export type DocStatus = 'valid' | 'expiring' | 'expired' | 'missing';
  */
 export interface Supplier {
   id: string;
+  /** Concurrency token: send it back with commands that change this record. The API answers 409 if someone changed it first. */
+  version: number;
   /** The Humo Contractor business party, when the business is on Humo. */
   partyId?: string;
   name: string;
@@ -60,7 +66,8 @@ export interface Supplier {
     /** % of jobs residents confirmed as fixed first time. */
     verifiedRate: number;
   };
-  status: 'active' | 'on-hold';
+  /** On hold: no new work orders. Archived: no longer used (kept for history and payments). */
+  status: SupplierStatus;
 }
 
 export function docStatus(doc: SupplierDocument, now = new Date()): DocStatus {

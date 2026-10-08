@@ -36,6 +36,17 @@ export class PrototypeToolbar {
     { value: 'error', label: 'Error' },
   ];
 
+  protected readonly confirmingReset = signal(false);
+
+  protected savedNote(): string {
+    const at = this.controls.lastSaved();
+    return at ? `Saved in this browser · ${new Date(at).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}` : 'Nothing changed yet';
+  }
+
+  protected resetSimulation(): void {
+    this.controls.resetSimulation();
+  }
+
   /** Nudges remember being seen or dismissed; this lets a reviewer see them again. */
   protected resetNudges(): void {
     this.controls.resetNudges();

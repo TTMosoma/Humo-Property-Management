@@ -1,4 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { DrawerService } from '../../ui/drawer/drawer.service';
+import { SessionService } from '../../core/session/session.service';
+import { IonIcon } from '@ionic/angular/standalone';
+import { newSupplierForm } from './supplier-forms';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, map, of, switchMap } from 'rxjs';
@@ -30,11 +34,15 @@ export const VETTING: Record<DocStatus, { label: string; tone: Tone }> = {
  */
 @Component({
   selector: 'app-suppliers-page',
-  imports: [PageHeader, ScopeNotice, ViewTabs, FilterBar, DataTable, CellDef, StatusPill, EmptyState, ErrorState, Skeleton, RandPipe],
+  imports: [PageHeader, ScopeNotice, ViewTabs, FilterBar, DataTable, CellDef, StatusPill, EmptyState, ErrorState, Skeleton, RandPipe, IonIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (!fixedScheme()) {
-      <ui-page-header eyebrow="Maintenance" title="Suppliers" subtitle="Vetted contractors, their documents and how well they perform." />
+      <ui-page-header eyebrow="Maintenance" title="Suppliers" subtitle="Vetted contractors, their documents and how well they perform.">
+        @if (canManage()) {
+          <button type="button" class="btn btn-primary" (click)="addSupplier()"><ion-icon name="add-outline" aria-hidden="true" /> Add supplier</button>
+        }
+      </ui-page-header>
       <app-scope-notice />
     }
     <ui-view-tabs label="Supplier views" [tabs]="tabs()" [active]="state().view ?? 'all'" (activeChange)="patch({ view: $event })" />
@@ -107,16 +115,31 @@ export class SuppliersPage {
     const s = this.state();
     const q = (s.q ?? '').toLowerCase();
     return this.all()
+      // Archived suppliers only appear in their own view.
+      .filter((r) => (s.view === 'archived' ? r.supplier.status === 'archived' : r.supplier.status !== 'archived'))
       .filter((r) => (s.view === 'attention' ? r.compliance !== 'valid' : s.view === 'hold' ? r.supplier.status === 'on-hold' : true))
       .filter((r) => !s.trade || r.supplier.trades.includes(s.trade as Trade))
       .filter((r) => !q || `${r.supplier.name} ${r.supplier.trades.join(' ')} ${r.supplier.contactName}`.toLowerCase().includes(q));
   });
 
-  protected readonly tabs = computed(() => [
-    { id: 'all', label: 'All', count: this.all().length },
-    { id: 'attention', label: 'Documents to chase', count: this.all().filter((r) => r.compliance !== 'valid').length },
-    { id: 'hold', label: 'On hold', count: this.all().filter((r) => r.supplier.status === 'on-hold').length },
-  ]);
+  protected readonly tabs = computed(() => {
+    const current = this.all().filter((r) => r.supplier.status !== 'archived');
+    const archived = this.all().length - current.length;
+    return [
+      { id: 'all', label: 'All', count: current.length },
+      { id: 'attention', label: 'Documents to chase', count: current.filter((r) => r.compliance !== 'valid').length },
+      { id: 'hold', label: 'On hold', count: current.filter((r) => r.supplier.status === 'on-hold').length },
+      ...(archived || this.state().view === 'archived' ? [{ id: 'archived', label: 'Archived', count: archived }] : []),
+    ];
+  });
+
+  private readonly drawer = inject(DrawerService);
+  private readonly session = inject(SessionService);
+  protected readonly canManage = computed(() => this.session.can('Suppliers.Manage') && !this.session.readOnly());
+
+  protected addSupplier(): void {
+    newSupplierForm(this.drawer, this.data, this.scope.accessible(), this.router);
+  }
 
   protected readonly filters = computed<FilterDef[]>(() => {
     const trades = [...new Set(this.all().flatMap((r) => r.supplier.trades))].sort();

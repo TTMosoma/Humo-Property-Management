@@ -12,4 +12,10 @@
 export abstract class PrototypeControls {
   /** Forget which Smart Nudges were seen or dismissed, so a reviewer can see them again. */
   abstract resetNudges(): void;
+  /** When the simulated data was last saved in this browser (development only), or null. */
+  abstract lastSaved(): string | null;
+  /** Throw away everything created or changed in the simulation and start again from the seed data. */
+  abstract resetSimulation(): void;
+  /** Simulate an invited person accepting their invitation (in reality: they follow the email link and set up a passkey). */
+  abstract acceptInvite(identityId: string): void;
 }

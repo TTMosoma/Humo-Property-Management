@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, Injector, inject } from '@angular/core';
 import { Observable, map, switchMap, throwError, timer } from 'rxjs';
 import {
   ApiError,
@@ -63,7 +63,8 @@ const DENIAL_REASON: Record<PolicyDenial, string> = {
 @Injectable({ providedIn: 'root' })
 export class MockGateway {
   private readonly auth = inject(MockAuthSession);
-  private readonly scope = inject(ScopeService);
+  /** The scheme in the client's scope chip (a request header in the real API). Looked up when needed: ScopeService itself reads schemes through this gateway's data sources. */
+  private readonly injector = inject(Injector);
   private readonly store = inject(AccessStore);
   private readonly notices = inject(PolicyNotices);
   private readonly respond = mockResponder();
@@ -112,7 +113,7 @@ export class MockGateway {
       actingAs: imp ? { identityId: s.identity.id, name: s.identity.name } : undefined,
       role: this.auth.assignment().role,
       organisationId: s.organisation?.id ?? null,
-      schemeId: spec.schemeId ?? this.scope.scopeId(),
+      schemeId: spec.schemeId ?? this.injector.get(ScopeService).scopeId(),
       action: spec.action,
       resource: spec.resource,
       resourceId: spec.resourceId,

@@ -2,7 +2,12 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { catchError, map, of, switchMap } from 'rxjs';
-import { PersonDataSource, TimelineDataSource, TimelineEvent } from '../../domain';
+import { Person, PersonDataSource, RelationshipView, TimelineDataSource, TimelineEvent, UnitDataSource } from '../../domain';
+import { IonIcon } from '@ionic/angular/standalone';
+import { ScopeService } from '../../core/scope/scope.service';
+import { SessionService } from '../../core/session/session.service';
+import { DrawerService } from '../../ui/drawer/drawer.service';
+import { editPersonForm, endRelationshipForm, linkPersonForm } from './person-forms';
 import { loadable } from '../../core/data/loadable';
 import { formatRand } from '../../ui/format/money';
 import { KeyFact, RecordHeader } from '../../ui/record/record-header';
@@ -19,7 +24,7 @@ import { PersonRelationships } from './person-relationships';
  */
 @Component({
   selector: 'app-person-page',
-  imports: [RecordHeader, PersonRelationships, Timeline, LogNote, EmptyState, ErrorState, Skeleton],
+  imports: [RecordHeader, PersonRelationships, Timeline, LogNote, EmptyState, ErrorState, Skeleton, IonIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (summary.loading()) {
@@ -35,12 +40,19 @@ import { PersonRelationships } from './person-relationships';
         [title]="p.person.displayName"
         [subtitle]="p.person.phone + ' · ' + p.person.email"
         [facts]="facts()"
-      />
+      >
+        @if (canManage()) {
+          <ng-container recordActions>
+            <button type="button" class="btn btn-secondary" (click)="edit(p.person)"><ion-icon name="create-outline" aria-hidden="true" /> Edit details</button>
+            <button type="button" class="btn btn-secondary" (click)="link(p.person)"><ion-icon name="link-outline" aria-hidden="true" /> Add a role</button>
+          </ng-container>
+        }
+      </ui-record-header>
       <div class="grid">
         <div class="main">
           <section class="surface panel">
             <h2 class="section-title">Roles & accounts</h2>
-            <app-person-relationships [person]="p" />
+            <app-person-relationships [person]="p" [canManage]="canManage()" (end)="endRole(p.person, $event)" />
           </section>
           <section class="surface panel">
             <h2 class="section-title">Contact preferences</h2>
@@ -84,6 +96,24 @@ export class PersonPage {
   private readonly route = inject(ActivatedRoute);
   private readonly people = inject(PersonDataSource);
   private readonly timelineData = inject(TimelineDataSource);
+  private readonly units = inject(UnitDataSource);
+  private readonly drawer = inject(DrawerService);
+  private readonly session = inject(SessionService);
+  private readonly scope = inject(ScopeService);
+
+  protected readonly canManage = computed(() => this.session.can('People.Manage') && !this.session.readOnly());
+
+  protected edit(p: Person): void {
+    editPersonForm(this.drawer, this.people, p);
+  }
+
+  protected link(p: Person): void {
+    linkPersonForm(this.drawer, this.people, this.units, this.scope.accessible(), p);
+  }
+
+  protected endRole(p: Person, r: RelationshipView): void {
+    endRelationshipForm(this.drawer, this.people, p, r);
+  }
 
   private readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('personId')!)), {
     initialValue: this.route.snapshot.paramMap.get('personId')!,

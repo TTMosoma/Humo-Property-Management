@@ -19,7 +19,8 @@ export type SensitiveAction =
   | 'export-data'
   | 'change-security'
   | 'impersonate-act'
-  | 'change-subscription';
+  | 'change-subscription'
+  | 'change-customer-status';
 
 export const SENSITIVE_ACTION_LABELS: Record<SensitiveAction, string> = {
   'release-payment': 'Release a supplier payment',
@@ -31,6 +32,7 @@ export const SENSITIVE_ACTION_LABELS: Record<SensitiveAction, string> = {
   'change-security': 'Change security settings',
   'impersonate-act': 'Act as a customer user',
   'change-subscription': 'Change a customer’s subscription',
+  'change-customer-status': 'Suspend or archive a customer',
 };
 
 /** Amounts at or above this need step-up when approved (prototype assumption). */

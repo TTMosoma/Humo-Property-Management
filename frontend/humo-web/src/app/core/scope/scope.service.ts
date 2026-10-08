@@ -49,7 +49,10 @@ export class ScopeService {
    * assignment determines what they can see." Covering for a colleague is an
    * extra (temporary) assignment, not a wider role.
    */
-  readonly accessible = computed<Scheme[]>(() => {
+  readonly accessible = computed<Scheme[]>(() => this.inScope().filter((s) => s.status !== 'archived'));
+
+  /** Every scheme the assignment covers, archived ones included (the schemes list's "Archived" view). */
+  readonly inScope = computed<Scheme[]>(() => {
     const m = this.session.assignment();
     if (isHumoRole(m.role)) return [];
     const inAgency = this.allSchemes().filter((s) => s.organisationId === m.scope.organisationId);

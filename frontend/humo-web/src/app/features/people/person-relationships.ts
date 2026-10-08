@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { PersonSummary } from '../../domain';
+import { PersonSummary, RelationshipView } from '../../domain';
 import { RandPipe, formatDate } from '../../ui/format/money';
 import { StatusPill } from '../../ui/status-pill/status-pill';
 import { accountStatus, links } from '../accounts/account-view';
@@ -41,6 +41,11 @@ import { accountStatus, links } from '../accounts/account-view';
               <ui-status-pill [label]="status(a).label" [tone]="status(a).tone" />
             </div>
           }
+          @if (ended(r)) {
+            <span class="ended">Ended {{ formatDate(r.relationship.until!) }}</span>
+          } @else if (canManage()) {
+            <button type="button" class="btn btn-ghost btn-sm" (click)="end.emit(r)" [attr.aria-label]="'End this role'">End</button>
+          }
         </li>
       }
     </ul>
@@ -62,11 +67,20 @@ import { accountStatus, links } from '../accounts/account-view';
     .bal { display: flex; flex: none; flex-direction: column; align-items: flex-end; gap: 4px; }
     .bal .money { font-weight: var(--fw-semibold); }
     .money.arrears { color: var(--c-warning); }
+    .ended { flex: none; font-size: var(--fs-xs); color: var(--c-text-faint); }
   `,
 })
 export class PersonRelationships {
   readonly person = input.required<PersonSummary>();
   readonly navigated = output<void>();
+  /** Shows "End" on roles still in force (People.Manage). */
+  readonly canManage = input(false);
+  readonly end = output<RelationshipView>();
+
+  /** Past its last day: kept as history. */
+  protected ended(r: RelationshipView): boolean {
+    return !!r.relationship.until && new Date(r.relationship.until) < new Date(new Date().toDateString());
+  }
   protected readonly links = links;
   protected readonly formatDate = formatDate;
   protected readonly status = accountStatus;

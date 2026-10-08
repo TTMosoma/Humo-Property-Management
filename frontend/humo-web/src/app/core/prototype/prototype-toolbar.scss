@@ -255,3 +255,6 @@
 .reset {
   margin-top: var(--s-3);
 }
+
+.saved { display: block; margin-top: 2px; font-size: var(--fs-2xs); color: var(--c-text-faint); }
+.sim-actions { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-bottom: var(--s-3); }

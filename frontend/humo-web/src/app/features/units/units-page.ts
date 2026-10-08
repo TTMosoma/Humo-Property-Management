@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { IonIcon } from '@ionic/angular/standalone';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, map, of, switchMap } from 'rxjs';
@@ -6,6 +7,8 @@ import { Scheme, UnitDataSource, UnitSummary } from '../../domain';
 import { loadable } from '../../core/data/loadable';
 import { ScopeNotice } from '../../core/scope/scope-notice';
 import { ScopeService } from '../../core/scope/scope.service';
+import { newUnitForm } from '../schemes/scheme-forms';
+import { SessionService } from '../../core/session/session.service';
 import { CellDef, ColumnDef, DataTable } from '../../ui/data-table/data-table';
 import { FilterBar, FilterDef } from '../../ui/data-table/filter-bar';
 import { urlState } from '../../ui/data-table/url-state';
@@ -30,7 +33,7 @@ const PAGE = 50;
  */
 @Component({
   selector: 'app-units-page',
-  imports: [PageHeader, ScopeNotice, ViewTabs, FilterBar, DataTable, CellDef, StatusPill, EmptyState, ErrorState, Skeleton, RandPipe],
+  imports: [PageHeader, ScopeNotice, ViewTabs, FilterBar, DataTable, CellDef, StatusPill, EmptyState, ErrorState, Skeleton, RandPipe, IonIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './units-page.html',
   styleUrl: './units-page.scss',
@@ -41,6 +44,18 @@ export class UnitsPage {
   private readonly data = inject(UnitDataSource);
   private readonly drawer = inject(DrawerService);
   protected readonly scope = inject(ScopeService);
+  private readonly sessionService = inject(SessionService);
+
+  /** In a scheme's Units tab: add units (not to a closed or archived scheme). */
+  protected readonly canAddUnit = computed(() => {
+    const s = this.scope.findScheme(this.fixedScheme()?.id);
+    return !!s && this.sessionService.can('Units.Manage') && !this.sessionService.readOnly() && s.status !== 'closed' && s.status !== 'archived';
+  });
+
+  protected addUnit(): void {
+    const s = this.scope.findScheme(this.fixedScheme()?.id);
+    if (s) newUnitForm(this.drawer, this.data, s, this.router);
+  }
 
   /** Set when shown as a scheme's tab. */
   protected readonly fixedScheme = toSignal(this.route.data.pipe(map((d) => d['scheme'] as Scheme | undefined)), {

@@ -23,11 +23,16 @@ import { Logo } from '../../ui/brand/logo';
       <section class="card">
         <ui-logo variant="wordmark" [height]="30" />
         <span class="ok" aria-hidden="true"><ion-icon name="checkmark-outline" /></span>
-        <h1>You’ve signed out of Humo{{ name() ? ', ' + name() : '' }}</h1>
-        <p class="lede">
-          Your Humo session has ended on this device — in {{ product().name }} and every other Humo product.
-          Anyone using this device next will need to sign in again.
-        </p>
+        @if (session.blocked(); as why) {
+          <h1>Your access is paused</h1>
+          <p class="lede">{{ blockedText[why] }}</p>
+        } @else {
+          <h1>You’ve signed out of Humo{{ name() ? ', ' + name() : '' }}</h1>
+          <p class="lede">
+            Your Humo session has ended on this device — in {{ product().name }} and every other Humo product.
+            Anyone using this device next will need to sign in again.
+          </p>
+        }
 
         @if (signingIn()) {
           <div class="waiting" role="status"><span class="spinner" aria-hidden="true"></span> Waiting for your passkey…</div>
@@ -97,6 +102,11 @@ export class SignedOutPage {
   protected readonly product = computed(() => HUMO_PRODUCTS[(this.params()?.product as HumoProductId) ?? 'property-management'] ?? HUMO_PRODUCTS['property-management']);
   protected readonly name = computed(() => this.params()?.name ?? '');
   protected readonly signingIn = signal(false);
+  protected readonly blockedText = {
+    'organisation-suspended': 'Your organisation’s access to Humo Property Management is suspended. Nothing has been deleted. Your agency’s administrator can ask Humo to reactivate it.',
+    'identity-suspended': 'Your Humo sign-in is suspended. Ask your agency administrator or Humo support.',
+    'identity-deactivated': 'This Humo sign-in has been closed. Ask your agency administrator for a new invitation if you still need access.',
+  } as const;
 
   protected rolesOf(p: Identity): string {
     return activeAssignments(p).map((x) => ROLE_LABELS[x.role]).join(' · ');

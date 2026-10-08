@@ -1,4 +1,5 @@
 import { Injectable, inject } from '@angular/core';
+import { simulationStorage } from '../simulation/simulation-storage';
 import {
   BatchView,
   DELEGATED_LIMIT,
@@ -34,22 +35,34 @@ const PAYMENT_APPROVERS: Role[] = ['agency-admin', 'finance', 'trustee'];
  * Shares MockDb's work items and change stream, so Approvals, Tasks, badges
  * and job pages always agree.
  */
+/** DEVELOPMENT / SIMULATION ONLY: the shape saved to localStorage. */
+interface MaintenanceSnapshot {
+  suppliers: Supplier[];
+  jobs: Job[];
+  invoices: Invoice[];
+  batches: PaymentBatch[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class MaintenanceStore {
   private readonly db = inject(MockDb);
 
-  readonly suppliers: Supplier[];
+  suppliers: Supplier[];
   jobs: Job[];
   invoices: Invoice[];
   batches: PaymentBatch[];
 
   constructor() {
-    const seed = seedMaintenance(this.db.units);
+    const seed = simulationStorage.load<MaintenanceSnapshot>('maintenance') ?? seedMaintenance(this.db.units);
     this.suppliers = seed.suppliers;
     this.jobs = seed.jobs;
     this.invoices = seed.invoices;
     this.batches = seed.batches;
     this.db.workHooks.push((before, after) => this.onDecision(before, after));
+    // Every maintenance change touches the portfolio database; save alongside it (dev only).
+    this.db.changes$.subscribe(() =>
+      simulationStorage.save('maintenance', (): MaintenanceSnapshot => ({ suppliers: this.suppliers, jobs: this.jobs, invoices: this.invoices, batches: this.batches })),
+    );
   }
 
   // =================================================================== Reads
@@ -91,7 +104,8 @@ export class MaintenanceStore {
     return {
       ...this.summary(job),
       suppliers,
-      candidates: this.suppliers.filter((s) => s.trades.includes(job.category) && s.schemeIds.includes(job.schemeId)),
+      // Archived suppliers aren't offered for new work.
+      candidates: this.suppliers.filter((s) => s.status !== 'archived' && s.trades.includes(job.category) && s.schemeIds.includes(job.schemeId)),
       invoice: invoice ? this.invoiceView(invoice) : undefined,
       batch: invoice?.batchId ? this.batches.find((b) => b.id === invoice.batchId) : undefined,
       approvalItem: job.approval?.workItemId ? this.db.workItems.find((w) => w.id === job.approval!.workItemId) : undefined,
@@ -222,6 +236,17 @@ export class MaintenanceStore {
   }
 
   /** Find or start the agency's supplier relationship with a Humo Contractor party. */
+  /** A supplier the agency vets itself: every vetting document still to come. */
+  addSupplier(s: Supplier): void {
+    this.suppliers = [...this.suppliers, s];
+    this.db.touch();
+  }
+
+  changeSupplier(id: string, apply: (s: Supplier) => Supplier): void {
+    this.suppliers = this.suppliers.map((s) => (s.id === id ? { ...apply(s), version: s.version + 1 } : s));
+    this.db.touch();
+  }
+
   linkParty(input: { partyId: string; name: string; trades: Supplier['trades']; schemeId: string }, contact: { name: string; phone: string; email: string }): string {
     const existing = this.suppliers.find((s) => s.partyId === input.partyId);
     if (existing) {
@@ -230,6 +255,7 @@ export class MaintenanceStore {
     }
     const soon = (d: number) => new Date(Date.now() + d * 86_400_000).toISOString();
     const supplier: Supplier = {
+      version: 1,
       id: `sup-${input.partyId.replace(/^party-/, '')}`,
       partyId: input.partyId,
       name: input.name,

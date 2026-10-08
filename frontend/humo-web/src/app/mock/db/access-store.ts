@@ -1,4 +1,5 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, effect, signal, untracked } from '@angular/core';
+import { simulationStorage } from '../simulation/simulation-storage';
 import {
   AuditEvent,
   Identity,
@@ -57,13 +58,35 @@ function securityFor(identity: Identity): SecurityProfile {
  * In production these live behind the .NET API (identity, authorisation and
  * an append-only audit store).
  */
+/** DEVELOPMENT / SIMULATION ONLY: the shape saved to localStorage. */
+interface AccessSnapshot {
+  identities: Identity[];
+  security: Record<string, SecurityProfile>;
+  audit: AuditEvent[];
+  seq: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AccessStore {
-  readonly identities = signal<Identity[]>(structuredClone(PERSONAS));
-  readonly security = signal<Record<string, SecurityProfile>>(Object.fromEntries(PERSONAS.map((p) => [p.id, securityFor(p)])));
-  readonly audit = signal<AuditEvent[]>(seedAudit());
+  private readonly saved = simulationStorage.load<AccessSnapshot>('access');
+  readonly identities = signal<Identity[]>(this.saved?.identities ?? structuredClone(PERSONAS));
+  readonly security = signal<Record<string, SecurityProfile>>(this.saved?.security ?? Object.fromEntries(PERSONAS.map((p) => [p.id, securityFor(p)])));
+  readonly audit = signal<AuditEvent[]>(this.saved?.audit ?? seedAudit());
 
-  private seq = 1;
+  private seq = this.saved?.seq ?? 1;
+
+  constructor() {
+    // DEVELOPMENT / SIMULATION ONLY: keep identities, credentials and the audit log across refreshes.
+    effect(() => {
+      const snapshot: AccessSnapshot = { identities: this.identities(), security: this.security(), audit: this.audit(), seq: this.seq };
+      untracked(() => simulationStorage.save('access', () => ({ ...snapshot, seq: this.seq })));
+    });
+  }
+
+  /** A new id that can't collide with one saved before a refresh. */
+  nextId(prefix: string): string {
+    return `${prefix}-${this.seq++}`;
+  }
 
   identity(id: string): Identity | undefined {
     return this.identities().find((i) => i.id === id);
@@ -71,7 +94,7 @@ export class AccessStore {
 
   assign(identityId: string, input: NewAssignment, by: string): RoleAssignment {
     const at = new Date().toISOString();
-    const assignment: RoleAssignment = { version: 1, ...input, id: `m-new-${this.seq++}`, status: 'active', grantedBy: by, grantedAt: at };
+    const assignment: RoleAssignment = { version: 1, ...input, id: this.nextId('m-new'), status: 'active', grantedBy: by, grantedAt: at };
     const org = input.scope.organisationId;
     this.identities.update((all) =>
       all.map((i) => {
@@ -101,12 +124,37 @@ export class AccessStore {
     return ended;
   }
 
+  addIdentity(identity: Identity): void {
+    this.identities.update((all) => [...all, identity]);
+    this.security.update((all) => ({ ...all, [identity.id]: securityFor(identity) }));
+  }
+
+  changeIdentity(id: string, apply: (i: Identity) => Identity): void {
+    this.identities.update((all) => all.map((i) => (i.id === id ? { ...apply(i), version: i.version + 1 } : i)));
+  }
+
+  /**
+   * Suspends, reactivates or ends someone's membership of an organisation.
+   * Ending it also ends every role they hold there (kept as history).
+   */
+  setMembership(identityId: string, organisationId: string, status: 'active' | 'suspended' | 'ended', by: string): void {
+    const at = new Date().toISOString();
+    this.changeIdentity(identityId, (i) => ({
+      ...i,
+      memberships: i.memberships.map((m) => (m.organisationId === organisationId ? { ...m, status, endedAt: status === 'ended' ? at : undefined } : m)),
+      assignments:
+        status === 'ended'
+          ? i.assignments.map((a) => (a.scope.organisationId === organisationId && a.status === 'active' ? { ...a, version: a.version + 1, status: 'ended' as const, endedBy: by, endedAt: at } : a))
+          : i.assignments,
+    }));
+  }
+
   updateSecurity(identityId: string, change: (p: SecurityProfile) => SecurityProfile): void {
     this.security.update((all) => ({ ...all, [identityId]: change(all[identityId]) }));
   }
 
   record(event: Omit<AuditEvent, 'id' | 'at'>): AuditEvent {
-    const full: AuditEvent = { ...event, id: `ae-live-${this.seq++}`, at: new Date().toISOString() };
+    const full: AuditEvent = { ...event, id: this.nextId('ae-live'), at: new Date().toISOString() };
     this.audit.update((all) => [full, ...all]);
     return full;
   }

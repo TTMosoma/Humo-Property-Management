@@ -142,6 +142,7 @@ export function seedPortfolio(): PortfolioSeed {
     const id = demo?.id ?? `per-${persons.size + 1}`;
     const emailName = `${first}.${last}`.toLowerCase().replace(/[^a-z.]/g, '');
     const person: Person = {
+      version: 1,
       id,
       firstName: first,
       lastName: last,
@@ -264,6 +265,7 @@ function buildUnits(scheme: Scheme, health: SchemeHealth, r: () => number): Unit
       monthlyLevy: levy,
       occupancy,
       parkingBays: isHoa ? [] : [`P${pad3(n)}`],
+      version: 1,
     } satisfies Unit;
   });
 }

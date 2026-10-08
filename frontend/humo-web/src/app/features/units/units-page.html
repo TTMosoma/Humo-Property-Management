@@ -1,6 +1,10 @@
 @if (!fixedScheme()) {
   <ui-page-header eyebrow="Portfolio" title="Units" subtitle="Find any unit — try “KC 42” — and see who owns it, who lives there and whether the account is in order." />
   <app-scope-notice />
+} @else if (canAddUnit()) {
+  <div class="add-bar">
+    <button type="button" class="btn btn-secondary btn-sm" (click)="addUnit()"><ion-icon name="add-outline" aria-hidden="true" /> Add unit</button>
+  </div>
 }
 
 <ui-view-tabs label="Unit views" [tabs]="tabs()" [active]="state().view ?? 'all'" (activeChange)="patch({ view: $event })" />
