@@ -5,6 +5,25 @@
 }
 
 <form class="form" (submit)="$event.preventDefault(); submit()" novalidate>
+  @if (capture()) {
+  <!-- Photos -->
+  <section class="block" [class.capture]="capture()">
+    <h2 class="q">@if (capture()) { Start with a photo } @else { Photos <span class="opt">(they help suppliers quote faster)</span> }</h2>
+    <div class="photos">
+      @for (p of photos(); track p) {
+        <ui-photo-tile [caption]="p" [seed]="title()" />
+      }
+      <label class="add-photo">
+        <input type="file" accept="image/*" capture="environment" multiple class="visually-hidden" (change)="takePhotos($event)" />
+        <ion-icon name="camera-outline" aria-hidden="true" />
+        <span>{{ photos().length ? 'Add another' : 'Take or add a photo' }}</span>
+      </label>
+    </div>
+    <p class="hint">On a phone this opens the camera. Prototype: the photo’s name is kept, not the image.</p>
+  </section>
+
+  }
+
   @if (attempted() && errors().length) {
     <div class="errors" role="alert">
       <strong>Please check:</strong>
@@ -117,21 +136,24 @@
     }
   </section>
 
+  @if (!capture()) {
   <!-- Photos -->
-  <section class="block">
-    <h2 class="q">Photos <span class="opt">(they help suppliers quote faster)</span></h2>
+  <section class="block" [class.capture]="capture()">
+    <h2 class="q">@if (capture()) { Start with a photo } @else { Photos <span class="opt">(they help suppliers quote faster)</span> }</h2>
     <div class="photos">
       @for (p of photos(); track p) {
         <ui-photo-tile [caption]="p" [seed]="title()" />
       }
-      <button type="button" class="add-photo" (click)="addPhoto()">
+      <label class="add-photo">
+        <input type="file" accept="image/*" capture="environment" multiple class="visually-hidden" (change)="takePhotos($event)" />
         <ion-icon name="camera-outline" aria-hidden="true" />
-        <span>Add photo</span>
-      </button>
+        <span>{{ photos().length ? 'Add another' : 'Take or add a photo' }}</span>
+      </label>
     </div>
-    <p class="hint">Prototype: adding a photo creates a placeholder.</p>
+    <p class="hint">On a phone this opens the camera. Prototype: the photo’s name is kept, not the image.</p>
   </section>
 
+  }
   <div class="submit">
     <button type="button" class="btn btn-ghost" (click)="cancel()">Cancel</button>
     <button type="submit" class="btn btn-primary" [disabled]="busy()">{{ mode() === 'resident' ? 'Send to managing agent' : 'Log request' }}</button>

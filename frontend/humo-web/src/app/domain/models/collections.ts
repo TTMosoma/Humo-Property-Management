@@ -36,8 +36,6 @@ export const COLLECTION_STAGE_LABELS: Record<CollectionStage, string> = {
   disputed: 'Disputed',
 };
 
-/** Days between steps before the next one is due (prototype rule; set in Settings › Billing later). */
-export const STEP_DAYS = 14;
 
 /** Letters that go to the owner. Each is a payment-notice document. */
 export type LetterKind = 'reminder' | 'final-demand' | 'letter-of-demand';
@@ -112,6 +110,8 @@ export interface CollectionView {
   /** For the letters: where to pay, and who is writing. */
   payTo: TrustAccount;
   agencyName: string;
+  /** Days between letters (Settings › Billing configuration). */
+  stepDays: number;
 }
 
 export function overdueOf(a: Ageing): number {

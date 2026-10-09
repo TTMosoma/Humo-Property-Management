@@ -1,4 +1,4 @@
-import { CollectionDataSource, CollectionView, LetterKind, STEP_DAYS } from '../../../domain';
+import { CollectionDataSource, CollectionView, LetterKind } from '../../../domain';
 import { DrawerService } from '../../../ui/drawer/drawer.service';
 import { formatRand } from '../../../ui/format/money';
 import { openForm } from '../../shared/form-drawer';
@@ -14,8 +14,8 @@ const eyebrow = (v: CollectionView) => `${v.account.accountNo} · Unit ${v.unit.
 
 export function sendLetterForm(drawer: DrawerService, data: CollectionDataSource, v: CollectionView, kind: LetterKind): void {
   const intro = {
-    reminder: `A friendly reminder that ${formatRand(v.overdueAmount)} is overdue, with how to pay. A final demand is due ${STEP_DAYS} days later if nothing is paid.`,
-    'final-demand': `Asks for ${formatRand(v.overdueAmount)} in full within ${STEP_DAYS} days and says a letter of demand may follow.`,
+    reminder: `A friendly reminder that ${formatRand(v.overdueAmount)} is overdue, with how to pay. A final demand is due ${v.stepDays} days later if nothing is paid.`,
+    'final-demand': `Asks for ${formatRand(v.overdueAmount)} in full within ${v.stepDays} days and says a letter of demand may follow.`,
     'letter-of-demand': `The trustees approved it. It demands ${formatRand(v.overdueAmount)} and says the account goes to the attorneys if it isn’t paid. Registered post is safest.`,
   }[kind];
   openForm(drawer, {

@@ -43,3 +43,7 @@ export * from './ports/finance-data-sources';
 export * from './models/library';
 export * from './models/compliance';
 export * from './ports/records-data-sources';
+export * from './models/settings';
+export * from './ports/settings-data-source';
+export * from './models/report';
+export * from './models/notice';

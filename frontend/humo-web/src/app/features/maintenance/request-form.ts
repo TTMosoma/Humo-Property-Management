@@ -126,9 +126,15 @@ export class RequestForm {
     if (this.reporterRole() === 'tenant' && u.tenant) this.reporterName.set(u.tenant.displayName);
   }
 
-  protected addPhoto(): void {
-    const n = this.photos().length + 1;
-    this.photos.update((p) => [...p, `Photo ${n}${this.category() ? ' — ' + this.category()!.toLowerCase() : ''}`]);
+  /** Field mode: "Report" on a phone opens this form photo-first (?capture=1). */
+  protected readonly capture = signal(this.route.snapshot.queryParamMap.get('capture') === '1');
+
+  /** The camera or the photo library. The prototype keeps each photo's name as its caption. */
+  protected takePhotos(e: Event): void {
+    const files = [...((e.target as HTMLInputElement).files ?? [])];
+    const start = this.photos().length;
+    this.photos.update((p) => [...p, ...files.map((f, i) => `Photo ${start + i + 1} — ${f.name.replace(/\.[^.]+$/, '')}`)]);
+    (e.target as HTMLInputElement).value = '';
   }
 
   protected submit(): void {

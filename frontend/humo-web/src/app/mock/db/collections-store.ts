@@ -10,7 +10,6 @@ import {
   FieldErrors,
   LetterKind,
   NextAction,
-  STEP_DAYS,
   WorkItem,
   activeAssignments,
   daysInArrears,
@@ -22,7 +21,8 @@ import { personName } from '../fixtures/staff';
 import { simulationStorage } from '../simulation/simulation-storage';
 import { AccessStore } from './access-store';
 import { DocumentStore } from './document-store';
-import { MockDb, trustAccountFor } from './mock-db';
+import { MockDb } from './mock-db';
+import { SettingsStore } from './settings-store';
 import { OrganisationStore } from './organisation-store';
 import { PlatformStore } from './platform-store';
 
@@ -64,6 +64,7 @@ const NEXT_LETTER: Partial<Record<CollectionStage, LetterKind>> = {
 @Injectable({ providedIn: 'root' })
 export class CollectionsStore {
   private readonly db = inject(MockDb);
+  private readonly settings = inject(SettingsStore);
   private readonly access = inject(AccessStore);
   private readonly docs = inject(DocumentStore);
   private readonly platform = inject(PlatformStore);
@@ -114,7 +115,8 @@ export class CollectionsStore {
       account: a,
       unit,
       scheme,
-      payTo: trustAccountFor(scheme),
+      payTo: this.db.trustAccount(scheme).account,
+      stepDays: this.settings.billing(scheme.organisationId).stepDays,
       agencyName: this.orgs.get(scheme.organisationId)?.name ?? '',
       holder: this.db.persons.get(a.holderPersonId)!,
       daysInArrears: daysInArrears(a.ageing),
@@ -129,6 +131,7 @@ export class CollectionsStore {
   private next(c: CollectionCase, a: Account): NextAction | undefined {
     const last = c.steps[0]?.at ?? new Date().toISOString();
     const due = (label: string, at: string): NextAction => ({ label, dueAt: at, overdue: new Date(at).getTime() < Date.now() });
+    const STEP_DAYS = this.settings.billing(this.db.scheme(c.schemeId).organisationId).stepDays;
     switch (c.stage) {
       case 'not-started': {
         // In arrears since the last billing run: remind today.

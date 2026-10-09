@@ -14,6 +14,7 @@ import {
   Scheme,
   SchemeDataSource,
   SchemeHealth,
+  SettingsDataSource,
   WORK_TYPE_LABELS,
   WorkItem,
   coversAllSchemes,
@@ -58,6 +59,8 @@ interface HealthRow {
   reasons: string[];
 }
 
+const ord = (n: number) => `${n}${n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th'}`;
+
 const URGENCY_GROUPS: { id: 'overdue' | 'today' | 'week'; label: string }[] = [
   { id: 'overdue', label: 'Overdue' },
   { id: 'today', label: 'Due today' },
@@ -100,6 +103,7 @@ const MAINT_FLOW: { label: string; stages: JobStage[] }[] = [
 export class DashboardPage {
   private readonly attention = inject(AttentionService);
   private readonly router = inject(Router);
+  private readonly settings = toSignal(inject(SettingsDataSource).agency().pipe(catchError(() => of(null))), { initialValue: null });
   private readonly schemesDs = inject(SchemeDataSource);
   private readonly jobsDs = inject(JobDataSource);
   private readonly payablesDs = inject(PayablesDataSource);
@@ -215,10 +219,10 @@ export class DashboardPage {
   protected readonly financeFlow = computed<FlowStep[]>(() => {
     const h = this.health();
     return [
-      { label: 'Billing', count: null, note: 'Next run 25th', route: '/finance/billing' },
+      { label: 'Billing', count: null, note: `Runs on the ${ord(this.settings()?.billing.billingDay ?? 25)}`, route: '/finance/billing' },
       { label: 'Payments', count: this.attention.counts().receipts, note: 'to allocate', route: '/finance/receipts' },
       { label: 'Allocation', count: null, note: 'matched daily', route: '/finance/receipts' },
-      { label: 'Statements', count: null, note: 'sent on the 1st', route: '/finance/billing' },
+      { label: 'Statements', count: null, note: `due by the ${ord(this.settings()?.billing.dueDay ?? 7)}`, route: '/finance/billing' },
       { label: 'Credit control', count: h.reduce((n, x) => n + x.accounts90Plus, 0), note: '90+ days', route: '/finance/credit-control' },
     ];
   });

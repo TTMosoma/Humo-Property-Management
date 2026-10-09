@@ -7,14 +7,19 @@ import {
   ComplianceItem,
   ComplianceProfile,
   DocumentAction,
+  FieldErrors,
   LibraryDataSource,
   LibraryDocument,
   NewDocument,
   NewManualCompliance,
+  NewNotice,
+  NoticeDataSource,
+  NoticeView,
   RecordKind,
 } from '../../domain';
 import { ComplianceStore } from '../db/compliance-store';
 import { LibraryStore } from '../db/library-store';
+import { NoticeStore } from '../db/notice-store';
 import { MockDb } from '../db/mock-db';
 import { mockResponder } from '../mock-latency';
 import { MockAuthSession } from '../server/mock-auth-session';
@@ -34,16 +39,42 @@ export class InMemoryLibraryDataSource extends LibraryDataSource {
   private readonly gateway = inject(MockGateway);
   private readonly respond = mockResponder();
 
+  /** The API filters by visibility: trustees see what's shared with trustees and owners; staff see everything. */
+  private visible(docs: LibraryDocument[]): LibraryDocument[] {
+    const role = this.auth.assignment()?.role;
+    if (role === 'trustee') return docs.filter((d) => d.visibility === 'trustees' || d.visibility === 'owners');
+    if (role === 'owner' || role === 'tenant') return [];
+    return docs;
+  }
+
   list(schemeIds: string[]): Observable<LibraryDocument[]> {
-    return this.db.changes$.pipe(switchMap(() => this.respond(this.store.inScope(schemeIds))));
+    return this.db.changes$.pipe(switchMap(() => this.respond(this.visible(this.store.inScope(schemeIds)))));
   }
 
   forRecord(kind: RecordKind, id: string): Observable<LibraryDocument[]> {
-    return this.db.changes$.pipe(switchMap(() => this.respond(this.store.forRecord(kind, id))));
+    return this.db.changes$.pipe(switchMap(() => this.respond(this.visible(this.store.forRecord(kind, id)))));
+  }
+
+  /** Owners: their scheme's owner documents and their unit's; tenants: their unit's only. Archived ones aren't shown. */
+  mine(): Observable<LibraryDocument[]> {
+    return this.db.changes$.pipe(
+      switchMap(() => {
+        const a = this.auth.assignment();
+        const schemeId = a?.scope.schemeIds[0];
+        const unitId = a?.scope.unitId;
+        const docs = this.store.documents.filter(
+          (d) =>
+            !d.archived &&
+            ((a?.role === 'owner' && d.visibility === 'owners' && !!schemeId && d.schemeIds.includes(schemeId)) ||
+              (d.visibility === 'unit' && !!unitId && d.links.some((l) => l.kind === 'unit' && l.id === unitId))),
+        );
+        return this.respond(docs.sort((x, y) => y.uploadedAt.localeCompare(x.uploadedAt)));
+      }),
+    );
   }
 
   get(id: string): Observable<LibraryDocument | undefined> {
-    return this.db.changes$.pipe(switchMap(() => this.respond(this.store.get(id))));
+    return this.db.changes$.pipe(switchMap(() => this.respond(this.visible([this.store.get(id)].filter((d): d is LibraryDocument => !!d))[0])));
   }
 
   upload(input: NewDocument, file?: File): Observable<string> {
@@ -136,5 +167,67 @@ export class InMemoryComplianceDataSource extends ComplianceDataSource {
       },
       () => this.store.addManual(input, this.auth.current.identity.name),
     );
+  }
+}
+
+@Injectable()
+export class InMemoryNoticeDataSource extends NoticeDataSource {
+  private readonly store = inject(NoticeStore);
+  private readonly db = inject(MockDb);
+  private readonly auth = inject(MockAuthSession);
+  private readonly gateway = inject(MockGateway);
+  private readonly respond = mockResponder();
+
+  /** Staff see every notice; trustees see the ones for residents, owners and trustees of their scheme (the API filters by scope). */
+  list(schemeIds: string[]): Observable<NoticeView[]> {
+    return this.db.changes$.pipe(switchMap(() => this.respond(this.store.inScope(schemeIds))));
+  }
+
+  mine(): Observable<NoticeView[]> {
+    return this.db.changes$.pipe(
+      switchMap(() => {
+        const a = this.auth.assignment();
+        const schemeId = a?.scope.schemeIds[0];
+        return this.respond(schemeId && (a.role === 'owner' || a.role === 'tenant') ? this.store.forResident(schemeId, a.role) : []);
+      }),
+    );
+  }
+
+  publish(input: NewNotice): Observable<string> {
+    return this.gateway.command(
+      {
+        action: `Published notice “${input.title.trim()}”`,
+        resource: 'Notice',
+        schemeId: input.schemeId,
+        permission: 'Messages.Reply',
+        feature: 'communications',
+        validate: () => this.store.check(input),
+      },
+      () => this.store.publish(input, this.auth.current.identity.name),
+    );
+  }
+
+  act(id: string, action: { type: 'pin' | 'unpin' } | { type: 'withdraw'; reason: string }, expectedVersion?: number): Observable<void> {
+    const n = this.store.notices.find((x) => x.id === id);
+    return this.gateway
+      .command(
+        {
+          action: `${action.type === 'withdraw' ? 'Withdrew' : action.type === 'pin' ? 'Pinned' : 'Unpinned'} notice “${n?.title ?? id}”`,
+          resource: 'Notice',
+          resourceId: n?.ref,
+          schemeId: n?.schemeId,
+          permission: 'Messages.Reply',
+          feature: 'communications',
+          version: { expected: expectedVersion, current: n?.version },
+          validate: (): FieldErrors | null => {
+            if (!n) return { id: 'No such notice.' };
+            if (action.type === 'withdraw' && n.withdrawn) return { id: 'Already withdrawn.' };
+            if (action.type === 'withdraw' && action.reason.trim().length < 3) return { reason: 'Say why, for the audit log.' };
+            return null;
+          },
+        },
+        () => this.store.act(id, action, this.auth.current.identity.name),
+      )
+      .pipe(map(() => undefined));
   }
 }

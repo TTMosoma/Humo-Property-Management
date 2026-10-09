@@ -28,6 +28,7 @@ import { LibraryStore } from './library-store';
 import { MaintenanceStore } from './maintenance-store';
 import { MockDb } from './mock-db';
 import { seeded } from './random';
+import { SettingsStore } from './settings-store';
 import { LIFT_SCHEMES } from './seed-library';
 
 /** DEVELOPMENT / SIMULATION ONLY: the shape saved to localStorage. */
@@ -70,6 +71,7 @@ export class ComplianceStore {
   private readonly library = inject(LibraryStore);
   private readonly governance = inject(GovernanceStore);
   private readonly maintenance = inject(MaintenanceStore);
+  private readonly settings = inject(SettingsStore);
 
   private profiles: ComplianceProfile[];
   private records: ComplianceRecord[];
@@ -162,7 +164,8 @@ export class ComplianceStore {
     const m = this.profile(schemeId).financialYearEnd;
     let end = new Date(now.getFullYear(), m, 0, 23, 59);
     if (end > now) end = new Date(now.getFullYear() - 1, m, 0, 23, 59);
-    const deadline = new Date(end.getFullYear(), end.getMonth() + 5, 0, 23, 59);
+    const months = this.settings.billing(this.db.scheme(schemeId).organisationId).agmMonths;
+    const deadline = new Date(end.getFullYear(), end.getMonth() + 1 + months, 0, 23, 59);
     return { end, deadline, period: `${end.getFullYear()}-${String(m).padStart(2, '0')}`, label: financialYearLabel(end.getFullYear(), m) };
   }
 
@@ -334,6 +337,19 @@ export class ComplianceStore {
       m.completed = { at, by, note: action.note.trim() };
       m.version++;
     }
+    this.commit();
+  }
+
+  checkProfile(p: ComplianceProfile): FieldErrors | null {
+    const e: FieldErrors = {};
+    if (!this.db.schemes.has(p.schemeId)) e['schemeId'] = 'No such scheme.';
+    if (!(Number.isInteger(p.financialYearEnd) && p.financialYearEnd >= 1 && p.financialYearEnd <= 12)) e['financialYearEnd'] = 'Choose the month the financial year ends.';
+    return Object.keys(e).length ? e : null;
+  }
+
+  /** The financial year-end and lifts: every year-based and lift item is worked out again from these. */
+  updateProfile(p: ComplianceProfile): void {
+    this.profiles = [...this.profiles.filter((x) => x.schemeId !== p.schemeId), { schemeId: p.schemeId, financialYearEnd: p.financialYearEnd, hasLifts: p.hasLifts }];
     this.commit();
   }
 

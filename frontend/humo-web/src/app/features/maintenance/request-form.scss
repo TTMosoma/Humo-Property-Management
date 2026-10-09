@@ -248,3 +248,20 @@
     }
   }
 }
+
+.add-photo {
+  cursor: pointer;
+}
+
+.block.capture {
+  padding: var(--s-4);
+  background: var(--c-primary-soft);
+  border-radius: var(--r-lg);
+
+  .add-photo {
+    width: 100%;
+    max-width: 320px;
+    height: 120px;
+    font-size: var(--fs-sm);
+  }
+}

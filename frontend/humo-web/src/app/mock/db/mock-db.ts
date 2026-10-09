@@ -42,6 +42,7 @@ interface PortfolioSnapshot {
   extraTx: [string, RawTransaction[]][];
   /** Statements issued by billing runs: "accountId|period" → the template version. */
   issued?: [string, DocumentTemplateRef][];
+  trust?: [string, { account: TrustAccount; verified: boolean }][];
 }
 
 function hasWord(text: string, word: string): boolean {
@@ -74,6 +75,8 @@ export class MockDb {
   private readonly ledgers = new Map<string, Ledger>();
   private readonly extraTx = new Map<string, RawTransaction[]>();
   private readonly issued = new Map<string, DocumentTemplateRef>();
+  /** Trust accounts the agency has changed in Settings › Agency (the rest are the seeded ones). */
+  private readonly trust = new Map<string, { account: TrustAccount; verified: boolean }>();
 
   receipts: Receipt[] = [];
   payerRules: PayerRule[] = [];
@@ -100,6 +103,7 @@ export class MockDb {
       this.workItems = saved.workItems;
       for (const [k, v] of saved.extraTx) this.extraTx.set(k, v);
       for (const [k, v] of saved.issued ?? []) this.issued.set(k, v);
+      for (const [k, v] of saved.trust ?? []) this.trust.set(k, v);
     } else {
       this.receipts = this.seedReceipts();
       this.syncReceiptWork();
@@ -126,6 +130,7 @@ export class MockDb {
       workItems: this.workItems,
       extraTx: entries(this.extraTx),
       issued: entries(this.issued),
+      trust: entries(this.trust),
     };
   }
 
@@ -144,6 +149,17 @@ export class MockDb {
 
   /** Relationships in force today (ended ones stay as history). */
   /** A scheme's board: trustees in office, with their portfolio (Chairperson, Treasurer, …). */
+  /** The scheme's trust account, as statements and letters show it. */
+  trustAccount(scheme: Scheme): { account: TrustAccount; verified: boolean } {
+    return this.trust.get(scheme.id) ?? { account: trustAccountFor(scheme), verified: true };
+  }
+
+  /** New bank details start unverified until the bank's confirmation letter is on file. */
+  setTrustAccount(schemeId: string, account: TrustAccount): void {
+    this.trust.set(schemeId, { account, verified: false });
+    this.touch();
+  }
+
   /** The schemes a person is linked to (owner, tenant or trustee). */
   schemesOfPerson(personId: string): string[] {
     return [...new Set((this.relsByPerson.get(personId) ?? []).map((r) => r.schemeId))];
@@ -263,7 +279,7 @@ export class MockDb {
       unit: this.unitById.get(account.unitId)!,
       scheme,
       holder: this.persons.get(account.holderPersonId)!,
-      payTo: trustAccountFor(scheme),
+      payTo: this.trustAccount(scheme).account,
       // Statements sent by a billing run record their template; the seeded history was issued with Standard v1.
       issuedWith: this.issued.get(`${accountId}|${period}`) ?? { templateId: 'levy-statement.standard', version: 1 },
     };

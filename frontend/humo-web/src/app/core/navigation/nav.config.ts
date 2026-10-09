@@ -98,7 +98,8 @@ export const NAV: NavSection[] = [
         label: 'Communications',
         icon: 'chatbubbles-outline',
         children: [
-          { id: 'sent', label: 'Sent', route: '/communications/sent', permission: 'Communications.View', keywords: 'announcements notices history' },
+          { id: 'notices', label: 'Notices', route: '/communications/notices', permission: 'Communications.View', keywords: 'announcements notices water outage residents portal' },
+          { id: 'sent', label: 'Sent', route: '/communications/sent', permission: 'Communications.View', keywords: 'history delivery' },
           { id: 'templates', label: 'Templates', route: '/communications/templates', permission: 'Messages.Reply' },
         ],
       },
@@ -135,7 +136,7 @@ export const NAV: NavSection[] = [
           { id: 'settings-roles', label: 'Roles & permissions', route: '/settings/roles', permission: 'Users.Manage', keywords: 'permission matrix entitlements plan' },
           { id: 'settings-audit', label: 'Audit log', route: '/settings/audit', permission: 'Audit.View', feature: 'audit-log', keywords: 'activity security impersonation history humo access' },
           { id: 'settings-notifications', label: 'Notifications', route: '/settings/notifications', permission: 'Notifications.Configure' },
-          { id: 'settings-billing', label: 'Billing configuration', route: '/settings/billing', permission: 'Billing.Run', keywords: 'interest rate levy rules bank accounts' },
+          { id: 'settings-billing', label: 'Billing configuration', route: '/settings/billing', permission: 'Billing.View', keywords: 'interest rate levy rules financial year-end lifts AGM deadline' },
           { id: 'settings-system', label: 'System', route: '/settings/system', permission: 'Platform.Config.Manage' },
         ],
       },

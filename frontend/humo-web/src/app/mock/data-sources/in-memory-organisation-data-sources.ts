@@ -15,6 +15,7 @@ import {
 } from '../../domain';
 import { NOTIFICATIONS } from '../fixtures/notifications';
 import { MockDb } from '../db/mock-db';
+import { ResidentNotifications } from './resident-notifications';
 import { OrganisationStore } from '../db/organisation-store';
 import { PlatformStore } from '../db/platform-store';
 import { AccessStore } from '../db/access-store';
@@ -154,10 +155,11 @@ export class InMemoryNotificationDataSource extends NotificationDataSource {
   private readonly respond = mockResponder();
   private readonly read = signal<Set<string>>(new Set());
   private readonly read$ = toObservable(this.read);
+  private readonly residents = inject(ResidentNotifications);
 
   /** The server filters by audience (role), scheme scope and, for residents, their unit. */
   list(): Observable<AppNotification[]> {
-    return combineLatest([this.auth.session$, this.read$]).pipe(
+    return combineLatest([this.auth.session$, this.read$, this.db.changes$]).pipe(
       switchMap(([s, read]) => {
         const a = s.assignments.find((x) => x.id === s.activeAssignmentId);
         if (!a) return of([]);
@@ -166,12 +168,11 @@ export class InMemoryNotificationDataSource extends NotificationDataSource {
             ? new Set([...this.db.schemes.values()].filter((x) => x.organisationId === a.scope.organisationId).map((x) => x.id))
             : new Set(a.scope.schemeIds);
         const unit = unitLabelOf(a.scope.unitId);
-        return this.respond(
-          NOTIFICATIONS.filter((n) => n.audience.includes(a.role))
-            .filter((n) => n.schemeId === null || schemes.has(n.schemeId))
-            .filter((n) => !n.unitLabel || n.unitLabel === unit)
-            .map((n) => (read.has(n.id) ? { ...n, read: true } : n)),
-        );
+        // Residents' own news is worked out from live records; the fixture keeps the staff and trustee examples.
+        const resident = a.role === 'owner' || a.role === 'tenant';
+        const fixtures = resident ? [] : NOTIFICATIONS.filter((n) => n.audience.includes(a.role)).filter((n) => n.schemeId === null || schemes.has(n.schemeId)).filter((n) => !n.unitLabel || n.unitLabel === unit);
+        const live = resident ? this.residents.for(a, s.identity.personId) : [];
+        return this.respond([...live, ...fixtures].sort((x, y) => y.at.localeCompare(x.at)).map((n) => (read.has(n.id) ? { ...n, read: true } : n)));
       }),
     );
   }

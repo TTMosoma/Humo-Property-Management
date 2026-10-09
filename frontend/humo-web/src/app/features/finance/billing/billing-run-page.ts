@@ -32,6 +32,7 @@ import { Skeleton } from '../../../ui/states/skeleton';
 import { Timeline } from '../../../ui/timeline/timeline';
 import { cancelRunForm, confirmStep, decideForm } from './billing-forms';
 import { BILLING_STAGE_TONE, BILLING_TRACKER, CHARGE_LABELS, billingStageLabel } from './billing-view';
+import { DesktopHint } from '../../../ui/states/desktop-hint';
 
 const EVENT_KIND: Record<BillingEvent['kind'], TimelineKind> = {
   stage: 'status',
@@ -50,7 +51,7 @@ type Detail = BillingRunSummary & { run: BillingRun };
  */
 @Component({
   selector: 'app-billing-run-page',
-  imports: [RecordHeader, StageTracker, DataTable, CellDef, Timeline, EmptyState, ErrorState, Skeleton, IonIcon, RouterLink, RandPipe],
+  imports: [DesktopHint, RecordHeader, StageTracker, DataTable, CellDef, Timeline, EmptyState, ErrorState, Skeleton, IonIcon, RouterLink, RandPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './billing-run-page.html',
   styleUrl: './billing-run-page.scss',

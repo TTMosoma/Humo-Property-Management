@@ -20,6 +20,7 @@ import { Skeleton } from '../../ui/states/skeleton';
 import { StatusPill } from '../../ui/status-pill/status-pill';
 import { addManualForm } from './compliance-forms';
 import { STATUS_RANK, STATUS_TONE, statusLabel, whenLabel } from './compliance-view';
+import { DesktopHint } from '../../ui/states/desktop-hint';
 
 interface MatrixRow {
   scheme: Scheme;
@@ -35,7 +36,7 @@ interface MatrixRow {
  */
 @Component({
   selector: 'app-compliance-page',
-  imports: [PageHeader, ScopeNotice, ViewTabs, DataTable, CellDef, StatusPill, EmptyState, ErrorState, Skeleton, IonIcon, RouterLink],
+  imports: [DesktopHint, PageHeader, ScopeNotice, ViewTabs, DataTable, CellDef, StatusPill, EmptyState, ErrorState, Skeleton, IonIcon, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (!fixedScheme()) {
@@ -69,6 +70,7 @@ interface MatrixRow {
       <ui-view-tabs label="Compliance views" [tabs]="tabs()" [active]="view()" (activeChange)="state.update((s) => ({ ...s, view: $event }))" />
 
       @if (view() === 'matrix') {
+        <ui-desktop-hint what="The compliance matrix" />
         <div class="surface matrix-wrap">
           <table class="matrix">
             <caption class="visually-hidden">Compliance by scheme and obligation</caption>

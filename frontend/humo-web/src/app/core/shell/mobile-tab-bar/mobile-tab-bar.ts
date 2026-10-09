@@ -79,22 +79,26 @@ export class MobileTabBar {
         more,
       ];
     }
+    // Field mode: staff who log jobs get "Report", which opens the request form photo-first.
+    const report: Tab = { id: 'report', label: 'Report', icon: 'camera-outline', route: '/maintenance/new?capture=1' };
+    const canReport = this.session.can('Maintenance.Log') && this.session.hasFeature('maintenance-basic') && role !== 'finance';
     if (role === 'operations') {
       return [
         { id: 'home', label: 'Home', icon: 'grid-outline', route: '/dashboard' },
         { id: 'jobs', label: 'Jobs', icon: 'construct-outline', route: '/maintenance', badge: 'jobs' },
+        ...(canReport ? [report] : []),
         { id: 'search', label: 'Search', icon: 'search-outline', route: null },
-        { id: 'suppliers', label: 'Suppliers', icon: 'people-outline', route: '/suppliers' },
         more,
       ];
     }
     if (role === 'supplier') {
       return [{ id: 'orders', label: 'Work orders', icon: 'hammer-outline', route: '/supplier' }, more];
     }
+    // Staff who log jobs trade Home (one tap away in More) for Report; search stays, as the top bar hides it on phones.
     return [
-      { id: 'home', label: 'Home', icon: 'grid-outline', route: '/dashboard' },
-      { id: 'tasks', label: 'Tasks', icon: 'checkmark-done-outline', route: '/tasks', badge: 'tasks' },
-      { id: 'approvals', label: 'Approvals', icon: 'shield-checkmark-outline', route: '/approvals', badge: 'approvals' },
+      canReport ? { id: 'tasks', label: 'Tasks', icon: 'checkmark-done-outline', route: '/tasks', badge: 'tasks' } : { id: 'home', label: 'Home', icon: 'grid-outline', route: '/dashboard' },
+      canReport ? { id: 'approvals', label: 'Approvals', icon: 'shield-checkmark-outline', route: '/approvals', badge: 'approvals' } : { id: 'tasks', label: 'Tasks', icon: 'checkmark-done-outline', route: '/tasks', badge: 'tasks' },
+      canReport ? report : { id: 'approvals', label: 'Approvals', icon: 'shield-checkmark-outline', route: '/approvals', badge: 'approvals' },
       { id: 'search', label: 'Search', icon: 'search-outline', route: null },
       more,
     ];
@@ -102,7 +106,12 @@ export class MobileTabBar {
 
   protected readonly selected = computed(() => {
     const path = this.nav.url().split(/[?#]/)[0];
-    return this.tabs().find((t) => t.route && (path === t.route || path.startsWith(t.route + '/')))?.id ?? 'more';
+    // The most specific match wins ("/maintenance/new" is Report, not Jobs).
+    const matches = this.tabs()
+      .map((t) => ({ t, route: t.route?.split('?')[0] ?? '' }))
+      .filter((x) => x.route && (path === x.route || path.startsWith(x.route + '/')))
+      .sort((a, b) => b.route.length - a.route.length);
+    return matches[0]?.t.id ?? 'more';
   });
 
   protected open(tab: Tab): void {

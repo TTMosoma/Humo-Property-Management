@@ -10,6 +10,9 @@ import {
   CollectionDataSource,
   ComplianceDataSource,
   LibraryDataSource,
+  SettingsDataSource,
+  ReportDataSource,
+  NoticeDataSource,
   ResolutionDataSource,
   PlatformTemplateDataSource,
   NotificationDataSource,
@@ -60,8 +63,10 @@ import { GovernanceStore } from './db/governance-store';
 import { InMemoryBillingDataSource, InMemoryCollectionDataSource } from './data-sources/in-memory-finance-data-sources';
 import { BillingStore } from './db/billing-store';
 import { CollectionsStore } from './db/collections-store';
-import { InMemoryComplianceDataSource, InMemoryLibraryDataSource } from './data-sources/in-memory-records-data-sources';
+import { InMemoryComplianceDataSource, InMemoryLibraryDataSource, InMemoryNoticeDataSource } from './data-sources/in-memory-records-data-sources';
 import { ComplianceStore } from './db/compliance-store';
+import { InMemorySettingsDataSource } from './data-sources/in-memory-settings-data-source';
+import { InMemoryReportDataSource } from './data-sources/in-memory-report-data-source';
 import { PrototypeControls } from '../core/prototype/prototype-controls';
 import { MaintenanceStore } from './db/maintenance-store';
 import { MockPrototypeControls } from './prototype/mock-prototype-controls';
@@ -102,6 +107,9 @@ export function provideMockData(): EnvironmentProviders {
     { provide: CollectionDataSource, useClass: InMemoryCollectionDataSource },
     { provide: LibraryDataSource, useClass: InMemoryLibraryDataSource },
     { provide: ComplianceDataSource, useClass: InMemoryComplianceDataSource },
+    { provide: SettingsDataSource, useClass: InMemorySettingsDataSource },
+    { provide: ReportDataSource, useClass: InMemoryReportDataSource },
+    { provide: NoticeDataSource, useClass: InMemoryNoticeDataSource },
     // Humo Contractor — a separate product's capabilities, consumed by Humo PM.
     { provide: ContractorNetwork, useClass: InMemoryContractorNetwork },
     { provide: ContractorPortal, useClass: InMemoryContractorPortal },

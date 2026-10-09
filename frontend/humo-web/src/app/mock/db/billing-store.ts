@@ -21,7 +21,8 @@ import {
 import { formatRand } from '../../ui/format/money';
 import { simulationStorage } from '../simulation/simulation-storage';
 import { DocumentStore } from './document-store';
-import { ARREARS_INTEREST_RATE, RawTransaction } from './ledger';
+import { RawTransaction } from './ledger';
+import { SettingsStore } from './settings-store';
 import { MockDb } from './mock-db';
 import { PlatformStore } from './platform-store';
 import { round2, seeded } from './random';
@@ -64,6 +65,7 @@ export class BillingStore {
   private readonly db = inject(MockDb);
   private readonly docs = inject(DocumentStore);
   private readonly platform = inject(PlatformStore);
+  private readonly settings = inject(SettingsStore);
 
   runs: BillingRun[];
   private seq: number;
@@ -207,6 +209,7 @@ export class BillingStore {
     const offset = monthOffset(input.period);
     const month = periodLabel(input.period, false);
     const r = seeded(`billing-${scheme.id}-${input.period}`);
+    const rate = this.settings.billing(scheme.organisationId).interestRate;
     const lines: BillingLine[] = [];
     const exceptions: BillingException[] = [];
     const units = this.db.units.filter((u) => u.schemeId === scheme.id).sort((a, b) => Number(a.number) - Number(b.number) || a.number.localeCompare(b.number));
@@ -229,7 +232,7 @@ export class BillingStore {
         charges.push({ kind: 'utility', description: `Water recovery — ${month} (${estimated ? 'estimated' : 'metered'})`, amount });
       }
       const overdue = account.ageing.d30 + account.ageing.d60 + account.ageing.d90 + account.ageing.d120;
-      if (overdue > 0) charges.push({ kind: 'interest', description: `Interest on arrears (${ARREARS_INTEREST_RATE * 100}% per month)`, amount: round2(overdue * ARREARS_INTEREST_RATE) });
+      if (overdue > 0 && rate > 0) charges.push({ kind: 'interest', description: `Interest on arrears (${rate}% per month)`, amount: round2((overdue * rate) / 100) });
 
       const line: BillingLine = {
         accountId: account.id,

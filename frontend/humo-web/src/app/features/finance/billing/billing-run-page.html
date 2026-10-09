@@ -13,6 +13,8 @@
   @let r = d.run;
   <ui-record-header [eyebrow]="r.ref + ' · Billing run'" [title]="d.scheme.name + ' — ' + period()" [subtitle]="d.scheme.unitCount + ' units · prepared by ' + r.createdBy" [status]="status()" [facts]="facts()" [chain]="chain()" />
 
+  <ui-desktop-hint what="Preparing, checking and posting a billing run" />
+
   @if (r.stage !== 'cancelled') {
     <div class="tracker surface">
       <ui-stage-tracker [stages]="stages" [current]="r.stage" [alert]="r.stage === 'preview' && open() > 0" label="Billing run progress" />
