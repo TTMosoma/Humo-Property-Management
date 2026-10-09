@@ -1,5 +1,5 @@
 import { Injectable, effect, inject, signal, untracked } from '@angular/core';
-import { DocumentTemplate, OrganisationDocumentSettings } from '../../domain';
+import { DocumentTemplate, DocumentTemplateRef, DocumentType, EntitlementSet, OrganisationDocumentSettings, templateAvailability } from '../../domain';
 import { simulationStorage } from '../simulation/simulation-storage';
 import { PlatformStore } from './platform-store';
 import { defaultDocumentSettings, seedCustomerDocuments, seedDocumentSettings, seedTemplates } from './seed-documents';
@@ -35,6 +35,15 @@ export class DocumentStore {
     const named = seedDocumentSettings();
     const others = seedCustomerDocuments(inject(PlatformStore).seeds(), [...named.map((s) => s.organisationId), 'acacia']);
     return { templates: [...seedTemplates(), ...others.templates], settings: [...named, ...others.settings] };
+  }
+
+  /** The template a document is issued with: the organisation's default if it may use it, else Humo's default for the type. */
+  issuingTemplate(organisationId: string, type: DocumentType, entitlements: EntitlementSet): DocumentTemplateRef {
+    const chosen = this.settingsFor(organisationId).defaults[type];
+    const t =
+      (chosen && this.templates().find((x) => x.id === chosen && templateAvailability(x, entitlements).state === 'available')) ||
+      this.templates().find((x) => x.documentType === type && x.isDefault)!;
+    return { templateId: t.id, version: t.currentVersion };
   }
 
   template(id: string): DocumentTemplate | undefined {

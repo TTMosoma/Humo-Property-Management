@@ -1,0 +1,152 @@
+@if (result.loading()) {
+  <ui-skeleton variant="tiles" [count]="4" />
+} @else if (result.failed()) {
+  <div class="surface"><ui-error-state title="We couldn’t load this account’s collection" (retry)="result.retry()" /></div>
+} @else if (result.value() === false) {
+  <div class="surface">
+    <ui-empty-state illustration="not-found" title="We couldn’t find that account">
+      <a class="btn btn-primary" routerLink="/finance/credit-control">Credit control</a>
+    </ui-empty-state>
+  </div>
+} @else {
+  @let v = view()!;
+  @let c = v.case;
+  <ui-record-header [eyebrow]="v.account.accountNo + ' · Credit control'" [title]="'Unit ' + v.unit.number + ' · ' + v.holder.displayName" [subtitle]="v.scheme.name" [status]="status()" [facts]="facts()" [chain]="chain()" />
+
+  <div class="tracker surface">
+    <ui-stage-tracker [stages]="stages" [current]="trackerStage()" [alert]="!!v.next?.overdue" label="Collection progress" />
+  </div>
+
+  <div class="grid">
+    <div class="main">
+      <!-- Next step -->
+      <section class="surface panel next">
+        @switch (c.stage) {
+          @case ('not-started') {
+            <h2 class="section-title">Next: send a reminder</h2>
+            <p>{{ v.overdueAmount | rand }} is overdue. A reminder is friendly: it shows what’s owed and how to pay, and offers an arrangement.</p>
+          }
+          @case ('reminder') {
+            <h2 class="section-title">Next: send a final demand</h2>
+            <p>Reminder sent {{ formatDate(v.lastStep?.at ?? '', true) }}. If nothing is paid by {{ formatDate(v.next!.dueAt, true) }}, a final demand follows.</p>
+          }
+          @case ('final-demand') {
+            @if (c.demandApproval?.status === 'pending') {
+              <h2 class="section-title">Waiting for the trustees</h2>
+              <p>A letter of demand is with the trustees in Approvals. Once they approve, you can send it.</p>
+            } @else if (c.demandApproval?.status === 'approved') {
+              <h2 class="section-title">Next: send the letter of demand</h2>
+              <p>Approved by {{ c.demandApproval!.decidedBy }} on {{ formatDate(c.demandApproval!.decidedAt ?? '', true) }}.</p>
+            } @else {
+              <h2 class="section-title">Next: ask the trustees to approve a letter of demand</h2>
+              <p>
+                @if (c.demandApproval?.status === 'rejected') {
+                  The trustees declined the last request ({{ c.demandApproval!.decidedBy }}). Talk to the owner or ask again.
+                } @else {
+                  The final demand went unanswered. A letter of demand can lead to legal costs, so the trustees decide.
+                }
+              </p>
+            }
+          }
+          @case ('letter-of-demand') {
+            <h2 class="section-title">Next: hand over to the attorney</h2>
+            <p>The letter of demand gave until {{ formatDate(letters()[0]?.letter?.dueBy ?? '', true) }}. If it isn’t paid, hand the account over.</p>
+          }
+          @case ('handed-over') {
+            <h2 class="section-title">With the attorney</h2>
+            <p>Humo keeps billing as usual and stops sending letters. Check progress with the attorney monthly.</p>
+          }
+          @case ('arrangement') {
+            @let a = c.arrangement!;
+            <h2 class="section-title">On a payment arrangement</h2>
+            <p>{{ a.instalment | rand }} a month on the {{ a.day }}{{ a.day === 1 ? 'st' : a.day === 2 ? 'nd' : a.day === 3 ? 'rd' : 'th' }} for {{ a.months }} months, from {{ formatDate(a.startedAt, true) }}, on top of the levy. Letters are paused while it’s kept.</p>
+          }
+          @case ('disputed') {
+            <h2 class="section-title">Disputed</h2>
+            <p>“{{ c.dispute?.reason }}” — {{ c.dispute?.by }}, {{ formatDate(c.dispute?.at ?? '', true) }}. Collection is paused until it’s resolved.</p>
+          }
+        }
+        @if (canManage()) {
+          <div class="actions">
+            @if (letter(); as kind) {
+              <button type="button" class="btn btn-primary" (click)="send()"><ion-icon name="send-outline" aria-hidden="true" /> Send {{ letterLabels[kind].toLowerCase() }}</button>
+            }
+            @if (c.stage === 'final-demand' && c.demandApproval?.status !== 'pending' && c.demandApproval?.status !== 'approved') {
+              <button type="button" class="btn btn-primary" (click)="askTrustees()">Ask the trustees</button>
+            }
+            @if (c.stage === 'final-demand' && c.demandApproval?.status === 'pending' && session.can('Approvals.Decide')) {
+              <a class="btn btn-secondary" routerLink="/approvals">Open Approvals</a>
+            }
+            @if (c.stage === 'letter-of-demand') {
+              <button type="button" class="btn btn-primary" (click)="handOver()">Hand over</button>
+            }
+            @if (c.stage === 'arrangement') {
+              <button type="button" class="btn btn-secondary" (click)="missed()">Record missed instalment</button>
+            }
+            @if (c.stage === 'disputed') {
+              <button type="button" class="btn btn-primary" (click)="resolve()">Resolve dispute</button>
+            }
+            @if (c.stage !== 'arrangement' && c.stage !== 'handed-over') {
+              <button type="button" class="btn btn-secondary" (click)="arrangement()">Payment arrangement</button>
+            }
+            @if (c.stage !== 'disputed') {
+              <button type="button" class="btn btn-ghost" (click)="dispute()">Owner disputes it</button>
+            }
+            <a class="btn btn-ghost" [routerLink]="accountLink()">Open account</a>
+          </div>
+        }
+      </section>
+
+      <!-- Ageing -->
+      <section class="surface panel">
+        <h2 class="section-title">What’s owed, by age</h2>
+        <ui-ageing-bar [ageing]="v.account.ageing" />
+      </section>
+
+      <!-- Letters -->
+      <section class="surface panel">
+        <h2 class="section-title">Letters</h2>
+        <ul class="docs">
+          @for (s of letters(); track s.id) {
+            <li>
+              <ion-icon name="document-text-outline" aria-hidden="true" />
+              <div>
+                <a [routerLink]="['letters', s.id]">{{ letterLabels[s.letter!.kind] }}</a>
+                <div class="muted">Sent {{ formatDate(s.at, true) }} by {{ s.letter!.channel }} · {{ s.letter!.amount | rand }} · {{ templateOf(s) }}</div>
+              </div>
+            </li>
+          } @empty {
+            <li class="muted">No letters sent yet.</li>
+          }
+        </ul>
+      </section>
+    </div>
+
+    <aside class="side">
+      <section class="surface panel">
+        <h2 class="section-title">Owner</h2>
+        <ul class="docs">
+          <li><ion-icon name="person-outline" aria-hidden="true" /><a [routerLink]="'/people/' + v.holder.id">{{ v.holder.displayName }}</a></li>
+          @if (v.holder.email) {
+            <li><ion-icon name="mail-outline" aria-hidden="true" /><span>{{ v.holder.email }}</span></li>
+          }
+          @if (v.holder.phone) {
+            <li><ion-icon name="call-outline" aria-hidden="true" /><span>{{ v.holder.phone }}</span></li>
+          }
+        </ul>
+      </section>
+
+      <section class="surface panel activity">
+        <h2 class="section-title">History</h2>
+        @if (canManage()) {
+          <div class="comment">
+            <label class="visually-hidden" for="case-note">Add a note</label>
+            <textarea id="case-note" rows="2" placeholder="e.g. Called the owner: promised to pay on the 25th" [value]="note()" (input)="note.set($any($event.target).value)"></textarea>
+            <button type="button" class="btn btn-secondary btn-sm" [disabled]="!note().trim()" (click)="addNote()">Add note</button>
+          </div>
+        }
+        <ui-timeline [events]="events()" [initial]="12" />
+      </section>
+    </aside>
+  </div>
+}

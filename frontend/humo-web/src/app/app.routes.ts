@@ -268,25 +268,46 @@ export const routes: Routes = [
         data: { section: 'Finance' },
         children: [
           { path: '', pathMatch: 'full', redirectTo: 'billing' },
-          planned('billing', 'Levies & billing', 'Billing.View', 6, 'Bill every unit correctly each month.', [
-            'Levy schedules per scheme (participation quota, special levies)',
-            'Billing runs with status; statements are generated and sent from the run',
-          ]),
-          planned('billing/new', 'New billing run', 'Billing.Run', 6, 'Run monthly billing safely.', [
-            'Scope → Period → Charges preview → Exceptions → Approval (Approvals) → Generate & send statements',
-            'Posted runs are locked; corrections are journal adjustments',
-          ]),
+          {
+            path: 'billing',
+            data: { permission: 'Billing.View', breadcrumb: 'Levies & billing', feature: 'billing' },
+            children: [
+              { path: '', title: 'Levies & billing', loadComponent: () => import('./features/finance/billing/billing-page').then((m) => m.BillingPage) },
+              { path: 'new', redirectTo: () => inject(Router).parseUrl('/finance/billing?new=1') },
+              {
+                path: ':runId',
+                title: 'Billing run',
+                data: { breadcrumb: 'Billing run' },
+                loadComponent: () => import('./features/finance/billing/billing-run-page').then((m) => m.BillingRunPage),
+              },
+            ],
+          },
           {
             path: 'receipts',
             title: 'Receipts',
             data: { permission: 'Receipts.Allocate', breadcrumb: 'Receipts', feature: 'payment-allocation' },
             loadComponent: () => import('./features/receipts/receipts-page').then((m) => m.ReceiptsPage),
           },
-          planned('credit-control', 'Credit control', 'Billing.View', 6, 'Chase arrears in a structured, fair way.', [
-            'Collection pipeline: Reminder → Final demand → Letter of demand → Handed over (+ Arrangement, Disputed)',
-            'Ageing (Current · 30 · 60 · 90 · 120+) as a filter and chart',
-            'Bulk reminders through Compose',
-          ]),
+          {
+            path: 'credit-control',
+            data: { permission: 'Billing.View', breadcrumb: 'Credit control', feature: 'credit-control' },
+            children: [
+              { path: '', title: 'Credit control', loadComponent: () => import('./features/finance/credit-control/credit-control-page').then((m) => m.CreditControlPage) },
+              {
+                path: ':accountId',
+                data: { breadcrumb: 'Collection' },
+                children: [
+                  { path: '', title: 'Collection', loadComponent: () => import('./features/finance/credit-control/collection-page').then((m) => m.CollectionPage) },
+                  {
+                    path: 'letters/:stepId',
+                    title: 'Collection letter',
+                    data: { breadcrumb: 'Letter' },
+                    loadComponent: () => import('./features/finance/credit-control/collection-letter-page').then((m) => m.CollectionLetterPage),
+                  },
+                ],
+              },
+            ],
+          },
           {
             path: 'payables',
             title: 'Payables',

@@ -24,6 +24,11 @@
         <button type="button" class="btn btn-secondary" (click)="sendStatement()">
           <ion-icon name="mail-outline" aria-hidden="true" /> Re-send
         </button>
+        @if (canAdjust()) {
+          <button type="button" class="btn btn-ghost" (click)="adjust()">
+            <ion-icon name="swap-vertical-outline" aria-hidden="true" /> Journal adjustment
+          </button>
+        }
       </ng-container>
     }
   </ui-record-header>
@@ -69,6 +74,18 @@
       @if (d.account.balance > 0) {
         <h3 class="sub-title">Ageing</h3>
         <ui-ageing-bar [ageing]="d.account.ageing" />
+      }
+      @if (collection(); as c) {
+        @if (c.overdueAmount > 0 || c.case.stage !== 'not-started') {
+          <div class="collection">
+            <span class="label-caps">Credit control</span>
+            <ui-status-pill [label]="collectionLabel(c)" [tone]="collectionTone(c)" />
+            @if (c.next; as n) {
+              <span class="muted small" [class.late]="n.overdue">{{ n.label }} · {{ n.overdue ? 'overdue since' : 'due' }} {{ formatDate(n.dueAt) }}</span>
+            }
+            <a class="btn btn-ghost btn-sm" [routerLink]="['/finance/credit-control', d.account.id]">Open</a>
+          </div>
+        }
       }
     </section>
 

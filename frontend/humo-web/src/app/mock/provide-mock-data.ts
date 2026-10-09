@@ -6,6 +6,8 @@ import {
   CatalogueDataSource,
   DocumentTemplateDataSource,
   MeetingDataSource,
+  BillingDataSource,
+  CollectionDataSource,
   ResolutionDataSource,
   PlatformTemplateDataSource,
   NotificationDataSource,
@@ -53,6 +55,9 @@ import { InMemorySchemeDataSource } from './data-sources/in-memory-scheme-data-s
 import { InMemoryDocumentTemplateDataSource, InMemoryPlatformTemplateDataSource } from './data-sources/in-memory-document-data-sources';
 import { InMemoryMeetingDataSource, InMemoryResolutionDataSource } from './data-sources/in-memory-governance-data-sources';
 import { GovernanceStore } from './db/governance-store';
+import { InMemoryBillingDataSource, InMemoryCollectionDataSource } from './data-sources/in-memory-finance-data-sources';
+import { BillingStore } from './db/billing-store';
+import { CollectionsStore } from './db/collections-store';
 import { PrototypeControls } from '../core/prototype/prototype-controls';
 import { MaintenanceStore } from './db/maintenance-store';
 import { MockPrototypeControls } from './prototype/mock-prototype-controls';
@@ -89,6 +94,8 @@ export function provideMockData(): EnvironmentProviders {
     { provide: PlatformTemplateDataSource, useClass: InMemoryPlatformTemplateDataSource },
     { provide: MeetingDataSource, useClass: InMemoryMeetingDataSource },
     { provide: ResolutionDataSource, useClass: InMemoryResolutionDataSource },
+    { provide: BillingDataSource, useClass: InMemoryBillingDataSource },
+    { provide: CollectionDataSource, useClass: InMemoryCollectionDataSource },
     // Humo Contractor — a separate product's capabilities, consumed by Humo PM.
     { provide: ContractorNetwork, useClass: InMemoryContractorNetwork },
     { provide: ContractorPortal, useClass: InMemoryContractorPortal },
@@ -98,5 +105,8 @@ export function provideMockData(): EnvironmentProviders {
     provideAppInitializer(() => void inject(MaintenanceStore)),
     // …and the governance store, so meeting actions completed in Tasks and minutes approved in Approvals update their meetings.
     provideAppInitializer(() => void inject(GovernanceStore)),
+    // …billing (runs approved in Approvals move on) and credit control (letters of demand approved there).
+    provideAppInitializer(() => void inject(BillingStore)),
+    provideAppInitializer(() => void inject(CollectionsStore)),
   ]);
 }

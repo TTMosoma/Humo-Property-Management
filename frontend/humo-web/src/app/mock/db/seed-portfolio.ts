@@ -107,12 +107,18 @@ export function specialLevyAmount(unit: Unit, cfg: SchemeCharges): number {
   return cfg.specialLevy ? Math.round((unit.monthlyLevy * cfg.specialLevy.ratio) / 10) * 10 : 0;
 }
 
-export function ageingFor(balance: number, monthly: number): Ageing {
+/**
+ * Ages a balance oldest-last: the latest month's charges are current, each
+ * earlier month's (approximated by the monthly charge) one bucket older.
+ * `latest` is the most recent month actually billed, when it differs from the
+ * usual monthly charge (an estimated water bill, interest).
+ */
+export function ageingFor(balance: number, monthly: number, latest = monthly): Ageing {
   const a: Ageing = { current: 0, d30: 0, d60: 0, d90: 0, d120: 0 };
   if (balance <= 0) return a;
   let rest = balance;
   for (const k of ['current', 'd30', 'd60', 'd90'] as const) {
-    a[k] = round2(Math.min(rest, monthly));
+    a[k] = round2(Math.min(rest, k === 'current' ? latest : monthly));
     rest = round2(rest - a[k]);
   }
   a.d120 = rest;

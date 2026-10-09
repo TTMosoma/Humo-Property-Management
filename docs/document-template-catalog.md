@@ -40,6 +40,15 @@ The initial catalogue: what exists, what's planned, and why each template exists
 
 The meeting records the version a notice was sent with and the version minutes were approved with (`docs/10-governance.md`).
 
+## Payment notice (Checkpoint 6)
+
+| Template | Tier | Status | Version | Layout | Why it exists |
+|---|---|---|---|---|---|
+| **Payment notice: Standard** (`payment-notice.standard`) | Standard | Active | v1 | `payment-notice/classic` | Reminders, final demands and letters of demand: what's overdue and since when, how to pay, what happens next. |
+| **Payment notice: Professional** (`payment-notice.professional`) | Premium | Active | v1 | `payment-notice/branded`, agency branding | Matches branded statements. |
+
+Each letter records the version it was sent with (`docs/11-billing-credit-control.md`).
+
 ## Planned document types
 
 | Document type | Standard | Professional | Notes |
@@ -48,7 +57,6 @@ The meeting records the version a notice was sent with and the version minutes w
 | Receipt | Planned | Planned | Proof of payment with allocation. |
 | Maintenance work order | Planned | Planned | Professional adds the agency's conditions of appointment. |
 | Owner statement | — | — | Type defined, no templates yet. |
-| Payment notice | — | — | Reminders and letters of demand from credit control. |
 | Contractor quote | — | — | As approved through Humo Contractor. |
 | Trustee resolution | — | — | Resolutions print inside the minutes for now. |
 | Financial report | — | — | Income statement, balance sheet, levy roll. |

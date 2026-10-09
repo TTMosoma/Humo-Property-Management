@@ -10,6 +10,8 @@ const BRANDED: TemplateDesign = { layout: 'levy-statement/branded', brandingMode
 const NOTICE: TemplateDesign = { layout: 'meeting-notice/classic', brandingMode: 'humo', sections: [] };
 const NOTICE_BRANDED: TemplateDesign = { layout: 'meeting-notice/branded', brandingMode: 'agency', sections: [] };
 const MINUTES: TemplateDesign = { layout: 'meeting-minutes/classic', brandingMode: 'humo', sections: [] };
+const NOTICE_PAY: TemplateDesign = { layout: 'payment-notice/classic', brandingMode: 'humo', sections: [] };
+const NOTICE_PAY_BRANDED: TemplateDesign = { layout: 'payment-notice/branded', brandingMode: 'agency', sections: [] };
 const MINUTES_BRANDED: TemplateDesign = { layout: 'meeting-minutes/branded', brandingMode: 'agency', sections: [] };
 
 function platform(
@@ -62,6 +64,12 @@ export function seedTemplates(): DocumentTemplate[] {
     platform('meeting-notice.professional', 'meeting-notice', 'premium', 'Professional',
       'The notice in your agency’s colours, font and wordmark.',
       'Matches branded statements, so owners recognise post from their agent.', NOTICE_BRANDED),
+    platform('payment-notice.standard', 'payment-notice', 'standard', 'Standard',
+      'Reminder, final demand and letter of demand: the amount overdue, its ageing, how to pay and what happens next.',
+      'Owners must be told clearly and fairly before collection escalates; every customer needs that.', NOTICE_PAY, true),
+    platform('payment-notice.professional', 'payment-notice', 'premium', 'Professional',
+      'Collection letters in your agency’s colours, font and wordmark.',
+      'Matches the agency’s statements, so the letter is recognisably from them.', NOTICE_PAY_BRANDED),
     platform('meeting-minutes.standard', 'meeting-minutes', 'standard', 'Standard',
       'Attendance, quorum, the minute of each agenda item, resolutions with votes, and actions.',
       'The scheme’s formal record of decisions; every customer needs a correct one.', MINUTES, true),

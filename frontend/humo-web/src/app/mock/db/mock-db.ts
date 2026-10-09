@@ -14,6 +14,7 @@ import {
   Scheme,
   StatementView,
   TrustAccount,
+  DocumentTemplateRef,
   TimelineEvent,
   Unit,
   UnitSummary,
@@ -39,6 +40,8 @@ interface PortfolioSnapshot {
   notes: Note[];
   workItems: WorkItem[];
   extraTx: [string, RawTransaction[]][];
+  /** Statements issued by billing runs: "accountId|period" → the template version. */
+  issued?: [string, DocumentTemplateRef][];
 }
 
 function hasWord(text: string, word: string): boolean {
@@ -70,6 +73,7 @@ export class MockDb {
   private readonly relsByPerson = new Map<string, Relationship[]>();
   private readonly ledgers = new Map<string, Ledger>();
   private readonly extraTx = new Map<string, RawTransaction[]>();
+  private readonly issued = new Map<string, DocumentTemplateRef>();
 
   receipts: Receipt[] = [];
   payerRules: PayerRule[] = [];
@@ -95,6 +99,7 @@ export class MockDb {
       this.notes = saved.notes;
       this.workItems = saved.workItems;
       for (const [k, v] of saved.extraTx) this.extraTx.set(k, v);
+      for (const [k, v] of saved.issued ?? []) this.issued.set(k, v);
     } else {
       this.receipts = this.seedReceipts();
       this.syncReceiptWork();
@@ -120,6 +125,7 @@ export class MockDb {
       notes: this.notes,
       workItems: this.workItems,
       extraTx: entries(this.extraTx),
+      issued: entries(this.issued),
     };
   }
 
@@ -253,8 +259,8 @@ export class MockDb {
       scheme,
       holder: this.persons.get(account.holderPersonId)!,
       payTo: trustAccountFor(scheme),
-      // Statements in the simulation were all issued with Humo's Standard template, version 1.
-      issuedWith: { templateId: 'levy-statement.standard', version: 1 },
+      // Statements sent by a billing run record their template; the seeded history was issued with Standard v1.
+      issuedWith: this.issued.get(`${accountId}|${period}`) ?? { templateId: 'levy-statement.standard', version: 1 },
     };
   }
 
@@ -629,6 +635,42 @@ export class MockDb {
     this.touch();
   }
 
+  // ---- Billing: charges, statements and journals (the ledger only ever grows) ----
+
+  accountForUnit(unitId: string): Account | undefined {
+    return this.accountByUnit.get(unitId);
+  }
+
+  /** Posts charges to an account (a billing run). */
+  postCharges(accountId: string, charges: RawTransaction[]): void {
+    const account = this.accounts.get(accountId)!;
+    this.ledger(account.id); // make sure history is generated before the balance changes
+    for (const c of charges) this.push(this.extraTx, account.id, c);
+    this.rebalance(account, round2(charges.reduce((s, c) => s + c.amount, 0)));
+  }
+
+  /** Records the template version a statement was issued with. */
+  recordStatement(accountId: string, period: string, template: DocumentTemplateRef): void {
+    this.issued.set(`${accountId}|${period}`, template);
+  }
+
+  /** A correction after posting: a journal adjustment, dated today. */
+  adjust(accountId: string, amount: number, reason: string, by: string): void {
+    const account = this.accounts.get(accountId)!;
+    this.ledger(account.id);
+    this.push(this.extraTx, account.id, {
+      id: `adj-${accountId}-${Date.now()}`,
+      accountId,
+      date: new Date().toISOString(),
+      type: 'adjustment',
+      description: `Adjustment — ${reason}`,
+      reference: by,
+      amount: round2(amount),
+    });
+    this.rebalance(account, round2(amount));
+    this.touch();
+  }
+
   // ---- Work items (Attention model store) ----
 
   /** Other stores react to decisions made anywhere (e.g. approving a quote moves its job on). */
@@ -653,6 +695,11 @@ export class MockDb {
     this.workItems = [...this.workItems.filter((w) => w.id !== item.id), item];
   }
 
+  /** Closes one work item because the work moved on elsewhere (e.g. the next collection step was taken). */
+  closeWork(id: string, by: string): void {
+    this.workItems = this.workItems.map((w) => (w.id === id && w.status === 'open' ? { ...w, status: 'done', decidedBy: by, decidedAt: new Date().toISOString() } : w));
+  }
+
   /** Marks open work items for a reference as done (e.g. the job moved on, so "overdue" no longer applies). */
   resolveWork(ref: string, types: WorkItem['type'][], by: string): void {
     this.workItems = this.workItems.map((w) =>
@@ -664,11 +711,20 @@ export class MockDb {
   // Internals
   // =====================================================================
 
+  /** What the most recent billing run charged this account, if one was posted in the simulation. */
+  private latestBilled(accountId: string): number | undefined {
+    const charges = (this.extraTx.get(accountId) ?? []).filter((t) => t.reference?.startsWith('BR-') && t.amount > 0);
+    const last = charges.reduce((m, t) => (t.date > m ? t.date : m), '');
+    return last ? round2(charges.filter((t) => t.date === last).reduce((s, t) => s + t.amount, 0)) : undefined;
+  }
+
   private rebalance(account: Account, delta: number): void {
     const unit = this.unitById.get(account.unitId)!;
     account.balance = round2(account.balance + delta);
-    account.ageing = ageingFor(account.balance, monthlyCharges(unit));
-    account.status = statusFor(account.balance, account.ageing, account.status === 'arrangement' ? 'arrangement' : undefined);
+    account.ageing = ageingFor(account.balance, monthlyCharges(unit), this.latestBilled(account.id));
+    // Arrangements and hand-overs are decisions, not arithmetic: they stay until credit control changes them (or the account is paid up).
+    const kept = (account.status === 'arrangement' || account.status === 'handed-over') && account.balance > 0 ? account.status : undefined;
+    account.status = statusFor(account.balance, account.ageing, kept);
   }
 
   /** Keeps each scheme's "N receipts to allocate" work item in step with the receipts. */

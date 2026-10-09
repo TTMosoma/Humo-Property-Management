@@ -37,3 +37,6 @@ export * from './models/document';
 export * from './ports/document-data-sources';
 export * from './models/meeting';
 export * from './ports/governance-data-sources';
+export * from './models/billing';
+export * from './models/collections';
+export * from './ports/finance-data-sources';

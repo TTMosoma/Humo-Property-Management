@@ -16,6 +16,7 @@ export type WorkItemType =
   | 'invoice-approval'
   | 'payment-batch-approval'
   | 'billing-run-approval'
+  | 'demand-approval'
   | 'compliance-due'
   | 'meeting-action'
   | 'minutes-approval'
@@ -70,6 +71,7 @@ export const WORK_TYPE_LABELS: Record<WorkItemType, string> = {
   'invoice-approval': 'Invoice approval',
   'payment-batch-approval': 'Payment batch',
   'billing-run-approval': 'Billing run',
+  'demand-approval': 'Letter of demand',
   'compliance-due': 'Compliance',
   'meeting-action': 'Meeting action',
   'minutes-approval': 'Minutes approval',
@@ -88,6 +90,7 @@ export const WORK_TYPE_AREA: Record<WorkItemType, 'Finance' | 'Maintenance' | 'G
   'invoice-approval': 'Finance',
   'payment-batch-approval': 'Finance',
   'billing-run-approval': 'Finance',
+  'demand-approval': 'Finance',
   'compliance-due': 'Compliance',
   'meeting-action': 'Governance',
   'minutes-approval': 'Governance',

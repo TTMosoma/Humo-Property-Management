@@ -1,17 +1,19 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
-import { DocumentType, MeetingDetail, OrganisationDocumentSettings, StatementView } from '../../domain';
+import { CollectionStep, CollectionView, DocumentType, MeetingDetail, OrganisationDocumentSettings, StatementView } from '../../domain';
 import { DocumentTemplatesService, ResolvedTemplate } from '../../core/documents/document-templates.service';
 import { LevyStatementDocument } from './levy-statement/levy-statement-document';
 import { MeetingMinutesDocument } from './meeting/meeting-minutes-document';
 import { MeetingNoticeDocument } from './meeting/meeting-notice-document';
+import { PaymentNoticeDocument } from './payment-notice/payment-notice-document';
 
 /** A document's data, by type. New document types add a case here and a layout component. */
 export type DocumentData =
   | { type: 'levy-statement'; view: StatementView }
   | { type: 'meeting-notice'; detail: MeetingDetail }
-  | { type: 'meeting-minutes'; detail: MeetingDetail };
+  | { type: 'meeting-minutes'; detail: MeetingDetail }
+  | { type: 'payment-notice'; view: CollectionView; step: CollectionStep };
 
-const RENDERED: DocumentType[] = ['levy-statement', 'meeting-notice', 'meeting-minutes'];
+const RENDERED: DocumentType[] = ['levy-statement', 'meeting-notice', 'meeting-minutes', 'payment-notice'];
 
 /**
  * Document type + template (at a version) + data + branding → the A4 document.
@@ -23,7 +25,7 @@ const RENDERED: DocumentType[] = ['levy-statement', 'meeting-notice', 'meeting-m
  */
 @Component({
   selector: 'app-document-renderer',
-  imports: [LevyStatementDocument, MeetingNoticeDocument, MeetingMinutesDocument],
+  imports: [LevyStatementDocument, MeetingNoticeDocument, MeetingMinutesDocument, PaymentNoticeDocument],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @let d = data();
@@ -42,6 +44,9 @@ const RENDERED: DocumentType[] = ['levy-statement', 'meeting-notice', 'meeting-m
       }
       @case ('meeting-minutes') {
         <app-meeting-minutes-document [detail]="d.detail" [design]="template().version.design" [branding]="branding()" [settings]="settings()" />
+      }
+      @case ('payment-notice') {
+        <app-payment-notice-document [view]="d.view" [step]="d.step" [design]="template().version.design" [branding]="branding()" [settings]="settings()" />
       }
     }
   `,

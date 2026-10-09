@@ -3,10 +3,14 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, map, of, switchMap } from 'rxjs';
-import { AccountDataSource, ReceiptDataSource, ReceiptView, Transaction, UnitDataSource, periodLabel, periodOf, sumRands } from '../../domain';
+import { AccountDataSource, BillingDataSource, COLLECTION_STAGE_LABELS, CollectionDataSource, CollectionView, ReceiptDataSource, ReceiptView, Transaction, UnitDataSource, periodLabel, periodOf, sumRands } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
+import { DrawerService } from '../../ui/drawer/drawer.service';
+import { StatusPill } from '../../ui/status-pill/status-pill';
+import { adjustmentForm } from '../finance/billing/billing-forms';
+import { COLLECTION_STAGE_TONE } from '../finance/credit-control/collection-view';
 import { AgeingBar } from '../../ui/ageing/ageing-bar';
 import { CellDef, ColumnDef, DataTable } from '../../ui/data-table/data-table';
 import { ViewTabs } from '../../ui/data-table/view-tabs';
@@ -23,7 +27,7 @@ import { accountStatus, balanceTone, links, unitChain } from './account-view';
  */
 @Component({
   selector: 'app-account-page',
-  imports: [RecordHeader, AgeingBar, DataTable, CellDef, ViewTabs, EmptyState, ErrorState, Skeleton, IonIcon, RouterLink, RandPipe],
+  imports: [RecordHeader, AgeingBar, StatusPill, DataTable, CellDef, ViewTabs, EmptyState, ErrorState, Skeleton, IonIcon, RouterLink, RandPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './account-page.html',
   styleUrl: './account-page.scss',
@@ -34,6 +38,9 @@ export class AccountPage {
   private readonly accounts = inject(AccountDataSource);
   private readonly receipts = inject(ReceiptDataSource);
   private readonly feedback = inject(FeedbackService);
+  private readonly billing = inject(BillingDataSource);
+  private readonly collections = inject(CollectionDataSource);
+  private readonly drawer = inject(DrawerService);
   protected readonly session = inject(SessionService);
 
   private readonly key = toSignal(
@@ -58,6 +65,20 @@ export class AccountPage {
     ),
     { initialValue: [] as ReceiptView[] },
   );
+
+  /** The account's collection case, when credit control is on the plan and it's in arrears or being collected. */
+  protected readonly collection = toSignal(
+    toObservable(this.summary.value).pipe(
+      switchMap((s) =>
+        s && this.session.can('Billing.View') && this.session.hasFeature('credit-control')
+          ? this.collections.get(s.account.id).pipe(catchError(() => of(undefined)))
+          : of(undefined),
+      ),
+    ),
+  );
+  protected readonly collectionTone = (c: CollectionView) => COLLECTION_STAGE_TONE[c.case.stage];
+  protected readonly collectionLabel = (c: CollectionView) => COLLECTION_STAGE_LABELS[c.case.stage];
+  protected readonly canAdjust = computed(() => this.session.can('Billing.Run') && this.session.hasFeature('billing') && !this.session.readOnly());
 
   protected readonly period = signal<string>('all');
   protected readonly busyReceipt = signal<string | null>(null);
@@ -147,5 +168,11 @@ export class AccountPage {
     const d = this.detail();
     if (!d) return;
     this.feedback.info(`Prototype: the ${periodLabel(d.statementPeriods[0], false)} statement would be re-sent to ${d.holder.email}.`);
+  }
+
+  /** Corrections after a run is posted: a journal on the account, never an edit to the run. */
+  protected adjust(): void {
+    const d = this.detail();
+    if (d) adjustmentForm(this.drawer, this.billing, d.account);
   }
 }

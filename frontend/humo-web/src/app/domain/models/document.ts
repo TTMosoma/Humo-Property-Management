@@ -43,7 +43,7 @@ export const DOCUMENT_TYPES: DocumentTypeDef[] = [
   { type: 'invoice', label: 'Invoice', description: 'A charge raised on an account outside the monthly levy.', implemented: false },
   { type: 'receipt', label: 'Receipt', description: 'Proof of a payment received and how it was allocated.', implemented: false },
   { type: 'owner-statement', label: 'Owner statement', description: 'An owner’s position across every unit they own.', implemented: false },
-  { type: 'payment-notice', label: 'Payment notice', description: 'Reminders and letters of demand from credit control.', implemented: false },
+  { type: 'payment-notice', label: 'Payment notice', description: 'Reminders, final demands and letters of demand from credit control.', implemented: true },
   { type: 'work-order', label: 'Maintenance work order', description: 'The instruction a supplier works to, with scope and approval.', implemented: false },
   { type: 'contractor-quote', label: 'Contractor quote', description: 'A quote received through Humo Contractor, as approved.', implemented: false },
   { type: 'meeting-minutes', label: 'Meeting minutes', description: 'The record of a trustee meeting or AGM.', implemented: true },
@@ -102,7 +102,9 @@ export type TemplateLayout =
   | 'meeting-notice/classic'
   | 'meeting-notice/branded'
   | 'meeting-minutes/classic'
-  | 'meeting-minutes/branded';
+  | 'meeting-minutes/branded'
+  | 'payment-notice/classic'
+  | 'payment-notice/branded';
 
 /** Branded layouts draw the brand bar, wordmark and branded headings; classic ones keep Humo's plain letterhead. */
 export function isBrandedLayout(layout: TemplateLayout): boolean {

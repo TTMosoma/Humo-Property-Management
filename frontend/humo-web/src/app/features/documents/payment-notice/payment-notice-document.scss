@@ -1,0 +1,18 @@
+// The collection letter's own parts. The page, letterhead, addressee block and
+// table come from ../document-sheet.scss; headings and sign-off from the meeting documents.
+
+.body {
+  margin: 0 0 var(--s-3);
+  line-height: 1.55;
+}
+
+.ageing {
+  margin-top: 0;
+}
+
+.pay-box {
+  margin-top: var(--s-4);
+  padding: var(--s-4);
+  background: #f4f6f9;
+  border-radius: var(--r);
+}

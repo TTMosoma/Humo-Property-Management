@@ -26,6 +26,7 @@ export type Permission =
   | 'Billing.View'
   | 'Billing.Run'
   | 'Receipts.Allocate'
+  | 'Collections.Manage'
   | 'Payables.Prepare'
   | 'Payables.Release'
   | 'Finance.Export'
@@ -109,6 +110,7 @@ export const PERMISSIONS: PermissionMeta[] = [
   { id: 'Billing.View', area: 'Finance', label: 'View levies, billing and credit control', mutates: false },
   { id: 'Billing.Run', area: 'Finance', label: 'Run billing and configure levy rules', mutates: true },
   { id: 'Receipts.Allocate', area: 'Finance', label: 'Allocate receipts to accounts', mutates: true },
+  { id: 'Collections.Manage', area: 'Finance', label: 'Chase arrears: send letters, record arrangements, hand over', mutates: true },
   { id: 'Payables.Prepare', area: 'Finance', label: 'Prepare supplier payment batches', mutates: true },
   { id: 'Payables.Release', area: 'Finance', label: 'Release payments from trust accounts', mutates: true, stepUp: true },
   { id: 'Finance.Export', area: 'Finance', label: 'Export financial and personal data', mutates: false, stepUp: true },
@@ -181,16 +183,16 @@ const TRUSTEE_VIEW: Permission[] = [
  */
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   'agency-admin': [
-    ...STAFF_BASE, 'Approvals.Decide', 'Schemes.Manage', 'Units.Manage', 'People.Manage', 'Accounts.View', 'Finance.View', 'Billing.View', 'Billing.Run', 'Receipts.Allocate',
+    ...STAFF_BASE, 'Approvals.Decide', 'Schemes.Manage', 'Units.Manage', 'People.Manage', 'Accounts.View', 'Finance.View', 'Billing.View', 'Billing.Run', 'Receipts.Allocate', 'Collections.Manage',
     'Payables.Prepare', 'Payables.Release', 'Finance.Export', 'Maintenance.Manage', 'Suppliers.Manage', 'Suppliers.ChangeBankDetails',
     'Meetings.Manage', 'Organisation.Manage', 'Documents.Configure', 'Notifications.Configure', 'Users.Manage', 'Users.ManageAdmins', 'Audit.View', 'Subscription.Request',
   ],
   'portfolio-manager': [
-    ...STAFF_BASE, 'Approvals.Decide', 'Units.Manage', 'People.Manage', 'Accounts.View', 'Finance.View', 'Billing.View', 'Maintenance.Manage', 'Suppliers.Manage',
+    ...STAFF_BASE, 'Approvals.Decide', 'Units.Manage', 'People.Manage', 'Accounts.View', 'Finance.View', 'Billing.View', 'Collections.Manage', 'Maintenance.Manage', 'Suppliers.Manage',
     'Meetings.Manage', 'Notifications.Configure',
   ],
   finance: [
-    ...STAFF_BASE, 'Approvals.Decide', 'Accounts.View', 'Finance.View', 'Billing.View', 'Billing.Run', 'Receipts.Allocate', 'Payables.Prepare',
+    ...STAFF_BASE, 'Approvals.Decide', 'Accounts.View', 'Finance.View', 'Billing.View', 'Billing.Run', 'Receipts.Allocate', 'Collections.Manage', 'Payables.Prepare',
     'Payables.Release', 'Finance.Export', 'Suppliers.ChangeBankDetails',
   ],
   operations: [...STAFF_BASE, 'Maintenance.Manage', 'Suppliers.Manage'],

@@ -57,9 +57,9 @@ const TIME = new Intl.DateTimeFormat('en-ZA', { hour: '2-digit', minute: '2-digi
     } @empty {
       <p class="empty">Nothing has happened here yet.</p>
     }
-    @if (events().length > shown()) {
-      <button type="button" class="btn btn-ghost btn-sm more" (click)="shown.set(shown() + 15)">
-        Show older ({{ events().length - shown() }})
+    @if (events().length > limit()) {
+      <button type="button" class="btn btn-ghost btn-sm more" (click)="shown.set(limit() + 15)">
+        Show older ({{ events().length - limit() }})
       </button>
     }
   `,
@@ -96,8 +96,10 @@ export class Timeline {
   protected readonly icon = ICON;
   protected readonly shown = signal(0);
 
+  protected readonly limit = computed(() => this.shown() || this.initial());
+
   protected readonly groups = computed(() => {
-    const limit = this.shown() || this.initial();
+    const limit = this.limit();
     const out: { day: string; events: TimelineEvent[] }[] = [];
     for (const e of this.events().slice(0, limit)) {
       const day = this.dayLabel(e.at);

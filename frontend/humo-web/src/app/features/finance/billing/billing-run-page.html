@@ -1,0 +1,207 @@
+@if (result.loading()) {
+  <ui-skeleton variant="tiles" [count]="4" />
+} @else if (result.failed()) {
+  <div class="surface"><ui-error-state title="We couldn’t load this billing run" (retry)="result.retry()" /></div>
+} @else if (result.value() === false) {
+  <div class="surface">
+    <ui-empty-state illustration="not-found" title="We couldn’t find that billing run">
+      <a class="btn btn-primary" routerLink="/finance/billing">Levies & billing</a>
+    </ui-empty-state>
+  </div>
+} @else {
+  @let d = detail()!;
+  @let r = d.run;
+  <ui-record-header [eyebrow]="r.ref + ' · Billing run'" [title]="d.scheme.name + ' — ' + period()" [subtitle]="d.scheme.unitCount + ' units · prepared by ' + r.createdBy" [status]="status()" [facts]="facts()" [chain]="chain()" />
+
+  @if (r.stage !== 'cancelled') {
+    <div class="tracker surface">
+      <ui-stage-tracker [stages]="stages" [current]="r.stage" [alert]="r.stage === 'preview' && open() > 0" label="Billing run progress" />
+    </div>
+  }
+
+  @if (locked()) {
+    <div class="locked surface" role="note">
+      <ion-icon name="lock-closed-outline" aria-hidden="true" />
+      <div>
+        <strong>Posted and locked.</strong>
+        {{ r.posted!.accounts }} accounts were charged {{ r.posted!.total | rand }} on {{ formatDate(r.posted!.at) }}. To correct an account, post a journal adjustment from the account page; the run itself never changes.
+      </div>
+    </div>
+  }
+
+  <div class="grid">
+    <div class="main">
+      <!-- Next step -->
+      <section class="surface panel next">
+        @switch (r.stage) {
+          @case ('preview') {
+            @if (open()) {
+              <h2 class="section-title">Next: decide {{ open() }} exception{{ open() === 1 ? '' : 's' }}</h2>
+              <p>Each flagged account needs a decision before the run can go for approval. The usual choice is first.</p>
+            } @else {
+              <h2 class="section-title">Next: send for approval</h2>
+              <p>Check the charges below{{ change()?.large ? ' — the total is ' + (change()!.pct >= 0 ? 'up ' : 'down ') + (change()!.pct >= 0 ? change()!.pct : -change()!.pct).toFixed(1) + '% on last month' : '' }}. An agency admin or finance approves it in Approvals.</p>
+            }
+            @if (canRun()) {
+              <div class="actions">
+                <button type="button" class="btn btn-primary" [disabled]="open() > 0" (click)="step('send-for-approval')"><ion-icon name="send-outline" aria-hidden="true" /> Send for approval</button>
+                <button type="button" class="btn btn-ghost danger" (click)="cancel()">Cancel run</button>
+              </div>
+            }
+          }
+          @case ('awaiting-approval') {
+            <h2 class="section-title">With the approvers</h2>
+            <p>Sent for approval; an agency admin or finance decides in Approvals. If it’s sent back, it returns here for changes.</p>
+            <div class="actions">
+              @if (session.can('Approvals.Decide')) {
+                <a class="btn btn-secondary" routerLink="/approvals">Open Approvals</a>
+              }
+              @if (canRun()) {
+                <button type="button" class="btn btn-ghost danger" (click)="cancel()">Withdraw and cancel</button>
+              }
+            </div>
+          }
+          @case ('approved') {
+            <h2 class="section-title">Next: post to the accounts</h2>
+            <p>Approved by {{ r.approval!.decidedBy }} on {{ formatDate(r.approval!.decidedAt) }}@if (r.approval!.comment) { : “{{ r.approval!.comment }}” }. Posting charges every account and locks the run.</p>
+            @if (canRun()) {
+              <div class="actions">
+                <button type="button" class="btn btn-primary" (click)="step('post')"><ion-icon name="checkmark-done-outline" aria-hidden="true" /> Post {{ d.total | rand }}</button>
+                <button type="button" class="btn btn-ghost danger" (click)="cancel()">Cancel run</button>
+              </div>
+            }
+          }
+          @case ('posted') {
+            <h2 class="section-title">Next: send the statements</h2>
+            <p>Each owner gets their {{ period() }} statement by their preferred channel, issued with {{ statementsTemplate() }}.</p>
+            @if (canRun()) {
+              <div class="actions">
+                <button type="button" class="btn btn-primary" (click)="step('send-statements')"><ion-icon name="mail-outline" aria-hidden="true" /> Send statements</button>
+              </div>
+            }
+          }
+          @case ('sent') {
+            <h2 class="section-title">Done</h2>
+            <p>Posted and statements sent. Arrears from this period are picked up by credit control.</p>
+            <div class="actions">
+              <a class="btn btn-secondary" routerLink="/finance/credit-control">Credit control</a>
+            </div>
+          }
+          @case ('cancelled') {
+            <h2 class="section-title">Cancelled</h2>
+            <p>{{ r.cancelled!.reason }} — {{ r.cancelled!.by }}, {{ formatDate(r.cancelled!.at) }}. Nothing was posted.</p>
+          }
+        }
+      </section>
+
+      <!-- Exceptions -->
+      @if (r.exceptions.length) {
+        <section class="surface panel">
+          <h2 class="section-title">Exceptions</h2>
+          <ul class="exceptions">
+            @for (x of r.exceptions; track x.id) {
+              <li [class.open]="!x.decision">
+                <ion-icon [name]="x.decision ? 'checkmark-circle-outline' : 'alert-circle-outline'" aria-hidden="true" />
+                <div class="x-main">
+                  <div class="x-head">
+                    <strong>{{ exceptionLabel(x) }}</strong>
+                    <span class="muted">{{ x.accountNo }}</span>
+                  </div>
+                  <div class="x-detail">{{ x.detail }}</div>
+                  @if (x.decision) {
+                    <div class="x-decision">{{ decisionLabel(x) }}<span class="muted"> · {{ x.decidedBy }}</span>@if (x.note) { <span class="muted"> · “{{ x.note }}”</span> }</div>
+                  }
+                </div>
+                @if (canRun() && r.stage === 'preview') {
+                  <button type="button" class="btn btn-sm" [class.btn-primary]="!x.decision" [class.btn-ghost]="!!x.decision" (click)="decide(x)">{{ x.decision ? 'Change' : 'Decide' }}</button>
+                }
+              </li>
+            }
+          </ul>
+        </section>
+      }
+
+      <!-- Charges -->
+      <section class="surface panel">
+        <div class="panel-head">
+          <h2 class="section-title">Charges</h2>
+          @if (r.lines.length) {
+            <div class="seg" role="group" aria-label="Show">
+              <button type="button" [class.on]="filter() === 'all'" (click)="filter.set('all')">All {{ r.lines.length }}</button>
+              <button type="button" [class.on]="filter() === 'flagged'" (click)="filter.set('flagged')">Flagged</button>
+              @if (excludedCount()) {
+                <button type="button" [class.on]="filter() === 'excluded'" (click)="filter.set('excluded')">Left out {{ excludedCount() }}</button>
+              }
+            </div>
+          }
+        </div>
+        @if (r.lines.length) {
+          <dl class="kinds">
+            @for (k of byKind(); track k.label) {
+              <div>
+                <dt>{{ k.label }}</dt>
+                <dd class="money">{{ k.amount | rand }}</dd>
+              </div>
+            }
+            <div class="sum">
+              <dt>Total</dt>
+              <dd class="money">{{ d.total | rand }}</dd>
+            </div>
+            @if (change(); as ch) {
+              <div class="vs" [class.large]="ch.large">
+                <dt>vs last month</dt>
+                <dd class="money">{{ ch.diff >= 0 ? '+' : '−' }}{{ (ch.diff >= 0 ? ch.diff : -ch.diff) | rand }} ({{ ch.pct >= 0 ? '+' : '' }}{{ ch.pct.toFixed(1) }}%)</dd>
+              </div>
+            }
+          </dl>
+          <ui-data-table caption="Charges per account" [rows]="lines()" [columns]="columns" [rowId]="lineId" [muted]="isExcluded">
+            <ng-template uiCell="unit" let-l>
+              <div class="title">Unit {{ l.unitNumber }}@if (isFlagged(l)) { <ion-icon class="flag" name="flag-outline" aria-label="Flagged" /> }</div>
+              <div class="muted">{{ l.holderName }} · {{ l.accountNo }}</div>
+            </ng-template>
+            <ng-template uiCell="charges" let-l>
+              @if (l.excluded) {
+                <span class="muted">Left out of this run</span>
+              } @else {
+                <ul class="charges">
+                  @for (c of l.charges; track $index) {
+                    <li><span>{{ c.description }}</span><span class="money">{{ c.amount | rand }}</span></li>
+                  }
+                </ul>
+              }
+            </ng-template>
+            <ng-template uiCell="total" let-l><span class="money" [class.struck]="l.excluded">{{ l.total | rand }}</span></ng-template>
+          </ui-data-table>
+        } @else {
+          <p class="muted">{{ d.accounts }} accounts were charged {{ d.total | rand }} in this run. Per-account detail for runs before Humo is on each account’s statement.</p>
+        }
+      </section>
+    </div>
+
+    <aside class="side">
+      @if (r.statements; as s) {
+        <section class="surface panel">
+          <h2 class="section-title">Statements</h2>
+          <ul class="docs">
+            <li><ion-icon name="mail-outline" aria-hidden="true" /><span>{{ s.email }} by email</span></li>
+            <li><ion-icon name="print-outline" aria-hidden="true" /><span>{{ s.post }} by post</span></li>
+            <li><ion-icon name="phone-portrait-outline" aria-hidden="true" /><span>{{ s.portal }} on the portal</span></li>
+          </ul>
+          <p class="muted">Sent {{ formatDate(s.at) }} by {{ s.by }} · {{ statementsTemplate() }}, as issued.</p>
+        </section>
+      }
+
+      <section class="surface panel activity">
+        <h2 class="section-title">Activity</h2>
+        @if (canRun()) {
+          <div class="comment">
+            <label class="visually-hidden" for="run-comment">Add a comment</label>
+            <textarea id="run-comment" rows="2" placeholder="Add a note for the approvers…" [value]="comment()" (input)="comment.set($any($event.target).value)"></textarea>
+            <button type="button" class="btn btn-secondary btn-sm" [disabled]="!comment().trim()" (click)="addComment()">Add comment</button>
+          </div>
+        }
+        <ui-timeline [events]="events()" [initial]="12" />
+      </section>
+    </aside>
+  </div>
+}

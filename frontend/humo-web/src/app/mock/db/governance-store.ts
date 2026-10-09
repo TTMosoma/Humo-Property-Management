@@ -497,14 +497,9 @@ export class GovernanceStore {
     return Math.max(0, ...this.resolutions.filter((r) => r.schemeId === schemeId).map((r) => r.number)) + 1;
   }
 
-  /** The template a document is issued with: the organisation's default if it may use it, else Humo's default. */
   private templateFor(organisationId: string, type: DocumentType): DocumentTemplateRef {
     const ent = entitlementSet(this.platform.customers().find((c) => c.organisationId === organisationId)?.entitlements ?? []);
-    const chosen = this.docs.settingsFor(organisationId).defaults[type];
-    const t =
-      (chosen && this.docs.templates().find((x) => x.id === chosen && templateAvailability(x, ent).state === 'available')) ||
-      this.docs.templates().find((x) => x.documentType === type && x.isDefault)!;
-    return { templateId: t.id, version: t.currentVersion };
+    return this.docs.issuingTemplate(organisationId, type, ent);
   }
 
   private standardAgenda(type: Meeting['type']) {
