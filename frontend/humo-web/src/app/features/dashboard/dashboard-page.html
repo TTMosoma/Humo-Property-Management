@@ -62,6 +62,7 @@
     </section>
   </div>
 
+  @if (flags.on('dashboard.since-yesterday')) {
   <section class="surface changes-card">
     <header class="p-head">
       <h2>Since yesterday</h2>
@@ -87,6 +88,7 @@
       <button type="button" class="btn btn-ghost btn-sm" (click)="showAllChanges.set(!showAllChanges())">{{ showAllChanges() ? 'Show fewer' : 'Show all ' + changes().length }}</button>
     }
   </section>
+  }
 
   @if (showMaintenanceFlow()) {
     <section class="surface flow-card">

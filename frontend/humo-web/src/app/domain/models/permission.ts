@@ -79,6 +79,7 @@ export type Permission =
   | 'Platform.Support.Assist'
   | 'Platform.Config.Manage'
   | 'Platform.Operations.View'
+  | 'Platform.Operations.Manage'
   | 'Platform.ManageHumoRoles'
   | 'Platform.Audit'
   | 'System.Impersonate';
@@ -158,6 +159,7 @@ export const PERMISSIONS: PermissionMeta[] = [
   { id: 'Platform.Support.Assist', area: 'Platform', label: 'Assist with customer users, recovery and escalation', mutates: true },
   { id: 'Platform.Config.Manage', area: 'Platform', label: 'Platform configuration, feature flags and integrations', mutates: true, stepUp: true },
   { id: 'Platform.Operations.View', area: 'Platform', label: 'View platform uptime, jobs and integrations', mutates: false },
+  { id: 'Platform.Operations.Manage', area: 'Platform', label: 'Retry background jobs and run incidents', mutates: true },
   { id: 'Platform.ManageHumoRoles', area: 'Platform', label: 'Grant Humo internal roles', mutates: true, stepUp: true },
   { id: 'Platform.Audit', area: 'Platform', label: 'View the platform-wide audit log', mutates: false },
   { id: 'System.Impersonate', area: 'Platform', label: 'Impersonate a customer user (granted individually)', mutates: false },
@@ -208,7 +210,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   'system-admin': [
     'Platform.View', 'Platform.Customers.View', 'Platform.Customers.Manage', 'Platform.Customers.Users', 'Platform.Subscriptions.View',
     'Platform.Subscriptions.Manage', 'Platform.Packages.Manage', 'Platform.Templates.Manage', 'Platform.Health.View', 'Platform.Revenue.View', 'Platform.Insights.View',
-    'Platform.Support.Assist', 'Platform.Config.Manage', 'Platform.Operations.View', 'Platform.ManageHumoRoles', 'Platform.Audit', 'Security.ManageOwn',
+    'Platform.Support.Assist', 'Platform.Config.Manage', 'Platform.Operations.View', 'Platform.Operations.Manage', 'Platform.ManageHumoRoles', 'Platform.Audit', 'Security.ManageOwn',
   ],
   // The customer relationship: onboarding, adoption, health, subscriptions where authorised. No platform config, no Humo roles.
   'humo-account-manager': [
@@ -219,7 +221,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   // Investigates and helps. Can't change packages, configuration, security policy or anyone's roles.
   'humo-support': [
     'Platform.View', 'Platform.Customers.View', 'Platform.Customers.Users', 'Platform.Subscriptions.View', 'Platform.Health.View',
-    'Platform.Support.Assist', 'Platform.Operations.View', 'Platform.Audit', 'Security.ManageOwn',
+    'Platform.Support.Assist', 'Platform.Operations.View', 'Platform.Operations.Manage', 'Platform.Audit', 'Security.ManageOwn',
   ],
   // Business intelligence: aggregates, revenue and health. Read-only; no customer users or audit detail.
   'humo-executive': [

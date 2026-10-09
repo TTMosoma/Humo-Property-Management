@@ -13,6 +13,7 @@ import {
   SettingsDataSource,
   ReportDataSource,
   NoticeDataSource,
+  OpsDataSource,
   ResolutionDataSource,
   PlatformTemplateDataSource,
   NotificationDataSource,
@@ -67,6 +68,7 @@ import { InMemoryComplianceDataSource, InMemoryLibraryDataSource, InMemoryNotice
 import { ComplianceStore } from './db/compliance-store';
 import { InMemorySettingsDataSource } from './data-sources/in-memory-settings-data-source';
 import { InMemoryReportDataSource } from './data-sources/in-memory-report-data-source';
+import { InMemoryOpsDataSource } from './data-sources/in-memory-ops-data-source';
 import { PrototypeControls } from '../core/prototype/prototype-controls';
 import { MaintenanceStore } from './db/maintenance-store';
 import { MockPrototypeControls } from './prototype/mock-prototype-controls';
@@ -110,6 +112,7 @@ export function provideMockData(): EnvironmentProviders {
     { provide: SettingsDataSource, useClass: InMemorySettingsDataSource },
     { provide: ReportDataSource, useClass: InMemoryReportDataSource },
     { provide: NoticeDataSource, useClass: InMemoryNoticeDataSource },
+    { provide: OpsDataSource, useClass: InMemoryOpsDataSource },
     // Humo Contractor — a separate product's capabilities, consumed by Humo PM.
     { provide: ContractorNetwork, useClass: InMemoryContractorNetwork },
     { provide: ContractorPortal, useClass: InMemoryContractorPortal },

@@ -59,7 +59,7 @@ export interface UploadPreset {
 export function uploadForm(drawer: DrawerService, data: LibraryDataSource, record: { kind: RecordKind; id: string; label: string }, preset: UploadPreset = {}): void {
   const category = preset.category ?? (record.kind === 'supplier' ? 'vetting' : 'other');
   const fields: FormField[] = [
-    { key: 'file', label: 'File', type: 'file', required: true, accept: '.pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx', help: 'Up to 25 MB.' },
+    { key: 'file', label: 'File', type: 'file', required: true, accept: '.pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx', help: 'PDF, photos, Word or Excel. Humo checks the size limit.' },
     { key: 'title', label: 'Title', type: 'text', required: true, placeholder: 'What people will look for' },
     { key: 'category', label: 'Category', type: 'select', required: true, half: true, options: categoriesFor(record.kind).map((c) => ({ value: c, label: CATEGORY_LABELS[c] })) },
     { key: 'visibility', label: 'Who can see it', type: 'select', required: true, half: true, options: visibilityOptions(record.kind) },

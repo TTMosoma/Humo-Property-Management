@@ -4,6 +4,7 @@ import { IonBadge, IonIcon, IonLabel, IonTabBar, IonTabButton } from '@ionic/ang
 import { AttentionKey, AttentionService } from '../../attention/attention.service';
 import { NavService } from '../../navigation/nav.service';
 import { SessionService } from '../../session/session.service';
+import { FeatureFlags } from '../../flags/feature-flags';
 
 interface Tab {
   id: string;
@@ -46,6 +47,7 @@ interface Tab {
 })
 export class MobileTabBar {
   private readonly session = inject(SessionService);
+  private readonly flags = inject(FeatureFlags);
   private readonly nav = inject(NavService);
   private readonly attention = inject(AttentionService);
   private readonly router = inject(Router);
@@ -81,7 +83,7 @@ export class MobileTabBar {
     }
     // Field mode: staff who log jobs get "Report", which opens the request form photo-first.
     const report: Tab = { id: 'report', label: 'Report', icon: 'camera-outline', route: '/maintenance/new?capture=1' };
-    const canReport = this.session.can('Maintenance.Log') && this.session.hasFeature('maintenance-basic') && role !== 'finance';
+    const canReport = this.session.can('Maintenance.Log') && this.session.hasFeature('maintenance-basic') && role !== 'finance' && this.flags.on('mobile.report-tab');
     if (role === 'operations') {
       return [
         { id: 'home', label: 'Home', icon: 'grid-outline', route: '/dashboard' },

@@ -12,6 +12,7 @@ import { simulationStorage } from '../simulation/simulation-storage';
 import { GovernanceStore } from './governance-store';
 import { MaintenanceStore } from './maintenance-store';
 import { MockDb } from './mock-db';
+import { OpsStore } from './ops-store';
 import { seedLibrary } from './seed-library';
 
 /** DEVELOPMENT / SIMULATION ONLY: the shape saved to localStorage. */
@@ -20,8 +21,6 @@ interface LibrarySnapshot {
   seq: number;
 }
 
-/** 25 MB, as the API will enforce. */
-const MAX_BYTES = 25 * 1024 * 1024;
 
 /**
  * The document library "backend" for the prototype. Documents are uploaded on
@@ -37,6 +36,7 @@ export class LibraryStore {
   private readonly db = inject(MockDb);
   private readonly maintenance = inject(MaintenanceStore);
   private readonly governance = inject(GovernanceStore);
+  private readonly ops = inject(OpsStore);
 
   documents: LibraryDocument[];
   private seq: number;
@@ -111,7 +111,7 @@ export class LibraryStore {
     const e: FieldErrors = {};
     if (!this.resolve(input.record.kind, input.record.id)) e['record'] = 'The record this belongs to no longer exists.';
     if (!input.fileName) e['file'] = 'Choose a file.';
-    else if (input.sizeBytes > MAX_BYTES) e['file'] = 'Files can be up to 25 MB.';
+    else if (input.sizeBytes > this.ops.config.uploadLimitMb * 1024 * 1024) e['file'] = `Files can be up to ${this.ops.config.uploadLimitMb} MB.`;
     if (!input.title.trim()) e['title'] = 'Give it a title people will recognise.';
     if ((input.compliance || (input.category === 'vetting' && input.supplierDoc !== 'Bank confirmation letter')) && !input.expiresAt) e['expiresAt'] = 'Compliance tracks this document: give its expiry date.';
     if (input.compliance && input.record.kind !== 'scheme') e['compliance'] = 'Compliance documents are uploaded on the scheme.';

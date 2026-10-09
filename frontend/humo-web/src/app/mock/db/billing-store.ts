@@ -22,6 +22,7 @@ import { formatRand } from '../../ui/format/money';
 import { simulationStorage } from '../simulation/simulation-storage';
 import { DocumentStore } from './document-store';
 import { RawTransaction } from './ledger';
+import { OpsStore } from './ops-store';
 import { SettingsStore } from './settings-store';
 import { MockDb } from './mock-db';
 import { PlatformStore } from './platform-store';
@@ -66,6 +67,7 @@ export class BillingStore {
   private readonly docs = inject(DocumentStore);
   private readonly platform = inject(PlatformStore);
   private readonly settings = inject(SettingsStore);
+  private readonly ops = inject(OpsStore);
 
   runs: BillingRun[];
   private seq: number;
@@ -157,6 +159,7 @@ export class BillingStore {
         break;
       case 'send-statements':
         if (run.stage !== 'posted') e['stage'] = 'Statements are sent once the run is posted.';
+        else if (!this.ops.isOn('billing.statement-sending', this.db.scheme(run.schemeId).organisationId)) e['stage'] = 'Humo has paused statement sending for a moment. The run stays posted; send the statements again shortly.';
         break;
       case 'cancel':
         if (locked) e['stage'] = 'A posted run can’t be cancelled. Correct accounts with journal adjustments.';

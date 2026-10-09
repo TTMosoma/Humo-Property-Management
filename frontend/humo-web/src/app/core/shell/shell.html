@@ -1,6 +1,7 @@
 @if (session.isImpersonating()) {
   <app-impersonation-banner />
 }
+<app-maintenance-banner />
 <div class="frame">
 <ion-split-pane contentId="main-content" when="lg" [class.rail]="railCollapsed()">
   <ion-menu contentId="main-content" menuId="main" type="overlay">

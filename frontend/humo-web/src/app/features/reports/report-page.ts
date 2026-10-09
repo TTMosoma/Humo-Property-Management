@@ -13,6 +13,7 @@ import { ErrorState } from '../../ui/states/error-state';
 import { Skeleton } from '../../ui/states/skeleton';
 import { downloadCsv, formatCell } from './report-view';
 import { DesktopHint } from '../../ui/states/desktop-hint';
+import { FeatureFlags } from '../../core/flags/feature-flags';
 
 const PERIODS = [
   { value: '1', label: 'Last month' },
@@ -47,7 +48,9 @@ const PERIODS = [
           <p class="meta">{{ r.scope }} · worked out {{ formatDate(r.generatedAt) }}</p>
         </div>
         <div class="actions no-print">
-          <button type="button" class="btn btn-secondary" (click)="exportCsv()"><ion-icon name="download-outline" aria-hidden="true" /> Export CSV</button>
+          @if (flags.on('reports.csv-export')) {
+            <button type="button" class="btn btn-secondary" (click)="exportCsv()"><ion-icon name="download-outline" aria-hidden="true" /> Export CSV</button>
+          }
           <button type="button" class="btn btn-ghost" (click)="print()"><ion-icon name="print-outline" aria-hidden="true" /> Print</button>
         </div>
       </header>
@@ -153,6 +156,7 @@ export class ReportPage {
   private readonly router = inject(Router);
   private readonly data = inject(ReportDataSource);
   private readonly scope = inject(ScopeService);
+  protected readonly flags = inject(FeatureFlags);
 
   private readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('reportId') as ReportId)), { initialValue: this.route.snapshot.paramMap.get('reportId') as ReportId });
   protected readonly state = urlState({ scheme: null, months: null });

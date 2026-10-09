@@ -130,6 +130,8 @@ import {
   checkboxOutline,
   pricetagOutline,
   pinOutline,
+  powerOutline,
+  attachOutline,
 } from 'ionicons/icons';
 
 /** Registers every icon the app uses (tree-shaken, no runtime fetches). */
@@ -140,6 +142,8 @@ export function registerIcons(): void {
     'checkbox-outline': checkboxOutline,
     'pricetag-outline': pricetagOutline,
     'pin-outline': pinOutline,
+    'power-outline': powerOutline,
+    'attach-outline': attachOutline,
     'add-outline': addOutline,
     'link-outline': linkOutline,
     'alert-circle-outline': alertCircleOutline,

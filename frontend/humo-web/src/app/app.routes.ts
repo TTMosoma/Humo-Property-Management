@@ -573,7 +573,12 @@ export const routes: Routes = [
             data: { permission: 'Billing.View', breadcrumb: 'Billing configuration' },
             loadComponent: () => import('./features/settings/billing-settings-page').then((m) => m.BillingSettingsPage),
           },
-          planned('system', 'System', 'Platform.Config.Manage', 8, 'Platform-wide configuration.'),
+          {
+            path: 'system',
+            title: 'System',
+            data: { permission: 'Platform.Config.Manage', breadcrumb: 'System' },
+            loadComponent: () => import('./features/settings/system-settings-page').then((m) => m.SystemSettingsPage),
+          },
         ],
       },
 
@@ -705,10 +710,19 @@ export const routes: Routes = [
             data: { permission: 'Platform.Subscriptions.View', breadcrumb: 'Packages & features' },
             loadComponent: () => import('./features/platform/packages-page').then((m) => m.PackagesPage),
           },
-          planned('flags', 'Feature flags', 'Platform.Config.Manage', 9, 'Roll features out safely: per environment, per customer, per percentage — separate from commercial entitlements.', [
-            'Flags are technical (is it switched on?); entitlements are commercial (has the customer got it?)',
-            'Kill switches and gradual rollout, every change audited',
-          ]),
+          {
+            path: 'flags',
+            data: { breadcrumb: 'Feature flags' },
+            children: [
+              { path: '', title: 'Feature flags', data: { permission: 'Platform.Config.Manage' }, loadComponent: () => import('./features/platform/flags/flags-page').then((m) => m.FlagsPage) },
+              {
+                path: ':flagKey',
+                title: 'Feature flag',
+                data: { permission: 'Platform.Config.Manage', breadcrumb: (_: unknown, p: Record<string, string>) => p['flagKey'] },
+                loadComponent: () => import('./features/platform/flags/flag-page').then((m) => m.FlagPage),
+              },
+            ],
+          },
           {
             path: 'users',
             title: 'Users & impersonation',
@@ -722,7 +736,12 @@ export const routes: Routes = [
             loadComponent: () => import('./features/audit/audit-page').then((m) => m.AuditPage),
           },
           { path: 'plans', redirectTo: 'packages' },
-          planned('health', 'Platform health', 'Platform.Operations.View', 9, 'Uptime, background jobs, integrations and error rates.'),
+          {
+            path: 'health',
+            title: 'Platform health',
+            data: { permission: 'Platform.Operations.View', breadcrumb: 'Platform health' },
+            loadComponent: () => import('./features/platform/health/health-page').then((m) => m.HealthPage),
+          },
         ],
       },
 

@@ -34,6 +34,7 @@ import { StatusPill } from '../../ui/status-pill/status-pill';
 import { organisationTeam } from '../../core/session/team';
 import { COMPLIANCE, RATING } from '../schemes/scheme-view';
 import { isOpenJob, isOverdue } from '../maintenance/job-view';
+import { FeatureFlags } from '../../core/flags/feature-flags';
 
 interface Tile {
   id: string;
@@ -103,6 +104,7 @@ const MAINT_FLOW: { label: string; stages: JobStage[] }[] = [
 export class DashboardPage {
   private readonly attention = inject(AttentionService);
   private readonly router = inject(Router);
+  protected readonly flags = inject(FeatureFlags);
   private readonly settings = toSignal(inject(SettingsDataSource).agency().pipe(catchError(() => of(null))), { initialValue: null });
   private readonly schemesDs = inject(SchemeDataSource);
   private readonly jobsDs = inject(JobDataSource);

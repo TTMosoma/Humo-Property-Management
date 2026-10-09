@@ -47,3 +47,4 @@ export * from './models/settings';
 export * from './ports/settings-data-source';
 export * from './models/report';
 export * from './models/notice';
+export * from './models/ops';

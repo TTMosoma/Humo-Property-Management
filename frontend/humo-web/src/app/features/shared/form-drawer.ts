@@ -14,7 +14,8 @@ export type FormValues = Record<string, string>;
 export interface FormField {
   key: string;
   label: string;
-  type: 'text' | 'email' | 'tel' | 'number' | 'date' | 'textarea' | 'select' | 'color' | 'file';
+  /** `checks`: several options; the value is the chosen values joined with commas. */
+  type: 'text' | 'email' | 'tel' | 'number' | 'date' | 'textarea' | 'select' | 'color' | 'file' | 'checks' | 'datetime-local';
   /** File fields: what the picker offers, e.g. ".pdf,.jpg". */
   accept?: string;
   required?: boolean;
@@ -82,6 +83,21 @@ export function openForm<R>(drawer: DrawerService, spec: FormSpec<R>): void {
       }
       <form class="form" (submit)="$event.preventDefault(); send()" novalidate>
         @for (f of visibleFields(); track f.key) {
+          @if (f.type === 'checks') {
+            <!-- Several checkboxes: a group, not a label (labels can't nest). -->
+            <div class="field" [class.half]="f.half" role="group" [attr.aria-labelledby]="'fl-' + f.key">
+              <span class="f-label" [attr.id]="'fl-' + f.key">{{ f.label }}@if (!f.required) { <span class="opt">(optional)</span> }</span>
+              <span class="checks">
+                @for (o of f.optionsFor ? f.optionsFor(values()) : (f.options ?? []); track o.value) {
+                  <label class="check"><input type="checkbox" [checked]="isChecked(f.key, o.value)" (change)="toggleCheck(f.key, o.value, $any($event.target).checked)" /> {{ o.label }}</label>
+                }
+              </span>
+              @if (f.help) {
+                <span class="f-help">{{ f.help }}</span>
+              }
+              <ui-field-error [errors]="errors()" [field]="f.key" />
+            </div>
+          } @else {
           <label class="field" [class.half]="f.half">
             <span class="f-label">{{ f.label }}@if (!f.required) { <span class="opt">(optional)</span> }</span>
             @switch (f.type) {
@@ -110,6 +126,7 @@ export function openForm<R>(drawer: DrawerService, spec: FormSpec<R>): void {
             }
             <ui-field-error [errors]="errors()" [field]="f.key" />
           </label>
+          }
         }
         <button type="submit" hidden></button>
       </form>
@@ -137,6 +154,9 @@ export function openForm<R>(drawer: DrawerService, spec: FormSpec<R>): void {
     .opt { margin-left: 4px; font-weight: var(--fw-regular); color: var(--c-text-faint); }
     .f-help { font-size: var(--fs-xs); color: var(--c-text-muted); }
     input, select, textarea { width: 100%; }
+    .checks { display: flex; flex-direction: column; gap: 4px; max-height: 220px; overflow-y: auto; padding: var(--s-2); border: 1px solid var(--c-border); border-radius: var(--r); }
+    .check { display: flex; gap: var(--s-2); align-items: center; font-size: var(--fs-sm); }
+    .check input { width: auto; }
   `,
 })
 export class FormDrawer {
@@ -161,6 +181,15 @@ export class FormDrawer {
 
   protected set(key: string, e: Event): void {
     this.apply(key, (e.target as HTMLInputElement).value);
+  }
+
+  protected isChecked(key: string, value: string): boolean {
+    return (this.values()[key] ?? '').split(',').includes(value);
+  }
+
+  protected toggleCheck(key: string, value: string, on: boolean): void {
+    const current = (this.values()[key] ?? '').split(',').filter(Boolean);
+    this.apply(key, (on ? [...new Set([...current, value])] : current.filter((v) => v !== value)).join(','));
   }
 
   protected pick(key: string, e: Event): void {

@@ -28,6 +28,7 @@ import { CommandPalette } from './command-palette/command-palette';
 import { MobileTabBar } from './mobile-tab-bar/mobile-tab-bar';
 import { Sidebar } from './sidebar/sidebar';
 import { Topbar } from './topbar/topbar';
+import { MaintenanceBanner } from '../flags/maintenance-banner';
 
 /** Matches Ionic's "lg" split-pane breakpoint: sidebar is docked at 992px and wider. */
 const DESKTOP_QUERY = '(min-width: 992px)';
@@ -39,7 +40,7 @@ const DESKTOP_QUERY = '(min-width: 992px)';
  */
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, IonSplitPane, IonMenu, IonIcon, Sidebar, Topbar, Breadcrumbs, MobileTabBar, PrototypeToolbar, ImpersonationBanner],
+  imports: [RouterOutlet, IonSplitPane, IonMenu, IonIcon, Sidebar, Topbar, Breadcrumbs, MobileTabBar, PrototypeToolbar, ImpersonationBanner, MaintenanceBanner],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shell.html',
   styleUrl: './shell.scss',

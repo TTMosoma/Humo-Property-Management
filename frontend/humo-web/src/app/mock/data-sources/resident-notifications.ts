@@ -7,6 +7,7 @@ import { LibraryStore } from '../db/library-store';
 import { MaintenanceStore } from '../db/maintenance-store';
 import { MockDb } from '../db/mock-db';
 import { NoticeStore } from '../db/notice-store';
+import { OpsStore } from '../db/ops-store';
 import { SettingsStore } from '../db/settings-store';
 
 const WINDOW_DAYS = 45;
@@ -28,6 +29,7 @@ export class ResidentNotifications {
   private readonly library = inject(LibraryStore);
   private readonly notices = inject(NoticeStore);
   private readonly settings = inject(SettingsStore);
+  private readonly ops = inject(OpsStore);
 
   for(a: RoleAssignment, personId: string | undefined): AppNotification[] {
     if (a.role !== 'owner' && a.role !== 'tenant') return [];
@@ -35,6 +37,7 @@ export class ResidentNotifications {
     const unitId = a.scope.unitId;
     const scheme = schemeId ? this.db.schemes.get(schemeId) : undefined;
     if (!scheme || !unitId) return [];
+    if (!this.ops.isOn('notifications.resident-live', scheme.organisationId)) return [];
     const on = (e: NotificationEvent) => this.settings.rule(scheme.organisationId, e).enabled;
     const since = new Date(Date.now() - WINDOW_DAYS * 86_400_000).toISOString();
     const account = this.db.accountForUnit(unitId);

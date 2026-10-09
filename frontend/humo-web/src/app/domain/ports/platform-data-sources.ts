@@ -1,3 +1,4 @@
+import { Environment, FeatureFlag, FlagRule, IncidentStatus, MaintenanceWindow, NewIncident, PlatformHealth, SystemConfig } from '../models/ops';
 import { Observable } from 'rxjs';
 import { ListQuery, Page } from './list-query';
 import { AddOn, AddOnId, Feature, FeatureDef, Package, PackageId } from '../models/entitlement';
@@ -52,4 +53,28 @@ export interface ServedNudge {
 export abstract class NudgeDataSource {
   abstract next(placement: NudgePlacement): Observable<ServedNudge | null>;
   abstract record(nudgeId: string, event: 'dismissed' | 'not-interested' | 'learn-more' | 'snoozed'): Observable<void>;
+}
+
+/**
+ * Platform operations (Humo staff only):
+ *   GET   /ops/flags                       every flag with its rules per environment
+ *   PUT   /ops/flags/{key}/{environment}   change a rule (production: step-up); audited with a reason
+ *   GET   /me/flags                        the flags evaluated for the caller's organisation (session bootstrap)
+ *   GET   /ops/config   PUT /ops/config    system configuration
+ *   GET   /system/status                   public: the maintenance banner
+ *   GET   /ops/health                      availability, latency, integrations, jobs, incidents
+ *   POST  /ops/jobs/{id}/retry
+ *   POST  /ops/incidents   POST /ops/incidents/{id}/updates
+ */
+export abstract class OpsDataSource {
+  abstract flags(): Observable<FeatureFlag[]>;
+  abstract updateFlag(key: string, environment: Environment, rule: FlagRule, reason: string, expectedVersion?: number): Observable<void>;
+  abstract myFlags(): Observable<Record<string, boolean>>;
+  abstract config(): Observable<SystemConfig>;
+  abstract updateConfig(config: Omit<SystemConfig, 'version'>, reason: string, expectedVersion?: number): Observable<void>;
+  abstract maintenance(): Observable<MaintenanceWindow | null>;
+  abstract health(): Observable<PlatformHealth>;
+  abstract retryJob(jobId: string): Observable<void>;
+  abstract declareIncident(input: NewIncident): Observable<string>;
+  abstract updateIncident(id: string, status: IncidentStatus, message: string, expectedVersion?: number): Observable<void>;
 }

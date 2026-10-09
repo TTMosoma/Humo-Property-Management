@@ -1,7 +1,8 @@
 import { Injectable, inject } from '@angular/core';
-import { FieldErrors, NewNotice, Notice, NoticeView } from '../../domain';
+import { Channel, FieldErrors, NewNotice, Notice, NoticeView } from '../../domain';
 import { simulationStorage } from '../simulation/simulation-storage';
 import { MockDb } from './mock-db';
+import { OpsStore } from './ops-store';
 import { SettingsStore } from './settings-store';
 
 /** DEVELOPMENT / SIMULATION ONLY: the shape saved to localStorage. */
@@ -26,6 +27,7 @@ const at = (days: number, hour = 9) => {
 export class NoticeStore {
   private readonly db = inject(MockDb);
   private readonly settings = inject(SettingsStore);
+  private readonly ops = inject(OpsStore);
 
   notices: Notice[];
   private seq: number;
@@ -90,7 +92,8 @@ export class NoticeStore {
         publishedBy: by,
         pinned: input.pinned,
         expiresAt: input.expiresAt ? new Date(`${input.expiresAt.slice(0, 10)}T23:59:00`).toISOString() : undefined,
-        sentBy: rule.enabled ? rule.channels : ['portal'],
+        // A channel switched off by Humo's kill switch is skipped; the others still go.
+        sentBy: (rule.enabled ? rule.channels : (['portal'] as Channel[])).filter((c) => c !== 'whatsapp' || this.ops.isOn('channels.whatsapp', scheme.organisationId)),
         recipients: this.recipients(scheme.id, input.audience),
       },
       ...this.notices,
