@@ -144,6 +144,11 @@ export class MockDb {
 
   /** Relationships in force today (ended ones stay as history). */
   /** A scheme's board: trustees in office, with their portfolio (Chairperson, Treasurer, …). */
+  /** The schemes a person is linked to (owner, tenant or trustee). */
+  schemesOfPerson(personId: string): string[] {
+    return [...new Set((this.relsByPerson.get(personId) ?? []).map((r) => r.schemeId))];
+  }
+
   trustees(schemeId: string): { person: Person; portfolio: string }[] {
     return [...new Set([...this.relsByPerson.values()].flat())]
       .filter((r) => r.type === 'trustee' && r.schemeId === schemeId && this.current(r))

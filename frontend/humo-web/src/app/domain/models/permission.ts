@@ -40,9 +40,11 @@ export type Permission =
   // Records & governance
   | 'Communications.View'
   | 'Documents.View'
+  | 'Documents.Manage'
   | 'Governance.View'
   | 'Meetings.Manage'
   | 'Compliance.View'
+  | 'Compliance.Manage'
   | 'Reports.View'
   // Residents
   | 'Resident.Portal'
@@ -122,9 +124,11 @@ export const PERMISSIONS: PermissionMeta[] = [
   { id: 'Suppliers.ChangeBankDetails', area: 'Maintenance', label: 'Change supplier banking details', mutates: true, stepUp: true },
   { id: 'Communications.View', area: 'Records', label: 'See what was sent to a scheme’s people', mutates: false },
   { id: 'Documents.View', area: 'Records', label: 'Open the document library', mutates: false },
+  { id: 'Documents.Manage', area: 'Records', label: 'Upload, edit and archive documents', mutates: true },
   { id: 'Governance.View', area: 'Records', label: 'View meetings, resolutions, boards and rules', mutates: false },
   { id: 'Meetings.Manage', area: 'Records', label: 'Schedule meetings and record decisions', mutates: true },
   { id: 'Compliance.View', area: 'Records', label: 'View compliance items and deadlines', mutates: false },
+  { id: 'Compliance.Manage', area: 'Records', label: 'Record compliance evidence and add compliance items', mutates: true },
   { id: 'Reports.View', area: 'Records', label: 'Run and view reports', mutates: false },
   { id: 'Resident.Portal', area: 'Residents', label: 'Use the resident portal for your own unit', mutates: false },
   { id: 'Resident.Requests', area: 'Residents', label: 'Report problems and confirm fixes', mutates: true },
@@ -185,17 +189,17 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   'agency-admin': [
     ...STAFF_BASE, 'Approvals.Decide', 'Schemes.Manage', 'Units.Manage', 'People.Manage', 'Accounts.View', 'Finance.View', 'Billing.View', 'Billing.Run', 'Receipts.Allocate', 'Collections.Manage',
     'Payables.Prepare', 'Payables.Release', 'Finance.Export', 'Maintenance.Manage', 'Suppliers.Manage', 'Suppliers.ChangeBankDetails',
-    'Meetings.Manage', 'Organisation.Manage', 'Documents.Configure', 'Notifications.Configure', 'Users.Manage', 'Users.ManageAdmins', 'Audit.View', 'Subscription.Request',
+    'Meetings.Manage', 'Documents.Manage', 'Compliance.Manage', 'Organisation.Manage', 'Documents.Configure', 'Notifications.Configure', 'Users.Manage', 'Users.ManageAdmins', 'Audit.View', 'Subscription.Request',
   ],
   'portfolio-manager': [
     ...STAFF_BASE, 'Approvals.Decide', 'Units.Manage', 'People.Manage', 'Accounts.View', 'Finance.View', 'Billing.View', 'Collections.Manage', 'Maintenance.Manage', 'Suppliers.Manage',
-    'Meetings.Manage', 'Notifications.Configure',
+    'Meetings.Manage', 'Documents.Manage', 'Compliance.Manage', 'Notifications.Configure',
   ],
   finance: [
     ...STAFF_BASE, 'Approvals.Decide', 'Accounts.View', 'Finance.View', 'Billing.View', 'Billing.Run', 'Receipts.Allocate', 'Collections.Manage', 'Payables.Prepare',
-    'Payables.Release', 'Finance.Export', 'Suppliers.ChangeBankDetails',
+    'Payables.Release', 'Finance.Export', 'Suppliers.ChangeBankDetails', 'Documents.Manage',
   ],
-  operations: [...STAFF_BASE, 'Maintenance.Manage', 'Suppliers.Manage'],
+  operations: [...STAFF_BASE, 'Maintenance.Manage', 'Suppliers.Manage', 'Documents.Manage'],
   trustee: [...TRUSTEE_VIEW, 'Work.Manage', 'Approvals.Decide', 'Security.ManageOwn'],
   owner: ['Resident.Portal', 'Account.ViewOwn', 'Resident.Requests', 'Security.ManageOwn'],
   tenant: ['Resident.Portal', 'Resident.Requests', 'Security.ManageOwn'],

@@ -109,6 +109,11 @@
           </div>
         }
       </section>
+
+      <!-- Documents (P5) -->
+      <section class="surface panel">
+        <app-attachments kind="job" [recordId]="d.job.ref" [label]="d.job.ref + ' · ' + d.job.title" />
+      </section>
     </div>
 
     <aside class="surface panel activity">

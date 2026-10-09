@@ -129,6 +129,11 @@
           <dt>Account number</dt><dd>{{ s.unit.accountNo }}</dd>
         </dl>
       </section>
+
+      <!-- Documents (P5) -->
+      <section class="surface panel">
+        <app-attachments kind="unit" [recordId]="s.unit.id" [label]="'Unit ' + s.unit.number + ', ' + s.scheme.name" />
+      </section>
     </div>
 
     <!-- Activity -->

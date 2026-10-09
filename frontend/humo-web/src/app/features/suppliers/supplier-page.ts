@@ -3,7 +3,7 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, map, of, switchMap } from 'rxjs';
-import { Supplier, SupplierDataSource, SupplierDocument, SupplierStatus, docStatus } from '../../domain';
+import { LibraryDataSource, Supplier, SupplierDataSource, SupplierDocument, SupplierStatus, docStatus } from '../../domain';
 import { editSupplierForm, supplierStatusForm } from './supplier-forms';
 import { DrawerService } from '../../ui/drawer/drawer.service';
 import { ScopeService } from '../../core/scope/scope.service';
@@ -21,11 +21,13 @@ import { Skeleton } from '../../ui/states/skeleton';
 import { StatusPill } from '../../ui/status-pill/status-pill';
 import { STAGE_LABEL, STAGE_TONE, isOpenJob } from '../maintenance/job-view';
 import { VETTING } from './suppliers-page';
+import { AttachmentsPanel } from '../library/attachments-panel';
+import { uploadForm } from '../library/library-forms';
 
 /** A supplier's record: vetting documents, performance, jobs and money. */
 @Component({
   selector: 'app-supplier-page',
-  imports: [VerificationBadge, Reputation, EndorsedBy, RecordHeader, StatusPill, EmptyState, ErrorState, Skeleton, IonIcon, RouterLink, RandPipe],
+  imports: [AttachmentsPanel, VerificationBadge, Reputation, EndorsedBy, RecordHeader, StatusPill, EmptyState, ErrorState, Skeleton, IonIcon, RouterLink, RandPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './supplier-page.html',
   styleUrl: './supplier-page.scss',
@@ -39,6 +41,8 @@ export class SupplierPage {
   protected readonly session = inject(SessionService);
   private readonly drawer = inject(DrawerService);
   private readonly scope = inject(ScopeService);
+  private readonly library = inject(LibraryDataSource);
+  protected readonly canUpload = computed(() => this.session.can('Documents.Manage') && this.session.hasFeature('documents') && !this.session.readOnly());
   protected readonly canManage = computed(() => this.session.can('Suppliers.Manage') && !this.session.readOnly());
 
   protected edit(s: Supplier): void {
@@ -138,6 +142,12 @@ export class SupplierPage {
       next: () => this.feedback.success(`Recorded. Payments to ${s.name} are on hold until the new account is confirmed with the bank and a call-back to ${s.contactName}.`),
       error: () => this.feedback.error('The banking details weren’t changed.'),
     });
+  }
+
+  /** A new vetting document: uploaded to the library, it updates the vetting record and Compliance. */
+  protected uploadDoc(type: SupplierDocument['type']): void {
+    const s = this.detail()?.supplier;
+    if (s) uploadForm(this.drawer, this.library, { kind: 'supplier', id: s.id, label: s.name }, { category: 'vetting', supplierDoc: type });
   }
 
   protected request(d: SupplierDocument): void {

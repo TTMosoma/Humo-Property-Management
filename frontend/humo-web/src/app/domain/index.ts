@@ -40,3 +40,6 @@ export * from './ports/governance-data-sources';
 export * from './models/billing';
 export * from './models/collections';
 export * from './ports/finance-data-sources';
+export * from './models/library';
+export * from './models/compliance';
+export * from './ports/records-data-sources';

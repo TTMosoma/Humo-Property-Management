@@ -226,6 +226,10 @@
         </ul>
       </section>
 
+      <section class="surface panel">
+        <app-attachments kind="meeting" [recordId]="m.id" [label]="m.ref + ' · ' + m.title" heading="Papers & attachments" />
+      </section>
+
       <section class="surface panel activity">
         <h2 class="section-title">Activity</h2>
         @if (canManage()) {

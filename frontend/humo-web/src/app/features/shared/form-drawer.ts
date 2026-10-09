@@ -14,9 +14,13 @@ export type FormValues = Record<string, string>;
 export interface FormField {
   key: string;
   label: string;
-  type: 'text' | 'email' | 'tel' | 'number' | 'date' | 'textarea' | 'select' | 'color';
+  type: 'text' | 'email' | 'tel' | 'number' | 'date' | 'textarea' | 'select' | 'color' | 'file';
+  /** File fields: what the picker offers, e.g. ".pdf,.jpg". */
+  accept?: string;
   required?: boolean;
   options?: { value: string; label: string }[];
+  /** Options that depend on the other fields' values (overrides `options`). */
+  optionsFor?: (values: FormValues) => { value: string; label: string }[];
   help?: string;
   placeholder?: string;
   /** Shown only when this returns true for the current values. */
@@ -32,8 +36,13 @@ export interface FormSpec<R = unknown> {
   fields: FormField[];
   initial?: FormValues;
   submitLabel: string;
-  /** Sends the form. The API validates again; its field errors appear next to the fields. */
-  submit: (values: FormValues) => Observable<R>;
+  /**
+   * Sends the form. The API validates again; its field errors appear next to the fields.
+   * A file field's value is the file name; the file itself is in `files`.
+   */
+  submit: (values: FormValues, files: Record<string, File>) => Observable<R>;
+  /** Fills in other fields when one changes (e.g. a title from the chosen file's name). */
+  changed?: (key: string, values: FormValues) => FormValues;
   /** What to say when it worked. */
   success: (result: R, values: FormValues) => string;
   /** E.g. go to the new record. */
@@ -79,12 +88,15 @@ export function openForm<R>(drawer: DrawerService, spec: FormSpec<R>): void {
               @case ('textarea') {
                 <textarea rows="3" [attr.id]="'f-' + f.key" [placeholder]="f.placeholder ?? ''" [value]="values()[f.key] ?? ''" (input)="set(f.key, $event)" [attr.aria-invalid]="!!errors()[f.key]"></textarea>
               }
+              @case ('file') {
+                <input type="file" [attr.id]="'f-' + f.key" [attr.accept]="f.accept ?? null" (change)="pick(f.key, $event)" [attr.aria-invalid]="!!errors()[f.key]" />
+              }
               @case ('select') {
                 <select [attr.id]="'f-' + f.key" (change)="set(f.key, $event)" [attr.aria-invalid]="!!errors()[f.key]">
                   @if (!f.required) {
                     <option value="" [selected]="!values()[f.key]">—</option>
                   }
-                  @for (o of f.options ?? []; track o.value) {
+                  @for (o of f.optionsFor ? f.optionsFor(values()) : (f.options ?? []); track o.value) {
                     <option [value]="o.value" [selected]="o.value === values()[f.key]">{{ o.label }}</option>
                   }
                 </select>
@@ -145,9 +157,24 @@ export class FormDrawer {
       .map(([, m]) => m);
   });
 
+  private readonly files: Record<string, File> = {};
+
   protected set(key: string, e: Event): void {
-    const value = (e.target as HTMLInputElement).value;
-    this.values.update((v) => ({ ...v, [key]: value }));
+    this.apply(key, (e.target as HTMLInputElement).value);
+  }
+
+  protected pick(key: string, e: Event): void {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (file) this.files[key] = file;
+    else delete this.files[key];
+    this.apply(key, file?.name ?? '');
+  }
+
+  private apply(key: string, value: string): void {
+    this.values.update((v) => {
+      const next = { ...v, [key]: value };
+      return this.spec.changed ? this.spec.changed(key, next) : next;
+    });
     if (this.errors()[key]) this.errors.update(({ [key]: _gone, ...rest }) => rest);
   }
 
@@ -165,7 +192,7 @@ export class FormDrawer {
       return;
     }
     this.busy.set(true);
-    const run = () => this.spec.submit(values);
+    const run = () => this.spec.submit(values, this.files);
     const stepUp = typeof this.spec.stepUp === 'function' ? this.spec.stepUp(values) : this.spec.stepUp;
     const request$ = stepUp ? this.stepUpService.guard(stepUp, run) : run();
     let sent = false;

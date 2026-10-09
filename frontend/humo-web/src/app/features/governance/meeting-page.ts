@@ -30,6 +30,7 @@ import { Timeline } from '../../ui/timeline/timeline';
 import { openForm } from '../shared/form-drawer';
 import { agendaItemForm, attendanceForm, cancelMeetingForm, minuteForm, packForm, rescheduleForm, resolutionForm } from './meeting-forms';
 import { MEETING_STAGE_TONE, MEETING_TRACKER, PROGRESS_TONE, progressLabel, stageLabel, when } from './meeting-view';
+import { AttachmentsPanel } from '../library/attachments-panel';
 
 const EVENT_KIND: Record<MeetingEvent['kind'], TimelineKind> = {
   stage: 'status',
@@ -47,7 +48,7 @@ const EVENT_KIND: Record<MeetingEvent['kind'], TimelineKind> = {
  */
 @Component({
   selector: 'app-meeting-page',
-  imports: [RecordHeader, StageTracker, StatusPill, Timeline, EmptyState, ErrorState, Skeleton, IonIcon, RouterLink],
+  imports: [AttachmentsPanel, RecordHeader, StageTracker, StatusPill, Timeline, EmptyState, ErrorState, Skeleton, IonIcon, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './meeting-page.html',
   styleUrl: './meeting-page.scss',

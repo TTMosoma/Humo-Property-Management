@@ -8,6 +8,8 @@ import {
   MeetingDataSource,
   BillingDataSource,
   CollectionDataSource,
+  ComplianceDataSource,
+  LibraryDataSource,
   ResolutionDataSource,
   PlatformTemplateDataSource,
   NotificationDataSource,
@@ -58,6 +60,8 @@ import { GovernanceStore } from './db/governance-store';
 import { InMemoryBillingDataSource, InMemoryCollectionDataSource } from './data-sources/in-memory-finance-data-sources';
 import { BillingStore } from './db/billing-store';
 import { CollectionsStore } from './db/collections-store';
+import { InMemoryComplianceDataSource, InMemoryLibraryDataSource } from './data-sources/in-memory-records-data-sources';
+import { ComplianceStore } from './db/compliance-store';
 import { PrototypeControls } from '../core/prototype/prototype-controls';
 import { MaintenanceStore } from './db/maintenance-store';
 import { MockPrototypeControls } from './prototype/mock-prototype-controls';
@@ -96,6 +100,8 @@ export function provideMockData(): EnvironmentProviders {
     { provide: ResolutionDataSource, useClass: InMemoryResolutionDataSource },
     { provide: BillingDataSource, useClass: InMemoryBillingDataSource },
     { provide: CollectionDataSource, useClass: InMemoryCollectionDataSource },
+    { provide: LibraryDataSource, useClass: InMemoryLibraryDataSource },
+    { provide: ComplianceDataSource, useClass: InMemoryComplianceDataSource },
     // Humo Contractor — a separate product's capabilities, consumed by Humo PM.
     { provide: ContractorNetwork, useClass: InMemoryContractorNetwork },
     { provide: ContractorPortal, useClass: InMemoryContractorPortal },
@@ -108,5 +114,7 @@ export function provideMockData(): EnvironmentProviders {
     // …billing (runs approved in Approvals move on) and credit control (letters of demand approved there).
     provideAppInitializer(() => void inject(BillingStore)),
     provideAppInitializer(() => void inject(CollectionsStore)),
+    // …and compliance, which keeps a Task open for every item that's due soon or overdue.
+    provideAppInitializer(() => void inject(ComplianceStore)),
   ]);
 }

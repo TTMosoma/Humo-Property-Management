@@ -15,6 +15,7 @@ export const RATING: Record<HealthRating, { label: string; tone: Tone }> = {
 
 export const COMPLIANCE: Record<ComplianceStatus, { label: string; tone: Tone }> = {
   complete: { label: 'Complete', tone: 'success' },
+  upcoming: { label: 'Upcoming', tone: 'info' },
   'due-soon': { label: 'Due soon', tone: 'warning' },
   overdue: { label: 'Overdue', tone: 'danger' },
   'not-applicable': { label: 'Not applicable', tone: 'neutral' },

@@ -1,9 +1,10 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, combineLatest, map, of, switchMap } from 'rxjs';
 import {
+  ChangeEvent,
   InvoiceView,
   JobDataSource,
   JobStage,
@@ -27,6 +28,10 @@ import { dueLabel, formatDate, formatRand } from '../../ui/format/money';
 import { EmptyState } from '../../ui/states/empty-state';
 import { ErrorState } from '../../ui/states/error-state';
 import { Skeleton } from '../../ui/states/skeleton';
+import { CellDef, ColumnDef, DataTable } from '../../ui/data-table/data-table';
+import { StatusPill } from '../../ui/status-pill/status-pill';
+import { organisationTeam } from '../../core/session/team';
+import { COMPLIANCE, RATING } from '../schemes/scheme-view';
 import { isOpenJob, isOverdue } from '../maintenance/job-view';
 
 interface Tile {
@@ -47,6 +52,30 @@ interface FlowStep {
   route?: string;
 }
 
+interface HealthRow {
+  h: SchemeHealth;
+  scheme: Scheme;
+  reasons: string[];
+}
+
+const URGENCY_GROUPS: { id: 'overdue' | 'today' | 'week'; label: string }[] = [
+  { id: 'overdue', label: 'Overdue' },
+  { id: 'today', label: 'Due today' },
+  { id: 'week', label: 'This week' },
+];
+
+const CHANGE_ICON: Record<ChangeEvent['kind'], string> = {
+  approval: 'shield-checkmark-outline',
+  request: 'construct-outline',
+  quote: 'pricetag-outline',
+  payments: 'cash-outline',
+  compliance: 'shield-half-outline',
+  document: 'document-text-outline',
+  meeting: 'people-outline',
+  billing: 'receipt-outline',
+  collection: 'wallet-outline',
+};
+
 const MAINT_FLOW: { label: string; stages: JobStage[] }[] = [
   { label: 'Reported', stages: ['reported'] },
   { label: 'Quotes', stages: ['quoting'] },
@@ -63,13 +92,14 @@ const MAINT_FLOW: { label: string; stages: JobStage[] }[] = [
  */
 @Component({
   selector: 'app-dashboard-page',
-  imports: [EmptyState, ErrorState, Skeleton, IonIcon, RouterLink],
+  imports: [EmptyState, ErrorState, Skeleton, IonIcon, RouterLink, DataTable, CellDef, StatusPill],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './dashboard-page.html',
   styleUrl: './dashboard-page.scss',
 })
 export class DashboardPage {
   private readonly attention = inject(AttentionService);
+  private readonly router = inject(Router);
   private readonly schemesDs = inject(SchemeDataSource);
   private readonly jobsDs = inject(JobDataSource);
   private readonly payablesDs = inject(PayablesDataSource);
@@ -87,11 +117,13 @@ export class DashboardPage {
   /** Only asks for what this role may see and the plan includes; re-asks when the scope chip changes. */
   protected readonly data = loadable(() => {
     const ids = this.scope.effectiveIds();
+    const since = new Date(Date.now() - 24 * 3_600_000).toISOString();
     return combineLatest([
       this.schemesDs.health(),
+      this.schemesDs.changes(ids, since),
       this.can.maintenance() ? this.jobsDs.list(ids).pipe(map((p) => p.items)) : of([] as JobSummary[]),
       this.can.payables() ? this.payablesDs.invoices(ids) : of([] as InvoiceView[]),
-    ]).pipe(map(([health, jobs, invoices]) => ({ health: health.filter((h) => ids.includes(h.schemeId)), jobs, invoices })));
+    ]).pipe(map(([health, changes, jobs, invoices]) => ({ health: health.filter((h) => ids.includes(h.schemeId)), changes, jobs, invoices })));
   });
 
   protected readonly loading = this.data.loading;
@@ -119,8 +151,13 @@ export class DashboardPage {
       .filter((w) => mine.has(w.id))
       .map((w) => ({ w, urgency: urgencyOf(w) }))
       .sort((a, b) => order[a.urgency] - order[b.urgency] || a.w.dueAt.localeCompare(b.w.dueAt))
-      .slice(0, 7);
+      .filter((x) => x.urgency !== 'later')
+      .slice(0, 9);
   });
+  /** Today, grouped by urgency rather than module (F9). */
+  protected readonly todayGroups = computed(() =>
+    URGENCY_GROUPS.map((g) => ({ ...g, items: this.attentionItems().filter((a) => a.urgency === g.id) })).filter((g) => g.items.length),
+  );
   protected readonly attentionTotal = computed(() => this.attention.myTasks().length + this.attention.pendingApprovals().length);
 
   private readonly health = computed(() => this.data.value()?.health ?? []);
@@ -162,7 +199,9 @@ export class DashboardPage {
       tiles.push({ id: 'inbox', label: 'Messages', value: String(c.inbox), sub: 'from owners, tenants and trustees', route: '/inbox', tone: c.inbox ? 'attention' : 'calm', icon: 'mail-outline' });
     }
     if (this.session.hasFeature('compliance') && (this.session.isStaff() || role === 'trustee')) {
-      tiles.push({ id: 'compliance', label: 'Compliance', value: String(c.compliance), sub: 'items due or overdue', route: '/compliance', tone: c.compliance ? 'attention' : 'calm', icon: 'shield-half-outline' });
+      const open = h.reduce((n, x) => n + x.complianceOpenItems, 0);
+      const overdue = h.filter((x) => x.compliance === 'overdue').length;
+      tiles.push({ id: 'compliance', label: 'Compliance', value: String(open), sub: overdue ? `items due · ${overdue} scheme${overdue === 1 ? '' : 's'} overdue` : 'items due within 30 days or overdue', route: '/compliance', query: open ? { view: 'due' } : undefined, tone: open ? 'attention' : 'calm', icon: 'shield-half-outline' });
     }
     return tiles;
   });
@@ -187,16 +226,64 @@ export class DashboardPage {
   protected readonly showMaintenanceFlow = computed(() => this.can.maintenance() && ['agency-admin', 'portfolio-manager', 'operations', 'trustee'].includes(this.session.role()));
   protected readonly showFinanceFlow = computed(() => ['finance', 'agency-admin'].includes(this.session.role()) && this.session.hasFeature('billing'));
 
-  /** Schemes that need a person (staff), worst first. */
-  protected readonly schemes = computed(() => {
+  /** What changed since yesterday that may need someone: newest first. */
+  protected readonly changes = computed(() => this.data.value()?.changes ?? []);
+  protected readonly changeIcon = CHANGE_ICON;
+  protected readonly showAllChanges = signal(false);
+  protected readonly shownChanges = computed(() => (this.showAllChanges() ? this.changes() : this.changes().slice(0, 6)));
+
+  /** One row per scheme in scope, worst first: which scheme needs me (F9 "Portfolio health"). */
+  protected readonly healthRows = computed<HealthRow[]>(() => {
     const byId = new Map(this.scope.accessible().map((s) => [s.id, s]));
     const rank = { 'at-risk': 0, watch: 1, good: 2 };
     return this.health()
-      .filter((h) => h.rating !== 'good')
+      .filter((h) => byId.has(h.schemeId))
       .sort((a, b) => rank[a.rating] - rank[b.rating] || b.arrears - a.arrears)
-      .slice(0, 5)
-      .map((h) => ({ h, scheme: byId.get(h.schemeId) as Scheme, reasons: this.reasons(h) }))
-      .filter((x) => !!x.scheme);
+      .map((h) => ({ h, scheme: byId.get(h.schemeId)!, reasons: this.reasons(h) }));
+  });
+  protected readonly healthColumns: ColumnDef<HealthRow>[] = [
+    { key: 'scheme', header: 'Scheme', mobile: 'title', sort: (r) => r.scheme.name },
+    { key: 'rating', header: 'Health', width: '110px', sort: (r) => ({ 'at-risk': 0, watch: 1, good: 2 })[r.h.rating] },
+    { key: 'collected', header: 'Collected', align: 'end', width: '100px', sort: (r) => r.h.collectionRate },
+    { key: 'arrears', header: 'Arrears', align: 'end', width: '120px', sort: (r) => r.h.arrears },
+    { key: 'jobs', header: 'Jobs', width: '120px', sort: (r) => r.h.overdueJobs * 1000 + r.h.openJobs },
+    { key: 'compliance', header: 'Compliance', width: '130px', sort: (r) => ({ overdue: 0, 'due-soon': 1, upcoming: 2, complete: 3, 'not-applicable': 4 })[r.h.compliance] },
+    { key: 'meeting', header: 'Next meeting', width: '150px', mobile: 'hidden', sort: (r) => r.h.nextMeeting?.at ?? '9999' },
+  ];
+  protected readonly healthRowId = (r: HealthRow) => r.h.schemeId;
+  protected readonly ratingOf = (r: HealthRow) => RATING[r.h.rating];
+  protected readonly complianceOf = (r: HealthRow) => COMPLIANCE[r.h.compliance];
+  protected readonly showComplianceColumn = computed(() => this.session.hasFeature('compliance'));
+
+  /** The portfolio in one line: totals belong in a small strip, not the headline (F9). */
+  protected readonly strip = computed(() => {
+    const h = this.health();
+    const roll = h.reduce((n, x) => n + x.monthlyLevyRoll, 0);
+    const weighted = roll ? h.reduce((n, x) => n + x.collectionRate * x.monthlyLevyRoll, 0) / roll : 100;
+    return [
+      { label: 'Schemes', value: String(h.length) },
+      { label: 'Units', value: this.scope.accessible().filter((s) => h.some((x) => x.schemeId === s.id)).reduce((n, s) => n + s.unitCount, 0).toLocaleString('en-ZA') },
+      { label: 'Monthly levy roll', value: this.rand(roll) },
+      { label: 'Collected (3 months)', value: `${weighted.toFixed(1)}%` },
+      { label: 'Arrears', value: this.rand(h.reduce((n, x) => n + x.arrears, 0)) },
+    ];
+  });
+
+  /** Agency administrators see who carries the open work (F9 role variant). */
+  private readonly team = organisationTeam();
+  protected readonly workload = computed(() => {
+    if (this.session.role() !== 'agency-admin') return [];
+    const tasks = this.attention.open().filter((w) => w.kind === 'task');
+    const by = new Map<string, { id: string | null; open: number; overdue: number }>();
+    for (const w of tasks) {
+      const key = w.assigneeId ?? 'none';
+      const x = by.get(key) ?? { id: w.assigneeId, open: 0, overdue: 0 };
+      x.open++;
+      if (urgencyOf(w) === 'overdue') x.overdue++;
+      by.set(key, x);
+    }
+    const max = Math.max(1, ...[...by.values()].map((x) => x.open));
+    return [...by.values()].sort((a, b) => b.overdue - a.overdue || b.open - a.open).map((x) => ({ ...x, name: this.team.nameOf(x.id), pct: (x.open / max) * 100 }));
   });
 
   /** A trustee sees their one scheme at a glance. */
@@ -217,16 +304,22 @@ export class DashboardPage {
     return this.scope.findScheme(id)?.name ?? '';
   }
 
+  protected openScheme(r: HealthRow): void {
+    void this.router.navigate(['/schemes', r.h.schemeId, 'overview']);
+  }
+
   protected link(w: WorkItem): string {
     return w.kind === 'approval' ? '/approvals' : w.route;
   }
 
   private reasons(h: SchemeHealth): string[] {
     const r: string[] = [];
-    if (h.accounts90Plus) r.push(`${h.accounts90Plus} accounts 90+ days`);
-    if (h.overdueJobs) r.push(`${h.overdueJobs} overdue jobs`);
-    if (h.compliance === 'overdue') r.push('compliance overdue');
-    if (h.collectionRate < 92) r.push(`${h.collectionRate}% collected`);
+    const n = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
+    if (h.compliance === 'overdue') r.push(`compliance overdue (${h.complianceOpenItems})`);
+    if (h.overdueJobs) r.push(`${n(h.overdueJobs, 'job')} overdue`);
+    if (h.collectionRate < 91) r.push(`${h.collectionRate}% collected`);
+    if (h.compliance === 'due-soon') r.push(`${n(h.complianceOpenItems, 'compliance item')} due`);
+    if (h.accounts90Plus) r.push(`${n(h.accounts90Plus, 'account')} 90+ days`);
     return r.slice(0, 3);
   }
 }

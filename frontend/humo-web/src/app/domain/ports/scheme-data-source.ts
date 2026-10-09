@@ -1,6 +1,6 @@
 import { Observable } from 'rxjs';
 import { Scheme, SchemeStatus } from '../models/scheme';
-import { SchemeHealth } from '../models/scheme-health';
+import { ChangeEvent, SchemeHealth } from '../models/scheme-health';
 
 /**
  * Port: how the UI reads schemes.
@@ -15,7 +15,10 @@ export abstract class SchemeDataSource {
   /** Live. Every scheme the caller may see, archived ones included (screens decide what to show). */
   abstract list(): Observable<Scheme[]>;
   abstract get(id: string): Observable<Scheme | undefined>;
+  /** Live. Each scheme's vital signs, worked out by the API from its records. */
   abstract health(): Observable<SchemeHealth[]>;
+  /** What changed in these schemes since a moment (the dashboard's "since yesterday"), newest first. */
+  abstract changes(schemeIds: string[], since: string): Observable<ChangeEvent[]>;
   /** A new scheme starts `onboarding`, with no units yet. Returns its id. */
   abstract create(details: SchemeDetails): Observable<string>;
   abstract update(id: string, details: SchemeDetails, expectedVersion?: number): Observable<void>;

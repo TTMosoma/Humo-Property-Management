@@ -17,6 +17,7 @@ import { Skeleton } from '../../ui/states/skeleton';
 import { Timeline } from '../../ui/timeline/timeline';
 import { LogNote } from '../shared/log-note';
 import { PersonRelationships } from './person-relationships';
+import { AttachmentsPanel } from '../library/attachments-panel';
 
 /**
  * A person's record. One canonical page however many units and roles they
@@ -24,7 +25,7 @@ import { PersonRelationships } from './person-relationships';
  */
 @Component({
   selector: 'app-person-page',
-  imports: [RecordHeader, PersonRelationships, Timeline, LogNote, EmptyState, ErrorState, Skeleton, IonIcon],
+  imports: [AttachmentsPanel, RecordHeader, PersonRelationships, Timeline, LogNote, EmptyState, ErrorState, Skeleton, IonIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (summary.loading()) {
@@ -62,6 +63,9 @@ import { PersonRelationships } from './person-relationships';
               <dt>Prefers</dt><dd>{{ channel() }}</dd>
               <dt>Portal access</dt><dd>{{ p.person.personaId ? 'Active' : 'Not invited yet' }}</dd>
             </dl>
+          </section>
+          <section class="surface panel">
+            <app-attachments kind="person" [recordId]="p.person.id" [label]="p.person.displayName" />
           </section>
         </div>
         <aside class="surface panel">

@@ -15,31 +15,39 @@
 } @else if (loading()) {
   <ui-skeleton variant="tiles" [count]="6" />
 } @else {
+  @if (session.isStaff()) {
+    <dl class="strip" aria-label="Portfolio in numbers">
+      @for (x of strip(); track x.label) {
+        <div><dt>{{ x.label }}</dt><dd>{{ x.value }}</dd></div>
+      }
+    </dl>
+  }
   <div class="layout">
     <!-- What needs me -->
     <section class="surface attention">
       <header class="p-head">
-        <h2>Needs your attention</h2>
+        <h2>Today</h2>
         <a routerLink="/tasks" class="small">{{ attentionTotal() ? 'All ' + attentionTotal() + ' open' : 'Tasks' }}</a>
       </header>
-      <ul>
-        @for (a of attentionItems(); track a.w.id) {
-          <li [attr.data-urgency]="a.urgency">
-            <a [routerLink]="link(a.w)">
-              <span class="u-dot" aria-hidden="true"></span>
-              <span class="a-main">
-                <span class="a-title">{{ a.w.title }}</span>
-                <span class="a-meta">{{ workLabel[a.w.type] }} · {{ schemeName(a.w.schemeId) }}{{ a.w.amount ? ' · ' + rand(a.w.amount) : '' }}</span>
-              </span>
-              <span class="a-due">{{ dueLabel(a.w.dueAt) }}</span>
-            </a>
-          </li>
-        } @empty {
-          <li class="none">
-            <ui-empty-state kind="done" title="Nothing urgent" message="No overdue or due-today work for you right now." />
-          </li>
-        }
-      </ul>
+      @for (g of todayGroups(); track g.id) {
+        <h3 class="u-group" [attr.data-urgency]="g.id">{{ g.label }}</h3>
+        <ul>
+          @for (a of g.items; track a.w.id) {
+            <li [attr.data-urgency]="a.urgency">
+              <a [routerLink]="link(a.w)">
+                <span class="u-dot" aria-hidden="true"></span>
+                <span class="a-main">
+                  <span class="a-title">{{ a.w.title }}</span>
+                  <span class="a-meta">{{ workLabel[a.w.type] }} · {{ schemeName(a.w.schemeId) }}{{ a.w.amount ? ' · ' + rand(a.w.amount) : '' }}</span>
+                </span>
+                <span class="a-due">{{ dueLabel(a.w.dueAt) }}</span>
+              </a>
+            </li>
+          }
+        </ul>
+      } @empty {
+        <ui-empty-state kind="done" title="Nothing urgent" message="No overdue work or work due this week for you right now." />
+      }
     </section>
 
     <!-- Actionable counts -->
@@ -53,6 +61,32 @@
       }
     </section>
   </div>
+
+  <section class="surface changes-card">
+    <header class="p-head">
+      <h2>Since yesterday</h2>
+      <span class="small muted">{{ changes().length }} change{{ changes().length === 1 ? '' : 's' }} in the last 24 hours</span>
+    </header>
+    <ul class="changes">
+      @for (c of shownChanges(); track c.id) {
+        <li [attr.data-tone]="c.tone">
+          <a [routerLink]="c.route">
+            <ion-icon [name]="changeIcon[c.kind]" aria-hidden="true" />
+            <span class="c-main">
+              <span class="c-title">{{ c.title }}</span>
+              <span class="c-meta">{{ schemeName(c.schemeId) }} · {{ c.detail }}</span>
+            </span>
+            <span class="c-at">{{ formatDate(c.at, true) }}</span>
+          </a>
+        </li>
+      } @empty {
+        <li class="none">Nothing new since yesterday.</li>
+      }
+    </ul>
+    @if (changes().length > 6) {
+      <button type="button" class="btn btn-ghost btn-sm" (click)="showAllChanges.set(!showAllChanges())">{{ showAllChanges() ? 'Show fewer' : 'Show all ' + changes().length }}</button>
+    }
+  </section>
 
   @if (showMaintenanceFlow()) {
     <section class="surface flow-card">
@@ -103,23 +137,50 @@
         <div><dt>Next meeting</dt><dd>{{ o.h.nextMeeting ? o.h.nextMeeting.type + ', ' + formatDate(o.h.nextMeeting.at, true) : 'None scheduled' }}</dd></div>
       </dl>
     </section>
-  } @else if (session.isStaff() && schemes().length) {
-    <section class="surface schemes-card">
+  } @else if (session.isStaff() && healthRows().length) {
+    <section class="surface health-card">
       <header class="p-head">
-        <h2>Schemes that need you</h2>
-        <a routerLink="/schemes" [queryParams]="{ view: 'attention' }" class="small">All schemes needing attention</a>
+        <h2>Portfolio health</h2>
+        <a routerLink="/schemes" class="small">All schemes</a>
       </header>
-      <ul>
-        @for (x of schemes(); track x.h.schemeId) {
+      <ui-data-table caption="Scheme health" [rows]="healthRows()" [columns]="healthColumns" [rowId]="healthRowId" (rowClick)="openScheme($event)">
+        <ng-template uiCell="scheme" let-r>
+          <div class="s-name">{{ r.scheme.name }}</div>
+          <div class="s-why">{{ r.reasons.join(' · ') || 'On track' }}</div>
+        </ng-template>
+        <ng-template uiCell="rating" let-r><ui-status-pill [label]="ratingOf(r).label" [tone]="ratingOf(r).tone" /></ng-template>
+        <ng-template uiCell="collected" let-r><span [class.warn]="r.h.collectionRate < 91">{{ r.h.collectionRate }}%</span></ng-template>
+        <ng-template uiCell="arrears" let-r>
+          <div class="money">{{ rand(r.h.arrears) }}</div>
+          @if (r.h.accounts90Plus) { <div class="s-why">{{ r.h.accounts90Plus }} at 90+ days</div> }
+        </ng-template>
+        <ng-template uiCell="jobs" let-r>{{ r.h.openJobs }} open@if (r.h.overdueJobs) { <span class="danger"> · {{ r.h.overdueJobs }} overdue</span> }</ng-template>
+        <ng-template uiCell="compliance" let-r>
+          @if (showComplianceColumn()) {
+            <ui-status-pill [label]="complianceOf(r).label" [tone]="complianceOf(r).tone" />
+          } @else {
+            <span class="s-why">—</span>
+          }
+        </ng-template>
+        <ng-template uiCell="meeting" let-r>
+          @if (r.h.nextMeeting; as m) { {{ m.type }}<div class="s-why">{{ formatDate(m.at, true) }}</div> } @else { <span class="s-why">None scheduled</span> }
+        </ng-template>
+      </ui-data-table>
+    </section>
+  }
+
+  @if (workload().length) {
+    <section class="surface workload-card">
+      <header class="p-head">
+        <h2>Team workload</h2>
+        <a routerLink="/tasks" [queryParams]="{ view: 'team' }" class="small">All team tasks</a>
+      </header>
+      <ul class="workload">
+        @for (p of workload(); track p.name) {
           <li>
-            <a [routerLink]="['/schemes', x.h.schemeId, 'overview']">
-              <span class="code">{{ x.scheme.code }}</span>
-              <span class="s-main">
-                <span class="s-name">{{ x.scheme.name }}</span>
-                <span class="s-why">{{ x.reasons.join(' · ') || 'Watch list' }}</span>
-              </span>
-              <span class="rating" [attr.data-rating]="x.h.rating">{{ x.h.rating === 'at-risk' ? 'At risk' : 'Watch' }}</span>
-            </a>
+            <span class="w-name">{{ p.name }}</span>
+            <span class="w-bar" aria-hidden="true"><span [style.width.%]="p.pct" [class.late]="p.overdue"></span></span>
+            <span class="w-n">{{ p.open }} open@if (p.overdue) { <span class="danger"> · {{ p.overdue }} overdue</span> }</span>
           </li>
         }
       </ul>

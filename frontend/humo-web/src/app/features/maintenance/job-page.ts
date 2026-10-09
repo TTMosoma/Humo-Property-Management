@@ -20,6 +20,7 @@ import { Timeline } from '../../ui/timeline/timeline';
 import { links } from '../accounts/account-view';
 import { JobNextStep } from './job-next-step';
 import { STAGE_LABEL, STAGE_TONE, TRACKER_STAGES, daysOpen, isOverdue } from './job-view';
+import { AttachmentsPanel } from '../library/attachments-panel';
 
 const EVENT_KIND: Record<JobEvent['kind'], TimelineKind> = {
   stage: 'status',
@@ -39,7 +40,7 @@ const EVENT_KIND: Record<JobEvent['kind'], TimelineKind> = {
  */
 @Component({
   selector: 'app-job-page',
-  imports: [RecordHeader, StageTracker, JobNextStep, StatusPill, PhotoTile, Timeline, EmptyState, ErrorState, Skeleton, IonIcon, RouterLink, RandPipe],
+  imports: [AttachmentsPanel, RecordHeader, StageTracker, JobNextStep, StatusPill, PhotoTile, Timeline, EmptyState, ErrorState, Skeleton, IonIcon, RouterLink, RandPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './job-page.html',
   styleUrl: './job-page.scss',

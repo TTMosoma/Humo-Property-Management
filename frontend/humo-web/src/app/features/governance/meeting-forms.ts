@@ -17,8 +17,8 @@ import { fieldsFrom, isoFrom } from './meeting-view';
 
 const TYPE_OPTIONS = (Object.keys(MEETING_TYPE_LABELS) as MeetingType[]).map((t) => ({ value: t, label: MEETING_TYPE_LABELS[t] }));
 
-export function scheduleMeetingForm(drawer: DrawerService, data: MeetingDataSource, router: Router, schemes: Scheme[], schemeId?: string): void {
-  const earliest = fieldsFrom(earliestMeetingDate('trustee').toISOString()).date;
+export function scheduleMeetingForm(drawer: DrawerService, data: MeetingDataSource, router: Router, schemes: Scheme[], schemeId?: string, type: MeetingType = 'trustee'): void {
+  const earliest = fieldsFrom(earliestMeetingDate(type).toISOString()).date;
   openForm(drawer, {
     eyebrow: 'Governance',
     title: 'Schedule a meeting',
@@ -26,12 +26,12 @@ export function scheduleMeetingForm(drawer: DrawerService, data: MeetingDataSour
     fields: [
       { key: 'schemeId', label: 'Scheme', type: 'select', required: true, options: schemes.map((s) => ({ value: s.id, label: s.name })) },
       { key: 'type', label: 'Meeting', type: 'select', required: true, options: TYPE_OPTIONS },
-      { key: 'date', label: 'Date', type: 'date', required: true, half: true, help: `Earliest with notice today: ${earliest} (trustee meeting).` },
+      { key: 'date', label: 'Date', type: 'date', required: true, half: true, help: `Earliest with notice today: ${earliest} (${MEETING_TYPE_LABELS[type].toLowerCase()}).` },
       { key: 'time', label: 'Time', type: 'text', required: true, half: true, placeholder: '18:00' },
       { key: 'venue', label: 'Venue', type: 'text', required: true, placeholder: 'Clubhouse, or “Online (Teams)”' },
       { key: 'title', label: 'Title', type: 'text', help: 'Optional. Defaults to the meeting type and month.' },
     ],
-    initial: { schemeId: schemeId ?? schemes[0]?.id ?? '', type: 'trustee', date: earliest, time: '18:00' },
+    initial: { schemeId: schemeId ?? schemes[0]?.id ?? '', type, date: earliest, time: '18:00' },
     submitLabel: 'Schedule meeting',
     submit: (v) => data.create({ schemeId: v['schemeId'], type: v['type'] as MeetingType, scheduledFor: isoFrom(v['date'], v['time']), venue: v['venue'], title: v['title'] }),
     success: () => 'Meeting scheduled. Next: finish the agenda and send notice.',

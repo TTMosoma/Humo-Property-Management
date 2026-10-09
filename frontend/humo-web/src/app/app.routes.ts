@@ -205,7 +205,12 @@ export const routes: Routes = [
                 data: { permission: 'Suppliers.View', breadcrumb: 'Suppliers' },
                 loadComponent: () => import('./features/suppliers/suppliers-page').then((m) => m.SuppliersPage),
               },
-              planned('documents', 'Documents', 'Documents.View', 7, 'This scheme’s documents, filtered from the library.'),
+              {
+                path: 'documents',
+                title: 'Documents',
+                data: { permission: 'Documents.View', breadcrumb: 'Documents', feature: 'documents' },
+                loadComponent: () => import('./features/library/library-page').then((m) => m.LibraryPage),
+              },
               planned('communications', 'Communications', 'Communications.View', 6, 'Everything sent to and received from this scheme’s people.'),
               {
                 path: 'meetings',
@@ -213,7 +218,12 @@ export const routes: Routes = [
                 data: { permission: 'Governance.View', breadcrumb: 'Meetings', ...GOVERNANCE },
                 loadComponent: () => import('./features/governance/meetings-page').then((m) => m.MeetingsPage),
               },
-              planned('compliance', 'Compliance', 'Compliance.View', 7, 'This scheme’s compliance items, generated from its records.'),
+              {
+                path: 'compliance',
+                title: 'Compliance',
+                data: { permission: 'Compliance.View', breadcrumb: 'Compliance', feature: 'compliance' },
+                loadComponent: () => import('./features/compliance/compliance-page').then((m) => m.CompliancePage),
+              },
               planned('reports', 'Reports', 'Reports.View', 8, 'Reports scoped to this scheme.'),
             ],
           },
@@ -398,10 +408,13 @@ export const routes: Routes = [
         path: 'documents',
         data: { section: 'Documents' },
         children: [
-          planned('', 'Documents', 'Documents.View', 7, 'Quickly find the right document for the right scheme.', [
-            'A search over every attachment in Humo Property Management, with facets: scheme, category, date, related record, uploader',
-            'Visibility per document (staff · trustees · owners · one unit) and expiry dates that feed Compliance',
-          ], false),
+          { path: '', title: 'Documents', data: { permission: 'Documents.View', feature: 'documents' }, loadComponent: () => import('./features/library/library-page').then((m) => m.LibraryPage) },
+          {
+            path: ':docId',
+            title: 'Document',
+            data: { permission: 'Documents.View', feature: 'documents', breadcrumb: 'Document' },
+            loadComponent: () => import('./features/library/document-page').then((m) => m.DocumentPage),
+          },
         ],
       },
 
@@ -452,12 +465,13 @@ export const routes: Routes = [
         path: 'compliance',
         data: { section: 'Compliance', feature: 'compliance' },
         children: [
-          planned('', 'Compliance', 'Compliance.View', 7, 'Know what is due, overdue or complete across every scheme.', [
-            'Matrix: schemes × compliance types, cells drill into the source record',
-            'Items generated from insurance documents, AGM dates, supplier documents and financial year-ends',
-            'Statuses: Complete · Due soon · Overdue · Not applicable (no regulatory logic yet)',
-          ], false),
-          planned(':itemId', 'Compliance item', 'Compliance.View', 7, 'One compliance item, its evidence and history.'),
+          { path: '', title: 'Compliance', data: { permission: 'Compliance.View' }, loadComponent: () => import('./features/compliance/compliance-page').then((m) => m.CompliancePage) },
+          {
+            path: ':itemId',
+            title: 'Compliance item',
+            data: { permission: 'Compliance.View', breadcrumb: 'Item' },
+            loadComponent: () => import('./features/compliance/compliance-item-page').then((m) => m.ComplianceItemPage),
+          },
         ],
       },
 

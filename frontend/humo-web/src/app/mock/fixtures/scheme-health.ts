@@ -1,4 +1,4 @@
-import { ComplianceStatus, HealthRating, SchemeHealth } from '../../domain';
+import { ComplianceStatus, SchemeHealth, rateHealth } from '../../domain';
 import { SCHEMES } from './schemes';
 
 /** Deterministic pseudo-random numbers per scheme, so figures are stable across reloads. */
@@ -19,6 +19,11 @@ function daysFromNow(n: number): string {
   return d.toISOString();
 }
 
+/**
+ * SEED TARGETS, not what the app shows: the portfolio and maintenance seeds
+ * generate ledgers and jobs to roughly match these. Scheme health itself is
+ * worked out from the live data (InMemorySchemeDataSource.health()).
+ */
 /** Hand-tuned values for schemes that appear in the demo story. */
 const OVERRIDES: Record<string, Partial<SchemeHealth>> = {
   'kingfisher-court': { collectionRate: 93.4, arrears: 186420.35, accounts90Plus: 3, openJobs: 9, overdueJobs: 1, compliance: 'due-soon', complianceOpenItems: 1, nextMeeting: { type: 'Trustee meeting', at: daysFromNow(9) } },
@@ -55,12 +60,6 @@ export const SCHEME_HEALTH: SchemeHealth[] = SCHEMES.map((s) => {
     rating: 'good',
   };
   const merged = { ...base, ...OVERRIDES[s.id] };
-  merged.rating = rate(merged);
+  merged.rating = rateHealth(merged);
   return merged;
 });
-
-function rate(h: SchemeHealth): HealthRating {
-  if (h.compliance === 'overdue' || h.collectionRate < 85 || (h.overdueJobs > 0 && h.collectionRate < 90)) return 'at-risk';
-  if (h.compliance === 'due-soon' || h.collectionRate < 91 || h.overdueJobs > 0) return 'watch';
-  return 'good';
-}

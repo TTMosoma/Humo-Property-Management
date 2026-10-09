@@ -48,9 +48,16 @@
               @if (st.tone !== 'success' && session.can('Suppliers.Manage')) {
                 <button type="button" class="btn btn-ghost btn-sm" (click)="request(doc)">Request</button>
               }
+              @if (canUpload()) {
+                <button type="button" class="btn btn-ghost btn-sm" (click)="uploadDoc(doc.type)">Upload</button>
+              }
             </li>
           }
         </ul>
+      </section>
+
+      <section class="surface panel">
+        <app-attachments kind="supplier" [recordId]="d.supplier.id" [label]="d.supplier.name" [preset]="{ category: 'vetting' }" heading="Documents on file" />
       </section>
 
       <section class="surface panel">

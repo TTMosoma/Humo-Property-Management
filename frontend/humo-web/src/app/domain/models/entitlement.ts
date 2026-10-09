@@ -185,7 +185,7 @@ export const PACKAGES: Package[] = [
   },
 ];
 
-export type AddOnId = 'governance' | 'advanced-reporting' | 'storage' | 'api-access' | 'whatsapp' | 'advanced-automation' | 'integrations' | 'document-branding-pack';
+export type AddOnId = 'governance' | 'compliance' | 'advanced-reporting' | 'storage' | 'api-access' | 'whatsapp' | 'advanced-automation' | 'integrations' | 'document-branding-pack';
 
 /** Features sold independently of the package. */
 export interface AddOn {
@@ -197,6 +197,7 @@ export interface AddOn {
 
 export const ADD_ONS: AddOn[] = [
   { id: 'governance', name: 'Governance', description: 'Trustee boards, meetings, AGMs and resolutions.', features: ['governance', 'trustee-management', 'meetings', 'agm-sgm'] },
+  { id: 'compliance', name: 'Compliance', description: 'Statutory deadlines across every scheme, generated from your records.', features: ['compliance'] },
   { id: 'advanced-reporting', name: 'Advanced Reporting', description: 'Custom and scheduled reports, analytics.', features: ['reporting-advanced', 'analytics-advanced'] },
   { id: 'storage', name: 'Additional Storage', description: 'More space for documents and photos.', features: ['storage-extra'] },
   { id: 'api-access', name: 'API Access', description: 'Programmatic access to Humo Property Management data.', features: ['api'] },

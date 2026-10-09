@@ -31,6 +31,7 @@ import { WorkItemPreview } from '../my-work/work-item-preview';
 import { workItemView } from '../my-work/work-item-view';
 import { OCCUPANCY_LABEL, accountStatus, balanceTone, links, unitChain } from '../accounts/account-view';
 import { LogNote } from '../shared/log-note';
+import { AttachmentsPanel } from '../library/attachments-panel';
 
 /**
  * Unit record (Record page pattern P1). The middle of the most common journey:
@@ -39,7 +40,7 @@ import { LogNote } from '../shared/log-note';
  */
 @Component({
   selector: 'app-unit-page',
-  imports: [RecordHeader, StatusPill, AgeingBar, Timeline, LogNote, EmptyState, ErrorState, Skeleton, IonIcon, RouterLink, RandPipe],
+  imports: [AttachmentsPanel, RecordHeader, StatusPill, AgeingBar, Timeline, LogNote, EmptyState, ErrorState, Skeleton, IonIcon, RouterLink, RandPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './unit-page.html',
   styleUrl: './unit-page.scss',
