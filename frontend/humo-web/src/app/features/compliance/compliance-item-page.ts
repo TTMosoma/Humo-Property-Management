@@ -74,7 +74,7 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
                   }
                   @case ('schedule-agm') {
                     <button type="button" class="btn btn-primary" (click)="scheduleAgm()"><ion-icon name="calendar-outline" aria-hidden="true" /> {{ i.next.label }}</button>
-                    <button type="button" class="btn btn-ghost" (click)="record()">It was held outside Humo</button>
+                    <button type="button" class="btn btn-ghost" (click)="record()">It was held outside Humo PM</button>
                   }
                   @case ('open-meeting') {
                     @if (i.evidence?.route) {
@@ -82,6 +82,9 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
                     } @else {
                       <a class="btn btn-primary" routerLink="/governance/meetings">{{ i.next.label }}</a>
                     }
+                  }
+                  @case ('open-board') {
+                    <a class="btn btn-primary" [routerLink]="i.source.route ?? '/governance/trustees'">{{ i.next.label }}</a>
                   }
                   @case ('open-suppliers') {
                     <a class="btn btn-primary" [routerLink]="i.source.route ?? '/suppliers'">{{ i.next.label }}</a>
@@ -159,7 +162,7 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
               <dt>Financial year-end</dt><dd>{{ fye() }}</dd>
               <dt>Lifts</dt><dd>{{ d.profile.hasLifts ? 'Yes' : 'No' }}</dd>
             </dl>
-            <p class="muted small">Humo tracks deadlines from your records and makes no claim of legal sufficiency.</p>
+            <p class="muted small">Humo Property Management tracks deadlines from your records and makes no claim of legal sufficiency.</p>
           </section>
         </aside>
       </div>
@@ -215,7 +218,7 @@ export class ComplianceItemPage {
   });
   protected readonly description = computed(() => {
     const t = this.detail()?.item.type;
-    return !t ? '' : t === 'manual' ? 'An item added by your team, for a deadline Humo doesn’t work out from your records.' : COMPLIANCE_TYPE[t].description;
+    return !t ? '' : t === 'manual' ? 'An item added by your team, for a deadline Humo Property Management doesn’t work out from your records.' : COMPLIANCE_TYPE[t].description;
   });
   protected readonly status = computed(() => {
     const i = this.detail()?.item;
@@ -268,7 +271,7 @@ export class ComplianceItemPage {
     if (this.session.readOnly() || !action) return false;
     if (action === 'upload') return this.session.can('Documents.Manage') && this.session.hasFeature('documents');
     if (action === 'schedule-agm') return this.session.can('Meetings.Manage') && this.session.hasFeature('governance');
-    if (action === 'open-meeting' || action === 'open-suppliers') return true;
+    if (action === 'open-meeting' || action === 'open-suppliers' || action === 'open-board') return true;
     return this.session.can('Compliance.Manage');
   });
 

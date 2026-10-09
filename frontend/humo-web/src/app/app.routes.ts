@@ -112,11 +112,7 @@ export const routes: Routes = [
         path: 'inbox',
         data: { section: 'My work' },
         children: [
-          planned('', 'Inbox', 'Messages.Reply', 3, 'Reply to owners, tenants and trustees without losing track — every message linked to its unit, person and scheme.', [
-            'Conversations grouped by person and unit, with the account balance and open jobs alongside',
-            'Assign, reply from a template, or turn a message into a job or task',
-            'Counts come from the Attention model, like every other queue',
-          ]),
+          { path: '', title: 'Inbox', data: { permission: 'Messages.Reply', breadcrumb: 'Inbox' }, loadComponent: () => import('./features/inbox/inbox-page').then((m) => m.InboxPage) },
         ],
       },
       {
@@ -192,7 +188,12 @@ export const routes: Routes = [
                 data: { permission: 'Portfolio.Browse', breadcrumb: 'People' },
                 loadComponent: () => import('./features/people/people-page').then((m) => m.PeoplePage),
               },
-              planned('finance', 'Finance', 'Finance.View', 3, 'This scheme’s levy roll, receipts, credit control, payables and budget.'),
+              {
+                path: 'finance',
+                title: 'Finance',
+                data: { permission: 'Finance.View', breadcrumb: 'Finance' },
+                loadComponent: () => import('./features/schemes/scheme-finance').then((m) => m.SchemeFinance),
+              },
               {
                 path: 'maintenance',
                 title: 'Maintenance',
@@ -274,11 +275,13 @@ export const routes: Routes = [
         path: 'staff',
         data: { section: 'Portfolio', breadcrumb: 'Staff' },
         children: [
-          planned('', 'Staff', 'Portfolio.Browse', 3, 'See who manages what, and each person’s workload.', [
-            'Team list with role, assigned schemes, open tasks and overdue work (from the Attention model)',
-            'Reassign schemes and work when someone is away',
-          ], false),
-          planned(':staffId', 'Staff member', 'Portfolio.Browse', 3, 'One team member’s schemes, tasks and activity.'),
+          { path: '', title: 'Staff', data: { permission: 'Portfolio.Browse' }, loadComponent: () => import('./features/staff/staff-page').then((m) => m.StaffPage) },
+          {
+            path: ':staffId',
+            title: 'Staff member',
+            data: { permission: 'Portfolio.Browse', breadcrumb: 'Person' },
+            loadComponent: () => import('./features/staff/staff-member-page').then((m) => m.StaffMemberPage),
+          },
         ],
       },
 
@@ -334,10 +337,19 @@ export const routes: Routes = [
             data: { permission: 'Finance.View', breadcrumb: 'Payables', feature: 'payables' },
             loadComponent: () => import('./features/finance/payables-page').then((m) => m.PayablesPage),
           },
-          planned('budgets', 'Budgets', 'Finance.View', 5, 'Prepare budgets and track budget vs actual.', [
-            'Budget vs Actual vs Variance by category with visual comparison',
-            'Budget approval at the AGM links to Meetings',
-          ]),
+          {
+            path: 'budgets',
+            data: { permission: 'Finance.View', breadcrumb: 'Budgets', feature: 'budgets' },
+            children: [
+              { path: '', title: 'Budgets', loadComponent: () => import('./features/finance/budgets/budgets-page').then((m) => m.BudgetsPage) },
+              {
+                path: ':budgetId',
+                title: 'Budget',
+                data: { breadcrumb: 'Budget' },
+                loadComponent: () => import('./features/finance/budgets/budget-page').then((m) => m.BudgetPage),
+              },
+            ],
+          },
           { path: 'debtors', redirectTo: 'credit-control' },
           { path: 'supplier-invoices', redirectTo: 'payables' },
           { path: 'reports', redirectTo: '/reports' },
@@ -413,9 +425,31 @@ export const routes: Routes = [
             data: { permission: 'Communications.View', breadcrumb: 'Notices', feature: 'communications' },
             loadComponent: () => import('./features/communications/notices-page').then((m) => m.NoticesPage),
           },
-          planned('sent', 'Sent', 'Communications.View', 6, 'Prove what was sent, to whom, when — and whether it arrived.'),
-          planned('compose', 'Compose', 'Messages.Reply', 6, 'Send to a scheme, units or people from a template, by email, SMS, WhatsApp or portal notice.'),
-          planned('templates', 'Templates', 'Messages.Reply', 6, 'Reusable messages: levy reminders, AGM notices, water outages.'),
+          {
+            path: 'sent',
+            data: { breadcrumb: 'Sent' },
+            children: [
+              { path: '', title: 'Sent', data: { permission: 'Communications.View' }, loadComponent: () => import('./features/communications/sent-page').then((m) => m.SentPage) },
+              {
+                path: ':messageId',
+                title: 'Sent message',
+                data: { permission: 'Communications.View', breadcrumb: 'Message' },
+                loadComponent: () => import('./features/communications/sent-message-page').then((m) => m.SentMessagePage),
+              },
+            ],
+          },
+          {
+            path: 'compose',
+            title: 'Compose',
+            data: { permission: 'Messages.Reply', breadcrumb: 'Compose', feature: 'communications' },
+            loadComponent: () => import('./features/communications/compose-page').then((m) => m.ComposePage),
+          },
+          {
+            path: 'templates',
+            title: 'Templates',
+            data: { permission: 'Messages.Reply', breadcrumb: 'Templates', feature: 'communications' },
+            loadComponent: () => import('./features/communications/templates-page').then((m) => m.TemplatesPage),
+          },
           { path: 'announcements', redirectTo: 'notices' },
           { path: 'history', redirectTo: 'sent' },
         ],
@@ -473,8 +507,32 @@ export const routes: Routes = [
             data: { permission: 'Governance.View', breadcrumb: 'Resolutions & actions' },
             loadComponent: () => import('./features/governance/resolutions-page').then((m) => m.ResolutionsPage),
           },
-          planned('trustees', 'Trustee boards', 'Governance.View', 5, 'Who serves on each board, in which role, and since when.'),
-          planned('rules', 'Scheme rules', 'Governance.View', 5, 'Keep rules current and support their enforcement.'),
+          {
+            path: 'trustees',
+            data: { permission: 'Governance.View', breadcrumb: 'Trustee boards' },
+            children: [
+              { path: '', title: 'Trustee boards', loadComponent: () => import('./features/governance/trustees-page').then((m) => m.TrusteesPage) },
+              {
+                path: ':schemeId',
+                title: 'Trustee board',
+                data: { breadcrumb: 'Board' },
+                loadComponent: () => import('./features/governance/board-page').then((m) => m.BoardPage),
+              },
+            ],
+          },
+          {
+            path: 'rules',
+            data: { permission: 'Governance.View', breadcrumb: 'Scheme rules' },
+            children: [
+              { path: '', title: 'Scheme rules', loadComponent: () => import('./features/governance/rules-page').then((m) => m.RulesPage) },
+              {
+                path: 'breaches/:breachId',
+                title: 'Rule breach',
+                data: { breadcrumb: 'Breach' },
+                loadComponent: () => import('./features/governance/breach-page').then((m) => m.BreachPage),
+              },
+            ],
+          },
         ],
       },
       {
@@ -622,6 +680,12 @@ export const routes: Routes = [
             title: 'Documents',
             data: { permission: 'Resident.Portal' },
             loadComponent: () => import('./features/my/my-documents-page').then((m) => m.MyDocumentsPage),
+          },
+          {
+            path: 'messages',
+            title: 'Messages',
+            data: { permission: 'Resident.Portal' },
+            loadComponent: () => import('./features/my/my-messages-page').then((m) => m.MyMessagesPage),
           },
           {
             path: 'notices',

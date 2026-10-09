@@ -3,7 +3,7 @@
   [title]="platform ? 'Platform audit log' : 'Audit log'"
   [subtitle]="
     platform
-      ? 'Every agency and every Humo staff action, including impersonation. Records are written by Humo’s servers and can’t be edited.'
+      ? 'Every agency and every Humo staff action, including impersonation. Records are written by the server and can’t be edited.'
       : 'What happened in ' + (session.organisation()?.shortName ?? 'your agency') + ' — by your team, and by Humo staff when they help you. Records can’t be edited or deleted.'
   "
 >
@@ -176,5 +176,5 @@
       </ol>
     </section>
   }
-  <p class="foot">Audit records are written by Humo’s servers when an action is accepted or refused — never by the browser — and can’t be edited by anyone, including Humo.</p>
+  <p class="foot">Audit records are written by Humo Property Management’s servers when an action is accepted or refused — never by the browser — and can’t be edited by anyone, including Humo.</p>
 }

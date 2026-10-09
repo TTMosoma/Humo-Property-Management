@@ -1,0 +1,168 @@
+<ui-page-header eyebrow="Communications" title="Compose" subtitle="Send to a scheme’s owners, tenants or trustees by email, SMS, WhatsApp or the portal. Everything sent is kept in Sent." />
+
+<div class="grid">
+  <form class="surface panel form" (submit)="$event.preventDefault(); send()" novalidate>
+    @if (errors()['audience'] || errors()['schemeId']) {
+      <div class="form-errors" role="alert">{{ errors()['audience'] ?? errors()['schemeId'] }}</div>
+    }
+
+    <fieldset>
+      <legend>To</legend>
+      <div class="row">
+        <label class="field">
+          <span>Scheme</span>
+          <select (change)="schemeId.set($any($event.target).value); unitIds.set([]); sample.set(0)">
+            @for (s of schemes(); track s.id) {
+              <option [value]="s.id" [selected]="s.id === schemeId()">{{ s.name }}</option>
+            }
+          </select>
+        </label>
+        <label class="field">
+          <span>Who</span>
+          <select (change)="kind.set($any($event.target).value); sample.set(0)">
+            @for (k of kinds; track k) {
+              <option [value]="k" [selected]="k === kind()">{{ kindLabel(k) }}</option>
+            }
+          </select>
+        </label>
+        @if (kind() === 'arrears') {
+          <label class="field">
+            <span>At least</span>
+            <select (change)="setMinDays($any($event.target).value)">
+              <option value="30" [selected]="minDays() === 30">30 days overdue</option>
+              <option value="60" [selected]="minDays() === 60">60 days overdue</option>
+              <option value="90" [selected]="minDays() === 90">90 days overdue</option>
+            </select>
+          </label>
+        }
+      </div>
+      @if (kind() === 'units') {
+        <div class="units">
+          @if (units.loading()) {
+            <ui-skeleton [count]="3" />
+          } @else {
+            @for (u of units.value() ?? []; track u.unit.id) {
+              <label class="check"><input type="checkbox" [checked]="unitIds().includes(u.unit.id)" (change)="toggleUnit(u.unit.id, $any($event.target).checked)" /> Unit {{ u.unit.number }} <span class="muted">{{ u.owners[0]?.displayName }}</span></label>
+            }
+          }
+        </div>
+        <label class="check"><input type="checkbox" [checked]="includeTenants()" (change)="includeTenants.set($any($event.target).checked)" /> Include their tenants</label>
+        @if (errors()['units']; as m) { <div class="err">{{ m }}</div> }
+      }
+    </fieldset>
+
+    <fieldset>
+      <legend>Message</legend>
+      <label class="field">
+        <span>Start from a template</span>
+        <select (change)="templateId.set($any($event.target).value || null)">
+          <option value="" [selected]="!templateId()">— Write from scratch —</option>
+          @for (t of templates(); track t.id) {
+            <option [value]="t.id" [selected]="t.id === templateId()">{{ t.name }}</option>
+          }
+        </select>
+      </label>
+      <div class="field">
+        <span>Send by</span>
+        <div class="checks">
+          @for (c of allChannels; track c) {
+            <label class="check"><input type="checkbox" [checked]="channels().includes(c)" (change)="toggleChannel(c, $any($event.target).checked)" /> {{ channelLabel(c) }}</label>
+          }
+        </div>
+        <span class="help">Each person gets their own preferred channel among these.</span>
+        @if (errors()['channels']; as m) { <span class="err">{{ m }}</span> }
+      </div>
+      @if (channels().includes('email')) {
+        <label class="field">
+          <span>Email subject</span>
+          <input type="text" [value]="subject()" (input)="subject.set($any($event.target).value)" />
+          @if (errors()['subject']; as m) { <span class="err">{{ m }}</span> }
+        </label>
+      }
+      <label class="field">
+        <span>Message</span>
+        <textarea rows="7" [value]="body()" (input)="body.set($any($event.target).value)"></textarea>
+        @if (errors()['body']; as m) { <span class="err">{{ m }}</span> }
+      </label>
+      <div class="chips" aria-label="Insert a merge field">
+        @for (f of mergeFields; track f.key) {
+          <button type="button" class="chip" (click)="insert(f.key)" [title]="f.label">{{ '{' + f.key + '}' }}</button>
+        }
+      </div>
+      @if (placeholders()) {
+        <p class="warn"><ion-icon name="alert-circle-outline" aria-hidden="true" /> Fill in the parts in [square brackets] before sending.</p>
+      }
+    </fieldset>
+
+    <fieldset>
+      <legend>When</legend>
+      <div class="row">
+        <label class="check"><input type="radio" name="when" [checked]="when() === 'now'" (change)="when.set('now')" /> Send now</label>
+        <label class="check"><input type="radio" name="when" [checked]="when() === 'later'" (change)="when.set('later')" /> Schedule</label>
+        @if (when() === 'later') {
+          <input type="datetime-local" [value]="sendAt()" (input)="sendAt.set($any($event.target).value)" />
+        }
+      </div>
+      @if (errors()['sendAt']; as m) { <span class="err">{{ m }}</span> }
+    </fieldset>
+
+    <div class="submit">
+      <button type="submit" class="btn btn-primary" [disabled]="busy() || !canSend() || !(preview.value()?.recipients?.length)">
+        <ion-icon name="send-outline" aria-hidden="true" />
+        {{ busy() ? 'Sending…' : when() === 'later' ? 'Schedule' : 'Send to ' + (preview.value()?.recipients?.length ?? 0) + ' people' }}
+      </button>
+      <a class="btn btn-ghost" routerLink="/communications/sent">Cancel</a>
+    </div>
+  </form>
+
+  <aside class="side">
+    <section class="surface panel">
+      <h2 class="section-title">Who it reaches</h2>
+      @if (preview.loading() && !preview.value()) {
+        <ui-skeleton [count]="2" />
+      } @else if (preview.value(); as p) {
+        <p class="big">{{ p.recipients.length }} <span>people</span></p>
+        <p class="muted">{{ p.audienceLabel }}</p>
+        <ul class="by">
+          @for (c of allChannels; track c) {
+            @if (p.byChannel[c]) { <li>{{ channelLabel(c) }} <strong>{{ p.byChannel[c] }}</strong></li> }
+          }
+        </ul>
+        @if (p.skipped.length) {
+          <button type="button" class="link" (click)="showSkipped.set(!showSkipped())">{{ p.skipped.length }} can’t be reached</button>
+          @if (showSkipped()) {
+            <ul class="skipped">
+              @for (s of p.skipped; track s.personId + (s.unitLabel ?? '')) {
+                <li><strong>{{ s.name }}</strong>@if (s.unitLabel) { · {{ s.unitLabel }} } <span class="muted">— {{ s.reason }}</span></li>
+              }
+            </ul>
+          }
+        }
+      }
+    </section>
+
+    <section class="surface panel">
+      <div class="p-head">
+        <h2 class="section-title">Preview</h2>
+        @if ((preview.value()?.recipients?.length ?? 0) > 1) {
+          <div class="nav">
+            <button type="button" class="btn btn-ghost btn-sm" (click)="step(-1)" aria-label="Previous recipient"><ion-icon name="chevron-back-outline" aria-hidden="true" /></button>
+            <button type="button" class="btn btn-ghost btn-sm" (click)="step(1)" aria-label="Next recipient"><ion-icon name="chevron-forward-outline" aria-hidden="true" /></button>
+          </div>
+        }
+      </div>
+      @if (recipient(); as r) {
+        <p class="muted">As {{ r.name }}@if (r.unitLabel) { ({{ r.unitLabel }}) } gets it, by {{ channelLabel(r.channel) }} to {{ r.address }}</p>
+      } @else {
+        <p class="muted">With example values.</p>
+      }
+      <div class="msg">
+        @if (channels().includes('email') && rendered().subject) { <div class="msg-subject">{{ rendered().subject }}</div> }
+        <div class="msg-body">{{ rendered().body || 'Your message appears here.' }}</div>
+      </div>
+      @if (channels().includes('sms')) {
+        <p class="muted">SMS: {{ rendered().body.length }} characters · {{ smsParts() }} message{{ smsParts() === 1 ? '' : 's' }}</p>
+      }
+    </section>
+  </aside>
+</div>

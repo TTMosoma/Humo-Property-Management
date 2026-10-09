@@ -222,6 +222,7 @@ export function seedPortfolio(): PortfolioSeed {
         schemeId: scheme.id,
         portfolio: t.portfolio,
         since: new Date(2021 + Math.floor(r() * 4), 10, 20).toISOString(),
+        appointment: { how: 'before-humo' },
       });
     }
 

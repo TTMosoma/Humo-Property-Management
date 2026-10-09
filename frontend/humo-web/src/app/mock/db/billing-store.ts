@@ -22,6 +22,7 @@ import { formatRand } from '../../ui/format/money';
 import { simulationStorage } from '../simulation/simulation-storage';
 import { DocumentStore } from './document-store';
 import { RawTransaction } from './ledger';
+import { CommsStore } from './comms-store';
 import { OpsStore } from './ops-store';
 import { SettingsStore } from './settings-store';
 import { MockDb } from './mock-db';
@@ -68,6 +69,7 @@ export class BillingStore {
   private readonly platform = inject(PlatformStore);
   private readonly settings = inject(SettingsStore);
   private readonly ops = inject(OpsStore);
+  private readonly comms = inject(CommsStore);
 
   runs: BillingRun[];
   private seq: number;
@@ -310,7 +312,7 @@ export class BillingStore {
       dueAt: new Date(Date.now() + 3 * DAY).toISOString(),
       assigneeId: null,
       approverRoles: APPROVERS,
-      evidence: ['Charges preview', `Exceptions report (${run.exceptions.length} decided)`, run.previousTotal ? `Last month ${formatRand(run.previousTotal)}` : 'First run in Humo'],
+      evidence: ['Charges preview', `Exceptions report (${run.exceptions.length} decided)`, run.previousTotal ? `Last month ${formatRand(run.previousTotal)}` : 'First run in Humo Property Management'],
       status: 'open',
       route: `/finance/billing/${run.id}`,
     });
@@ -354,6 +356,24 @@ export class BillingStore {
     }
     run.statements = { at: new Date().toISOString(), by, ...counts, template };
     run.stage = 'sent';
+    // Emailed and portal statements are in Sent; posted ones are printed and posted.
+    const to = run.lines
+      .filter((x) => !x.excluded)
+      .map((l) => ({ l, account: this.db.accounts.get(l.accountId)! }))
+      .filter((x) => x.account.statementBy !== 'post')
+      .map((x) => ({ ...this.comms.holderOf(x.l.accountId)!, channel: x.account.statementBy === 'email' ? ('email' as const) : ('portal' as const) }))
+      .filter((x) => !!x.person);
+    this.comms.record({
+      kind: 'statement',
+      schemeId: run.schemeId,
+      subject: `Your ${scheme.name} levy statement`,
+      body: 'Dear {person.name},\n\nYour levy statement for unit {unit.number} is attached and in the resident portal. The balance owing is {account.balance}.\n\nKind regards,\n{agency.name}',
+      channels: ['email', 'portal'],
+      audienceLabel: `Owners · ${scheme.name}`,
+      by,
+      to,
+      source: { label: `Billing run ${run.ref}`, route: `/finance/billing/${run.id}` },
+    });
     this.log(run, 'statements', `Statements sent: ${counts.email} by email, ${counts.portal} to the portal, ${counts.post} by post`, by);
   }
 

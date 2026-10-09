@@ -175,7 +175,7 @@ export class InMemoryNudgeDataSource extends NudgeDataSource {
           return {
             definition: def,
             usageLine: fillNudge(def.usageLine, customer.snapshot),
-            why: `Because ${opp.reasons.join(', ').toLowerCase()}. Humo shows a suggestion like this at most once a month, never again if you choose “Not interested”, and never once you have it.`,
+            why: `Because ${opp.reasons.join(', ').toLowerCase()}. Humo Property Management shows a suggestion like this at most once a month, never again if you choose “Not interested”, and never once you have it.`,
           };
         }
         return null;

@@ -20,7 +20,7 @@ export function newRunForm(drawer: DrawerService, data: BillingDataSource, route
   openForm(drawer, {
     eyebrow: 'Levies & billing',
     title: 'New billing run',
-    intro: 'Humo calculates each account’s levy, special levy, water and interest, and flags anything unusual for you to decide. Nothing reaches an account until the run is approved and posted.',
+    intro: 'Humo Property Management calculates each account’s levy, special levy, water and interest, and flags anything unusual for you to decide. Nothing reaches an account until the run is approved and posted.',
     fields: [
       {
         key: 'schemeId',

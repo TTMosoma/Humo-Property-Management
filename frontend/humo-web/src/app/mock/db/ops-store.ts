@@ -53,6 +53,10 @@ export class OpsStore {
     const saved = simulationStorage.load<OpsSnapshot>('ops');
     this.flags = saved?.flags ?? this.seedFlags();
     this.config = saved?.config ?? { version: 1, maintenance: null, uploadLimitMb: 25, sessionIdleMinutes: 30, requirePasskeysForStaff: true, auditRetentionYears: 7 };
+    // Notices saved before the product-name fix said "Humo will be unavailable": it's this application that goes offline.
+    if (this.config.maintenance?.message.startsWith('Humo will be unavailable')) {
+      this.config.maintenance.message = this.config.maintenance.message.replace(/^Humo will/, 'Humo Property Management will');
+    }
     this.incidents = saved?.incidents ?? this.seedIncidents();
     for (const [k, v] of saved?.extraRuns ?? []) this.extraRuns.set(k, v);
     this.seq = saved?.seq ?? 100;

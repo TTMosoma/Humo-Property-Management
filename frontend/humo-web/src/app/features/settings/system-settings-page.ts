@@ -110,7 +110,7 @@ export class SystemSettingsPage {
       fields: [
         { key: 'startsAt', label: 'Starts', type: 'datetime-local', required: true, half: true },
         { key: 'endsAt', label: 'Ends', type: 'datetime-local', required: true, half: true },
-        { key: 'message', label: 'What people should know', type: 'textarea', required: true, placeholder: 'e.g. Humo will be unavailable for up to an hour while we upgrade the database.' },
+        { key: 'message', label: 'What people should know', type: 'textarea', required: true, placeholder: 'e.g. Humo Property Management will be unavailable for up to an hour while we upgrade the database.' },
         REASON_FIELD,
       ],
       initial: { startsAt: toLocal(start), endsAt: toLocal(end), message: c.maintenance?.message ?? '' },

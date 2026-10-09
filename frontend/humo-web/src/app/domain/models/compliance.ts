@@ -13,12 +13,13 @@ import { ComplianceStatus } from './scheme-health';
  *   Fire equipment service          ← the service certificate in Documents
  *   Lift inspection                 ← the inspection certificate in Documents (schemes with lifts)
  *   Supplier documents              ← the scheme's suppliers' vetting documents
+ *   Trustee board                   ← Governance › Trustee boards (at least the minimum in office)
  *
  * Manual items stay possible for anything else. The wording is neutral
  * ("Due soon", "Overdue"): Humo tracks deadlines; it makes no claim of legal sufficiency.
  */
 
-export type ComplianceType = 'agm' | 'financial-statements' | 'csos-return' | 'building-insurance' | 'fire-equipment' | 'lift-inspection' | 'supplier-documents';
+export type ComplianceType = 'agm' | 'financial-statements' | 'csos-return' | 'building-insurance' | 'fire-equipment' | 'lift-inspection' | 'supplier-documents' | 'trustee-board';
 
 export type ComplianceSource = 'governance' | 'finance' | 'documents' | 'suppliers';
 
@@ -39,6 +40,7 @@ export const COMPLIANCE_TYPES: ComplianceTypeDef[] = [
   { id: 'building-insurance', label: 'Building insurance', short: 'Insurance', source: 'documents', description: 'A current policy on file. Comes from the policy’s expiry in Documents.' },
   { id: 'fire-equipment', label: 'Fire equipment service', short: 'Fire', source: 'documents', description: 'An annual service certificate. Comes from the certificate’s expiry in Documents.' },
   { id: 'lift-inspection', label: 'Lift inspection', short: 'Lifts', source: 'documents', description: 'A current inspection certificate, for schemes with lifts. Comes from Documents.' },
+  { id: 'trustee-board', label: 'Trustee board', short: 'Board', source: 'governance', description: 'At least the minimum number of trustees in office (3 unless the scheme’s rules say otherwise). Comes from Trustee boards.' },
   { id: 'supplier-documents', label: 'Supplier documents', short: 'Suppliers', source: 'suppliers', description: 'Suppliers who worked at the scheme in the last 12 months have a current COIDA letter of good standing and public liability insurance.' },
 ];
 
@@ -56,7 +58,7 @@ export const COMPLIANCE_STATUS_LABELS: Record<ComplianceStatus, string> = {
 export const DUE_SOON_DAYS = 30;
 
 /** What the person can do about an item from its page. */
-export type ComplianceNext = 'upload' | 'schedule-agm' | 'open-meeting' | 'record' | 'open-suppliers' | 'complete-manual';
+export type ComplianceNext = 'upload' | 'schedule-agm' | 'open-meeting' | 'record' | 'open-suppliers' | 'open-board' | 'complete-manual';
 
 export interface ComplianceItem {
   /** Generated items: `${schemeId}.${type}`; manual items: their own id. */

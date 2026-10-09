@@ -48,7 +48,7 @@ export function handOverForm(drawer: DrawerService, data: CollectionDataSource, 
   openForm(drawer, {
     eyebrow: eyebrow(v),
     title: 'Hand over to the attorney',
-    intro: 'The attorney collects from here. Humo stops sending letters and keeps billing as usual; interest and legal costs are recovered as the scheme’s rules allow.',
+    intro: 'The attorney collects from here. Humo Property Management stops sending letters and keeps billing as usual; interest and legal costs are recovered as the scheme’s rules allow.',
     fields: [{ key: 'attorney', label: 'Attorney', type: 'text', required: true, placeholder: 'e.g. Van der Merwe Attorneys' }],
     submitLabel: 'Hand over',
     submit: (f) => data.act(v.account.id, { type: 'hand-over', attorney: f['attorney'] }, v.case.version),

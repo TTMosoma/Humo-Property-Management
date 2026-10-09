@@ -254,7 +254,7 @@ export class InMemoryAccessDataSource extends AccessDataSource {
     // The server ends the session as soon as it hears about it, even if the response is lost.
     this.gateway.audit(
       {
-        action: imp ? `Signed out of Humo from ${fromProduct} (impersonation ended)` : `Signed out of Humo from ${fromProduct}`,
+        action: imp ? `Signed out of ${fromProduct} (impersonation ended)` : `Signed out of ${fromProduct}`,
         resource: 'Session',
         resourceId: 's-current',
         category: 'security',

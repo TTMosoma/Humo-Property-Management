@@ -1,5 +1,7 @@
 import { Observable } from 'rxjs';
 import { Assignee, MeetingAction, MeetingDetail, MeetingSummary, NewMeeting, ResolutionView, WrittenResolutionInput } from '../models/meeting';
+import { BoardAction, BoardCandidate, BoardSummary, BoardView } from '../models/board';
+import { BreachAction, BreachView, NewBreach, RuleAction, RulesView } from '../models/rules';
 import { ListQuery, Page } from './list-query';
 
 /**
@@ -32,4 +34,38 @@ export abstract class ResolutionDataSource {
   abstract proposeWritten(input: WrittenResolutionInput): Observable<string>;
   /** Who actions can be given to across these schemes: agency staff, and trustees with a Humo sign-in. */
   abstract assignees(schemeIds: string[]): Observable<Assignee[]>;
+}
+
+/**
+ * Trustee boards:
+ *   GET   /boards?schemeIds=…                 a summary per scheme
+ *   GET   /boards/{schemeId}                  the board, former trustees and candidates
+ *   POST  /boards/{schemeId}/actions          appoint, end a term, change a portfolio (Meetings.Manage)
+ *
+ * The API checks the person owns a unit in the scheme, and that an election
+ * cites a passed resolution of that scheme.
+ */
+export abstract class BoardDataSource {
+  abstract list(schemeIds: string[]): Observable<BoardSummary[]>;
+  abstract get(schemeId: string): Observable<BoardView | undefined>;
+  abstract candidates(schemeId: string): Observable<BoardCandidate[]>;
+  abstract act(schemeId: string, action: BoardAction): Observable<void>;
+}
+
+/**
+ * Scheme rules and the breach log:
+ *   GET   /rules/{schemeId}                   the register, and when owners last got a copy
+ *   POST  /rules/{schemeId}/actions           add, amend, repeal (each cites a resolution); share (Meetings.Manage)
+ *   GET   /breaches?schemeIds=…
+ *   GET   /breaches/{id}
+ *   POST  /breaches                           log (Rules.Enforce)
+ *   POST  /breaches/{id}/actions              warn, note, refer to the trustees, resolve (Rules.Enforce)
+ */
+export abstract class RulesDataSource {
+  abstract rules(schemeId: string): Observable<RulesView | undefined>;
+  abstract actRules(schemeId: string, action: RuleAction): Observable<string | void>;
+  abstract breaches(schemeIds: string[]): Observable<BreachView[]>;
+  abstract breach(id: string): Observable<BreachView | undefined>;
+  abstract logBreach(input: NewBreach): Observable<string>;
+  abstract actBreach(id: string, action: BreachAction, expectedVersion?: number): Observable<void>;
 }

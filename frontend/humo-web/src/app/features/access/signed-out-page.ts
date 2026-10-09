@@ -27,9 +27,9 @@ import { Logo } from '../../ui/brand/logo';
           <h1>Your access is paused</h1>
           <p class="lede">{{ blockedText[why] }}</p>
         } @else {
-          <h1>You’ve signed out of Humo{{ name() ? ', ' + name() : '' }}</h1>
+          <h1>You’ve signed out of {{ product().name }}{{ name() ? ', ' + name() : '' }}</h1>
           <p class="lede">
-            Your Humo session has ended on this device — in {{ product().name }} and every other Humo product.
+            Your session has ended on this device — in {{ product().name }} and in any other Humo product you use with the same Humo sign-in.
             Anyone using this device next will need to sign in again.
           </p>
         }

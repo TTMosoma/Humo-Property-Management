@@ -28,6 +28,7 @@ export const NAV: NavSection[] = [
       { id: 'my-account', label: 'My account', icon: 'wallet-outline', route: '/my/account', permission: 'Account.ViewOwn', keywords: 'balance levy pay statement' },
       { id: 'my-requests', label: 'Maintenance', icon: 'construct-outline', route: '/my/requests', permission: 'Resident.Portal', keywords: 'repair report problem' },
       { id: 'my-documents', label: 'Documents', icon: 'folder-open-outline', route: '/my/documents', permission: 'Resident.Portal' },
+      { id: 'my-messages', label: 'Messages', icon: 'chatbubbles-outline', route: '/my/messages', permission: 'Resident.Portal', keywords: 'contact managing agent question' },
       { id: 'my-notices', label: 'Notices', icon: 'megaphone-outline', route: '/my/notices', permission: 'Resident.Portal' },
     ],
   },
@@ -99,7 +100,8 @@ export const NAV: NavSection[] = [
         icon: 'chatbubbles-outline',
         children: [
           { id: 'notices', label: 'Notices', route: '/communications/notices', permission: 'Communications.View', keywords: 'announcements notices water outage residents portal' },
-          { id: 'sent', label: 'Sent', route: '/communications/sent', permission: 'Communications.View', keywords: 'history delivery' },
+          { id: 'compose', label: 'Compose', route: '/communications/compose', permission: 'Messages.Reply', keywords: 'send message sms email whatsapp bulk' },
+          { id: 'sent', label: 'Sent', route: '/communications/sent', permission: 'Communications.View', keywords: 'history delivery bounced' },
           { id: 'templates', label: 'Templates', route: '/communications/templates', permission: 'Messages.Reply' },
         ],
       },

@@ -22,9 +22,11 @@ import { simulationStorage } from '../simulation/simulation-storage';
 import { AccessStore } from './access-store';
 import { DocumentStore } from './document-store';
 import { MockDb } from './mock-db';
+import { CommsStore } from './comms-store';
 import { SettingsStore } from './settings-store';
 import { OrganisationStore } from './organisation-store';
 import { PlatformStore } from './platform-store';
+import { StaffStore } from './staff-store';
 
 
 /** 1 → "1st", 22 → "22nd" (days of the month, 1–28). */
@@ -65,6 +67,8 @@ const NEXT_LETTER: Partial<Record<CollectionStage, LetterKind>> = {
 export class CollectionsStore {
   private readonly db = inject(MockDb);
   private readonly settings = inject(SettingsStore);
+  private readonly comms = inject(CommsStore);
+  private readonly staff = inject(StaffStore);
   private readonly access = inject(AccessStore);
   private readonly docs = inject(DocumentStore);
   private readonly platform = inject(PlatformStore);
@@ -225,6 +229,22 @@ export class CollectionsStore {
         this.step(c, stage, `${LETTER_TEXT[action.kind]} sent by ${action.channel}: ${formatRand(overdueOf(a.ageing))} overdue`, by, this.letter(a, action.kind, action.channel));
         c.stage = stage;
         if (action.kind === 'letter-of-demand') c.demandApproval = undefined;
+        // Emailed or SMSed letters are in Sent; registered post is tracked by the post office.
+        const holder = action.channel !== 'post' ? this.comms.holderOf(a.id) : undefined;
+        if (holder && action.channel !== 'post') {
+          const channel = action.channel;
+          this.comms.record({
+            kind: 'letter',
+            schemeId: a.schemeId,
+            subject: `${LETTER_TEXT[action.kind]}: levy account {account.number}`,
+            body: `Dear {person.name},\n\nPlease find attached a ${LETTER_TEXT[action.kind].toLowerCase()} about {account.overdue} overdue on your levy account for unit {unit.number}.\n\n{agency.name}`,
+            channels: [channel],
+            audienceLabel: `${a.accountNo} · ${this.db.scheme(a.schemeId).name}`,
+            by,
+            to: [{ ...holder, channel }],
+            source: { label: `Collection case ${a.accountNo}`, route: `/finance/credit-control/${a.id}` },
+          });
+        }
         break;
       }
       case 'request-demand-approval': {
@@ -291,6 +311,7 @@ export class CollectionsStore {
   /** Reminders to many accounts at once (the Compose pattern). Only accounts whose next step is a reminder get one. */
   remind(accountIds: string[], channel: 'email' | 'sms', by: string): number {
     let sent = 0;
+    const reminded: string[] = [];
     for (const id of accountIds) {
       const a = this.db.accounts.get(id);
       if (!a || overdueOf(a.ageing) <= 0 || this.caseFor(id).stage !== 'not-started') continue;
@@ -300,6 +321,21 @@ export class CollectionsStore {
       c.version++;
       this.syncFollowUp(c, by);
       sent++;
+      reminded.push(id);
+    }
+    const first = reminded[0] && this.db.accounts.get(reminded[0]);
+    if (first) {
+      this.comms.record({
+        kind: 'reminder',
+        schemeId: first.schemeId,
+        subject: 'Your levy account {account.number}',
+        body: 'Hi {person.firstName}, a friendly reminder that {account.overdue} is overdue on your levy account for unit {unit.number}, {scheme.name}. Please pay using reference {account.number}, or call {agency.name} on {agency.phone} to arrange.',
+        channels: [channel],
+        audienceLabel: `${reminded.length} account${reminded.length === 1 ? '' : 's'} in arrears · ${this.db.scheme(first.schemeId).name}`,
+        by,
+        to: reminded.map((rid) => this.comms.holderOf(rid)).filter((x): x is NonNullable<typeof x> => !!x).map((x) => ({ ...x, channel })),
+        source: { label: 'Credit control', route: '/finance/credit-control' },
+      });
     }
     this.commit();
     return sent;
@@ -377,7 +413,7 @@ export class CollectionsStore {
     const controller = this.access
       .identities()
       .find((i) => i.status === 'active' && i.staffId && /credit/i.test(i.title ?? '') && activeAssignments(i).some((x) => x.role === 'finance' && x.scope.organisationId === scheme.organisationId));
-    return controller?.staffId ?? scheme.portfolioManager?.staffId ?? null;
+    return this.staff.routeTo(controller?.staffId ?? scheme.portfolioManager?.staffId ?? null);
   }
 
   /** Demo cases behind the old fixture tasks (w04–w06), plus a few reminders and a dispute. */

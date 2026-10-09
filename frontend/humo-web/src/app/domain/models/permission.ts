@@ -27,6 +27,7 @@ export type Permission =
   | 'Billing.Run'
   | 'Receipts.Allocate'
   | 'Collections.Manage'
+  | 'Budgets.Manage'
   | 'Payables.Prepare'
   | 'Payables.Release'
   | 'Finance.Export'
@@ -43,6 +44,7 @@ export type Permission =
   | 'Documents.Manage'
   | 'Governance.View'
   | 'Meetings.Manage'
+  | 'Rules.Enforce'
   | 'Compliance.View'
   | 'Compliance.Manage'
   | 'Reports.View'
@@ -115,6 +117,7 @@ export const PERMISSIONS: PermissionMeta[] = [
   { id: 'Receipts.Allocate', area: 'Finance', label: 'Allocate receipts to accounts', mutates: true },
   { id: 'Collections.Manage', area: 'Finance', label: 'Chase arrears: send letters, record arrangements, hand over', mutates: true },
   { id: 'Payables.Prepare', area: 'Finance', label: 'Prepare supplier payment batches', mutates: true },
+  { id: 'Budgets.Manage', area: 'Finance', label: 'Prepare budgets and put them to the AGM', mutates: true },
   { id: 'Payables.Release', area: 'Finance', label: 'Release payments from trust accounts', mutates: true, stepUp: true },
   { id: 'Finance.Export', area: 'Finance', label: 'Export financial and personal data', mutates: false, stepUp: true },
   { id: 'Maintenance.View', area: 'Maintenance', label: 'View maintenance jobs and quotes', mutates: false },
@@ -128,6 +131,7 @@ export const PERMISSIONS: PermissionMeta[] = [
   { id: 'Documents.Manage', area: 'Records', label: 'Upload, edit and archive documents', mutates: true },
   { id: 'Governance.View', area: 'Records', label: 'View meetings, resolutions, boards and rules', mutates: false },
   { id: 'Meetings.Manage', area: 'Records', label: 'Schedule meetings and record decisions', mutates: true },
+  { id: 'Rules.Enforce', area: 'Records', label: 'Log rule breaches and send warning letters', mutates: true },
   { id: 'Compliance.View', area: 'Records', label: 'View compliance items and deadlines', mutates: false },
   { id: 'Compliance.Manage', area: 'Records', label: 'Record compliance evidence and add compliance items', mutates: true },
   { id: 'Reports.View', area: 'Records', label: 'Run and view reports', mutates: false },
@@ -189,16 +193,16 @@ const TRUSTEE_VIEW: Permission[] = [
  */
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   'agency-admin': [
-    ...STAFF_BASE, 'Approvals.Decide', 'Schemes.Manage', 'Units.Manage', 'People.Manage', 'Accounts.View', 'Finance.View', 'Billing.View', 'Billing.Run', 'Receipts.Allocate', 'Collections.Manage',
+    ...STAFF_BASE, 'Approvals.Decide', 'Schemes.Manage', 'Units.Manage', 'People.Manage', 'Accounts.View', 'Finance.View', 'Billing.View', 'Billing.Run', 'Receipts.Allocate', 'Collections.Manage', 'Budgets.Manage', 'Rules.Enforce',
     'Payables.Prepare', 'Payables.Release', 'Finance.Export', 'Maintenance.Manage', 'Suppliers.Manage', 'Suppliers.ChangeBankDetails',
     'Meetings.Manage', 'Documents.Manage', 'Compliance.Manage', 'Organisation.Manage', 'Documents.Configure', 'Notifications.Configure', 'Users.Manage', 'Users.ManageAdmins', 'Audit.View', 'Subscription.Request',
   ],
   'portfolio-manager': [
-    ...STAFF_BASE, 'Approvals.Decide', 'Units.Manage', 'People.Manage', 'Accounts.View', 'Finance.View', 'Billing.View', 'Collections.Manage', 'Maintenance.Manage', 'Suppliers.Manage',
+    ...STAFF_BASE, 'Approvals.Decide', 'Units.Manage', 'People.Manage', 'Accounts.View', 'Finance.View', 'Billing.View', 'Collections.Manage', 'Budgets.Manage', 'Rules.Enforce', 'Maintenance.Manage', 'Suppliers.Manage',
     'Meetings.Manage', 'Documents.Manage', 'Compliance.Manage', 'Notifications.Configure',
   ],
   finance: [
-    ...STAFF_BASE, 'Approvals.Decide', 'Accounts.View', 'Finance.View', 'Billing.View', 'Billing.Run', 'Receipts.Allocate', 'Collections.Manage', 'Payables.Prepare',
+    ...STAFF_BASE, 'Approvals.Decide', 'Accounts.View', 'Finance.View', 'Billing.View', 'Billing.Run', 'Receipts.Allocate', 'Collections.Manage', 'Budgets.Manage', 'Payables.Prepare',
     'Payables.Release', 'Finance.Export', 'Suppliers.ChangeBankDetails', 'Documents.Manage',
   ],
   operations: [...STAFF_BASE, 'Maintenance.Manage', 'Suppliers.Manage', 'Documents.Manage'],

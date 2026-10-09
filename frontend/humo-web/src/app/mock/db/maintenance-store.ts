@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, Injector, inject } from '@angular/core';
 import { simulationStorage } from '../simulation/simulation-storage';
 import {
   BatchView,
@@ -25,6 +25,7 @@ import { personName, portfolioManagerOf } from '../fixtures/staff';
 import { MockDb } from './mock-db';
 import { round2, seeded } from './random';
 import { seedMaintenance } from './seed-maintenance';
+import { BudgetStore } from './budget-store';
 
 const QUOTE_APPROVERS_TRUSTEE: Role[] = ['agency-admin', 'portfolio-manager', 'trustee'];
 const PAYMENT_APPROVERS: Role[] = ['agency-admin', 'finance', 'trustee'];
@@ -46,6 +47,7 @@ interface MaintenanceSnapshot {
 @Injectable({ providedIn: 'root' })
 export class MaintenanceStore {
   private readonly db = inject(MockDb);
+  private readonly injector = inject(Injector);
 
   suppliers: Supplier[];
   jobs: Job[];
@@ -600,10 +602,12 @@ export class MaintenanceStore {
     job.events = [{ id: `${job.ref}-e${job.events.length + 1}-${Date.now()}`, at: new Date().toISOString(), kind, text, by }, ...job.events];
   }
 
-  private budgetFor(job: Job): { category: string; annual: number; spent: number } {
-    const r = seeded(`budget-${job.schemeId}-${job.category}`);
-    const annual = Math.round((60 + r() * 140) * 1000);
-    return { category: job.budgetCategory, annual, spent: Math.round(annual * (0.45 + r() * 0.35)) };
+  /**
+   * The approved budget line this job counts against, with what's been spent and committed, for the
+   * approval card. Looked up lazily: the budget store reads this store's invoices.
+   */
+  private budgetFor(job: Job): { category: string; annual: number; spent: number } | undefined {
+    return this.injector.get(BudgetStore).lineFor(job.schemeId, job.category);
   }
 }
 

@@ -14,6 +14,12 @@ import {
   ReportDataSource,
   NoticeDataSource,
   OpsDataSource,
+  CommunicationsDataSource,
+  InboxDataSource,
+  StaffDataSource,
+  BudgetDataSource,
+  BoardDataSource,
+  RulesDataSource,
   ResolutionDataSource,
   PlatformTemplateDataSource,
   NotificationDataSource,
@@ -64,8 +70,9 @@ import { GovernanceStore } from './db/governance-store';
 import { InMemoryBillingDataSource, InMemoryCollectionDataSource } from './data-sources/in-memory-finance-data-sources';
 import { BillingStore } from './db/billing-store';
 import { CollectionsStore } from './db/collections-store';
-import { InMemoryComplianceDataSource, InMemoryLibraryDataSource, InMemoryNoticeDataSource } from './data-sources/in-memory-records-data-sources';
+import { InMemoryBoardDataSource, InMemoryRulesDataSource, InMemoryBudgetDataSource, InMemoryStaffDataSource, InMemoryInboxDataSource, InMemoryCommunicationsDataSource, InMemoryComplianceDataSource, InMemoryLibraryDataSource, InMemoryNoticeDataSource } from './data-sources/in-memory-records-data-sources';
 import { ComplianceStore } from './db/compliance-store';
+import { InboxStore } from './db/inbox-store';
 import { InMemorySettingsDataSource } from './data-sources/in-memory-settings-data-source';
 import { InMemoryReportDataSource } from './data-sources/in-memory-report-data-source';
 import { InMemoryOpsDataSource } from './data-sources/in-memory-ops-data-source';
@@ -113,6 +120,14 @@ export function provideMockData(): EnvironmentProviders {
     { provide: ReportDataSource, useClass: InMemoryReportDataSource },
     { provide: NoticeDataSource, useClass: InMemoryNoticeDataSource },
     { provide: OpsDataSource, useClass: InMemoryOpsDataSource },
+    { provide: CommunicationsDataSource, useClass: InMemoryCommunicationsDataSource },
+    { provide: InboxDataSource, useClass: InMemoryInboxDataSource },
+    { provide: StaffDataSource, useClass: InMemoryStaffDataSource },
+    { provide: BudgetDataSource, useClass: InMemoryBudgetDataSource },
+    { provide: BoardDataSource, useClass: InMemoryBoardDataSource },
+    { provide: RulesDataSource, useClass: InMemoryRulesDataSource },
+    // The inbox store turns the seeded owner messages into conversations, so start it with the app.
+    provideAppInitializer(() => void inject(InboxStore)),
     // Humo Contractor — a separate product's capabilities, consumed by Humo PM.
     { provide: ContractorNetwork, useClass: InMemoryContractorNetwork },
     { provide: ContractorPortal, useClass: InMemoryContractorPortal },

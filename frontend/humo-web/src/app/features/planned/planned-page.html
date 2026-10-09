@@ -1,7 +1,7 @@
 @if (!embedded()) {
   <ui-page-header [eyebrow]="section()" [title]="title()" [subtitle]="meta()?.job">
     @if (meta()) {
-      <span class="checkpoint">Checkpoint {{ meta()!.checkpoint }} · {{ checkpointName() }}</span>
+      <span class="checkpoint">Not built yet</span>
     }
   </ui-page-header>
 }
@@ -43,8 +43,7 @@
                 <h2>Planned screen</h2>
               }
               <p class="text-muted">
-                Part of checkpoint {{ meta()?.checkpoint }}<span class="cp"> · {{ checkpointName() }}</span>.
-                It’s in the navigation now so the whole product can be reviewed end to end.
+                Not built yet. It’s in the navigation so the whole product can be reviewed end to end.
               </p>
             </div>
           </div>
@@ -58,6 +57,9 @@
         </section>
         <aside class="surface plan-side">
           <div class="label-caps">Who can access this</div>
+          @if (permission(); as p) {
+            <p class="perm">{{ p }}</p>
+          }
           <ul class="roles">
             @for (r of roles(); track r) {
               <li>{{ r }}</li>

@@ -2,6 +2,11 @@ import { Observable } from 'rxjs';
 import { ComplianceAction, ComplianceDetail, ComplianceItem, ComplianceProfile, NewManualCompliance } from '../models/compliance';
 import { DocumentAction, LibraryDocument, NewDocument, RecordKind } from '../models/library';
 import { NewNotice, NoticeView } from '../models/notice';
+import { Audience, ComposeInput, ComposePreview, MessageTemplate, SentView, TemplateInput } from '../models/messaging';
+import { Channel } from '../models/settings';
+import { ConversationAction, ConversationView, ResidentMessage } from '../models/inbox';
+import { NewCover, StaffDetail, StaffSummary } from '../models/staff';
+import { BudgetAction, BudgetView, NewBudget } from '../models/budget';
 
 /**
  * The document library:
@@ -56,4 +61,70 @@ export abstract class NoticeDataSource {
   abstract mine(): Observable<NoticeView[]>;
   abstract publish(input: NewNotice): Observable<string>;
   abstract act(id: string, action: { type: 'pin' | 'unpin' } | { type: 'withdraw'; reason: string }, expectedVersion?: number): Observable<void>;
+}
+
+/**
+ * Communications:
+ *   GET   /communications/templates          POST/PUT …/templates/{id}     archive: POST …/{id}/archive
+ *   POST  /communications/preview            who an audience reaches, by which channel, and who can't be reached
+ *   POST  /communications/messages           send now or schedule
+ *   GET   /communications/sent?schemeIds=…   everything sent: messages, notices, letters, statements, replies
+ *   GET   /communications/sent/{id}          with each delivery
+ *   POST  …/sent/{id}/retry                  failed deliveries again     POST …/sent/{id}/cancel   a scheduled one
+ */
+export abstract class CommunicationsDataSource {
+  abstract templates(): Observable<MessageTemplate[]>;
+  abstract saveTemplate(input: TemplateInput, id?: string, expectedVersion?: number): Observable<string>;
+  abstract archiveTemplate(id: string): Observable<void>;
+  abstract preview(audience: Audience, channels: Channel[]): Observable<ComposePreview>;
+  abstract send(input: ComposeInput): Observable<string>;
+  abstract sent(schemeIds: string[]): Observable<SentView[]>;
+  abstract message(id: string): Observable<SentView | undefined>;
+  abstract retry(id: string): Observable<void>;
+  abstract cancel(id: string): Observable<void>;
+}
+
+/**
+ * Inbox:
+ *   GET   /inbox?schemeIds=…                 conversations in scope, with the person's unit, balance and open jobs
+ *   GET   /inbox/{id}
+ *   POST  /inbox/{id}/actions                reply, assign, close, reopen, turn into a job or a Task
+ *   GET   /me/conversations                  residents: their own
+ *   POST  /me/conversations                  residents: write to the managing agent
+ */
+export abstract class InboxDataSource {
+  abstract list(schemeIds: string[]): Observable<ConversationView[]>;
+  abstract get(id: string): Observable<ConversationView | undefined>;
+  /** Returns the job ref or Task id for "to-job" / "to-task"; the conversation id otherwise. */
+  abstract act(id: string, action: ConversationAction, expectedVersion?: number): Observable<string>;
+  abstract mine(): Observable<ConversationView[]>;
+  abstract write(message: ResidentMessage): Observable<string>;
+}
+
+/**
+ * Staff:
+ *   GET   /staff                       the organisation's team, with workload from the Attention model
+ *   GET   /staff/{staffId}
+ *   PUT   /staff/{staffId}/cover       away from–to, covered by a colleague (Users.Manage or Work.Manage)
+ *   DELETE /staff/{staffId}/cover      back early
+ */
+export abstract class StaffDataSource {
+  abstract list(): Observable<StaffSummary[]>;
+  abstract get(staffId: string): Observable<StaffDetail | undefined>;
+  abstract setCover(staffId: string, cover: NewCover): Observable<void>;
+  abstract endCover(staffId: string): Observable<void>;
+}
+
+/**
+ * Budgets:
+ *   GET   /budgets?schemeIds=…              each scheme's budgets with actuals from billing and payables
+ *   GET   /budgets/{id}
+ *   POST  /budgets                          next year's draft, from this year's
+ *   POST  /budgets/{id}/actions             set or remove a line, propose at the AGM
+ */
+export abstract class BudgetDataSource {
+  abstract list(schemeIds: string[]): Observable<BudgetView[]>;
+  abstract get(id: string): Observable<BudgetView | undefined>;
+  abstract create(input: NewBudget): Observable<string>;
+  abstract act(id: string, action: BudgetAction, expectedVersion?: number): Observable<void>;
 }

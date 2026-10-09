@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Channel, FieldErrors, NewNotice, Notice, NoticeView } from '../../domain';
 import { simulationStorage } from '../simulation/simulation-storage';
 import { MockDb } from './mock-db';
+import { CommsStore } from './comms-store';
 import { OpsStore } from './ops-store';
 import { SettingsStore } from './settings-store';
 
@@ -28,6 +29,7 @@ export class NoticeStore {
   private readonly db = inject(MockDb);
   private readonly settings = inject(SettingsStore);
   private readonly ops = inject(OpsStore);
+  private readonly comms = inject(CommsStore);
 
   notices: Notice[];
   private seq: number;
@@ -98,6 +100,18 @@ export class NoticeStore {
       },
       ...this.notices,
     ];
+    const n0 = this.notices[0];
+    this.comms.record({
+      kind: 'notice',
+      schemeId: scheme.id,
+      subject: n0.title,
+      body: n0.body,
+      channels: n0.sentBy,
+      audienceLabel: this.comms.audienceLabel({ schemeId: scheme.id, kind: n0.audience === 'residents' ? 'residents' : n0.audience === 'owners' ? 'owners' : 'trustees' }),
+      by,
+      to: this.comms.addressees({ schemeId: scheme.id, kind: n0.audience === 'residents' ? 'residents' : n0.audience === 'owners' ? 'owners' : 'trustees' }),
+      source: { label: `Notice ${n0.ref}`, route: '/communications/notices' },
+    });
     this.commit();
     return id;
   }

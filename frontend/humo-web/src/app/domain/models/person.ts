@@ -33,6 +33,21 @@ export interface Relationship {
   portfolio?: string;
   /** ISO date. */
   since: string;
-  /** Tenants: lease end. */
+  /** Tenants: lease end. Trustees: the day they left the board. */
   until?: string;
+  /** Trustees: how they came onto the board. */
+  appointment?: TrusteeAppointment;
+  /** Trustees: why they left (resigned, sold their unit, removed at a general meeting…). */
+  endReason?: string;
+}
+
+/**
+ * Trustees are elected by the owners at the AGM; between AGMs the board can
+ * fill a vacancy by co-opting an owner until the next AGM.
+ */
+export interface TrusteeAppointment {
+  how: 'elected' | 'co-opted' | 'before-humo';
+  /** The resolution, for elections recorded in Humo. */
+  resolutionRef?: string;
+  meetingId?: string;
 }

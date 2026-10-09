@@ -147,8 +147,6 @@ export class MockDb {
     return this.schemes.get(id)!;
   }
 
-  /** Relationships in force today (ended ones stay as history). */
-  /** A scheme's board: trustees in office, with their portfolio (Chairperson, Treasurer, …). */
   /** The scheme's trust account, as statements and letters show it. */
   trustAccount(scheme: Scheme): { account: TrustAccount; verified: boolean } {
     return this.trust.get(scheme.id) ?? { account: trustAccountFor(scheme), verified: true };
@@ -165,6 +163,17 @@ export class MockDb {
     return [...new Set((this.relsByPerson.get(personId) ?? []).map((r) => r.schemeId))];
   }
 
+  /** Every relationship with a scheme, current and ended (e.g. a board's history). */
+  relationshipsIn(schemeId: string, type?: Relationship['type']): Relationship[] {
+    return [...new Set([...this.relsByPerson.values()].flat())].filter((r) => r.schemeId === schemeId && (!type || r.type === type));
+  }
+
+  /** Relationships in force today (ended ones stay as history). */
+  isCurrent(r: Relationship): boolean {
+    return this.current(r);
+  }
+
+  /** A scheme's board: trustees in office, with their portfolio (Chairperson, Treasurer, …). */
   trustees(schemeId: string): { person: Person; portfolio: string }[] {
     return [...new Set([...this.relsByPerson.values()].flat())]
       .filter((r) => r.type === 'trustee' && r.schemeId === schemeId && this.current(r))

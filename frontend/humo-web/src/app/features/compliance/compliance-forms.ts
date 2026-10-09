@@ -3,7 +3,7 @@ import { DrawerService } from '../../ui/drawer/drawer.service';
 import { openForm, today } from '../shared/form-drawer';
 
 const REFERENCE_HELP: Record<string, string> = {
-  agm: 'Where the record is, e.g. “AGM held 12 Sep, minutes on file” (for an AGM held outside Humo).',
+  agm: 'Where the record is, e.g. “AGM held 12 Sep, minutes on file” (for an AGM held outside Humo PM).',
   'financial-statements': 'E.g. “Audit report signed 28 Aug by Moore Johannesburg”.',
   'csos-return': 'The CSOS submission reference.',
 };
@@ -42,7 +42,7 @@ export function addManualForm(drawer: DrawerService, data: ComplianceDataSource,
   openForm(drawer, {
     eyebrow: 'Compliance',
     title: 'Add a compliance item',
-    intro: 'For deadlines Humo doesn’t work out from your records. It gets a Task when it’s due within 30 days.',
+    intro: 'For deadlines Humo Property Management doesn’t work out from your records. It gets a Task when it’s due within 30 days.',
     fields: [
       { key: 'schemeId', label: 'Scheme', type: 'select', required: true, options: schemes.map((s) => ({ value: s.id, label: s.name })) },
       { key: 'title', label: 'What has to be done', type: 'text', required: true, placeholder: 'e.g. Pool safety inspection' },

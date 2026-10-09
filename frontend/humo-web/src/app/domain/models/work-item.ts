@@ -22,7 +22,8 @@ export type WorkItemType =
   | 'minutes-approval'
   | 'resolution-approval'
   | 'document-expiry'
-  | 'owner-message';
+  | 'owner-message'
+  | 'follow-up';
 
 export type WorkItemStatus = 'open' | 'done' | 'approved' | 'rejected';
 
@@ -78,6 +79,7 @@ export const WORK_TYPE_LABELS: Record<WorkItemType, string> = {
   'resolution-approval': 'Written resolution',
   'document-expiry': 'Document expiry',
   'owner-message': 'Message',
+  'follow-up': 'Follow-up',
 };
 
 /** Which part of Humo Property Management a work item belongs to (used for grouping and filters). */
@@ -97,6 +99,7 @@ export const WORK_TYPE_AREA: Record<WorkItemType, 'Finance' | 'Maintenance' | 'G
   'resolution-approval': 'Governance',
   'document-expiry': 'Compliance',
   'owner-message': 'Communication',
+  'follow-up': 'Communication',
 };
 
 export function urgencyOf(item: Pick<WorkItem, 'dueAt'>, now = new Date()): Urgency {

@@ -14,7 +14,7 @@ export class HumoTitleStrategy extends TitleStrategy {
 
   override updateTitle(snapshot: RouterStateSnapshot): void {
     if (snapshot.url.startsWith('/signed-out')) {
-      this.title.setTitle('Signed out · Humo');
+      this.title.setTitle('Signed out · Humo Property Management');
       return;
     }
     const product = snapshot.url.startsWith('/contractor') ? HUMO_PRODUCTS.contractor : PRODUCT;

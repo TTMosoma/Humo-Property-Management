@@ -132,6 +132,8 @@ import {
   pinOutline,
   powerOutline,
   attachOutline,
+  airplaneOutline,
+  shareOutline,
 } from 'ionicons/icons';
 
 /** Registers every icon the app uses (tree-shaken, no runtime fetches). */
@@ -144,6 +146,8 @@ export function registerIcons(): void {
     'pin-outline': pinOutline,
     'power-outline': powerOutline,
     'attach-outline': attachOutline,
+    'airplane-outline': airplaneOutline,
+    'share-outline': shareOutline,
     'add-outline': addOutline,
     'link-outline': linkOutline,
     'alert-circle-outline': alertCircleOutline,

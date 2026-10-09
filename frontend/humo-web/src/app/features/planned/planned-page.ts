@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { ROLE_LABELS, Role, Scheme } from '../../domain';
+import { PERMISSION_META, Permission, ROLE_LABELS, ROLE_PERMISSIONS, Role, Scheme } from '../../domain';
 import { PrototypeStateService } from '../../core/prototype/prototype-state.service';
 import { Illustration } from '../../ui/illustration/illustration';
 import { PageHeader } from '../../ui/page-header/page-header';
@@ -18,16 +18,6 @@ export interface PlannedMeta {
   checkpoint: number;
 }
 
-/** Build order from docs/02-ux-review.md §4.2 (vertical workflow slices). */
-const CHECKPOINTS: Record<number, string> = {
-  2: 'Foundations',
-  3: 'Slice A · Owner calls about their balance',
-  4: 'Slice B · Fix the leaking geyser',
-  5: 'Slice C · Run the trustee meeting',
-  6: 'Credit control & billing run',
-  7: 'Dashboard, Compliance & Documents',
-  8: 'Roles, resident portal & mobile',
-};
 
 /**
  * Placeholder for screens not built yet. It states the job the screen serves and
@@ -56,8 +46,14 @@ export class PlannedPage {
   protected readonly scheme = computed(() => this.data()['scheme'] as Scheme | undefined);
   /** Inside a scheme workspace the record header is already on screen. */
   protected readonly embedded = computed(() => !!this.scheme());
-  protected readonly roles = computed(() =>
-    ((this.data()['roles'] as Role[] | undefined) ?? []).map((r) => ROLE_LABELS[r]),
-  );
-  protected readonly checkpointName = computed(() => CHECKPOINTS[this.meta()?.checkpoint ?? 0] ?? '');
+  /** The route's permission, and the roles that carry it (the same check the route guard makes). */
+  protected readonly permission = computed(() => {
+    const p = this.data()['permission'] as Permission | undefined;
+    return p ? PERMISSION_META[p]?.label : undefined;
+  });
+  protected readonly roles = computed(() => {
+    const p = this.data()['permission'] as Permission | undefined;
+    if (!p) return [];
+    return (Object.keys(ROLE_PERMISSIONS) as Role[]).filter((r) => ROLE_PERMISSIONS[r].includes(p)).map((r) => ROLE_LABELS[r]);
+  });
 }

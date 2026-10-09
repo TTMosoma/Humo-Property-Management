@@ -332,6 +332,25 @@ export class GovernanceStore {
     this.commit();
   }
 
+  /**
+   * Puts a matter on a draft meeting's agenda, reusing the standard item for it
+   * when the agenda already has one (e.g. an AGM's "Budget and levies for the
+   * coming year"). Returns the agenda item's id.
+   */
+  placeOnAgenda(meetingId: string, existing: RegExp, title: string, notes: string, by: string, skip: string[] = []): string {
+    const m = this.meetings.find((x) => x.id === meetingId)!;
+    const item = m.agenda.find((a) => existing.test(a.title) && !skip.includes(a.id));
+    if (!item) {
+      this.act(meetingId, { type: 'add-agenda-item', title, notes }, by);
+      return m.agenda.at(-1)!.id;
+    }
+    item.notes = [item.notes, notes].filter(Boolean).join(' ');
+    m.version++;
+    this.log(m, 'stage', `Agenda item updated: ${item.title} — ${title}`, by);
+    this.commit();
+    return item.id;
+  }
+
   checkWritten(input: WrittenResolutionInput): FieldErrors | null {
     const e: FieldErrors = {};
     if (!input.title.trim()) e['title'] = 'Give the resolution a short title.';

@@ -53,7 +53,7 @@ const HELD = ['held', 'minutes-draft', 'minutes-approved'];
     } @else if (rows().length === 0) {
       <div class="surface">
         @if (state().view === 'upcoming') {
-          <ui-empty-state kind="first-use" illustration="empty-tray" title="No meetings coming up" message="Schedule a trustee meeting, AGM or SGM: Humo keeps the agenda, notice, pack, minutes and actions together." />
+          <ui-empty-state kind="first-use" illustration="empty-tray" title="No meetings coming up" message="Schedule a trustee meeting, AGM or SGM: Humo Property Management keeps the agenda, notice, pack, minutes and actions together." />
         } @else {
           <ui-empty-state title="No meetings here" message="Meetings appear here once they’re held." />
         }

@@ -116,7 +116,7 @@ interface MatrixRow {
             </tbody>
           </table>
         </div>
-        <p class="note">Humo tracks deadlines from your records; it doesn’t give legal advice. Rules such as the 4-month AGM deadline are prototype defaults until they’re set per scheme.</p>
+        <p class="note">Humo Property Management tracks deadlines from your records; it doesn’t give legal advice. Rules such as the 4-month AGM deadline are prototype defaults until they’re set per scheme.</p>
       } @else if (rows().length === 0) {
         <div class="surface"><ui-empty-state title="Nothing here" [message]="view() === 'due' ? 'Nothing is due in the next 30 days or overdue.' : 'No items in this view.'" /></div>
       } @else {

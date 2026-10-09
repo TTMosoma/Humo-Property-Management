@@ -23,6 +23,7 @@ import {
 import { formatDate } from '../../ui/format/money';
 import { portfolioManagerOf } from '../fixtures/staff';
 import { simulationStorage } from '../simulation/simulation-storage';
+import { BoardStore } from './board-store';
 import { GovernanceStore } from './governance-store';
 import { LibraryStore } from './library-store';
 import { MaintenanceStore } from './maintenance-store';
@@ -30,6 +31,7 @@ import { MockDb } from './mock-db';
 import { seeded } from './random';
 import { SettingsStore } from './settings-store';
 import { LIFT_SCHEMES } from './seed-library';
+import { StaffStore } from './staff-store';
 
 /** DEVELOPMENT / SIMULATION ONLY: the shape saved to localStorage. */
 interface ComplianceSnapshot {
@@ -48,6 +50,7 @@ const SUFFIX: Record<ComplianceType, string> = {
   'fire-equipment': 'FIRE',
   'lift-inspection': 'LIFT',
   'supplier-documents': 'SUP',
+  'trustee-board': 'BRD',
 };
 /** The compliance Tasks the fixtures used to hold keep their ids, so links and history agree. */
 const FIXED_WORK_IDS: Record<string, string> = { 'CMP-JH-INS': 'w23', 'CMP-KC-AGM': 'w24', 'CMP-SLM-CSOS': 'w25', 'DOC-RAND-PLUMBING': 'w26', 'CMP-BDE-FIRE': 'w27' };
@@ -72,6 +75,8 @@ export class ComplianceStore {
   private readonly governance = inject(GovernanceStore);
   private readonly maintenance = inject(MaintenanceStore);
   private readonly settings = inject(SettingsStore);
+  private readonly staff = inject(StaffStore);
+  private readonly boards = inject(BoardStore);
 
   private profiles: ComplianceProfile[];
   private records: ComplianceRecord[];
@@ -156,7 +161,26 @@ export class ComplianceStore {
         return { ...base, ...this.fromDocuments(scheme, type) };
       case 'supplier-documents':
         return { ...base, ...this.fromSuppliers(scheme) };
+      case 'trustee-board':
+        return { ...base, ...this.fromBoard(scheme) };
     }
+  }
+
+  private fromBoard(scheme: Scheme): Omit<ComplianceItem, 'id' | 'ref' | 'schemeId' | 'type' | 'title'> {
+    const b = this.boards.board(scheme.id)!;
+    const n = b.trustees.length;
+    const source = { label: 'Governance › Trustee boards', route: `/governance/trustees/${scheme.id}` };
+    const next = { label: 'Open the board', action: 'open-board' as const };
+    const co = b.coOpted ? ` ${b.coOpted} co-opted until the next AGM.` : '';
+    if (n >= b.minimum) return { status: 'complete', detail: `${n} trustees in office (at least ${b.minimum}).${co}`, source, next };
+    const since = b.former[0]?.relationship.until;
+    return {
+      status: 'overdue',
+      detail: `${n} ${n === 1 ? 'trustee' : 'trustees'} in office; the board needs at least ${b.minimum}. Co-opt an owner until the AGM, or elect one at a general meeting.${co}`,
+      dueAt: since,
+      source,
+      next,
+    };
   }
 
   /** The financial year whose obligations are current: the latest year-end on or before today, and its 4-month deadline. */
@@ -400,7 +424,7 @@ export class ComplianceStore {
       const tasks = existing.filter((w) => w.ref === ref);
       // Open already, or closed by a person in the last 30 days (they decided it's handled): leave it. Otherwise it's due again: a new Task.
       const recent = Date.now() - 30 * DAY;
-      if (tasks.some((w) => w.status === 'open' || (w.decidedBy !== 'Humo' && new Date(w.decidedAt ?? 0).getTime() > recent))) continue;
+      if (tasks.some((w) => w.status === 'open' || (w.decidedBy !== 'Humo PM' && w.decidedBy !== 'Humo' && new Date(w.decidedAt ?? 0).getTime() > recent))) continue;
       let id = task.id;
       for (let n = 2; ids.has(id); n++) id = `${task.id}-${n}`;
       ids.add(id);
@@ -409,7 +433,7 @@ export class ComplianceStore {
     }
     for (const w of existing) {
       if (w.status === 'open' && !wanted.has(w.ref)) {
-        this.db.resolveWork(w.ref, [w.type], 'Humo');
+        this.db.resolveWork(w.ref, [w.type], 'Humo PM');
         changed = true;
       }
     }
@@ -447,7 +471,7 @@ export class ComplianceStore {
         supplierName: a.supplier.name,
         createdAt: new Date().toISOString(),
         dueAt: a.dueAt ?? new Date().toISOString(),
-        assigneeId: portfolioManagerOf(a.schemes[0])?.staffId ?? null,
+        assigneeId: this.staff.routeTo(portfolioManagerOf(a.schemes[0])?.staffId),
         status: 'open',
         route: `/suppliers/${a.supplier.id}`,
       } satisfies WorkItem;
@@ -467,7 +491,7 @@ export class ComplianceStore {
       schemeId: i.schemeId,
       createdAt: new Date().toISOString(),
       dueAt: noticeBy ?? i.dueAt ?? new Date().toISOString(),
-      assigneeId: portfolioManagerOf(scheme.id)?.staffId ?? null,
+      assigneeId: this.staff.routeTo(portfolioManagerOf(scheme.id)?.staffId),
       status: 'open',
       route: `/compliance/${i.id}`,
     };

@@ -16,7 +16,7 @@ const WORK_CHANNELS: Channel[] = ['email', 'push', 'sms'];
   imports: [PageHeader, ErrorState, Skeleton, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <ui-page-header eyebrow="Settings" title="My profile" subtitle="Your details, your roles, and how Humo tells you about your work." />
+    <ui-page-header eyebrow="Settings" title="My profile" subtitle="Your details, your roles, and how Humo Property Management tells you about your work." />
 
     <section class="surface panel">
       <h2 class="section-title">You</h2>

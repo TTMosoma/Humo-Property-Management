@@ -58,7 +58,7 @@ export const NUDGES: NudgeDefinition[] = [
     audience: ['agency-admin', 'portfolio-manager'],
     eyebrow: 'You’re getting more out of Humo Property Management',
     usageLine: 'Your team has processed {maintenanceRequests30d} maintenance requests this month, across schemes with {trustees} trustees.',
-    suggestion: 'Did you know? Humo Governance can run trustee meetings, resolutions and their follow-up actions in the same workflow.',
+    suggestion: 'Did you know? Governance in Humo Property Management can run trustee meetings, resolutions and their follow-up actions in the same workflow.',
     cta: 'Explore Governance',
     destination: '/settings/plan?feature=governance',
     policy: DEFAULT_NUDGE_POLICY,
