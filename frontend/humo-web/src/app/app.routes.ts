@@ -788,6 +788,19 @@ export const routes: Routes = [
             ],
           },
           {
+            path: 'team',
+            data: { permission: 'Platform.View', breadcrumb: 'Humo team' },
+            children: [
+              { path: '', title: 'Humo team', loadComponent: () => import('./features/platform/team/team-page').then((m) => m.TeamPage) },
+              {
+                path: ':identityId',
+                title: 'Humo team member',
+                data: { breadcrumb: 'Member' },
+                loadComponent: () => import('./features/platform/team/member-page').then((m) => m.MemberPage),
+              },
+            ],
+          },
+          {
             path: 'users',
             title: 'Users & impersonation',
             data: { permission: 'Platform.Customers.Users', breadcrumb: 'Users & impersonation' },

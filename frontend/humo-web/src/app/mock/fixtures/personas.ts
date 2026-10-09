@@ -321,6 +321,25 @@ const SEED: SeedIdentity[] = [
       { id: 'm-nomsa-admin', role: 'system-admin', organisationId: null, schemeIds: [], label: 'Platform operations', grantedBy: 'Terry Mosoma', grantedAt: '2026-01-12T09:00:00+02:00' },
     ],
   },
+  // Account managers named on customers (seed-platform ACCOUNT_MANAGERS); not offered in "Sign in as".
+  {
+    id: 'am-thabo',
+    name: 'Thabo Mahlangu',
+    initials: 'TM',
+    email: 'thabo@humo.example',
+    kind: 'humo',
+    title: 'Account Manager',
+    assignments: [{ id: 'm-thabo', role: 'humo-account-manager', organisationId: null, schemeIds: [], label: 'Western Cape accounts', grantedBy: 'Terry Mosoma', grantedAt: '2026-03-16T09:00:00+02:00' }],
+  },
+  {
+    id: 'am-carla',
+    name: 'Carla de Wet',
+    initials: 'CW',
+    email: 'carla@humo.example',
+    kind: 'humo',
+    title: 'Account Manager',
+    assignments: [{ id: 'm-carla', role: 'humo-account-manager', organisationId: null, schemeIds: [], label: 'Free State & Eastern Cape accounts', grantedBy: 'Terry Mosoma', grantedAt: '2026-04-06T09:00:00+02:00' }],
+  },
 ];
 
 /** "Unit 42" in Kingfisher Court → the unit's id, "unit-kc-042". */

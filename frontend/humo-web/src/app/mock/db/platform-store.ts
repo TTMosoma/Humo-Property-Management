@@ -194,6 +194,12 @@ export class PlatformStore {
     this.seeds.update((all) => [seed, ...all]);
   }
 
+  /** Who at Humo looks after the customer. */
+  setAccountManager(organisationIds: string[], manager: { id: string; name: string }): void {
+    const ids = new Set(organisationIds);
+    this.seeds.update((all) => all.map((c) => (ids.has(c.organisationId) ? { ...c, accountManagerId: manager.id, accountManager: manager.name } : c)));
+  }
+
   /** Keeps the customer record's name and location in step with the organisation. */
   renameCustomer(organisationId: string, details: { name: string; city: string; province: string }): void {
     this.seeds.update((all) => all.map((c) => (c.organisationId === organisationId ? { ...c, ...details } : c)));

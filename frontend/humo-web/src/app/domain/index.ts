@@ -37,6 +37,7 @@ export * from './models/document';
 export * from './ports/document-data-sources';
 export * from './models/meeting';
 export * from './models/board';
+export * from './models/humo-team';
 export * from './models/rules';
 export * from './ports/governance-data-sources';
 export * from './models/billing';

@@ -76,6 +76,15 @@ export class AccessStore {
   private seq = this.saved?.seq ?? 1;
 
   constructor() {
+    // Seed identities added after a simulation was saved join it (e.g. the account managers named on customers).
+    if (this.saved) {
+      const known = new Set(this.saved.identities.map((i) => i.id));
+      const missing = PERSONAS.filter((p) => !known.has(p.id));
+      if (missing.length) {
+        this.identities.update((all) => [...all, ...structuredClone(missing)]);
+        this.security.update((all) => ({ ...all, ...Object.fromEntries(missing.map((p) => [p.id, securityFor(p)])) }));
+      }
+    }
     // DEVELOPMENT / SIMULATION ONLY: keep identities, credentials and the audit log across refreshes.
     effect(() => {
       const snapshot: AccessSnapshot = { identities: this.identities(), security: this.security(), audit: this.audit(), seq: this.seq };
@@ -126,7 +135,9 @@ export class AccessStore {
 
   addIdentity(identity: Identity): void {
     this.identities.update((all) => [...all, identity]);
-    this.security.update((all) => ({ ...all, [identity.id]: securityFor(identity) }));
+    // Someone invited hasn't signed in yet: no passkeys, devices or sessions until they accept.
+    const profile = identity.status === 'invited' ? { identityId: identity.id, passkeys: [], devices: [], sessions: [] } : securityFor(identity);
+    this.security.update((all) => ({ ...all, [identity.id]: profile }));
   }
 
   changeIdentity(id: string, apply: (i: Identity) => Identity): void {
@@ -150,7 +161,7 @@ export class AccessStore {
   }
 
   updateSecurity(identityId: string, change: (p: SecurityProfile) => SecurityProfile): void {
-    this.security.update((all) => ({ ...all, [identityId]: change(all[identityId]) }));
+    this.security.update((all) => ({ ...all, [identityId]: change(all[identityId] ?? { identityId, passkeys: [], devices: [], sessions: [] }) }));
   }
 
   record(event: Omit<AuditEvent, 'id' | 'at'>): AuditEvent {

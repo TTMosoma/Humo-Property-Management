@@ -1,6 +1,7 @@
 import { EnvironmentProviders, inject, makeEnvironmentProviders, provideAppInitializer } from '@angular/core';
 import {
   AccessDataSource,
+  HumoTeamDataSource,
   AccountDataSource,
   AuditDataSource,
   CatalogueDataSource,
@@ -40,6 +41,7 @@ import {
   UnitDataSource,
   WorkItemDataSource,
 } from '../domain';
+import { InMemoryHumoTeamDataSource } from './data-sources/in-memory-humo-team-data-source';
 import {
   InMemoryAccountDataSource,
   InMemoryPersonDataSource,
@@ -101,6 +103,7 @@ export function provideMockData(): EnvironmentProviders {
     { provide: SupplierDataSource, useClass: InMemorySupplierDataSource },
     { provide: PayablesDataSource, useClass: InMemoryPayablesDataSource },
     { provide: AccessDataSource, useClass: InMemoryAccessDataSource },
+    { provide: HumoTeamDataSource, useClass: InMemoryHumoTeamDataSource },
     { provide: AuditDataSource, useClass: InMemoryAuditDataSource },
     { provide: SecurityDataSource, useClass: InMemorySecurityDataSource },
     { provide: StepUpAuthenticator, useClass: InMemoryStepUpAuthenticator },

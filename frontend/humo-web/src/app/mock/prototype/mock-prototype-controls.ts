@@ -22,6 +22,12 @@ export class MockPrototypeControls extends PrototypeControls {
     const who = this.access.identity(identityId);
     if (!who || who.status !== 'invited') return;
     this.access.changeIdentity(identityId, (i) => ({ ...i, status: 'active' }));
+    const now = new Date().toISOString();
+    this.access.updateSecurity(identityId, (p) => ({
+      ...p,
+      passkeys: [...p.passkeys, { id: `pk-${Date.now()}`, name: 'Phone', provider: 'Google Password Manager', createdAt: now, lastUsedAt: now }],
+      sessions: [...p.sessions, { id: `s-${Date.now()}`, device: 'Android phone', browser: 'Chrome', location: 'Johannesburg', ip: '41.13.200.7', startedAt: now, lastActiveAt: now, current: false }],
+    }));
     this.access.record({
       category: 'security', actor: { identityId, name: who.name }, role: activeAssignments(who)[0]?.role ?? 'tenant',
       organisationId: who.memberships[0]?.organisationId ?? null, action: 'Accepted the invitation and set up a passkey', resource: 'Identity', resourceId: identityId,

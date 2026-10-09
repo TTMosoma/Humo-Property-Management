@@ -2,6 +2,7 @@ import { Observable } from 'rxjs';
 import { ListQuery, Page } from './list-query';
 import { AuditEvent, AuditQuery, ImpersonationMode, ImpersonationReason, ImpersonationSession } from '../models/audit';
 import { AssignmentScope, Identity, RoleAssignment } from '../models/identity';
+import { HumoTeamAction, HumoTeamMember, NewHumoMember, PendingHumoGrant } from '../models/humo-team';
 import { SecurityProfile, StepUpMethod, StepUpRequest, StepUpResult } from '../models/security';
 
 export interface NewAssignment {
@@ -50,6 +51,27 @@ export abstract class AccessDataSource {
     ticket?: string;
   }): Observable<ImpersonationSession>;
   abstract endImpersonation(sessionId: string): Observable<void>;
+}
+
+/**
+ * Humo's own team (Platform › Humo team):
+ *   GET   /platform/team                       members, with roles and the customers they look after
+ *   GET   /platform/team/{id}
+ *   GET   /platform/team/pending-grants        System Administrator requests waiting for approval
+ *   POST  /platform/team                       invite (Platform.ManageHumoRoles, step-up)
+ *   PATCH /platform/team/{id}                  name, email, job title
+ *   POST  /platform/team/{id}/actions          roles, impersonation, customers, suspend, restore, offboard, approve/decline
+ *
+ * The API refuses changes to your own access, removing the last System
+ * Administrator, and approving a grant you requested.
+ */
+export abstract class HumoTeamDataSource {
+  abstract list(): Observable<HumoTeamMember[]>;
+  abstract get(identityId: string): Observable<HumoTeamMember | undefined>;
+  abstract pending(): Observable<PendingHumoGrant[]>;
+  abstract invite(input: NewHumoMember): Observable<string>;
+  abstract update(identityId: string, details: { name: string; email: string; title?: string }, expectedVersion?: number): Observable<void>;
+  abstract act(identityId: string, action: HumoTeamAction, expectedVersion?: number): Observable<void>;
 }
 
 export abstract class AuditDataSource {
