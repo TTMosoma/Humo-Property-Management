@@ -1,0 +1,42 @@
+# 18 · Production readiness register
+
+**Purpose:** the frontend is a working prototype. Some actions look and behave like the real thing in the demo but are simulated. Every one of them is listed here, so none of them reaches production still simulated.
+
+**Started:** 10 October 2026 (branch `demo-ready`).
+
+## How the register works
+
+**Three things keep an item from being forgotten:**
+
+1. **The port.** Every simulated action goes through a domain port (an abstract class in `domain/ports` or `domain/contractor`). The production HTTP adapter must implement every abstract method, or the build fails. So nothing can be "left as a toast": the backend has to provide an endpoint.
+2. **A tag in the code.** Find every item with:
+   ```bash
+   grep -rn "docs/18" frontend/humo-web/src
+   ```
+   - `PRODUCTION:` on a port method says what the real implementation must do.
+   - `SIMULATED (docs/18 R-n)` on the in-memory adapter says what the demo does instead.
+3. **This register.** An item is closed only when the real implementation is live **and** its tags are removed.
+
+**Rule for new work:** anything added to the prototype that simulates an outside effect (an email, an SMS, a payment, a file, a notification to another product) gets an entry here and the two tags.
+
+## Open items
+
+| # | Item | What the demo does | What production must do | Decisions | Where |
+|---|---|---|---|---|---|
+| R-1 | **Email a statement** ("Email to owner" on the statement; "Re-send" on the account) | Records the email in Communications › Sent, with a simulated delivery result. Nothing leaves the browser. | Send the **stored, issued PDF** as a secure portal link (or an attachment, per agency setting). Record it in Sent. Track delivery and whether the link was opened. Links expire and need sign-in. | D7, D9 | `AccountDataSource.sendStatement`; `InMemoryAccountDataSource.sendStatement` |
+| R-2 | **"Preview" label on statements** | Every statement is rebuilt from today's ledger, holder and trust account, and labelled *Preview*. | Open the stored PDF that was issued. Corrections appear on the next statement. Then **remove the label**. | D7, D8 | `statement-page.html` (`rerender-note`) |
+| R-3 | **Message a contractor about a quote** ("Message through Humo") | The message is kept on the quote request. The customer sees the thread; the contractor sees their own thread in Humo Contractor. Nobody is notified. The contractor can't reply yet. | Store messages server-side. Notify the contractor (email and in Humo Contractor). Let the contractor reply. Keep contact details hidden until a quote is accepted. | Contractor network (P3-7) | `ContractorNetwork.message`; `InMemoryContractorNetwork.message` |
+| R-4 | **Invite a business by email to quote** | The address is kept on the quote request, shown as *Invited by email*, and recorded in the quote lifecycle. No email is sent. | Email a sign-up link for Humo Contractor that opens this request. When the business joins, turn the email invite into a normal invitation for their new profile. Expire unused invites. | Contractor network (P3-7) | `NewQuoteRequest.inviteEmails`; `InMemoryContractorNetwork.createQuoteRequest` |
+| R-5 | **Delivery results in Sent** (all messages, notices, letters, statements, reminders) | Delivered / read / bounced results are simulated, deterministically. | Real results from the email, SMS and WhatsApp providers (webhooks), shown in Sent. | D9 | `CommsStore` (`outcome()`) |
+| R-6 | **Mock data and prototype controls ship in the build** | The demo build contains the in-memory data, the persona switcher and the *Prototype* panel. Each visitor's data lives in their own browser. | A production build with HTTP adapters only and no prototype controls. | P1-2 | `app.config.ts`; `mock/provide-mock-data.ts` |
+| R-7 | **Demo hosting settings** | `npm run build:demo` adds `robots.txt` (block everything), `noindex` headers and single-page-app rewrites from `deploy/demo/`. | Production gets its own hosting settings. **Never deploy the demo configuration as production**: search engines would be told to ignore it. | — | `frontend/humo-web/deploy/demo/`; `angular.json` `demo` configuration |
+
+## Closed items
+
+None yet.
+
+## Related
+
+- [audit/frontend-remediation-plan.md](audit/frontend-remediation-plan.md): P0-4 and P0-9 (done on `demo-ready`) created R-1 to R-4.
+- [17-decisions.md](17-decisions.md): D7 (issued statements are fixed) and D9 (statement delivery).
+- [19-demo-deployment.md](19-demo-deployment.md): how the demo is built and hosted.

@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { catchError, map, of, switchMap } from 'rxjs';
-import { Scheme, SchemeDataSource, SchemeHealth, UnitDataSource, UnitSummary, Urgency, WorkItem, urgencyOf } from '../../domain';
+import { map } from 'rxjs';
+import { Scheme, SchemeDataSource, UnitDataSource, UnitSummary, Urgency, WorkItem, urgencyOf } from '../../domain';
 import { SessionService } from '../../core/session/session.service';
 import { AttentionService } from '../../core/attention/attention.service';
 import { loadable } from '../../core/data/loadable';

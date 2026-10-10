@@ -72,3 +72,14 @@
   background: var(--c-warning-soft);
   border-radius: 999px;
 }
+
+.rerender-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s-2);
+  max-width: 210mm;
+  margin: 0 auto var(--s-4);
+  font-size: var(--fs-xs);
+  color: var(--c-text-muted);
+}

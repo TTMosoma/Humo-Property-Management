@@ -33,6 +33,8 @@ export interface NewQuoteRequest {
   photos: number;
   deadline: string;
   invite: { partyId: string; via: 'existing-relationship' | 'email-invite' }[];
+  /** Businesses not on Humo Contractor yet: each gets an email inviting them to join and quote. */
+  inviteEmails?: string[];
 }
 
 /**
@@ -50,6 +52,11 @@ export abstract class ContractorNetwork {
   abstract setRecommended(quoteRequestId: string, quoteId: string): Observable<void>;
   /** The customer's choice. Other quotes become "not selected". */
   abstract accept(quoteRequestId: string, quoteId: string): Observable<void>;
+  /**
+   * A message to an invited contractor, kept on the quote request so the history stays in one place.
+   * PRODUCTION: notify the contractor (email / Humo Contractor) — see docs/18 R-3.
+   */
+  abstract message(quoteRequestId: string, partyId: string, body: string): Observable<void>;
   /** Only possible with a genuine relationship (completed work together). */
   abstract endorse(partyId: string, customerId: string, customerName: string, note: string, completedJobs: number): Observable<void>;
 }

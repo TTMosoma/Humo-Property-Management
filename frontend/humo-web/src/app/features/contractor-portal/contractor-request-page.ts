@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { catchError, map, of, switchMap } from 'rxjs';
+import { map } from 'rxjs';
 import { FieldErrors, describeFailure, fieldErrorsOf } from '../../domain';
 import { ContractorPortal } from '../../domain/contractor';
 import { FeedbackService } from '../../core/feedback/feedback.service';

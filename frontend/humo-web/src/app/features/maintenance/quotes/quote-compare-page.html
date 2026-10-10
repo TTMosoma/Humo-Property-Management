@@ -67,7 +67,25 @@
           </li>
           @if (i.declineReason) { <li class="reason">“{{ i.declineReason }}”</li> }
         }
+        @for (e of v.request.emailInvites ?? []; track e.email) {
+          <li>
+            <span>{{ e.email }}</span>
+            <span class="muted small">Invited by email · joins Humo Contractor to quote</span>
+            <ui-status-pill label="Invited" tone="info" />
+          </li>
+        }
       </ul>
+      @if (messages().length) {
+        <h3 class="label-caps">Messages</h3>
+        <ol class="messages">
+          @for (m of messages(); track m.id) {
+            <li [class.theirs]="m.from === 'contractor'">
+              <span class="m-meta">{{ m.from === 'customer' ? m.author + ' to ' + name(m.partyId) : name(m.partyId) }} · {{ relativeTime(m.at) }}</span>
+              <span class="m-body">{{ m.body }}</span>
+            </li>
+          }
+        </ol>
+      }
     </section>
 
     <!-- The comparison -->
@@ -158,7 +176,11 @@
                       <div class="muted small">{{ c.phone }} · {{ c.email }}</div>
                     } @else {
                       <div class="masked"><ion-icon name="lock-closed-outline" aria-hidden="true" /> Shared after acceptance</div>
-                      <button type="button" class="link" (click)="message(o.profile.party.tradingName)">Message through Humo</button>
+                      @if (canAct()) {
+                        <button type="button" class="link" (click)="message(o.profile.party.id)">
+                          Message through Humo{{ messageCount(o.profile.party.id) ? ' (' + messageCount(o.profile.party.id) + ')' : '' }}
+                        </button>
+                      }
                     }
                   </td>
                 }
@@ -267,7 +289,7 @@
       @for (e of events(); track e.id) {
         <li>
           <span class="e-type">{{ lifecycleLabel[e.type] }}</span>
-          <span class="muted">{{ e.partyId ? name(e.partyId) + ' · ' : '' }}{{ e.amount ? rand(e.amount) + ' · ' : '' }}{{ relativeTime(e.at) }}</span>
+          <span class="muted">{{ e.partyId ? name(e.partyId) + ' · ' : '' }}{{ e.detail ? e.detail + ' · ' : '' }}{{ e.amount ? rand(e.amount) + ' · ' : '' }}{{ relativeTime(e.at) }}</span>
         </li>
       }
     </ol>

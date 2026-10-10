@@ -212,6 +212,26 @@ export interface QuoteRequest {
   createdBy: string;
   status: 'open' | 'closed' | 'awarded' | 'cancelled';
   invitations: QuoteInvitation[];
+  /** Businesses not on Humo Contractor yet, invited by email to join and quote. They appear in `invitations` once they join. */
+  emailInvites?: EmailInvite[];
+  /** Messages with invited contractors before contact details are shared, one thread per contractor. */
+  messages?: QuoteMessage[];
+}
+
+export interface EmailInvite {
+  email: string;
+  invitedAt: string;
+}
+
+export interface QuoteMessage {
+  id: string;
+  /** The contractor the thread is with. */
+  partyId: string;
+  at: string;
+  from: 'customer' | 'contractor';
+  /** The person who wrote it. */
+  author: string;
+  body: string;
 }
 
 export interface QuoteInvitation {
@@ -280,6 +300,8 @@ export function disclosureFor(request: QuoteRequest, quote: ContractorQuote | un
 export type QuoteLifecycleEventType =
   | 'quote-request-created'
   | 'contractor-invited'
+  | 'contractor-invited-by-email'
+  | 'message-sent'
   | 'quote-submitted'
   | 'quote-viewed'
   | 'quote-accepted'
@@ -293,6 +315,8 @@ export type QuoteLifecycleEventType =
 export const LIFECYCLE_LABEL: Record<QuoteLifecycleEventType, string> = {
   'quote-request-created': 'Quote request created',
   'contractor-invited': 'Contractor invited',
+  'contractor-invited-by-email': 'Business invited by email',
+  'message-sent': 'Message sent',
   'quote-submitted': 'Quote submitted',
   'quote-viewed': 'Quote viewed',
   'quote-accepted': 'Quote accepted',
@@ -318,6 +342,8 @@ export interface QuoteLifecycleEvent {
   partyId?: string;
   quoteId?: string;
   amount?: number;
+  /** E.g. the email address an invitation went to. */
+  detail?: string;
   actor: string;
 }
 

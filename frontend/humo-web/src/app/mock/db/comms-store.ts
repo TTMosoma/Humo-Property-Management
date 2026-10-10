@@ -347,7 +347,7 @@ function isChannel(c: string): c is Channel {
   return ['email', 'sms', 'whatsapp', 'portal', 'push'].includes(c);
 }
 
-/** A simulated, repeatable delivery result: most arrive, a few bounce or fail. */
+/** SIMULATED (docs/18 R-5): a repeatable delivery result: most arrive, a few bounce or fail. */
 function outcome(key: string, channel: Channel, at: string): { status: DeliveryStatus; at: string; error?: string } {
   const r = seeded(key)();
   const later = (min: number) => new Date(new Date(at).getTime() + min * 60_000).toISOString();

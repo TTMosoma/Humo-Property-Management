@@ -1,6 +1,5 @@
 import { Injectable, computed, inject } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { Observable, catchError, of } from 'rxjs';
+import { Observable } from 'rxjs';
 import { Role, WorkItem, WorkItemDataSource, WorkItemType, isOpen } from '../../domain';
 import { ScopeService } from '../scope/scope.service';
 import { loadable } from '../data/loadable';

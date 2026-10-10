@@ -21,9 +21,11 @@
         <a class="btn btn-primary" [routerLink]="links.statement(d.scheme, d.unit, latest)">
           <ion-icon name="document-text-outline" aria-hidden="true" /> {{ periodLabel(latest, false) }} statement
         </a>
-        <button type="button" class="btn btn-secondary" (click)="sendStatement()">
-          <ion-icon name="mail-outline" aria-hidden="true" /> Re-send
-        </button>
+        @if (canSend()) {
+          <button type="button" class="btn btn-secondary" [disabled]="sending()" (click)="sendStatement()">
+            <ion-icon name="mail-outline" aria-hidden="true" /> {{ sending() ? 'Sending…' : 'Re-send' }}
+          </button>
+        }
         @if (canAdjust()) {
           <button type="button" class="btn btn-ghost" (click)="adjust()">
             <ion-icon name="swap-vertical-outline" aria-hidden="true" /> Journal adjustment

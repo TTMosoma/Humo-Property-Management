@@ -158,3 +158,28 @@
     grid-template-columns: 1fr;
   }
 }
+
+.emails {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin: var(--s-2) 0 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+    padding: var(--s-1) var(--s-3);
+    font-size: var(--fs-sm);
+    background: var(--c-surface-sunken);
+    border: 1px solid var(--c-border);
+    border-radius: 999px;
+  }
+}
+
+.email-error {
+  font-size: var(--fs-xs);
+  color: var(--c-danger);
+}

@@ -48,7 +48,7 @@ export class ImpersonationService {
         this.busy.set(true);
         return this.access.startImpersonation(input).pipe(
           tap({
-            next: (s) => {
+            next: () => {
               this.busy.set(false);
               this.scope.setScope(null);
               // The server session now renders the target; /me reflects it.

@@ -1,8 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
 import { IonIcon } from '@ionic/angular/standalone';
-import { catchError, map, of } from 'rxjs';
-import { ContractorDashboard, ContractorPortal, VERIFICATION_LABEL, meetsRecommendedBar } from '../../domain/contractor';
+import { map } from 'rxjs';
+import { ContractorPortal, VERIFICATION_LABEL, meetsRecommendedBar } from '../../domain/contractor';
 import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
 import { formatDate, formatRand } from '../../ui/format/money';

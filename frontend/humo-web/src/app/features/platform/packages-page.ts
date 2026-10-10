@@ -9,7 +9,6 @@ import {
   OPPORTUNITY_RULES,
   ROLE_LABELS,
   Role,
-  packageFeatures,
 } from '../../domain';
 import { SessionService } from '../../core/session/session.service';
 import { PageHeader } from '../../ui/page-header/page-header';

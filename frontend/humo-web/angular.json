@@ -76,6 +76,22 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "demo": {
+              "assets": [
+                {
+                  "glob": "**/*",
+                  "input": "public"
+                },
+                {
+                  "glob": "**/*",
+                  "input": "deploy/demo"
+                },
+                {
+                  "glob": ".htaccess",
+                  "input": "deploy/demo"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"

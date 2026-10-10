@@ -132,7 +132,7 @@ export class CollectionsStore {
   }
 
   /** The next step and when it's due. */
-  private next(c: CollectionCase, a: Account): NextAction | undefined {
+  private next(c: CollectionCase, _account: Account): NextAction | undefined {
     const last = c.steps[0]?.at ?? new Date().toISOString();
     const due = (label: string, at: string): NextAction => ({ label, dueAt: at, overdue: new Date(at).getTime() < Date.now() });
     const STEP_DAYS = this.settings.billing(this.db.scheme(c.schemeId).organisationId).stepDays;

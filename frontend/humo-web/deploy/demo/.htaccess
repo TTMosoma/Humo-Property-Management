@@ -1,0 +1,20 @@
+# Humo Property Management: demo hosting on Apache (cPanel-style hosts).
+# Single-page app: unknown paths serve index.html so deep links and refreshes work.
+Options -MultiViews
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+RewriteRule ^ index.html [L]
+
+<IfModule mod_headers.c>
+  # The demo isn't for search engines.
+  Header set X-Robots-Tag "noindex, nofollow"
+  # index.html is never cached, so a new deployment shows at once (the other files have hashed names).
+  <FilesMatch "^index\.html$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+  </FilesMatch>
+  <FilesMatch "\.(js|css|woff2?)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+</IfModule>
