@@ -43,10 +43,14 @@
 
   <!-- Sign-in -->
   <main class="panel">
+    <!-- Small screens: the brand panel is hidden, so the white logo sits on a navy band instead. -->
+    <div class="mobile-brand">
+      <ui-logo [variant]="product().id === 'contractor' ? 'wordmark' : 'full'" [reverse]="true" [height]="product().id === 'contractor' ? 28 : 34" />
+      @if (product().id === 'contractor') {
+        <span class="product-tag">Contractor</span>
+      }
+    </div>
     <div class="form-wrap">
-      <div class="mobile-logo">
-        <ui-logo [variant]="product().id === 'contractor' ? 'wordmark' : 'full'" [height]="product().id === 'contractor' ? 30 : 38" />
-      </div>
 
       @switch (step()) {
         @case ('start') {

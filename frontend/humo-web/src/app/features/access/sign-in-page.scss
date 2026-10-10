@@ -244,9 +244,8 @@
   width: min(400px, 100%);
 }
 
-.mobile-logo {
+.mobile-brand {
   display: none;
-  margin-bottom: clamp(16px, 4vh, 32px);
 }
 
 h1 {
@@ -681,13 +680,27 @@ input {
     display: none;
   }
 
-  .mobile-logo {
-    display: block;
+  .panel {
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0 0 var(--s-8);
   }
 
-  .panel {
-    align-items: flex-start;
-    padding: var(--s-8) var(--s-4);
+  .mobile-brand {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    align-self: stretch;
+    margin-bottom: clamp(20px, 4vh, 32px);
+    padding: var(--s-5) var(--s-4);
+    background:
+      radial-gradient(circle at 92% 0%, rgba(84, 190, 141, 0.3), transparent 55%),
+      linear-gradient(160deg, var(--brand-navy-900) 0%, var(--brand-navy-950) 100%);
+  }
+
+  .form-wrap {
+    padding: 0 var(--s-4);
   }
 }
 
