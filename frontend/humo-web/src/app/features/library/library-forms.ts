@@ -47,6 +47,8 @@ const complianceFor = (category: string) =>
   (Object.entries(COMPLIANCE_CATEGORIES) as [ComplianceType, LibraryCategory][]).filter(([, c]) => c === category).map(([t]) => ({ value: t, label: COMPLIANCE_TYPE[t].label }));
 
 const needsExpiry = (v: FormValues) => !!v['compliance'] || v['category'] === 'vetting' || v['category'] === 'insurance' || v['category'] === 'certificate';
+/** Compliance tracks it, so the API requires the date: evidence for an obligation, or a vetting document other than the bank letter. */
+const expiryRequired = (v: FormValues) => !!v['compliance'] || (v['category'] === 'vetting' && v['supplierDoc'] !== 'Bank confirmation letter');
 
 export interface UploadPreset {
   category?: LibraryCategory;
@@ -69,7 +71,7 @@ export function uploadForm(drawer: DrawerService, data: LibraryDataSource, recor
     fields.push({ key: 'compliance', label: 'Evidence for', type: 'select', help: 'Compliance tracks its expiry for this scheme.', optionsFor: (v) => complianceFor(v['category']), showIf: (v) => complianceFor(v['category']).length > 0 });
   }
   fields.push(
-    { key: 'expiresAt', label: 'Expires', type: 'date', half: true, showIf: needsExpiry, help: 'Compliance warns 30 days before.' },
+    { key: 'expiresAt', label: 'Expires', type: 'date', half: true, showIf: needsExpiry, requiredIf: expiryRequired, help: 'Compliance warns 30 days before.' },
     { key: 'notes', label: 'Notes', type: 'textarea' },
   );
 
@@ -127,7 +129,7 @@ export function editDocumentForm(drawer: DrawerService, data: LibraryDataSource,
       { key: 'title', label: 'Title', type: 'text', required: true },
       { key: 'category', label: 'Category', type: 'select', required: true, half: true, options: categoriesFor(kind).map((c) => ({ value: c, label: CATEGORY_LABELS[c] })) },
       { key: 'visibility', label: 'Who can see it', type: 'select', required: true, half: true, options: visibilityOptions(kind) },
-      { key: 'expiresAt', label: 'Expires', type: 'date', half: true, help: d.compliance || d.supplierDoc ? 'Compliance tracks this date.' : undefined },
+      { key: 'expiresAt', label: 'Expires', type: 'date', half: true, required: !!d.compliance || (!!d.supplierDoc && d.supplierDoc !== 'Bank confirmation letter'), help: d.compliance || d.supplierDoc ? 'Compliance tracks this date.' : undefined },
       { key: 'notes', label: 'Notes', type: 'textarea' },
     ],
     initial: { title: d.title, category: d.category, visibility: d.visibility, expiresAt: d.expiresAt ? toDateField(d.expiresAt) : '', notes: d.notes ?? '' },

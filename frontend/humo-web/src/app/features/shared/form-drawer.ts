@@ -19,6 +19,8 @@ export interface FormField {
   /** File fields: what the picker offers, e.g. ".pdf,.jpg". */
   accept?: string;
   required?: boolean;
+  /** Required only for some values of the other fields (overrides `required`), e.g. an expiry date that Compliance needs. */
+  requiredIf?: (values: FormValues) => boolean;
   options?: { value: string; label: string }[];
   /** Options that depend on the other fields' values (overrides `options`). */
   optionsFor?: (values: FormValues) => { value: string; label: string }[];
@@ -168,7 +170,10 @@ export class FormDrawer {
   protected readonly values = signal<FormValues>({ ...(this.spec.initial ?? {}) });
   protected readonly errors = signal<FieldErrors>({});
   protected readonly busy = signal(false);
-  protected readonly visibleFields = computed(() => this.spec.fields.filter((f) => !f.showIf || f.showIf(this.values())));
+  protected readonly visibleFields = computed(() => {
+    const values = this.values();
+    return this.spec.fields.filter((f) => !f.showIf || f.showIf(values)).map((f) => (f.requiredIf ? { ...f, required: f.requiredIf(values) } : f));
+  });
   /** The server's messages about things that aren't a field on this form (e.g. "needs 7 days' notice"). */
   protected readonly otherErrors = computed(() => {
     const shown = new Set(this.visibleFields().map((f) => f.key));

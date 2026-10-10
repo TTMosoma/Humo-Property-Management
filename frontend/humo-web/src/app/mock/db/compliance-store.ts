@@ -150,6 +150,16 @@ export class ComplianceStore {
 
   private generate(scheme: Scheme, type: ComplianceType): ComplianceItem {
     const base = { id: `${scheme.id}.${type}`, ref: `CMP-${scheme.code}-${SUFFIX[type]}`, schemeId: scheme.id, type, title: COMPLIANCE_TYPES.find((t) => t.id === type)!.label };
+    // A scheme still being onboarded has no obligations in Humo PM yet: nothing is due or overdue, and
+    // no Tasks are raised, until it's marked active. (Audit F-12: every new scheme showed overdue AGMs.)
+    if (scheme.status === 'onboarding') {
+      return {
+        ...base,
+        status: 'upcoming',
+        detail: `Tracked once ${scheme.name} goes live. Mark the scheme active when onboarding is done.`,
+        source: { label: 'Scheme onboarding', route: `/schemes/${scheme.id}/overview` },
+      };
+    }
     switch (type) {
       case 'agm':
       case 'financial-statements':
