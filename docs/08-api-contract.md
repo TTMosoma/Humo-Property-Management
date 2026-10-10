@@ -11,9 +11,18 @@ Status: **frontend contract frozen after the P1 and P2 readiness cleanups** (Oct
   1. Observe impersonation (read-only)
   2. Permission
   3. Entitlement
-  4. Step-up freshness
-  5. Validation
-  6. Audit
+  4. Version (409)
+  5. Validation (422)
+  6. Step-up freshness: checked **after** validation, so nobody verifies with a passkey for a request that was going to fail
+  7. Audit
+
+- **Step-up is a challenge, not a refusal.**
+  - When a valid command needs a fresh proof, the API answers `step-up-required` and changes nothing.
+  - The client verifies (passkey or Humo Mobile) and sends the same command again.
+  - Forms do this through the form drawer: send first; on `step-up-required`, verify and resend; cancelling leaves the form as it was.
+  - Only the outcome of the retried command is audited.
+  - One-click actions without typed input (approve, release a batch) may still verify first.
+  - (H-2, fixed 10 Oct 2026.)
 
 ## 2. Session bootstrap: `GET /me`
 
@@ -65,7 +74,7 @@ Every port reports failures as `ApiError` (`domain/ports/api-error.ts`):
 | HTTP | `kind` | UI |
 |---|---|---|
 | 400 / 422 | `validation`, with `fieldErrors` | The message appears next to the field (`<ui-field-error>`) and the form keeps what was typed |
-| 401 / 403 | `policy`, a `PolicyError` with code `observe-only` / `forbidden` / `step-up-required` / `not-entitled` | `PolicyNotices` explains why (it becomes the HTTP interceptor) |
+| 401 / 403 | `policy`, a `PolicyError` with code `observe-only` / `forbidden` / `step-up-required` / `not-entitled` | `PolicyNotices` explains why (it becomes the HTTP interceptor). `step-up-required` is answered by verifying and resending (§1), not shown as an error. |
 | 404 | `not-found` | A "couldn't find" empty state |
 | 409 / 412 | `conflict` | "Someone else changed it — reload and try again" |
 | 0 / 5xx | `network` / `server` | Error state with **Try again** |
