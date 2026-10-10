@@ -17,7 +17,7 @@
 
 | # | Item | Why first | Effort | Owner |
 |---|---|---|---|---|
-| R1 | **Decide D1 (Portfolio Manager scope), D2 (trustee source of truth), D5 (identity provider and passkeys), D6 (staff holding resident roles).** | They define the authorisation model every endpoint enforces | Decision workshop | Product + you |
+| R1 | ~~Decide D1, D2, D5, D6~~ **Decided 10 Oct 2026** ([docs/17](../17-decisions.md)). Remaining: the identity provider evaluation under D5. | They define the authorisation model every endpoint enforces | Evaluation for D5 | Product + you |
 | R2 | **Write the scope rule into the port contract:** reads derive scope from the session, and `schemeIds` is only a filter; commands check the target record's organisation and scheme. Document it in `docs/08`. | Prevents building endpoints that trust the client (F-02, F-08) | Small (docs + contract) | Architect |
 | R3 | **Extract business rules from the mock stores into acceptance criteria**, per module: validation messages, lifecycle transitions, invariants and side effects (e.g. "posting a billing run locks it and updates balances"; "ending a trustee term ends trustee access"). | Mock stores are the spec (F-11). Without this, rules are silently lost | Medium (one module at a time; slice 1's modules first) | Dev + product |
 | R4 | **Restore a test harness:** add a test target (the existing `tsconfig.spec.json` expects Vitest), a lint configuration, and a Prettier check. Then add **contract tests per port** that run against the in-memory adapter now and the HTTP adapter later. | No safety net today; contract tests make the mock → HTTP swap verifiable | Small–medium | Dev |
@@ -29,12 +29,12 @@
 |---|---|---|
 | F-03 | Seed identities used for portfolio-manager routing and names | Derive from live assignments (the server does the join) |
 | F-26 | UTC date defaults (17 uses) | One "today in Africa/Johannesburg" helper; calendar dates as plain dates (`docs/08` §7) |
-| F-22 | First-administrator invite allows any role | Restrict to Agency Administrator |
-| F-28 | Trustee relationship through People bypasses board rules | Follows D2 |
+| F-22 | First-administrator invite allows any role | Restrict to Agency Administrator (D3) |
+| F-28 | Trustee relationship through People bypasses board rules | Per D2: trustees only through the board; People links owners and tenants; derive trustee access from the board |
 | F-14 | Quota versus levy | Follows the levy-model decision; at minimum validate consistency |
 | F-25 | "Owner-occupied" with no owner | Derive occupancy from relationships |
 | F-12 | False overdue compliance for onboarding schemes | Compliance starts from the scheme's "managed since" date; no Tasks while onboarding |
-| F-07 / F-38 | Role-name checks (resolver) | Replace with permissions or scope once D1 is decided |
+| F-07 / F-38 | Role-name checks (resolver) | Per D1 and D4: scope by assignment, plus the read-only browse-all permission; no role-name checks |
 
 ## 3. Can remain planned for later
 

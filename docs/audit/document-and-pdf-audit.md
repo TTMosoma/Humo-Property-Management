@@ -65,9 +65,11 @@ These are drawn from existing docs and code, not new requirements.
 
 ## 4. Decisions required
 
-| # | Decision |
-|---|---|
-| D7 | Is the issued statement the stored PDF (immutable), or re-rendered on demand from a snapshot? |
-| D8 | Rendering technology: Chromium (Puppeteer or Playwright) in .NET (e.g. PuppeteerSharp), a separate render service, or a commercial engine? |
-| D9 | Delivery: attach the PDF to email, or a secure link to the resident portal (POPIA consideration)? |
-| D10 | Statement numbering (custom templates show numbered statements): per scheme, per agency, gapless? |
+**Decided 10 October 2026:** see [docs/17-decisions.md](../17-decisions.md).
+
+| # | Decision | Outcome |
+|---|---|---|
+| D7 | Is the issued statement the stored PDF (immutable), or re-rendered on demand from a snapshot? | Store the PDF and a data snapshot; corrections on the next statement |
+| D8 | Rendering technology: Chromium (Puppeteer or Playwright) in .NET (e.g. PuppeteerSharp), a separate render service, or a commercial engine? | Headless Chrome from .NET, same templates; its own service when volume requires |
+| D9 | Delivery: attach the PDF to email, or a secure link to the resident portal (POPIA consideration)? | Portal link by default; attachment as an agency setting |
+| D10 | Statement numbering (custom templates show numbered statements): per scheme, per agency, gapless? | No numbers on statements; gapless only where the law requires it |

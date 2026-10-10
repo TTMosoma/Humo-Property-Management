@@ -2,6 +2,8 @@
 
 Audit of the Humo Property Management frontend before backend work · 9–10 October 2026 · commit `edb67df` · audit only, no code changed.
 
+**Decisions D1–D10 were approved on 10 October 2026:** [docs/17-decisions.md](../17-decisions.md).
+
 **Companion documents:**
 - [screen-completeness-matrix.md](screen-completeness-matrix.md)
 - [crud-and-data-integrity-matrix.md](crud-and-data-integrity-matrix.md)

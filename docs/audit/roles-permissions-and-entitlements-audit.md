@@ -59,11 +59,13 @@
 
 ## 4. Decisions required
 
-| # | Decision | Options seen in code or docs |
-|---|---|---|
-| D1 | Can a Portfolio Manager read (or change) schemes outside their assignment? | Today: read everything in the agency (resolver) and, by inference, write too |
-| D2 | One source of truth for trustees: is the board relationship the authority, with access derived from it? | Today: two records, partly synced |
-| D3 | Who may invite owners, tenants and trustees? (Agency Administrator only, or Portfolio Managers for their own schemes) Invite from the person, unit and board records? | Today: Agency Administrator in Settings only |
-| D4 | Configurable role profiles in v1, or the fixed role → permission map? | `docs/08` §8 lists profiles as open |
-| D5 | Identity provider and the passkey or step-up approach (WebAuthn server, Humo Mobile push) | Not specified |
-| D6 | Can staff hold resident or trustee roles in a scheme they manage (conflict of interest)? | Seed: Sarah is staff *and* a Kingfisher Court trustee |
+**Decided 10 October 2026:** see [docs/17-decisions.md](../17-decisions.md). The outcome column records what was approved.
+
+| # | Decision | Options seen in code or docs | Outcome |
+|---|---|---|---|
+| D1 | Can a Portfolio Manager read (or change) schemes outside their assignment? | Today: read everything in the agency (resolver) and, by inference, write too | Scope follows the assignment; read-only "browse all" is a grantable permission |
+| D2 | One source of truth for trustees: is the board relationship the authority, with access derived from it? | Today: two records, partly synced | The board is the authority; trustee access is derived from it |
+| D3 | Who may invite owners, tenants and trustees? (Agency Administrator only, or Portfolio Managers for their own schemes) Invite from the person, unit and board records? | Today: Agency Administrator in Settings only | Portfolio Managers may invite residents and trustees in scope; Invite on the person, unit and board pages |
+| D4 | Configurable role profiles in v1, or the fixed role → permission map? | `docs/08` §8 lists profiles as open | Fixed roles in v1; every check by permission |
+| D5 | Identity provider and the passkey or step-up approach (WebAuthn server, Humo Mobile push) | Not specified | Established identity provider with passkeys and step-up; selection against criteria |
+| D6 | Can staff hold resident or trustee roles in a scheme they manage (conflict of interest)? | Seed: Sarah is staff *and* a Kingfisher Court trustee | Allowed, but can't approve their own agency's work at that scheme |
