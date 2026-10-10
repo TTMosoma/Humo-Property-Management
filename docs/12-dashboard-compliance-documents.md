@@ -125,3 +125,36 @@ Trustees keep their one-scheme card. Their Today and Since yesterday lists cover
 - **Compliance rules.** Prototype defaults that will be set per scheme. The financial year-end and lifts aren't editable yet (Settings).
 - **Changes since yesterday.** Derived from timestamps on the records. The API needs an event log, for example for "accounts that crossed 90 days".
 - **Bundle size.** The initial bundle is 1.21 MB, over the 1.2 MB warning budget, because the simulated stores start at launch. It won't apply with the HTTP data layer.
+
+## 6. Re-verification (10 October 2026)
+
+Checked on `main` after a full simulation reset, in the browser. Fixes are on branch `fix/checkpoint-7-gaps`.
+
+**Walkthrough (§4):** all six steps pass.
+1. **Dashboard (Johan):** Today has Bright Spark's lapsed vetting document at the top. Since yesterday shows quotes received and a collection step due. Portfolio health has Kingfisher Court at risk.
+2. **Compliance:** matrix → Kingfisher Court AGM → *Schedule the AGM* (14 days' notice) → *Send notice*. The AGM is Complete, with evidence, and its Task is closed.
+3. **Suppliers:** Bright Spark public liability insurance uploaded → vetting row "Valid until 31 Oct 2027"; the Task is closed; Kingfisher Court's Suppliers cell is no longer overdue.
+4. **Thandeka:** Jacaranda Heights insurance uploaded. The item is Complete and its Task is closed; the old policy is archived "Replaced by …" and listed under Documents › Archived. Team workload shows per-person counts.
+5. **Sipho:** the dashboard is scoped to Kingfisher Court only.
+
+**Also checked:**
+- **Attachments panel** on unit, person, supplier, job and meeting, each with *Upload* and *Open in the library*.
+- **Library:** filter bar (category, record, visibility, scheme), search, and `?record=supplier:…` from *Open in the library* (5 documents and a "Showing documents on …" banner).
+- **Rules:** a vetting upload without an expiry is refused by the API.
+- **Manual compliance item:** added, then marked done.
+- **CSOS return:** recorded with a reference, and becomes Complete.
+
+**Fixed (branch `fix/checkpoint-7-gaps`):**
+
+| Defect | Cause | Fix |
+|---|---|---|
+| The document page didn't refresh after *Archive*, *Restore* or *Edit details*. The change was saved, but the page still offered *Archive* until reloaded. | `LibraryDataSource.get()` returned the store's own object. The store changes it in place, so the page received the same reference and didn't re-render. | `InMemoryLibraryDataSource.get()` returns a copy, as the API would |
+| *Expires* was labelled "(optional)" when the API required it (Compliance evidence; vetting documents other than the bank letter) | The form field's `required` was fixed | New `FormField.requiredIf`; the upload form uses it, and *Edit details* sets `required` from the document's type |
+| A scheme still **onboarding** showed overdue AGM, financials and CSOS items, and raised unassigned Tasks, as soon as it was created (audit F-12, remediation P0-8) | Compliance ignored the scheme's status | Items for an onboarding scheme are *Upcoming*, "Tracked once … goes live", and raise no Tasks. Marking the scheme active switches normal rules on. |
+
+**Found, not fixed** (outside Checkpoint 7, or needing a decision):
+- **List pages don't follow URL changes while open.** `urlState` (`ui/data-table/url-state.ts`) reads the query string only when a page opens. A link that changes only the query on the same page doesn't update the view. This affects every list page.
+- **The dashboard shows "Due earlier today"** for a compliance item with no date (a trustee board below its minimum, Checkpoint 10), while the matrix shows "Missing".
+- **Team workload includes trustees** who have Tasks (e.g. Sipho, through a resolution action). Product question: should the Agency Administrator's team view include them?
+- **The meeting attachments panel** is titled "Documents", where §1 says "Papers & attachments" (cosmetic).
+

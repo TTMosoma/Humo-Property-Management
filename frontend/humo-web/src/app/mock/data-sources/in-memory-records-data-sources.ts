@@ -111,7 +111,14 @@ export class InMemoryLibraryDataSource extends LibraryDataSource {
   }
 
   get(id: string): Observable<LibraryDocument | undefined> {
-    return this.db.changes$.pipe(switchMap(() => this.respond(this.visible([this.store.get(id)].filter((d): d is LibraryDocument => !!d))[0])));
+    return this.db.changes$.pipe(
+      switchMap(() => {
+        const d = this.visible([this.store.get(id)].filter((x): x is LibraryDocument => !!x))[0];
+        // A copy, as the API would send: the store changes documents in place, and an unchanged
+        // reference wouldn't refresh the page after archive, restore or edit.
+        return this.respond(d ? { ...d } : undefined);
+      }),
+    );
   }
 
   upload(input: NewDocument, file?: File): Observable<string> {
