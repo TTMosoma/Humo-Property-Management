@@ -13,11 +13,27 @@ const schemeName = (d: Record<string, unknown>) => (d['scheme'] as Scheme | unde
 
 export const routes: Routes = [
   // ---------------- Humo identity: shared by every Humo product ----------------
+  // One page: sign in, after signing out, and where an emailed sign-in link opens.
+  {
+    path: 'sign-in',
+    title: 'Sign in',
+    canActivate: [signedOutGuard],
+    data: { mode: 'sign-in' },
+    loadComponent: () => import('./features/access/sign-in-page').then((m) => m.SignInPage),
+  },
+  {
+    path: 'sign-in/link',
+    title: 'Signing in',
+    canActivate: [signedOutGuard],
+    data: { mode: 'link' },
+    loadComponent: () => import('./features/access/sign-in-page').then((m) => m.SignInPage),
+  },
   {
     path: 'signed-out',
     title: 'Signed out',
     canActivate: [signedOutGuard],
-    loadComponent: () => import('./features/access/signed-out-page').then((m) => m.SignedOutPage),
+    data: { mode: 'signed-out' },
+    loadComponent: () => import('./features/access/sign-in-page').then((m) => m.SignInPage),
   },
 
   // ---------------- Humo Contractor (a separate Humo product, prototyped here behind its own shell) ----------------

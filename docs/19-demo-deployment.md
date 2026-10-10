@@ -26,6 +26,10 @@ The build is a **static site**: HTML, JavaScript and CSS only. There's no server
   - Two clients looking at the same time never see each other's changes.
   - A client's changes stay in their browser until they reset them.
 - **Reset.** *Prototype* (bottom right) › *Reset simulation…* › *Reset everything* returns to the seeded demo data. Do this before each demo.
+- **Sign-in.** Visitors start at the Humo sign-in page (`/sign-in`).
+  - Enter a demo person's email, or open *Demo accounts* under the form and choose one. The passkey is simulated.
+  - *Email me a sign-in link* works too: the *Prototype* box on the "Check your email" step opens the link.
+  - Details are in register R-8.
 - **Personas.** The prototype controls stay in the demo build, so the presenter can switch personas and roles.
 - **Search engines.** The site asks search engines not to index it (`robots.txt` and an `X-Robots-Tag` header).
 - **What's simulated.** Every simulated action is listed in [18-production-readiness-register.md](18-production-readiness-register.md).
@@ -82,7 +86,7 @@ DNS changes usually take minutes, occasionally a few hours.
 ## Before each demo
 
 - [ ] Open `https://pm-demo.humo.co.za` in a private window, or reset the simulation.
-- [ ] Sign in as the persona you start with. The suggested order:
+- [ ] Sign in from *Demo accounts* on the sign-in page as the persona you start with. The suggested order:
   1. Executive overview.
   2. Portfolio Manager's day: Inbox, then jobs, then approvals.
   3. Finance: billing run, receipts, credit control.

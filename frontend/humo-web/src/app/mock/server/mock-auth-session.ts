@@ -95,6 +95,31 @@ export class MockAuthSession {
     this.update({ identityId: id, signedIn: true, assignmentId: identityId ? null : this.state.assignmentId, impersonation: null });
   }
 
+  /** Whose passkey this device holds: the last person who signed in here. */
+  deviceIdentityId(): string {
+    return this.state.identityId;
+  }
+
+  // ---- Sign-in links (SIMULATED, docs/18 R-8): kept in memory; the "email" is shown by the prototype controls.
+
+  private readonly links = new Map<string, { identityId: string; expiresAt: number }>();
+  lastLink: { email: string; token: string; delivered: boolean } | null = null;
+
+  /** A one-time link for an active identity. Unknown addresses get nothing, silently. */
+  issueLink(email: string): void {
+    const who = this.store.identities().find((i) => i.email.toLowerCase() === email.toLowerCase() && i.status === 'active');
+    const token = `lnk-${Math.random().toString(36).slice(2, 12)}`;
+    if (who) this.links.set(token, { identityId: who.id, expiresAt: Date.now() + 15 * 60_000 });
+    this.lastLink = { email, token, delivered: !!who };
+  }
+
+  /** The identity a link signs in, once; undefined if it's unknown, used or expired. */
+  redeemLink(token: string): string | undefined {
+    const link = this.links.get(token);
+    this.links.delete(token);
+    return link && link.expiresAt > Date.now() ? link.identityId : undefined;
+  }
+
   signOut(): void {
     this.proof = null;
     this.update({ ...this.state, signedIn: false, assignmentId: null, impersonation: null });
@@ -183,7 +208,7 @@ export class MockAuthSession {
 
   private restore(): AuthState {
     const stored = safeStorage.get(KEYS.identity);
-    const identityId = stored && this.store.identities().some((i) => i.id === stored && i.demo) ? stored : 'p-sarah';
+    const identityId = stored && this.store.identities().some((i) => i.id === stored) ? stored : 'p-sarah';
     let impersonation: ImpersonationSession | null = null;
     try {
       const s = JSON.parse(safeStorage.get(KEYS.impersonation) ?? 'null') as ImpersonationSession | null;
@@ -193,7 +218,8 @@ export class MockAuthSession {
     }
     return {
       identityId,
-      signedIn: safeStorage.get(KEYS.signedOut) !== '1',
+      // A first visit starts signed out, at the sign-in page.
+      signedIn: safeStorage.get(KEYS.signedOut) === '0',
       assignmentId: safeStorage.get(KEYS.assignment) || null,
       impersonation,
     };
