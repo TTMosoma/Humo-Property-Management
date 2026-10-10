@@ -51,11 +51,13 @@ const DENIAL_REASON: Record<PolicyDenial, string> = {
 /**
  * The prototype's stand-in for the API boundary. Every command from every mock
  * data source passes through here, which is where the real backend will:
- *   1. authorise (role permission, scope, entitlement) from the token's claims,
- *   2. refuse writes in Observe impersonation,
- *   3. require a fresh step-up proof for sensitive commands,
- *   4. check the record hasn't changed since the caller saw it (409),
- *   5. validate the input (422 with field errors),
+ *   1. refuse writes in Observe impersonation,
+ *   2. authorise (role permission, scope, entitlement) from the token's claims,
+ *   3. check the record hasn't changed since the caller saw it (409),
+ *   4. validate the input (422 with field errors),
+ *   5. only then require a fresh step-up proof for sensitive commands: a
+ *      "step-up required" challenge the client answers with a passkey and
+ *      retries, so nobody verifies for a request that was going to fail,
  *   6. append an audit record naming the actor AND the impersonated user.
  *
  * The browser's own checks (SessionService.can) are UX; these are the rules.
@@ -84,6 +86,9 @@ export class MockGateway {
         }
         const invalid = spec.validate?.();
         if (invalid && Object.keys(invalid).length) throw new ApiError('validation', 'Some details need attention', invalid);
+        // Step-up comes after validation. It's a challenge, not a refusal: nothing is audited until
+        // the retried command succeeds (or is refused for another reason).
+        if (this.needsProof(spec) && !this.auth.stepUpFresh()) throw new PolicyError('step-up-required', DENIAL_REASON['step-up-required']);
         try {
           const result = apply();
           this.audit(spec, 'success');
@@ -106,7 +111,7 @@ export class MockGateway {
     const imp = s.impersonation;
     const actor = s.actor;
     const proof = this.auth.stepUpProof();
-    const needsProof = spec.stepUp ?? (spec.permission ? PERMISSION_META[spec.permission].stepUp : false);
+    const needsProof = this.needsProof(spec);
     this.store.record({
       category: spec.category ?? 'activity',
       actor: { identityId: actor.id, name: actor.name },
@@ -131,9 +136,12 @@ export class MockGateway {
     // Permission is checked against the token's role, not the observe-filtered list (observe is reported above).
     if (spec.permission && !this.roleGrants(spec.permission)) return 'forbidden';
     if (spec.feature && !this.auth.hasFeature(spec.feature)) return 'not-entitled';
-    const needsProof = spec.stepUp ?? (spec.permission ? PERMISSION_META[spec.permission].stepUp : false);
-    if (needsProof && !this.auth.stepUpFresh()) return 'step-up-required';
     return null;
+  }
+
+  /** Sensitive commands need a fresh step-up proof: forced or waived per command, otherwise the permission's default. */
+  private needsProof(spec: CommandSpec): boolean {
+    return spec.stepUp ?? (spec.permission ? !!PERMISSION_META[spec.permission].stepUp : false);
   }
 
   private roleGrants(permission: Permission): boolean {

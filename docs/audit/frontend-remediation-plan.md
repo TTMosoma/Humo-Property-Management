@@ -48,7 +48,7 @@
 | P1-3 | **Implement D3:** *Invite* on the person, unit and board pages, prefilled; Portfolio Managers may invite residents and trustees in scope (new permission); first-administrator invite restricted to Agency Administrator (F-22) | | Person page "Not invited yet" (F-27) | M |
 | P1-4 | **Implement D4 hygiene:** replace security-relevant `role ===` checks with permissions | 29 checks, most harmless (meeting attendee roles) | Read-only search | S |
 | P1-5 | **Date handling:** one "today in Africa/Johannesburg" helper; plain calendar dates | Off-by-one dates near midnight (F-26), 17 uses | W3 | S |
-| P1-6 | **Validate before step-up** in Humo team and agency invites (H-2) | Avoids passkey prompts for doomed requests | Live trace | S–M |
+| P1-6 | ✅ **Done 10 Oct 2026** (branch `fix/h2-validate-before-step-up`). **Validate before step-up** in Humo team and agency invites (H-2) | Avoids passkey prompts for doomed requests | Live trace | S–M |
 | P1-7 | **Platform onboarding polish:** correct the instruction text (F-21); customer name in the breadcrumb (F-24); "Too new to score" instead of Critical health (F-23) | First-client onboarding is the first thing Humo staff do | W1 | S |
 | P1-8 | **Extract business rules from the mock stores** into acceptance criteria, for slice-1 modules (organisation, scheme, unit, person, relationship, access, Humo team, audit) | The mocks are the spec (F-11) | Roadmap R3 | M |
 
