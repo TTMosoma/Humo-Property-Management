@@ -1,11 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { catchError, combineLatest, concatMap, map, of, switchMap } from 'rxjs';
-import { ContractorNetwork, ContractorProfile, ContractorQuote, LIFECYCLE_LABEL, QuoteRequestView } from '../../../domain/contractor';
-import { DELEGATED_LIMIT, JobDataSource, JobDetail, JobStage, SupplierDataSource, SupplierSummary, stageIndex } from '../../../domain';
+import { combineLatest, concatMap, map, of, switchMap } from 'rxjs';
+import { ContractorNetwork, ContractorProfile, ContractorQuote, LIFECYCLE_LABEL } from '../../../domain/contractor';
+import { DELEGATED_LIMIT, JobDataSource, JobStage, SupplierDataSource, SupplierSummary, stageIndex } from '../../../domain';
 import { FeedbackService } from '../../../core/feedback/feedback.service';
+import { DrawerService } from '../../../ui/drawer/drawer.service';
+import { openForm } from '../../shared/form-drawer';
 import { loadable } from '../../../core/data/loadable';
 import { SessionService } from '../../../core/session/session.service';
 import { formatDate, formatRand } from '../../../ui/format/money';
@@ -40,6 +42,7 @@ export class QuoteComparePage {
   private readonly suppliers = inject(SupplierDataSource);
   private readonly feedback = inject(FeedbackService);
   private readonly router = inject(Router);
+  private readonly drawer = inject(DrawerService);
   protected readonly session = inject(SessionService);
 
   protected readonly ref = toSignal(inject(ActivatedRoute).paramMap.pipe(map((p) => p.get('requestId')!)), { initialValue: '' });
@@ -182,7 +185,26 @@ export class QuoteComparePage {
       });
   }
 
-  protected message(name: string): void {
-    this.feedback.info(`Messages to ${name} go through Humo, so the quote history stays in one place. (Messaging is planned.)`);
+  /** Messages with contractors, newest last. Contact details stay private until a quote is accepted. */
+  protected readonly messages = computed(() => [...(this.qr()?.request.messages ?? [])].sort((a, b) => a.at.localeCompare(b.at)));
+
+  protected messageCount(partyId: string): number {
+    return this.messages().filter((m) => m.partyId === partyId).length;
+  }
+
+  protected message(partyId: string): void {
+    const v = this.qr();
+    if (!v) return;
+    const name = this.name(partyId);
+    openForm(this.drawer, {
+      eyebrow: v.request.title,
+      title: `Message ${name}`,
+      intro: 'It goes through Humo Contractor, so the conversation stays with this quote request. Contact details are shared once you accept a quote.',
+      fields: [{ key: 'body', label: 'Message', type: 'textarea', required: true, placeholder: 'e.g. Can you start before the 20th? The geyser is in the roof space above unit 12.' }],
+      submitLabel: 'Send message',
+      submit: (values) => this.network.message(v.request.id, partyId, values['body']),
+      success: () => `Message sent to ${name}.`,
+      failure: 'The message wasn’t sent',
+    });
   }
 }

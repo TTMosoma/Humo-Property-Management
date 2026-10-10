@@ -1,39 +1,13 @@
 import { inject } from '@angular/core';
-import { ActivatedRouteSnapshot, Route, Router, Routes } from '@angular/router';
+import { ActivatedRouteSnapshot, Router, Routes } from '@angular/router';
 import { accessGuard } from './core/access/access.guard';
 import { signedInGuard, signedOutGuard } from './core/access/signed-in.guard';
 import { SessionService } from './core/session/session.service';
-import type { BreadcrumbData } from './core/shell/breadcrumbs/breadcrumbs';
 import { Shell } from './core/shell/shell';
-import { Feature, Permission, Scheme, periodLabel } from './domain';
-import type { PlannedMeta } from './features/planned/planned-page';
+import { Feature, Scheme, periodLabel } from './domain';
 import { schemeResolver } from './features/schemes/scheme.resolver';
 
 const GOVERNANCE: { feature: Feature } = { feature: 'governance' };
-
-/**
- * A screen that isn't built yet. Each one declares the permission needed to open it and the job it serves,
- * so the whole navigation can be clicked through and reviewed now.
- * As screens are built, `loadComponent` is pointed at the real feature component.
- */
-function planned(
-  path: string,
-  title: string | ((route: ActivatedRouteSnapshot) => string),
-  permission: Permission,
-  checkpoint: number,
-  job: string,
-  plannedItems: string[] = [],
-  crumb: BreadcrumbData | false = typeof title === 'string' ? title : false,
-  extra: Record<string, unknown> = {},
-): Route {
-  const meta: PlannedMeta = { job, planned: plannedItems, checkpoint };
-  return {
-    path,
-    title,
-    loadComponent: () => import('./features/planned/planned-page').then((m) => m.PlannedPage),
-    data: { permission, planned: meta, ...(crumb ? { breadcrumb: crumb } : {}), ...extra },
-  };
-}
 
 const schemeName = (d: Record<string, unknown>) => (d['scheme'] as Scheme | undefined)?.name ?? 'Scheme';
 

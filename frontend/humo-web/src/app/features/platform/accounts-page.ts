@@ -3,7 +3,7 @@ import { CatalogueService } from '../../core/catalogue/catalogue.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { catchError, map, of } from 'rxjs';
+import { map } from 'rxjs';
 import { Opportunity, PlatformCustomer, PlatformDataSource } from '../../domain';
 import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';

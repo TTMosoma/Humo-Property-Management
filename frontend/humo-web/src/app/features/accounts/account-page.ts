@@ -19,7 +19,7 @@ import { KeyFact, RecordHeader } from '../../ui/record/record-header';
 import { EmptyState } from '../../ui/states/empty-state';
 import { ErrorState } from '../../ui/states/error-state';
 import { Skeleton } from '../../ui/states/skeleton';
-import { accountStatus, balanceTone, links, unitChain } from './account-view';
+import { accountStatus, balanceTone, links, statementSendFailure, unitChain } from './account-view';
 
 /**
  * Levy account (decision D2: it belongs to the unit). Job: answer
@@ -164,10 +164,25 @@ export class AccountPage {
     });
   }
 
+  protected readonly sending = signal(false);
+  protected readonly canSend = computed(() => this.session.can('Collections.Manage'));
+
+  /** Emails the latest statement again; it's recorded in Communications › Sent. */
   protected sendStatement(): void {
     const d = this.detail();
-    if (!d) return;
-    this.feedback.info(`Prototype: the ${periodLabel(d.statementPeriods[0], false)} statement would be re-sent to ${d.holder.email}.`);
+    const period = d?.statementPeriods[0];
+    if (!d || !period || this.sending()) return;
+    this.sending.set(true);
+    this.accounts.sendStatement(d.account.id, period).subscribe({
+      next: () => {
+        this.sending.set(false);
+        this.feedback.success(`The ${periodLabel(period, false)} statement was emailed to ${d.holder.email}. It’s in Communications › Sent.`);
+      },
+      error: (e: unknown) => {
+        this.sending.set(false);
+        this.feedback.error(statementSendFailure(e));
+      },
+    });
   }
 
   /** Corrections after a run is posted: a journal on the account, never an edit to the run. */

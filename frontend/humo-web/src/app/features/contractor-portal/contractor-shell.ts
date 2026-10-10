@@ -122,14 +122,15 @@ import { Logo } from '../../ui/brand/logo';
 export class ContractorShell {
   protected readonly prototype = inject(PrototypeControls, { optional: true });
   protected readonly session = inject(SessionService);
-  private readonly leaveWhenSignedOut = (() => {
+  protected readonly signOut = inject(SignOutService);
+
+  constructor() {
     const router = inject(Router);
     // The session can end while you're here: leave for the signed-out page, which explains why.
     effect(() => {
       if (!this.session.signedIn()) untracked(() => router.navigate(['/signed-out'], { queryParams: { product: 'contractor' } }));
     });
-  })();
-  protected readonly signOut = inject(SignOutService);
+  }
   protected readonly business = computed(() => this.session.assignment().label);
   protected readonly links = [
     { label: 'Dashboard', route: '/contractor', icon: 'speedometer-outline', exact: true },

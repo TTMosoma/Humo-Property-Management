@@ -802,7 +802,7 @@ export class MockDb {
     // Kingfisher Court — the demo story.
     add('kingfisher-court', 3480, 'ANELE M', 'A MTHEMBU', 2);
     add('kingfisher-court', 2000, 'UNIT 31', 'L NDLOVU', 1);
-    const kcLevy = this.units.filter((u) => u.schemeId === 'kingfisher-court').find((u, i, all) => all.filter((x) => x.monthlyLevy === u.monthlyLevy).length > 1);
+    const kcLevy = this.units.filter((u) => u.schemeId === 'kingfisher-court').find((u, _i, all) => all.filter((x) => x.monthlyLevy === u.monthlyLevy).length > 1);
     add('kingfisher-court', kcLevy?.monthlyLevy ?? 2950, 'LEVY OCT', '', 1);
     add('kingfisher-court', 6500, 'KC17 RENT OCT', 'R BOTHA', 2);
     add('kingfisher-court', 1840, 'J SMITH 0821234567', 'J SMITH', 3);

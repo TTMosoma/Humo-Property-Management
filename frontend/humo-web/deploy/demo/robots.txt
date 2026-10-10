@@ -1,0 +1,3 @@
+# Demo site: not for search engines.
+User-agent: *
+Disallow: /

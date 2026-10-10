@@ -1,0 +1,5 @@
+# Netlify / Cloudflare Pages headers for the demo.
+/*
+  X-Robots-Tag: noindex, nofollow
+/index.html
+  Cache-Control: no-cache, no-store, must-revalidate

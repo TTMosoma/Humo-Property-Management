@@ -15,13 +15,15 @@ import {
   WorkOrder,
   disclosureFor,
 } from '../../domain/contractor';
-import { JobStage, PolicyError } from '../../domain';
+import { FieldErrors, JobStage, PolicyError } from '../../domain';
 import { MockAuthSession } from '../server/mock-auth-session';
 import { MaintenanceStore } from '../db/maintenance-store';
 import { MockDb } from '../db/mock-db';
 import { mockResponder } from '../mock-latency';
 import { MockGateway } from '../server/mock-gateway';
 import { ContractorStore } from './contractor-store';
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** Simulated integration feed: a PM job's stage drives the contractor's work order status. */
 const FROM_JOB: Partial<Record<JobStage, WorkOrder['status']>> = {
@@ -82,18 +84,44 @@ export class InMemoryContractorNetwork extends ContractorNetwork {
 
   createQuoteRequest(input: NewQuoteRequest): Observable<string> {
     const by = this.session.current.identity.name;
-    return this.gateway.command({ action: `Requested quotes through Humo Contractor: ${input.title}`, resource: 'Quote request', permission: 'Maintenance.Manage' }, () => {
+    const emails = [...new Set((input.inviteEmails ?? []).map((e) => e.trim().toLowerCase()).filter(Boolean))];
+    const validate = (): FieldErrors | null => {
+      const bad = emails.find((e) => !EMAIL.test(e));
+      if (bad) return { inviteEmails: `“${bad}” isn’t an email address.` };
+      return input.invite.length || emails.length ? null : { invite: 'Choose at least one contractor, or invite one by email.' };
+    };
+    return this.gateway.command({ action: `Requested quotes through Humo Contractor: ${input.title}`, resource: 'Quote request', permission: 'Maintenance.Manage', validate }, () => {
       const id = this.store.nextId('QR');
       const now = new Date().toISOString();
-      const { invite, ...rest } = input;
+      const { invite, inviteEmails: _emails, ...rest } = input;
       this.store.addRequest({
         ...rest, id, createdAt: now, createdBy: by, status: 'open',
         invitations: invite.map((i) => ({ partyId: i.partyId, invitedAt: now, via: i.via, status: 'invited' as const })),
+        emailInvites: emails.map((email) => ({ email, invitedAt: now })),
       });
       this.store.emit({ type: 'quote-request-created', quoteRequestId: id, customerId: input.customerId, actor: by });
       for (const i of invite) this.store.emit({ type: 'contractor-invited', quoteRequestId: id, customerId: input.customerId, partyId: i.partyId, actor: by });
+      // SIMULATED (docs/18 R-4): no email is sent. Production emails a sign-up link for Humo Contractor that opens this request.
+      for (const email of emails) this.store.emit({ type: 'contractor-invited-by-email', quoteRequestId: id, customerId: input.customerId, detail: email, actor: by });
       return id;
     });
+  }
+
+  /** SIMULATED (docs/18 R-3): kept on the request and shown in the contractor's portal; nobody is notified. */
+  message(quoteRequestId: string, partyId: string, body: string): Observable<void> {
+    const by = this.session.current.identity.name;
+    const request = this.store.requests().find((r) => r.id === quoteRequestId);
+    const validate = (): FieldErrors | null => {
+      if (!request || !request.invitations.some((i) => i.partyId === partyId)) return { partyId: 'They weren’t invited to this quote request.' };
+      return body.trim() ? null : { body: 'Write your message.' };
+    };
+    return this.gateway
+      .command({ action: 'Messaged a contractor about a quote', resource: 'Quote request', resourceId: quoteRequestId, permission: 'Maintenance.Manage', validate }, () => {
+        const message = { id: this.store.nextId('QM'), partyId, at: new Date().toISOString(), from: 'customer' as const, author: by, body: body.trim() };
+        this.store.updateRequest(quoteRequestId, (r) => ({ ...r, messages: [...(r.messages ?? []), message] }));
+        this.store.emit({ type: 'message-sent', quoteRequestId, customerId: request!.customerId, partyId, actor: by });
+      })
+      .pipe(map(() => undefined));
   }
 
   /** Recorded on subscribe, like a POST. Impersonation never counts as the customer having looked. */
@@ -223,8 +251,10 @@ export class InMemoryContractorPortal extends ContractorPortal {
         const invitation = request?.invitations.find((i) => i.partyId === partyId);
         if (!request || !invitation) return this.respond(undefined);
         if (invitation.status === 'invited') queueMicrotask(() => this.setInvitation(partyId, quoteRequestId, 'viewed'));
+        // A contractor sees only their own messages, and never who else was invited by email.
+        const own = { ...request, emailInvites: undefined, messages: request.messages?.filter((m) => m.partyId === partyId) };
         return this.respond<ContractorRequestView>({
-          request,
+          request: own,
           invitation,
           myQuote: s.quotes.find((q) => q.quoteRequestId === quoteRequestId && q.partyId === partyId),
           competing: request.invitations.length - 1,

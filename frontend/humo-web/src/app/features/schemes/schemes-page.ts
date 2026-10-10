@@ -1,9 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
 import { IonIcon } from '@ionic/angular/standalone';
-import { catchError, of } from 'rxjs';
 import { Router } from '@angular/router';
-import { SCHEME_STATUS_LABELS, SchemeDataSource, SchemeHealth } from '../../domain';
+import { SCHEME_STATUS_LABELS, SchemeDataSource } from '../../domain';
 import { newSchemeForm } from './scheme-forms';
 import { loadable } from '../../core/data/loadable';
 import { ScopeService } from '../../core/scope/scope.service';

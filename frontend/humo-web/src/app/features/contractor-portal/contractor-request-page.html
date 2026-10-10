@@ -41,6 +41,17 @@
         <ion-icon name="lock-closed-outline" aria-hidden="true" />
         Residents’ details and the customer’s direct contact are shared if your quote is accepted. Until then, ask questions through Humo.
       </p>
+      @if (r.messages?.length) {
+        <h3>Messages from {{ r.customerName }}</h3>
+        <ol class="messages">
+          @for (m of r.messages; track m.id) {
+            <li>
+              <span class="muted small">{{ m.from === 'customer' ? m.author + ', ' + r.customerName : 'You' }} · {{ formatDate(m.at) }}</span>
+              <span class="m-body">{{ m.body }}</span>
+            </li>
+          }
+        </ol>
+      }
       <p class="muted small">{{ x.competing ? 'You’re one of ' + (x.competing + 1) + ' businesses invited. You won’t see the others or their prices.' : 'Only your business was invited.' }}</p>
     </section>
 

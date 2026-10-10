@@ -23,7 +23,7 @@ import {
 import { formatRand } from '../../ui/format/money';
 import { personName, portfolioManagerOf } from '../fixtures/staff';
 import { MockDb } from './mock-db';
-import { round2, seeded } from './random';
+import { round2 } from './random';
 import { seedMaintenance } from './seed-maintenance';
 import { BudgetStore } from './budget-store';
 

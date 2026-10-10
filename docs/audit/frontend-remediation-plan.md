@@ -32,12 +32,12 @@
 | P0-1 | **Merge PR #3 into `main`** (after review) and retitle it to match its content | `main` has no application; every review of `main` or an older branch shows "Planned screen" pages and no Humo team. The source of truth for the frontend must be unambiguous. | Matrix §0 | S |
 | P0-2 | **Write the scope rule into the API contract** (`docs/08`): reads derive scope from the session and `schemeIds` is only a filter within it; commands check the target record's organisation and scheme; the mock gateway imitates it | Prevents endpoints that trust the client (F-02, F-08). Required by D1. | `mock-gateway.ts` `authorise()`; `SchemeDataSource.list()` | M |
 | P0-3 | **Implement D1 in the frontend:** scheme resolver and scope by assignment; add the read-only "browse all schemes" permission; show a read-only state when browsing | The current behaviour contradicts an approved decision (F-07) | `scheme.resolver.ts` | S–M |
-| P0-4 | **Inert actions must not look real:** "Email statement", "Re-send statement", "Message through Humo", email quote invites. Either record them properly (Sent + issued document, per D9), or label them clearly as not available yet. | Misleading: users believe a statement was sent (F-15, F-16) | `statement-page.ts:133`, `account-page.ts:170`, `quote-compare-page.ts:186`, `quote-request-page.ts:88` | S |
+| P0-4 | ✅ **Done 10 Oct 2026** (branch `demo-ready`; still simulated, tracked in `docs/18` R-1, R-3, R-4). **Inert actions must not look real:** "Email statement", "Re-send statement", "Message through Humo", email quote invites. Either record them properly (Sent + issued document, per D9), or label them clearly as not available yet. | Misleading: users believe a statement was sent (F-15, F-16) | `statement-page.ts:133`, `account-page.ts:170`, `quote-compare-page.ts:186`, `quote-request-page.ts:88` | S |
 | P0-5 | **Live assignments, not seed data,** for portfolio-manager routing and names (`portfolioManagerOf`, `personName`) | Two sources of truth would be copied into the backend (F-03) | `mock/fixtures/staff.ts`, 10 callers | S–M |
 | P0-6 | **Implement D2:** trustees only through the board (remove "Trustee of a scheme" from the People form); appointing grants trustee access when the person has a sign-in; reconcile seed data (Sarah, Mpho) | The legal board register must be the only source of truth (F-06, F-28) | `board-store.ts`, `person-forms`, `personas.ts` | M |
 | P0-7 | ✅ **Done 10 Oct 2026** (Phase 2; see `phase-1-verification-report.md` §11). **Humo staff separation:** refuse `@humo.example` addresses in agency invites (H-3). Restore a suspended Humo invitee to *Invited*, not *Active* (H-1). | Account status integrity, and the internal versus customer boundary | `in-memory-access-data-sources.ts:75`, `in-memory-humo-team-data-source.ts:310` | S |
 | P0-8 | ✅ **Done 10 Oct 2026** (branch `fix/checkpoint-7-gaps`). **Compliance for onboarding schemes:** no overdue items or Tasks before the scheme's "managed since" date; no unassigned Tasks | False alarms on every new scheme (F-12) | W4; `compliance-store.ts` | S–M |
-| P0-9 | **Statements are previews until D7:** label past statements "Preview: re-rendered from current data". Document that the backend stores issued PDFs. | The current behaviour contradicts D7 (F-44) and can show new bank details on old statements | `mock-db.ts:278–295` | S |
+| P0-9 | ✅ **Done 10 Oct 2026** (branch `demo-ready`; `docs/18` R-2). **Statements are previews until D7:** label past statements "Preview: re-rendered from current data". Document that the backend stores issued PDFs. | The current behaviour contradicts D7 (F-44) and can show new bank details on old statements | `mock-db.ts:278–295` | S |
 
 ## P1: core workflows for the first client and slice 1
 
@@ -70,7 +70,7 @@
 
 | # | Item | Status |
 |---|---|---|
-| P3-1 | Remove dead code: `features/planned/*`, `planned()` helper (F-33) | Cleanup |
+| P3-1 | ✅ Done 10 Oct 2026 (branch `demo-ready`). Remove dead code: `features/planned/*`, `planned()` helper (F-33); also about 80 unused imports, with `noUnusedLocals` and `noUnusedParameters` now on | Cleanup |
 | P3-2 | Naming review of the 133 bare "Humo" candidates against doc 07 (F-31) | Cleanup |
 | P3-3 | Plan message wording under Observe (F-30) | Cosmetic |
 | P3-4 | Person merge; unit archive and renumber; bulk resident invites | Deferred (D3, `docs/09`) |

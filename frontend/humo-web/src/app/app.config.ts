@@ -20,6 +20,7 @@ export const appConfig: ApplicationConfig = {
     provideIonicAngular({ mode: 'md' }),
     provideAppInitializer(registerIcons),
     // Data layer: in-memory for the prototype. Swap for the HTTP implementation later.
+    // PRODUCTION: HTTP adapters only, no mocks or prototype controls (docs/18 R-6, P1-2).
     provideMockData(),
   ],
 };

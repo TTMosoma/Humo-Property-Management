@@ -62,10 +62,14 @@ export class QuoteRequestPage {
   protected readonly deadline = signal(new Date(Date.now() + 14 * 86_400_000).toISOString().slice(0, 10));
   protected readonly chosen = signal<string[]>([]);
   protected readonly inviteEmail = signal('');
+  /** Businesses not on Humo Contractor yet; each gets an email invitation when the request is sent. */
+  protected readonly emails = signal<string[]>([]);
+  protected readonly emailError = signal('');
   protected readonly busy = signal(false);
 
   protected readonly reqList = computed(() => this.requirements().split('\n').map((x) => x.trim()).filter(Boolean));
-  protected readonly valid = computed(() => this.title().trim().length > 3 && this.reqList().length > 0 && this.chosen().length > 0);
+  protected readonly valid = computed(() => this.title().trim().length > 3 && this.reqList().length > 0 && this.chosen().length + this.emails().length > 0);
+  protected readonly recipients = computed(() => this.chosen().length + this.emails().length);
   protected readonly complianceOk = complianceOk;
 
   constructor() {
@@ -82,11 +86,21 @@ export class QuoteRequestPage {
     this.chosen.update((c) => (c.includes(partyId) ? c.filter((x) => x !== partyId) : [...c, partyId]));
   }
 
+  /** Adds the address to the request; the invitation goes out when the request is sent. */
   protected inviteByEmail(): void {
-    const email = this.inviteEmail().trim();
+    const email = this.inviteEmail().trim().toLowerCase();
     if (!email) return;
-    this.feedback.info(`An invitation to quote (and to create a free Humo Contractor profile) would go to ${email}. Email invites are planned.`);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      this.emailError.set('That isn’t an email address.');
+      return;
+    }
+    this.emailError.set('');
+    if (!this.emails().includes(email)) this.emails.update((all) => [...all, email]);
     this.inviteEmail.set('');
+  }
+
+  protected removeEmail(email: string): void {
+    this.emails.update((all) => all.filter((e) => e !== email));
   }
 
   protected send(): void {
@@ -106,12 +120,14 @@ export class QuoteRequestPage {
         photos: d.job.photos.length,
         deadline: new Date(`${this.deadline()}T17:00:00`).toISOString(),
         invite: this.chosen().map((partyId) => ({ partyId, via: 'existing-relationship' as const })),
+        inviteEmails: this.emails(),
       })
       .pipe(concatMap(() => (d.job.stage === 'reported' ? this.jobs.act(d.job.ref, { type: 'request-quotes', supplierIds: [] }) : of(undefined))))
       .subscribe({
         next: () => {
           this.busy.set(false);
-          this.feedback.success(`Quote request sent to ${this.chosen().length} contractors. They’ll quote in Humo Contractor.`);
+          const n = this.recipients();
+          this.feedback.success(`Quote request sent to ${n} ${n === 1 ? 'contractor' : 'contractors'}. They’ll quote in Humo Contractor.`);
           this.router.navigate(['/maintenance', d.job.ref, 'quotes']);
         },
         error: () => {

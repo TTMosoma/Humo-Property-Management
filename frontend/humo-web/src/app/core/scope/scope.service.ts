@@ -1,6 +1,4 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { catchError, of } from 'rxjs';
 import { Scheme, SchemeDataSource, coversAllSchemes, isHumoRole } from '../../domain';
 import { loadable } from '../data/loadable';
 import { safeStorage } from '../prototype/safe-storage';

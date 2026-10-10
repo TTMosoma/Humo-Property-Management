@@ -62,6 +62,12 @@ export abstract class PersonDataSource {
 export abstract class AccountDataSource {
   abstract get(accountId: string): Observable<AccountDetail | undefined>;
   abstract statement(accountId: string, period: string): Observable<StatementView | undefined>;
+  /**
+   * Emails the period's statement to the account holder and records it in
+   * Communications › Sent (D9). Returns the Sent message id.
+   * PRODUCTION: real delivery of the stored PDF (D7) — see docs/18 R-1.
+   */
+  abstract sendStatement(accountId: string, period: string): Observable<string>;
 }
 
 export abstract class ReceiptDataSource {

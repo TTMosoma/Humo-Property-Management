@@ -4,7 +4,6 @@ import { IonIcon } from '@ionic/angular/standalone';
 import { WORK_TYPE_AREA, WorkItem, isOpen, urgencyOf } from '../../domain';
 import { AttentionService } from '../../core/attention/attention.service';
 import { FeedbackService } from '../../core/feedback/feedback.service';
-import { loadable } from '../../core/data/loadable';
 import { ScopeNotice } from '../../core/scope/scope-notice';
 import { ScopeService } from '../../core/scope/scope.service';
 import { SessionService } from '../../core/session/session.service';
@@ -54,7 +53,6 @@ export class TasksPage {
   protected readonly areaIcon = AREA_ICON;
 
   private readonly allTasks = computed(() => this.attention.visible().filter((w) => w.kind === 'task'));
-  private readonly me = computed(() => new Set(this.session.selfIds()));
 
   private readonly byView = computed(() => {
     const tasks = this.allTasks();

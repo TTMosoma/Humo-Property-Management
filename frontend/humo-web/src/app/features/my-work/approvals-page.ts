@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { WorkItem, WorkItemType, isOpen, urgencyOf, sumRands } from '../../domain';
 import { AttentionService } from '../../core/attention/attention.service';
-import { loadable } from '../../core/data/loadable';
 import { ScopeNotice } from '../../core/scope/scope-notice';
 import { ScopeService } from '../../core/scope/scope.service';
 import { SessionService } from '../../core/session/session.service';

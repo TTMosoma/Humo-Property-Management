@@ -8,10 +8,8 @@ import {
   AuditEvent,
   Permission,
   ROLE_LABELS,
-  ROLE_PERMISSIONS,
   SENSITIVE_ACTION_LABELS,
   SecurityDataSource,
-  SecurityProfile,
   SensitiveAction,
 } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';

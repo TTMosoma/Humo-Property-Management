@@ -14,7 +14,7 @@ import { RelationshipChain } from '../../ui/record/relationship-chain';
 import { EmptyState } from '../../ui/states/empty-state';
 import { ErrorState } from '../../ui/states/error-state';
 import { Skeleton } from '../../ui/states/skeleton';
-import { links, unitChain } from './account-view';
+import { links, statementSendFailure, unitChain } from './account-view';
 
 /**
  * A levy statement: opening balance, charges, payments, adjustments,
@@ -128,8 +128,23 @@ export class StatementPage {
     window.print();
   }
 
+  protected readonly sending = signal(false);
+  protected readonly canSend = computed(() => !this.isOwnerView() && this.session.can('Collections.Manage'));
+
+  /** Emails this statement to the holder; it's recorded in Communications › Sent. */
   protected email(): void {
     const v = this.view();
-    if (v) this.feedback.info(`Prototype: this statement would be emailed to ${v.holder.email}.`);
+    if (!v || this.sending()) return;
+    this.sending.set(true);
+    this.accounts.sendStatement(v.account.id, v.statement.period).subscribe({
+      next: () => {
+        this.sending.set(false);
+        this.feedback.success(`Emailed to ${v.holder.email}. It’s in Communications › Sent.`);
+      },
+      error: (e: unknown) => {
+        this.sending.set(false);
+        this.feedback.error(statementSendFailure(e));
+      },
+    });
   }
 }

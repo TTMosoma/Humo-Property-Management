@@ -26,7 +26,6 @@ import {
   earliestMeetingDate,
   quorumRequired,
   resolutionProgress,
-  templateAvailability,
   entitlementSet,
 } from '../../domain';
 import { formatDate } from '../../ui/format/money';

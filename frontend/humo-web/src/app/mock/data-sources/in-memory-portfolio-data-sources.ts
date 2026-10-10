@@ -22,8 +22,10 @@ import {
   UnitDataSource,
   UnitDetails,
   UnitSummary,
+  periodLabel,
   roundRands,
 } from '../../domain';
+import { CommsStore } from '../db/comms-store';
 import { MockAuthSession } from '../server/mock-auth-session';
 import { MockDb } from '../db/mock-db';
 import { mockResponder } from '../mock-latency';
@@ -267,6 +269,9 @@ export class InMemoryPersonDataSource extends PersonDataSource {
 @Injectable()
 export class InMemoryAccountDataSource extends AccountDataSource {
   private readonly db = inject(MockDb);
+  private readonly comms = inject(CommsStore);
+  private readonly session = inject(MockAuthSession);
+  private readonly gateway = inject(MockGateway);
   private readonly respond = mockResponder();
 
   get(accountId: string): Observable<AccountDetail | undefined> {
@@ -275,6 +280,34 @@ export class InMemoryAccountDataSource extends AccountDataSource {
 
   statement(accountId: string, period: string): Observable<StatementView | undefined> {
     return live(this.db, this.respond, () => this.db.statement(accountId, period));
+  }
+
+  /** SIMULATED (docs/18 R-1): recorded in Sent with a simulated delivery; nothing leaves the browser. */
+  sendStatement(accountId: string, period: string): Observable<string> {
+    const v = this.db.statement(accountId, period);
+    return this.gateway.command(
+      {
+        action: `Emailed the ${periodLabel(period)} statement for ${v?.account.accountNo ?? accountId}`,
+        resource: 'Account',
+        resourceId: accountId,
+        permission: 'Collections.Manage',
+        validate: (): FieldErrors | null => (!v ? { period: 'There’s no statement for that period.' } : !v.holder.email ? { email: `${v.holder.displayName} has no email address. Add one on their person record.` } : null),
+      },
+      () => {
+        const to = this.comms.holderOf(accountId)!;
+        return this.comms.record({
+          kind: 'statement',
+          schemeId: v!.scheme.id,
+          subject: `Your ${v!.scheme.name} levy statement: ${periodLabel(period)}`,
+          body: 'Dear {person.name},\n\nYour levy statement for unit {unit.number} is in the resident portal. The balance owing is {account.balance}.\n\nKind regards,\n{agency.name}',
+          channels: ['email'],
+          audienceLabel: `${v!.holder.displayName} · ${v!.account.accountNo}`,
+          by: this.session.current.identity.name,
+          to: [{ ...to, channel: 'email' }],
+          source: { label: `Statement ${periodLabel(period)} · ${v!.account.accountNo}`, route: `/schemes/${v!.scheme.id}/units/${v!.unit.number}/account/statements/${period}` },
+        });
+      },
+    );
   }
 }
 

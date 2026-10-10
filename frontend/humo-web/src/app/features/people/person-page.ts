@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
-import { catchError, map, of, switchMap } from 'rxjs';
+import { map } from 'rxjs';
 import { Person, PersonDataSource, RelationshipView, TimelineDataSource, TimelineEvent, UnitDataSource } from '../../domain';
 import { IonIcon } from '@ionic/angular/standalone';
 import { ScopeService } from '../../core/scope/scope.service';

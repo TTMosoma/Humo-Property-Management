@@ -73,18 +73,29 @@
         <label class="field">
           <span class="f-label">Invite a business you know by email</span>
           <span class="inline">
-            <input type="email" placeholder="name@business.co.za" [value]="inviteEmail()" (input)="setText('inviteEmail', $event)" />
+            <input type="email" placeholder="name@business.co.za" [value]="inviteEmail()" (input)="setText('inviteEmail', $event)" (keydown.enter)="inviteByEmail()" />
             <button type="button" class="btn btn-ghost btn-sm" (click)="inviteByEmail()">Invite</button>
           </span>
+          @if (emailError()) { <span class="email-error" role="alert">{{ emailError() }}</span> }
           <span class="muted small">They create a free Humo Contractor profile to quote. Humo doesn’t suggest contractors you don’t know.</span>
         </label>
+        @if (emails().length) {
+          <ul class="emails" aria-label="Invited by email">
+            @for (e of emails(); track e) {
+              <li>
+                <ion-icon name="mail-outline" aria-hidden="true" /> {{ e }}
+                <button type="button" class="link" [attr.aria-label]="'Remove ' + e" (click)="removeEmail(e)">Remove</button>
+              </li>
+            }
+          </ul>
+        }
       </div>
     </section>
   </div>
 
   <div class="actions">
     <button type="button" class="btn btn-primary" [disabled]="!valid() || busy()" (click)="send()">
-      <ion-icon name="send-outline" aria-hidden="true" /> Send to {{ chosen().length }} {{ chosen().length === 1 ? 'contractor' : 'contractors' }}
+      <ion-icon name="send-outline" aria-hidden="true" /> Send to {{ recipients() }} {{ recipients() === 1 ? 'contractor' : 'contractors' }}
     </button>
     <a class="btn btn-ghost" [routerLink]="['/maintenance', ref()]">Cancel</a>
   </div>

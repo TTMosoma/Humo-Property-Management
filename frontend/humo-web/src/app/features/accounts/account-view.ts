@@ -1,4 +1,4 @@
-import { ACCOUNT_STATUS_LABEL, Account, AccountStatus, Occupancy, Person, Scheme, Unit, UnitSummary } from '../../domain';
+import { ACCOUNT_STATUS_LABEL, Account, AccountStatus, Occupancy, Person, Scheme, Unit, UnitSummary, describeFailure, fieldErrorsOf } from '../../domain';
 import { ChainLink } from '../../ui/record/relationship-chain';
 import { Tone } from '../../ui/status-pill/status-pill';
 
@@ -51,4 +51,10 @@ export function unitChain(summary: Pick<UnitSummary, 'scheme' | 'unit' | 'owners
   if (owner) chain.push({ kind: owners.length > 1 ? 'Owners' : 'Owner', label: owner.displayName + (owners.length > 1 ? ` +${owners.length - 1}` : ''), route: links.person(owner) });
   if (account) chain.push({ kind: 'Account', label: account.accountNo, route: links.account(scheme, unit) });
   return chain;
+}
+
+/** A toast for a statement that couldn't be emailed: the reason, when the API gave one (e.g. no email address). */
+export function statementSendFailure(e: unknown): string {
+  const reason = Object.values(fieldErrorsOf(e))[0];
+  return reason ? `The statement wasn’t sent. ${reason}` : describeFailure(e, 'The statement wasn’t sent');
 }
