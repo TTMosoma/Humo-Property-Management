@@ -21,6 +21,7 @@ import {
   SecurityDataSource,
   SecurityProfile,
   SessionDataSource,
+  SignInError,
   StepUpAuthenticator,
   StepUpMethod,
   StepUpRequest,
@@ -487,5 +488,53 @@ export class InMemorySessionDataSource extends SessionDataSource {
 
   demoIdentities(): Observable<Identity[]> {
     return of(this.store.identities().filter((i) => i.demo && i.status === 'active'));
+  }
+
+  /**
+   * SIMULATED (docs/18 R-8): a moment for the person to touch their sensor,
+   * then the passkey "found" for the email (or this device's last user).
+   * Same answer for "no account" and "no passkey here", like the real thing.
+   */
+  signInWithPasskey(emailHint?: string): Observable<void> {
+    const email = emailHint?.trim().toLowerCase();
+    const who = email ? this.store.identities().find((i) => i.email.toLowerCase() === email) : this.store.identity(this.auth.deviceIdentityId());
+    const hasPasskey = !!who && (this.store.security()[who.id]?.passkeys.length ?? 0) > 0;
+    return timer(1400).pipe(
+      switchMap(() => {
+        if (!who || !hasPasskey || who.status === 'invited') {
+          return throwError(() => new SignInError('no-passkey', 'There’s no passkey for that account on this device'));
+        }
+        if (who.status !== 'active') {
+          return throwError(() => new SignInError('paused', 'This Humo sign-in is paused'));
+        }
+        this.auth.signIn(who.id);
+        this.audit('Signed in to Humo with a passkey');
+        return of(undefined);
+      }),
+    );
+  }
+
+  /** SIMULATED (docs/18 R-8): no email is sent; the prototype controls show the link instead. */
+  sendSignInLink(email: string): Observable<void> {
+    this.auth.issueLink(email.trim());
+    return timer(700).pipe(map(() => undefined));
+  }
+
+  completeSignInLink(token: string): Observable<void> {
+    return timer(600).pipe(
+      switchMap(() => {
+        const id = this.auth.redeemLink(token);
+        const who = id ? this.store.identity(id) : undefined;
+        if (!who || who.status !== 'active') return throwError(() => new SignInError('link-expired', 'This sign-in link has expired or was already used'));
+        this.auth.signIn(who.id);
+        this.audit('Signed in to Humo with an email link');
+        return of(undefined);
+      }),
+    );
+  }
+
+  /** After sign-in, so the event is the signed-in person's. */
+  private audit(action: string): void {
+    this.injector.get(MockGateway).audit({ action, resource: 'Session', resourceId: 's-current', category: 'security' }, 'success');
   }
 }

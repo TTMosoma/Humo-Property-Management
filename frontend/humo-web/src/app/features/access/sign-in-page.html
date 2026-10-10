@@ -1,0 +1,223 @@
+<div class="layout">
+  <!-- Brand panel (hidden on small screens) -->
+  <aside class="brand" [attr.aria-label]="'About ' + product().name">
+    <div class="pattern" aria-hidden="true"></div>
+    <img class="watermark" src="brand/humo-mark-reverse.png" alt="" />
+
+    <div class="brand-top">
+      @if (product().id === 'contractor') {
+        <ui-logo variant="wordmark" [reverse]="true" [height]="34" />
+        <span class="product-tag">Contractor</span>
+      } @else {
+        <ui-logo variant="full" [reverse]="true" [height]="46" />
+      }
+    </div>
+
+    <div class="story">
+      <p class="eyebrow">{{ story().eyebrow }}</p>
+      <h2 class="headline">{{ story().headline }} <span>{{ story().accent }}</span></h2>
+      <p class="lede">{{ story().lede }}</p>
+      <ul class="points">
+        @for (p of story().points; track p.text) {
+          <li><span class="pi"><ion-icon [name]="p.icon" /></span>{{ p.text }}</li>
+        }
+      </ul>
+    </div>
+
+    @if (product().id === 'contractor') {
+      <div class="glimpse" aria-hidden="true">
+        <div class="g-row"><span class="g-label">Quote request</span><span class="g-pill">Viewed</span></div>
+        <strong class="g-title">Gate motor replacement</strong>
+        <span class="g-sub">Kingfisher Court · Bryanston</span>
+        <div class="g-foot"><span><ion-icon name="time-outline" /> Deadline in 5 days</span><span>R 18 400</span></div>
+      </div>
+    } @else {
+      <div class="glimpse" aria-hidden="true">
+        <div class="g-row"><span class="g-label">October levies</span><span class="g-pill">On track</span></div>
+        <strong class="g-title">Kingfisher Court</strong>
+        <div class="g-bar"><span style="width: 96.9%"></span></div>
+        <div class="g-foot"><span>96.9% collected</span><span><ion-icon name="checkmark-circle-outline" /> Statements sent</span></div>
+      </div>
+    }
+  </aside>
+
+  <!-- Sign-in -->
+  <main class="panel">
+    <div class="form-wrap">
+      <div class="mobile-logo">
+        <ui-logo [variant]="product().id === 'contractor' ? 'wordmark' : 'full'" [height]="product().id === 'contractor' ? 30 : 38" />
+      </div>
+
+      @switch (step()) {
+        @case ('start') {
+          @if (session.blocked(); as why) {
+            <div class="notice warn" role="status">
+              <ion-icon name="alert-circle-outline" aria-hidden="true" />
+              <div><strong>Your access is paused</strong><span>{{ blockedText[why] }}</span></div>
+            </div>
+          } @else if (signedOutName() !== null) {
+            <div class="notice ok" role="status">
+              <ion-icon name="checkmark-circle-outline" aria-hidden="true" />
+              <div>
+                <strong>You’ve signed out{{ signedOutName() ? ', ' + signedOutName() : '' }}</strong>
+                <span>Your session has ended on this device, in {{ product().name }} and any other Humo product.</span>
+              </div>
+            </div>
+          }
+
+          <h1 #heading tabindex="-1">Sign in</h1>
+          <p class="sub">to {{ product().name }}</p>
+
+          <form class="form" novalidate (submit)="$event.preventDefault(); continue()">
+            <label class="field">
+              <span class="label">Email address</span>
+              <input
+                #emailInput
+                type="email"
+                name="email"
+                autocomplete="username webauthn"
+                inputmode="email"
+                placeholder="you@company.co.za"
+                [value]="email()"
+                [attr.aria-invalid]="!!emailError()"
+                [attr.aria-describedby]="emailError() ? 'email-error' : null"
+                (input)="setEmail($event)"
+              />
+              @if (emailError()) {
+                <span class="error" id="email-error" role="alert"><ion-icon name="alert-circle-outline" aria-hidden="true" /> {{ emailError() }}</span>
+              }
+            </label>
+            <button type="submit" class="btn btn-primary big">Continue <ion-icon name="arrow-forward-outline" aria-hidden="true" /></button>
+          </form>
+
+          <div class="divider" role="separator"><span>or</span></div>
+
+          <button type="button" class="btn btn-secondary big" (click)="passkey()">
+            <ion-icon name="finger-print-outline" aria-hidden="true" /> Sign in with a passkey
+          </button>
+
+          <details class="help">
+            <summary>Trouble signing in?</summary>
+            <ul>
+              <li><strong>New to Humo?</strong> Your managing agent, or Humo, sends you an invitation by email. Follow its link to set up your passkey.</li>
+              <li><strong>New phone or computer?</strong> Enter your email and choose <em>Email me a sign-in link</em>. You can add a passkey for the new device afterwards.</li>
+              <li><strong>Lost your device?</strong> Ask your agency administrator to remove its passkey.</li>
+            </ul>
+          </details>
+        }
+
+        @case ('passkey') {
+          <div class="centre">
+            <div class="passkey-anim" aria-hidden="true"><ion-icon name="finger-print-outline" /></div>
+            <h1 #heading tabindex="-1">Confirm it’s you</h1>
+            <p class="sub" role="status">
+              @if (passkeyFor()) {
+                Use your fingerprint, face or screen lock to sign in as <strong>{{ passkeyFor() }}</strong>.
+              } @else {
+                Choose your Humo passkey and confirm with your fingerprint, face or screen lock.
+              }
+            </p>
+            <p class="waiting"><span class="spinner" aria-hidden="true"></span> Waiting for your passkey…</p>
+            <button type="button" class="btn btn-ghost" (click)="cancelPasskey()">Cancel</button>
+          </div>
+        }
+
+        @case ('no-passkey') {
+          <div class="centre">
+            <div class="icon-badge warn" aria-hidden="true"><ion-icon name="key-outline" /></div>
+            <h1 #heading tabindex="-1">No passkey on this device</h1>
+            <p class="sub">
+              @if (passkeyFor()) {
+                There’s no passkey for <strong>{{ passkeyFor() }}</strong> on this device. Use the phone or computer you set it up on, or we’ll email you a one-time sign-in link.
+              } @else {
+                This device doesn’t have a Humo passkey. Enter your email and we’ll send you a one-time sign-in link.
+              }
+            </p>
+            <div class="stack">
+              @if (passkeyFor()) {
+                <button type="button" class="btn btn-primary big" (click)="sendLink()"><ion-icon name="mail-outline" aria-hidden="true" /> Email me a sign-in link</button>
+                <button type="button" class="btn btn-secondary big" (click)="passkey(passkeyFor())"><ion-icon name="refresh-outline" aria-hidden="true" /> Try the passkey again</button>
+              }
+              <button type="button" class="btn btn-ghost" (click)="startOver()">{{ passkeyFor() ? 'Use a different email' : 'Enter my email' }}</button>
+            </div>
+          </div>
+        }
+
+        @case ('paused') {
+          <div class="centre">
+            <div class="icon-badge warn" aria-hidden="true"><ion-icon name="lock-closed-outline" /></div>
+            <h1 #heading tabindex="-1">This sign-in is paused</h1>
+            <p class="sub">{{ blockedText['identity-suspended'] }}</p>
+            <button type="button" class="btn btn-ghost" (click)="startOver()">Use a different email</button>
+          </div>
+        }
+
+        @case ('link-sent') {
+          <div class="centre">
+            <div class="icon-badge ok" aria-hidden="true"><ion-icon name="mail-outline" /></div>
+            <h1 #heading tabindex="-1">Check your email</h1>
+            <p class="sub">If <strong>{{ email() }}</strong> has a Humo account, a sign-in link is on its way. It works once and expires in 15 minutes.</p>
+            <div class="stack">
+              <button type="button" class="btn btn-secondary big" [disabled]="resendIn() > 0" (click)="sendLink()">
+                {{ resendIn() > 0 ? 'Resend in ' + resendIn() + 's' : 'Resend the link' }}
+              </button>
+              <button type="button" class="btn btn-ghost" (click)="startOver()">Use a different email</button>
+            </div>
+            <p class="hint">Nothing after a few minutes? Check your spam folder.</p>
+            @if (prototype && demoLink(); as link) {
+              <div class="demo-mail">
+                <span class="demo-tag">Prototype</span>
+                @if (link.delivered) {
+                  <p>No email is sent in the demo. Open the link the email would contain:</p>
+                  <button type="button" class="btn btn-primary btn-sm" (click)="openDemoLink()"><ion-icon name="open-outline" aria-hidden="true" /> Open the sign-in link</button>
+                } @else {
+                  <p>No email would arrive: there’s no active Humo account for this address. The page doesn’t say so, so nobody can test which addresses have accounts.</p>
+                }
+              </div>
+            }
+          </div>
+        }
+
+        @case ('redeeming') {
+          <div class="centre">
+            <div class="passkey-anim calm" aria-hidden="true"><ion-icon name="link-outline" /></div>
+            <h1 #heading tabindex="-1">Signing you in…</h1>
+            <p class="sub" role="status">Checking your sign-in link.</p>
+          </div>
+        }
+
+        @case ('link-failed') {
+          <div class="centre">
+            <div class="icon-badge warn" aria-hidden="true"><ion-icon name="time-outline" /></div>
+            <h1 #heading tabindex="-1">That link has expired</h1>
+            <p class="sub">Sign-in links work once, for 15 minutes. Enter your email to get a new one, or use your passkey.</p>
+            <button type="button" class="btn btn-primary big" (click)="startOver()">Back to sign in</button>
+          </div>
+        }
+      }
+
+      @if (prototype && (step() === 'start' || step() === 'no-passkey')) {
+        <details class="demo">
+          <summary><span class="demo-tag">Prototype</span> Demo accounts</summary>
+          <p class="demo-note">Sign in as a demo person. Their passkey is simulated.</p>
+          <ul>
+            @for (p of personas(); track p.id) {
+              <li>
+                <button type="button" (click)="useDemoAccount(p)">
+                  <span class="av">{{ p.initials }}</span>
+                  <span class="who"><strong>{{ p.name }}</strong><span>{{ rolesOf(p) }}</span></span>
+                  <ion-icon name="chevron-forward-outline" aria-hidden="true" />
+                </button>
+              </li>
+            }
+          </ul>
+        </details>
+      }
+
+      <footer class="foot">
+        <p class="secure"><ion-icon name="shield-checkmark-outline" aria-hidden="true" /> Humo signs you in with passkeys: there’s no password to steal or forget.</p>
+        <p class="copy">© {{ year }} Humo · {{ product().name }}</p>
+      </footer>
+    </div>
+  </main>
+</div>

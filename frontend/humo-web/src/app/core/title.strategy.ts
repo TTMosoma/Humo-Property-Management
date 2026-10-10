@@ -13,11 +13,9 @@ export class HumoTitleStrategy extends TitleStrategy {
   private readonly title = inject(Title);
 
   override updateTitle(snapshot: RouterStateSnapshot): void {
-    if (snapshot.url.startsWith('/signed-out')) {
-      this.title.setTitle('Signed out · Humo Property Management');
-      return;
-    }
-    const product = snapshot.url.startsWith('/contractor') ? HUMO_PRODUCTS.contractor : PRODUCT;
+    // The Humo sign-in pages carry the product they sign in to (?product=contractor).
+    const signIn = snapshot.url.startsWith('/sign') && snapshot.root.queryParamMap.get('product') === 'contractor';
+    const product = snapshot.url.startsWith('/contractor') || signIn ? HUMO_PRODUCTS.contractor : PRODUCT;
     const page = this.buildTitle(snapshot);
     this.title.setTitle(page && page !== product.name ? `${page} · ${product.name}` : product.name);
   }
