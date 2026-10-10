@@ -1,0 +1,81 @@
+<ui-page-header
+  eyebrow="Settings"
+  title="Plan & features"
+  [subtitle]="'What ' + (session.organisation()?.shortName ?? 'your agency') + ' has in Humo Property Management, and where each feature comes from.' + (plan() ? ' Your Humo account manager is ' + plan()!.accountManager + '.' : '')"
+/>
+
+@if (failed()) {
+  <ui-error-state (retry)="result.retry()" />
+} @else if (loading()) {
+  <ui-skeleton variant="tiles" [count]="3" />
+} @else {
+  @let p = plan()!;
+  <section class="pkg surface">
+    <div>
+      <div class="label-caps">Your package</div>
+      <h2>{{ packageName(p.packageId) }}</h2>
+      <div class="muted">Renews {{ formatDate(p.renewsAt, true) }}</div>
+    </div>
+    <div class="pkg-right">
+      <ui-status-pill [label]="statusLabel[p.status]" [tone]="statusTone[p.status]" />
+      @for (a of p.addOns; track a.addOnId) {
+        <span class="addon">+ {{ addOnName(a.addOnId) }}</span>
+      }
+    </div>
+  </section>
+
+  <ul class="modules">
+    @for (row of rows(); track row.module) {
+      <li class="module surface" [class.off]="!row.on" [class.focus]="focusModule() === row.module">
+        <div class="m-head">
+          <span class="m-state" [class.on]="row.on">{{ row.on ? '✓' : 'Off' }}</span>
+          <span class="m-name">{{ row.label }}</span>
+          <span class="m-src">{{ row.on ? row.source : howToGet(row.module).label }}</span>
+          @if (!row.on) {
+            @if (canRequest()) {
+              @if (asking() !== row.module) {
+                <button type="button" class="btn btn-secondary btn-sm" (click)="ask(row.module)">Ask Humo about {{ row.label }}</button>
+              }
+            } @else {
+              <span class="muted small">Your agency administrator can ask Humo about this.</span>
+            }
+          }
+        </div>
+        <div class="features">
+          @for (f of row.features; track f.key) {
+            <span class="f" [class.on]="f.enabled" [title]="f.description">
+              <ion-icon [name]="f.enabled ? 'checkmark-outline' : 'remove-outline'" aria-hidden="true" />{{ f.label }}
+            </span>
+          }
+        </div>
+        @if (asking() === row.module) {
+          <div class="ask">
+            <label>
+              <span class="f-label">Anything {{ p.accountManager.split(' ')[0] }} should know? (optional)</span>
+              <textarea rows="2" [value]="note()" (input)="note.set($any($event.target).value)" placeholder="e.g. Our trustees want minutes and resolutions in one place"></textarea>
+            </label>
+            <div class="ask-actions">
+              <button type="button" class="btn btn-primary btn-sm" (click)="send(row.module)" [disabled]="busy()">Send to {{ p.accountManager }}</button>
+              <button type="button" class="btn btn-ghost btn-sm" (click)="asking.set(null)">Cancel</button>
+              <span class="muted small">This only starts a conversation. Nothing is switched on or billed.</span>
+            </div>
+          </div>
+        }
+      </li>
+    }
+  </ul>
+
+  @if (p.requests.length) {
+    <h2 class="section-title">Your requests</h2>
+    <ul class="requests surface">
+      @for (r of p.requests; track r.id) {
+        <li>
+          <span><strong>{{ requestLabel(r) }}</strong> · {{ r.requestedBy }} · {{ relativeTime(r.at) }}</span>
+          <ui-status-pill [label]="r.status === 'new' ? 'Sent' : r.status === 'in-progress' ? 'In discussion' : r.status === 'done' ? 'Done' : 'Closed'" [tone]="r.status === 'done' ? 'success' : 'info'" />
+        </li>
+      }
+    </ul>
+  }
+
+  <p class="foot">Security features — the audit log, passkeys and Humo Mobile — are included in every plan.</p>
+}

@@ -1,0 +1,73 @@
+<table>
+  <caption class="visually-hidden">{{ caption() }}</caption>
+  <thead>
+    <tr>
+      @if (selectable()) {
+        <th class="select" scope="col">
+          <input
+            type="checkbox"
+            [checked]="allSelected()"
+            [indeterminate]="someSelected()"
+            (change)="toggleAll()"
+            aria-label="Select all rows"
+          />
+        </th>
+      }
+      @for (col of columns(); track col.key) {
+        <th
+          scope="col"
+          [style.width]="col.width"
+          [class.end]="col.align === 'end'"
+          [class.center]="col.align === 'center'"
+          [attr.aria-sort]="ariaSort(col)"
+        >
+          @if (col.sort) {
+            <button type="button" class="sort" (click)="sortBy(col)">
+              {{ col.header }}
+              <ion-icon
+                [name]="sortKey() === col.key && sortDir() === 'desc' ? 'chevron-down-outline' : 'chevron-up-outline'"
+                [class.on]="sortKey() === col.key"
+                aria-hidden="true"
+              />
+            </button>
+          } @else {
+            {{ col.header }}
+          }
+        </th>
+      }
+    </tr>
+  </thead>
+  <tbody>
+    @for (row of sorted(); track rowId()(row)) {
+      @let id = rowId()(row);
+      <tr
+        tabindex="0"
+        [class.active]="activeId() === id"
+        [class.selected]="selectedSet().has(id)"
+        [class.muted]="muted()(row)"
+        (click)="rowClick.emit(row)"
+        (keydown.enter)="rowClick.emit(row)"
+      >
+        @if (selectable()) {
+          <td class="select" (click)="$event.stopPropagation()">
+            <input type="checkbox" [checked]="selectedSet().has(id)" (change)="toggle(row, $event)" aria-label="Select row" />
+          </td>
+        }
+        @for (col of columns(); track col.key) {
+          <td
+            [attr.data-label]="col.header"
+            [class]="'m-' + (col.mobile ?? 'field')"
+            [class.end]="col.align === 'end'"
+            [class.center]="col.align === 'center'"
+          >
+            @if (cellMap().get(col.key); as tpl) {
+              <ng-container *ngTemplateOutlet="tpl; context: { $implicit: row }" />
+            } @else {
+              {{ value(row, col.key) }}
+            }
+          </td>
+        }
+      </tr>
+    }
+  </tbody>
+</table>

@@ -1,0 +1,91 @@
+@let d = job();
+
+<ui-page-header
+  [eyebrow]="'Job ' + ref()"
+  title="Request quotes through Humo Contractor"
+  subtitle="Describe the work once. The contractors you invite quote in Humo Contractor, and you compare their offers side by side. Only the businesses you invite see this request."
+/>
+
+@if (result.failed()) {
+  <ui-error-state (retry)="result.retry()" />
+} @else if (result.loading()) {
+  <ui-skeleton variant="tiles" [count]="3" />
+} @else if (!d) {
+  <ui-empty-state illustration="not-found" title="We couldn’t find that job" />
+} @else {
+  <div class="layout">
+    <section class="surface form">
+      <h2>The work</h2>
+      <label class="field">
+        <span class="f-label">Title</span>
+        <input type="text" [value]="title()" (input)="setText('title', $event)" />
+      </label>
+      <label class="field">
+        <span class="f-label">What happened</span>
+        <textarea rows="3" [value]="description()" (input)="setText('description', $event)"></textarea>
+      </label>
+      <label class="field">
+        <span class="f-label">Requirements (one per line)</span>
+        <textarea rows="5" [value]="requirements()" (input)="setText('requirements', $event)"></textarea>
+      </label>
+      <div class="row">
+        <label class="field">
+          <span class="f-label">Quotes due by</span>
+          <input type="date" [value]="deadline()" (input)="setText('deadline', $event)" />
+        </label>
+        <div class="field">
+          <span class="f-label">Photos</span>
+          <span class="static"><ion-icon name="images-outline" aria-hidden="true" /> {{ d.job.photos.length }} from the job</span>
+        </div>
+      </div>
+      <p class="privacy">
+        <ion-icon name="lock-closed-outline" aria-hidden="true" />
+        Contractors see the work, photos and suburb ({{ d.scheme.suburb }}, {{ d.scheme.city }}) — not residents’ details or your direct contact. Contact details are shared once you accept a quote.
+      </p>
+    </section>
+
+    <section class="surface pick">
+      <h2>Invite contractors</h2>
+      <p class="muted small">Your {{ d.job.category.toLowerCase() }} suppliers for {{ d.scheme.name }}, with their reputation on Humo Contractor.</p>
+      <ul>
+        @for (c of candidates(); track c.profile.party.id) {
+          <li [class.on]="chosen().includes(c.profile.party.id)">
+            <label>
+              <input type="checkbox" [checked]="chosen().includes(c.profile.party.id)" (change)="toggle(c.profile.party.id)" />
+              <span class="p-main">
+                <span class="p-name">{{ c.profile.party.tradingName }} <ct-verification-badge [level]="c.profile.verification.level" /></span>
+                <span class="p-stats">
+                  ★ {{ c.profile.reputation.rating.toFixed(1) }} · {{ c.profile.reputation.completedJobs }} jobs · {{ c.profile.reputation.onTimeRate }}% on time ·
+                  {{ c.profile.availability.status === 'fully-booked' ? 'Fully booked' : 'Available from ' + c.profile.availability.nextAvailable.slice(0, 10) }}
+                </span>
+                <ct-endorsed-by [profile]="c.profile" />
+                @if (!complianceOk(c.profile)) {
+                  <span class="warn"><ion-icon name="alert-circle-outline" aria-hidden="true" /> A compliance document needs attention</span>
+                }
+              </span>
+            </label>
+          </li>
+        } @empty {
+          <li class="muted">None of your suppliers for this trade are on Humo Contractor yet.</li>
+        }
+      </ul>
+      <div class="email">
+        <label class="field">
+          <span class="f-label">Invite a business you know by email</span>
+          <span class="inline">
+            <input type="email" placeholder="name@business.co.za" [value]="inviteEmail()" (input)="setText('inviteEmail', $event)" />
+            <button type="button" class="btn btn-ghost btn-sm" (click)="inviteByEmail()">Invite</button>
+          </span>
+          <span class="muted small">They create a free Humo Contractor profile to quote. Humo doesn’t suggest contractors you don’t know.</span>
+        </label>
+      </div>
+    </section>
+  </div>
+
+  <div class="actions">
+    <button type="button" class="btn btn-primary" [disabled]="!valid() || busy()" (click)="send()">
+      <ion-icon name="send-outline" aria-hidden="true" /> Send to {{ chosen().length }} {{ chosen().length === 1 ? 'contractor' : 'contractors' }}
+    </button>
+    <a class="btn btn-ghost" [routerLink]="['/maintenance', ref()]">Cancel</a>
+  </div>
+}

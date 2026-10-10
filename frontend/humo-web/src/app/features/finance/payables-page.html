@@ -1,0 +1,92 @@
+<ui-page-header eyebrow="Finance" title="Payables" subtitle="Approved, matched invoices are paid in batches from each scheme’s trust account — with a second authoriser before money leaves." />
+<app-smart-nudge placement="payables" />
+<app-scope-notice />
+
+<ui-view-tabs label="Payables views" [tabs]="tabs()" [active]="state().view ?? 'ready'" (activeChange)="setView($event)" />
+
+@if (loading()) {
+  <ui-skeleton [count]="7" />
+} @else if (failed()) {
+  <div class="surface"><ui-error-state title="We couldn’t load payables" (retry)="result.retry()" /></div>
+} @else if (state().view === 'batches') {
+  @for (b of batches(); track b.batch.id) {
+    <section class="batch surface">
+      <header>
+        <div>
+          <div class="label-caps">{{ b.scheme.name }} · created by {{ b.batch.createdBy }} {{ formatDate(b.batch.createdAt, true) }}</div>
+          <h2>{{ b.batch.id }} <span class="muted">· {{ b.invoices.length }} payments</span></h2>
+        </div>
+        <div class="b-right">
+          <span class="money total">{{ b.batch.total | rand }}</span>
+          <ui-status-pill [label]="b.batch.status === 'approved' ? 'Approved — ready to release' : 'Awaiting second authoriser'" [tone]="b.batch.status === 'approved' ? 'success' : 'warning'" />
+        </div>
+      </header>
+      <ul class="lines">
+        @for (i of b.invoices; track i.invoice.id) {
+          <li><span>{{ i.supplier.name }} <span class="muted">· {{ i.invoice.description }}</span></span><span class="money">{{ i.invoice.amount | rand }}</span></li>
+        }
+      </ul>
+      @if (b.batch.status === 'awaiting-approval') {
+        @if (b.approvalItem; as item) {
+          <app-approval-card [item]="item" [compact]="true" />
+        }
+      } @else if (canRelease()) {
+        <div class="release">
+          <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="release(b)">
+            <ion-icon name="finger-print-outline" aria-hidden="true" /> Verify and release EFT batch
+          </button>
+          <span class="muted small">Prototype: marks every invoice paid and moves linked jobs to “Paid”.</span>
+        </div>
+      }
+    </section>
+  } @empty {
+    <div class="surface"><ui-empty-state kind="done" title="No batches waiting" message="Select approved invoices under “Ready to pay” to create the next batch." /></div>
+  }
+} @else if (rows().length === 0) {
+  <div class="surface">
+    @if (state().view === 'ready') {
+      <ui-empty-state kind="done" title="Nothing ready to pay" message="Approved invoices appear here. Invoices over their quote wait in “Awaiting approval” first." />
+    } @else if (state().view === 'approval') {
+      <ui-empty-state kind="done" title="No invoices waiting for approval" />
+    } @else {
+      <ui-empty-state kind="first-use" title="No payments yet" />
+    }
+  </div>
+} @else {
+  @if (state().view === 'approval') {
+    <p class="hint"><ion-icon name="information-circle-outline" aria-hidden="true" /> Invoices are decided in <a routerLink="/approvals">Approvals</a> — over-quote invoices need re-approval before they can be paid.</p>
+  }
+  <ui-data-table
+    caption="Invoices"
+    [rows]="rows()"
+    [columns]="columns"
+    [rowId]="rowId"
+    [selectable]="state().view === 'ready' && canPay()"
+    [(selected)]="selected"
+  >
+    <ng-template uiCell="invoice" let-r>
+      <div class="inv-id">{{ r.invoice.id }}</div>
+      <div class="sub">
+        {{ r.invoice.description }}
+        @if (r.job) { · <a [routerLink]="['/maintenance', r.job.ref]" (click)="$event.stopPropagation()">{{ r.job.ref }}</a> }
+      </div>
+    </ng-template>
+    <ng-template uiCell="supplier" let-r><a [routerLink]="['/suppliers', r.supplier.id]" (click)="$event.stopPropagation()">{{ r.supplier.name }}</a></ng-template>
+    <ng-template uiCell="scheme" let-r>{{ r.scheme.code }}</ng-template>
+    <ng-template uiCell="match" let-r><ui-status-pill [label]="match(r).label" [tone]="match(r).tone" /></ng-template>
+    <ng-template uiCell="amount" let-r><span class="money">{{ r.invoice.amount | rand }}</span></ng-template>
+    <ng-template uiCell="due" let-r>{{ formatDate(r.invoice.status === 'paid' ? r.invoice.paidAt : r.invoice.dueAt, true) }}</ng-template>
+  </ui-data-table>
+
+  @if (selected().length) {
+    <ui-bulk-bar [count]="selected().length" (clear)="selected.set([])">
+      @if (mixedSchemes()) {
+        <span class="mixed">A batch pays from one scheme’s trust account — select invoices from one scheme.</span>
+      } @else {
+        <button type="button" class="btn btn-primary btn-sm on-dark" [disabled]="busy()" (click)="createBatch()">
+          Create payment batch · {{ selectionTotal() | rand }}
+        </button>
+      }
+    </ui-bulk-bar>
+  }
+}

@@ -1,0 +1,246 @@
+@if (result.loading()) {
+  <ui-skeleton variant="tiles" [count]="4" />
+} @else if (result.failed()) {
+  <div class="surface"><ui-error-state title="We couldn’t load this meeting" (retry)="result.retry()" /></div>
+} @else if (result.value() === false) {
+  <div class="surface">
+    <ui-empty-state illustration="not-found" title="We couldn’t find that meeting">
+      <a class="btn btn-primary" routerLink="/governance/meetings">All meetings</a>
+    </ui-empty-state>
+  </div>
+} @else {
+  @let d = detail()!;
+  @let m = d.meeting;
+  <ui-record-header [eyebrow]="m.ref + ' · ' + typeLabel()" [title]="m.title" [subtitle]="d.scheme.name + ' · ' + m.venue" [status]="status()" [facts]="facts()" [chain]="chain()" />
+
+  @if (m.stage !== 'cancelled') {
+    <div class="tracker surface">
+      <ui-stage-tracker [stages]="stages" [current]="m.stage" label="Meeting progress" />
+    </div>
+  }
+
+  <div class="grid">
+    <div class="main">
+      <!-- Next step -->
+      <section class="surface panel next">
+        @switch (m.stage) {
+          @case ('draft') {
+            <h2 class="section-title">Next: finish the agenda and send notice</h2>
+            <p>Notice must reach everyone at least {{ noticeDays() }} days before the meeting. If it goes out today, the earliest date is {{ earliest() }}.</p>
+            @if (canManage()) {
+              <div class="actions">
+                <button type="button" class="btn btn-primary" (click)="sendNotice()"><ion-icon name="send-outline" aria-hidden="true" /> Send notice</button>
+                <button type="button" class="btn btn-secondary" (click)="addItem()"><ion-icon name="add-outline" aria-hidden="true" /> Add agenda item</button>
+                <button type="button" class="btn btn-ghost" (click)="reschedule()">Change date or venue</button>
+                <a class="btn btn-ghost" [routerLink]="['notice']">Preview notice</a>
+                <button type="button" class="btn btn-ghost danger" (click)="cancel()">Cancel meeting</button>
+              </div>
+            }
+          }
+          @case ('notice-sent') {
+            <h2 class="section-title">Next: put the pack together</h2>
+            <p>Notice went to {{ m.notice!.recipients }} people on {{ formatDate(m.notice!.sentAt) }}. Add the papers trustees should read before the meeting.</p>
+            @if (canManage()) {
+              <div class="actions">
+                <button type="button" class="btn btn-primary" (click)="pack()">Mark pack ready</button>
+                <button type="button" class="btn btn-secondary" (click)="attendance()">Record the meeting</button>
+                <a class="btn btn-ghost" [routerLink]="['notice']">View notice</a>
+                <button type="button" class="btn btn-ghost danger" (click)="cancel()">Cancel meeting</button>
+              </div>
+            }
+          }
+          @case ('pack-ready') {
+            <h2 class="section-title">Next: hold the meeting, then record it</h2>
+            <p>Pack: {{ m.pack.join(', ') }}. After the meeting, record who attended; resolutions and minutes follow.</p>
+            @if (canManage()) {
+              <div class="actions">
+                <button type="button" class="btn btn-primary" (click)="attendance()">Record the meeting</button>
+                <a class="btn btn-ghost" [routerLink]="['notice']">View notice</a>
+                <button type="button" class="btn btn-ghost danger" (click)="cancel()">Cancel meeting</button>
+              </div>
+            }
+          }
+          @case ('held') {
+            <h2 class="section-title">Next: minute the items and record resolutions</h2>
+            <p>{{ m.held!.present }} of {{ m.held!.voters }} present, quorate. Record each decision as a resolution; its actions go straight onto Tasks.</p>
+            @if (canManage()) {
+              <div class="actions">
+                <button type="button" class="btn btn-primary" (click)="resolution()"><ion-icon name="add-outline" aria-hidden="true" /> Record a resolution</button>
+                <button type="button" class="btn btn-secondary" (click)="sendMinutes()">Send minutes for approval</button>
+                <a class="btn btn-ghost" [routerLink]="['minutes']">Preview minutes</a>
+              </div>
+            }
+          }
+          @case ('minutes-draft') {
+            @if (minutesPending()) {
+              <h2 class="section-title">Minutes are with the trustees</h2>
+              <p>Sent for approval; the trustees decide in Approvals. Meanwhile the actions are already on people’s Tasks.</p>
+              <div class="actions">
+                <a class="btn btn-secondary" [routerLink]="['minutes']">View draft minutes</a>
+                @if (session.can('Approvals.Decide')) {
+                  <a class="btn btn-ghost" routerLink="/approvals">Open Approvals</a>
+                }
+              </div>
+            } @else {
+              <h2 class="section-title">Next: finish the minutes and send them for approval</h2>
+              <p>Check every item has its minute and every decision its resolution, then send the minutes to the trustees.</p>
+              @if (canManage()) {
+                <div class="actions">
+                  <button type="button" class="btn btn-primary" (click)="sendMinutes()">Send minutes for approval</button>
+                  <button type="button" class="btn btn-secondary" (click)="resolution()"><ion-icon name="add-outline" aria-hidden="true" /> Record a resolution</button>
+                  <a class="btn btn-ghost" [routerLink]="['minutes']">Preview minutes</a>
+                </div>
+              }
+            }
+          }
+          @case ('minutes-approved') {
+            <h2 class="section-title">Minutes approved</h2>
+            <p>Approved by {{ m.minutes!.approvedBy }} on {{ formatDate(m.minutes!.approvedAt!) }}. @if (d.openActions) { {{ d.openActions }} action{{ d.openActions === 1 ? ' is' : 's are' }} still open. } @else { Every action is done. }</p>
+            <div class="actions">
+              <a class="btn btn-secondary" [routerLink]="['minutes']">View minutes</a>
+              <a class="btn btn-ghost" [routerLink]="['notice']">View notice</a>
+            </div>
+          }
+          @case ('cancelled') {
+            <h2 class="section-title">Cancelled</h2>
+            <p>{{ m.cancelled!.reason }} — {{ m.cancelled!.by }}, {{ formatDate(m.cancelled!.at) }}.</p>
+          }
+        }
+      </section>
+
+      <!-- Agenda -->
+      <section class="surface panel">
+        <div class="panel-head">
+          <h2 class="section-title">Agenda</h2>
+          @if (canManage() && m.stage === 'draft') {
+            <button type="button" class="btn btn-ghost btn-sm" (click)="addItem()"><ion-icon name="add-outline" aria-hidden="true" /> Add item</button>
+          }
+        </div>
+        <ol class="agenda">
+          @for (a of m.agenda; track a.id; let i = $index) {
+            <li>
+              <div class="a-row">
+                <span class="a-no">{{ i + 1 }}</span>
+                <div class="a-main">
+                  <div class="a-title">{{ a.title }}</div>
+                  @if (a.notes) { <div class="muted">{{ a.notes }}</div> }
+                  @if (a.minute) { <div class="minute"><span class="label-caps">Minute</span> {{ a.minute }}</div> }
+                </div>
+                @if (canManage()) {
+                  @if (m.stage === 'draft') {
+                    <button type="button" class="btn btn-ghost btn-sm" (click)="removeItem(a.id)" [attr.aria-label]="'Remove ' + a.title"><ion-icon name="close-outline" aria-hidden="true" /></button>
+                  } @else if (minuting()) {
+                    <div class="a-actions">
+                      <button type="button" class="btn btn-ghost btn-sm" (click)="minute(a.id)">{{ a.minute ? 'Edit minute' : 'Minute' }}</button>
+                      <button type="button" class="btn btn-ghost btn-sm" (click)="resolution(a.id)">Resolution</button>
+                    </div>
+                  }
+                }
+              </div>
+            </li>
+          } @empty {
+            <li class="muted">No items yet.</li>
+          }
+        </ol>
+      </section>
+
+      <!-- Resolutions -->
+      @if (d.resolutionViews.length || minuting()) {
+        <section class="surface panel">
+          <h2 class="section-title">Resolutions</h2>
+          @for (r of d.resolutionViews; track r.resolution.id) {
+            <article class="res">
+              <div class="res-head">
+                <span class="ref">{{ r.resolution.ref }}</span>
+                <strong>{{ r.resolution.title }}</strong>
+                <ui-status-pill [label]="progressLabel(r.progress)" [tone]="progressTone[r.progress]" />
+              </div>
+              <p class="res-text">{{ r.resolution.text }}</p>
+              @if (r.resolution.votes; as v) {
+                <div class="muted">{{ r.resolution.outcome === 'passed' ? 'Passed' : 'Not passed' }}: {{ v.for }} for, {{ v.against }} against, {{ v.abstain }} abstained</div>
+              }
+              @if (r.actions.length) {
+                <ul class="acts">
+                  @for (a of r.actions; track a.action.id) {
+                    <li [class.done]="a.status === 'done'" [class.late]="a.overdue">
+                      <ion-icon [name]="a.status === 'done' ? 'checkmark-circle-outline' : 'ellipse-outline'" aria-hidden="true" />
+                      <span class="act-title">{{ a.action.title }}</span>
+                      <span class="muted">{{ a.assigneeName }} · {{ a.status === 'done' ? 'done ' + formatDate(a.completedAt, true) : (a.overdue ? 'overdue, ' : 'due ') + formatDate(a.action.dueAt, true) }}</span>
+                    </li>
+                  }
+                </ul>
+              }
+            </article>
+          } @empty {
+            <p class="muted">No resolutions recorded yet.</p>
+          }
+        </section>
+      }
+
+      <!-- People -->
+      <section class="surface panel">
+        <h2 class="section-title">{{ m.type === 'trustee' ? 'Trustees' : 'Trustees and agent' }}</h2>
+        <ul class="people">
+          @for (p of m.attendees; track p.id) {
+            <li>
+              <span>{{ p.name }}</span>
+              <span class="muted">{{ p.capacity }}</span>
+              @if (m.held) {
+                <ui-status-pill [label]="p.present ? 'Present' : 'Apologies'" [tone]="p.present ? 'success' : 'neutral'" />
+              }
+            </li>
+          }
+        </ul>
+        @if (m.type !== 'trustee' && m.held) {
+          <p class="muted">{{ m.held.present }} owners present in person or by proxy, of {{ m.held.voters }} units.</p>
+        }
+      </section>
+    </div>
+
+    <aside class="side">
+      <section class="surface panel">
+        <h2 class="section-title">Documents</h2>
+        <ul class="docs">
+          <li>
+            <ion-icon name="document-text-outline" aria-hidden="true" />
+            <div>
+              <a [routerLink]="['notice']">Notice of meeting</a>
+              <div class="muted">{{ m.notice ? 'Sent ' + formatDate(m.notice.sentAt, true) : 'Draft' }} · {{ noticeTemplate() }}</div>
+            </div>
+          </li>
+          @if (m.held) {
+            <li>
+              <ion-icon name="document-text-outline" aria-hidden="true" />
+              <div>
+                <a [routerLink]="['minutes']">Minutes</a>
+                <div class="muted">{{ m.minutes?.approvedAt ? 'Approved ' + formatDate(m.minutes!.approvedAt!, true) : 'Draft' }} · {{ minutesTemplate() }}</div>
+              </div>
+            </li>
+          }
+          @for (p of m.pack; track p) {
+            <li>
+              <ion-icon name="attach-outline" aria-hidden="true" />
+              <div>{{ p }} <span class="muted">· pack</span></div>
+            </li>
+          }
+        </ul>
+      </section>
+
+      <section class="surface panel">
+        <app-attachments kind="meeting" [recordId]="m.id" [label]="m.ref + ' · ' + m.title" heading="Papers & attachments" />
+      </section>
+
+      <section class="surface panel activity">
+        <h2 class="section-title">Activity</h2>
+        @if (canManage()) {
+          <div class="comment">
+            <label class="visually-hidden" for="meeting-comment">Add a comment</label>
+            <textarea id="meeting-comment" rows="2" placeholder="Add a note for the team…" [value]="comment()" (input)="comment.set($any($event.target).value)"></textarea>
+            <button type="button" class="btn btn-secondary btn-sm" [disabled]="!comment().trim()" (click)="addComment()">Add comment</button>
+          </div>
+        }
+        <ui-timeline [events]="events()" [initial]="12" />
+      </section>
+    </aside>
+  </div>
+}

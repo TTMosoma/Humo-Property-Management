@@ -1,0 +1,92 @@
+// Ionic: only the core stylesheet. We deliberately skip Ionic's typography,
+// normalize and utility CSS so Humo's own design system stays in control.
+@use '@ionic/angular/css/core.css';
+@use '@angular/cdk/overlay-prebuilt.css';
+
+@use 'styles/tokens';
+@use 'styles/base';
+
+// Bridge Humo tokens into Ionic so its mobile components match the brand.
+:root {
+  --ion-font-family: var(--font-sans);
+  --ion-background-color: var(--c-bg);
+  --ion-text-color: var(--c-text);
+  --ion-color-primary: var(--c-primary);
+  --ion-color-primary-contrast: var(--c-on-primary);
+  --ion-color-primary-shade: var(--c-primary-hover);
+  --ion-color-primary-tint: var(--c-primary-hover);
+  --ion-color-success: var(--c-success);
+  --ion-tab-bar-background: var(--c-surface);
+  --ion-tab-bar-border-color: var(--c-border);
+  --ion-tab-bar-color: var(--c-text-muted);
+  --ion-tab-bar-color-selected: var(--c-primary);
+  --ion-toast-background: var(--c-text);
+  --ion-toast-color: var(--c-surface);
+}
+
+// CDK dialog backdrop (command palette)
+.cdk-overlay-dark-backdrop {
+  background: rgba(2, 15, 38, 0.45);
+}
+
+// Preview drawer (ui-drawer)
+.ui-drawer-backdrop {
+  background: rgba(2, 15, 38, 0.18);
+}
+
+.ui-drawer-pane {
+  max-width: 100vw;
+}
+
+// Toasts (FeedbackService)
+ion-toast.humo-toast {
+  --background: var(--brand-navy-900);
+  --color: var(--brand-cream);
+  --button-color: var(--brand-leaf-400);
+  --border-radius: var(--r-lg);
+  --box-shadow: var(--shadow-overlay);
+  font-family: var(--font-sans);
+}
+
+ion-toast.humo-toast-danger {
+  --background: #7f1d16;
+  --color: #fff;
+}
+
+// Toasts sit above drawers and dialogs.
+ion-toast.humo-toast {
+  z-index: 2000;
+}
+
+// Printing (statements): only the page content, no app chrome.
+@media print {
+  ion-menu,
+  app-sidebar,
+  app-topbar,
+  app-breadcrumbs,
+  app-prototype-toolbar,
+  app-mobile-tab-bar,
+  .support-banner,
+  .no-print {
+    display: none !important;
+  }
+
+  ion-app,
+  ion-split-pane,
+  .ion-page,
+  main.content {
+    position: static !important;
+    display: block !important;
+    overflow: visible !important;
+    contain: none !important;
+  }
+
+  .content-inner {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  body {
+    background: #fff !important;
+  }
+}

@@ -1,0 +1,71 @@
+<header class="head">
+  <h1>Hi {{ firstName() }}</h1>
+  <p class="muted">{{ where() }} · managed by {{ session.organisation()?.shortName }}</p>
+</header>
+
+@if (failed()) {
+  <ui-error-state (retry)="result.retry()" />
+} @else if (loading()) {
+  <ui-skeleton variant="tiles" [count]="3" />
+} @else {
+  <div class="stack">
+    @if (isOwner()) {
+      @if (account(); as a) {
+        <a class="card balance" routerLink="/my/account">
+          <span class="label">Balance due</span>
+          <span class="amount" [class.credit]="a.account.balance <= 0">{{ a.account.balance <= 0 ? 'Paid up' : rand(a.account.balance) }}</span>
+          <span class="sub">
+            @if (a.account.balance > 0) {
+              Due by the 7th · pay by EFT using reference {{ a.account.accountNo }}
+            } @else {
+              Thank you — nothing is owing.
+            }
+          </span>
+          <span class="go">Statement and how to pay <ion-icon name="chevron-forward-outline" aria-hidden="true" /></span>
+        </a>
+      }
+    }
+
+    <section class="card">
+      <header class="c-head">
+        <h2>Your requests</h2>
+        <a routerLink="/my/requests" class="small">All</a>
+      </header>
+      @if (needsAnswer()) {
+        <a class="ask" routerLink="/my/requests">
+          <ion-icon name="help-circle-outline" aria-hidden="true" />
+          {{ needsAnswer() === 1 ? 'One job is' : needsAnswer() + ' jobs are' }} marked as done — was it fixed? Let us know.
+        </a>
+      }
+      <ul class="reqs">
+        @for (r of requests(); track r.job.id) {
+          @let st = status(r.job);
+          <li>
+            <span class="r-main">
+              <span class="r-title">{{ r.job.title }}</span>
+              <span class="muted small">{{ r.job.ref }} · reported {{ relativeTime(r.job.reportedAt) }}</span>
+            </span>
+            <span class="pill" [attr.data-tone]="st.tone">{{ st.label }}</span>
+          </li>
+        } @empty {
+          <li class="muted small">No open requests.</li>
+        }
+      </ul>
+      <a class="btn btn-primary report" routerLink="/my/requests/new"><ion-icon name="construct-outline" aria-hidden="true" /> Report a problem</a>
+    </section>
+
+    <section class="card">
+      <header class="c-head"><h2>Notices</h2></header>
+      <ul class="notices">
+        @for (n of notices(); track n.id) {
+          <li>
+            <span class="r-title">{{ n.title }}</span>
+            <span class="muted small">{{ n.detail }} · {{ relativeTime(n.at) }}</span>
+          </li>
+        } @empty {
+          <li class="muted small">No notices right now.</li>
+        }
+      </ul>
+    </section>
+  </div>
+}

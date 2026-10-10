@@ -1,0 +1,89 @@
+@if (result.loading()) {
+  <ui-skeleton variant="tiles" [count]="3" />
+} @else if (result.failed() || !summary()) {
+  <div class="surface"><ui-error-state title="We couldn’t load your account" (retry)="result.retry()" /></div>
+} @else {
+  @let s = summary()!;
+  @let d = detail()!;
+  <ui-page-header eyebrow="{{ s.scheme.name }} · Unit {{ s.unit.number }}" title="My account" subtitle="Account {{ d.account.accountNo }}" />
+
+  @if (otherUnits().length) {
+    <div class="units" role="group" aria-label="Your units">
+      <span class="muted">Your units:</span>
+      <span class="unit-pill on">{{ s.scheme.code }} {{ s.unit.number }}</span>
+      @for (m of otherUnits(); track m.id) {
+        <button type="button" class="unit-pill" (click)="switchUnit(m.id)">{{ m.label.replace('Owner · ', '') }}</button>
+      }
+    </div>
+  }
+
+  <section class="due surface" [class.clear]="d.account.balance <= 0">
+    @if (d.account.balance > 0) {
+      <div>
+        <div class="label">Amount due by {{ dueDate() }}</div>
+        <div class="amount money">{{ d.account.balance | rand }}</div>
+        @if (current(); as c) {
+          <ul class="breakdown">
+            @for (t of c.charges; track t.id) {
+              <li><span>{{ t.description }}</span><span class="money">{{ t.amount | rand }}</span></li>
+            }
+          </ul>
+        }
+      </div>
+      <div class="pay">
+        <div class="label">Pay by EFT</div>
+        <div><strong>{{ s.scheme.name }} — Trust Account</strong></div>
+        <div>FNB · 62 000 000 000 · branch 250 655</div>
+        <div class="ref">Reference: <strong>{{ d.account.accountNo }}</strong></div>
+        <p class="hint">Using this exact reference means your payment is matched automatically.</p>
+        <button type="button" class="btn btn-secondary btn-sm" (click)="paidOpen.set(!paidOpen())">I’ve already paid</button>
+      </div>
+    } @else {
+      <div class="ok">
+        <ion-icon name="checkmark-circle-outline" aria-hidden="true" />
+        <div>
+          <div class="amount-ok">You’re all paid up</div>
+          <div class="muted">{{ d.account.balance < 0 ? 'You have ' + (-d.account.balance | rand) + ' in credit.' : 'Thank you.' }}</div>
+        </div>
+      </div>
+    }
+  </section>
+
+  @if (paidOpen()) {
+    <section class="surface paid">
+      <label for="paid-text" class="label">Tell us when and how much you paid — we’ll find it</label>
+      <textarea id="paid-text" rows="2" placeholder="e.g. Paid R 3 480 on 5 Oct from my Capitec account, reference ANELE M" [value]="paidText()" (input)="paidText.set($any($event.target).value)"></textarea>
+      <div class="actions">
+        <button type="button" class="btn btn-primary btn-sm" (click)="sendPaid()">Send to managing agent</button>
+        <button type="button" class="btn btn-ghost btn-sm" (click)="paidOpen.set(false)">Cancel</button>
+      </div>
+    </section>
+  }
+
+  <div class="grid">
+    <section class="surface panel">
+      <h2 class="section-title">Recent activity</h2>
+      <ul class="tx">
+        @for (t of recent(); track t.id) {
+          <li>
+            <span class="tx-date">{{ formatDate(t.date) }}</span>
+            <span class="tx-desc">{{ t.description }}</span>
+            <span class="money" [class.credit]="t.amount < 0">{{ t.amount < 0 ? '−' : '' }}{{ (t.amount < 0 ? -t.amount : t.amount) | rand }}</span>
+          </li>
+        }
+      </ul>
+    </section>
+    <section class="surface panel">
+      <h2 class="section-title">Statements</h2>
+      <ul class="statements">
+        @for (p of d.statementPeriods; track p) {
+          <li>
+            <a [routerLink]="['/my/statements', p]">
+              <ion-icon name="document-text-outline" aria-hidden="true" /> {{ periodLabel(p) }}
+            </a>
+          </li>
+        }
+      </ul>
+    </section>
+  </div>
+}

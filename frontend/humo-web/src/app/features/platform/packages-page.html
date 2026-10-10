@@ -1,0 +1,115 @@
+<ui-page-header
+  eyebrow="Humo platform"
+  title="Packages & features"
+  subtitle="Packages are collections of features. Add-ons and overrides adjust them per customer. The app and the API only ever ask whether a feature is on."
+/>
+
+@if (session.can('Platform.Packages.Manage')) {
+  <p class="note"><ion-icon name="construct-outline" aria-hidden="true" /> Editing the catalogue, health weights and nudge rules will live here (System Administrator, with verification). Read-only in the prototype.</p>
+}
+
+<h2 class="section-title">Feature catalogue</h2>
+<div class="matrix-wrap surface">
+  <table class="matrix">
+    <caption class="sr-only">Features by package</caption>
+    <thead>
+      <tr>
+        <th scope="col">Feature</th>
+        @for (p of packages(); track p.id) {
+          <th scope="col">
+            <span class="p-name" [attr.data-pkg]="p.id">{{ p.name.replace('Humo ', '') }}</span>
+            <span class="p-tag">{{ p.tagline }}</span>
+          </th>
+        }
+        <th scope="col">Also as add-on</th>
+      </tr>
+    </thead>
+    @for (g of groups(); track g.module) {
+      <tbody>
+        <tr class="area"><th scope="rowgroup" colspan="5">{{ g.label }}</th></tr>
+        @for (f of g.features; track f.key) {
+          <tr>
+            <th scope="row">
+              <span class="f-label">{{ f.label }}</span>
+              <span class="f-desc">{{ f.description }}</span>
+            </th>
+            @for (p of packages(); track p.id) {
+              <td>
+                @if (has(p.id, f.key)) {
+                  <ion-icon class="yes" name="checkmark-circle" [attr.aria-label]="'Included in ' + p.name" />
+                } @else {
+                  <span class="no">—</span>
+                }
+              </td>
+            }
+            <td class="addon">{{ f.baseline ? 'Always included' : (addOnFor(f.key) ?? '') }}</td>
+          </tr>
+        }
+      </tbody>
+    }
+  </table>
+</div>
+
+<h2 class="section-title">Add-ons</h2>
+<div class="cards">
+  @for (a of addOns(); track a.id) {
+    <article class="card surface">
+      <h3>{{ a.name }}</h3>
+      <p>{{ a.description }}</p>
+      <code>{{ a.features.join(', ') }}</code>
+    </article>
+  }
+</div>
+
+<h2 class="section-title">The flywheel</h2>
+<ol class="flywheel">
+  <li>Customer uses Humo</li>
+  <li>Usage analytics</li>
+  <li>Account health</li>
+  <li>Opportunity detected</li>
+  <li>Account Manager or Smart Nudge</li>
+  <li>Customer asks or upgrades</li>
+  <li>More features, more usage</li>
+</ol>
+
+<div class="cols">
+  <section class="surface panel">
+    <h3>Health weights</h3>
+    <p class="muted">calculateHealth() — the same formula will run on real analytics.</p>
+    <ul class="weights">
+      @for (w of weights; track w.key) {
+        <li><span>{{ w.key }}</span><span class="w-bar"><span [style.width.%]="w.w * 4"></span></span><span>{{ w.w }}%</span></li>
+      }
+    </ul>
+    <p class="muted small">Bands: 75+ healthy · 50–74 at risk · below 50 critical.</p>
+  </section>
+
+  <section class="surface panel">
+    <h3>Opportunity rules</h3>
+    <p class="muted">Shared by Account Managers and Smart Nudges.</p>
+    <ul class="rules">
+      @for (r of rules; track r.id) {
+        <li><code>{{ r.id }}</code><span>{{ r.description }}</span></li>
+      }
+    </ul>
+  </section>
+</div>
+
+<h2 class="section-title">Smart Nudges</h2>
+<div class="cards">
+  @for (n of nudges; track n.id) {
+    <article class="card surface nudge">
+      <h3>{{ n.cta.replace('Explore ', '') }}</h3>
+      <p class="muted small">“{{ n.suggestion }}”</p>
+      <dl>
+        <div><dt>Trigger</dt><dd><code>{{ n.trigger.rule }}</code> · at least {{ n.trigger.minStrength }}</dd></div>
+        <div><dt>Shown on</dt><dd>{{ n.placements.join(', ') }}</dd></div>
+        <div><dt>Audience</dt><dd>{{ n.audience.map(roleLabel).join(', ') }}</dd></div>
+        <div><dt>If ignored</dt><dd>Wait {{ n.policy.ignoredWaitDays }} days</dd></div>
+        <div><dt>If dismissed</dt><dd>Suppress {{ n.policy.dismissSuppressDays }} days</dd></div>
+        <div><dt>Not interested</dt><dd>{{ n.policy.notInterestedSuppressDays === null ? 'Never again' : n.policy.notInterestedSuppressDays + ' days' }}</dd></div>
+        <div><dt>Converted</dt><dd>Retired for good</dd></div>
+      </dl>
+    </article>
+  }
+</div>

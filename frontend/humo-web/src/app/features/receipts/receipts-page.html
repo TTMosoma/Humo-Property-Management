@@ -1,0 +1,186 @@
+@let t = totals();
+<ui-page-header
+  eyebrow="Finance"
+  title="Receipts"
+  [subtitle]="t.count ? t.count + ' receipts (' + (t.amount | rand) + ') waiting to be allocated to owner accounts.' : 'Every receipt is allocated.'"
+>
+  <span class="kbd-hint"><kbd>↑</kbd><kbd>↓</kbd> move · <kbd>Enter</kbd> accept top match</span>
+</ui-page-header>
+<app-scope-notice />
+
+<ui-view-tabs label="Receipt views" [tabs]="tabs()" [active]="view()" (activeChange)="setView($event)" />
+
+@if (loading()) {
+  <div class="split"><ui-skeleton [count]="6" /><ui-skeleton variant="tiles" [count]="2" /></div>
+} @else if (failed()) {
+  <div class="surface"><ui-error-state title="We couldn’t load receipts" (retry)="result.retry()" /></div>
+} @else if (list().length === 0) {
+  <div class="surface">
+    @if (view() === 'open') {
+      <ui-empty-state kind="done" title="All receipts allocated" message="Every rand from the latest bank imports is on the right account. New receipts appear here after the next import.">
+        <button type="button" class="btn btn-secondary" (click)="setView('allocated')">Review this week’s allocations</button>
+      </ui-empty-state>
+    } @else if (view() === 'suspense') {
+      <ui-empty-state kind="done" title="Suspense is empty" message="Receipts you can’t identify yet are parked here until someone claims them." />
+    } @else {
+      <ui-empty-state kind="first-use" title="No allocations yet this week" />
+    }
+  </div>
+} @else {
+  <div class="split">
+    <!-- Receipt list -->
+    <ul class="list surface" role="listbox" aria-label="Receipts">
+      @for (v of list(); track v.receipt.id) {
+        <li>
+          <button
+            type="button"
+            role="option"
+            class="row"
+            [attr.aria-selected]="v.receipt.id === selectedId()"
+            (click)="select(v.receipt.id)"
+          >
+            <span class="row-main">
+              <span class="row-ref">“{{ v.receipt.reference || '(no reference)' }}”</span>
+              <span class="row-sub">{{ v.receipt.payer || 'Unknown depositor' }} · {{ v.scheme.code }} · {{ formatDate(v.receipt.date) }}</span>
+            </span>
+            <span class="money row-amount">{{ v.receipt.amount | rand }}</span>
+          </button>
+        </li>
+      }
+    </ul>
+
+    <!-- Selected receipt -->
+    @if (selected(); as v) {
+      <section class="detail surface" aria-label="Selected receipt">
+        <header class="d-head">
+          <div>
+            <div class="label-caps">{{ v.scheme.name }} · {{ v.receipt.bankAccount }}</div>
+            <div class="d-amount money">{{ v.receipt.amount | rand }}</div>
+            <div class="d-meta">
+              Received {{ formatDate(v.receipt.date) }} · reference <strong>“{{ v.receipt.reference || '—' }}”</strong>
+              @if (v.receipt.payer) { · from <strong>{{ v.receipt.payer }}</strong> }
+            </div>
+          </div>
+        </header>
+
+        @if (v.receipt.status === 'allocated') {
+          <div class="done">
+            <ion-icon name="checkmark-circle-outline" aria-hidden="true" />
+            <div>
+              <strong>Allocated</strong> by {{ v.receipt.allocatedBy }}
+              @for (a of v.allocatedTo; track a.account.id) {
+                <div>
+                  <a [routerLink]="links.account(v.scheme, a.unit)">{{ a.account.accountNo }}</a> · {{ a.amount | rand }}
+                </div>
+              }
+            </div>
+            @if (!v.receipt.autoMatched) {
+              <button type="button" class="btn btn-secondary btn-sm" (click)="undo(v)">Undo allocation</button>
+            }
+          </div>
+        } @else {
+          @if (v.receipt.status === 'suspense') {
+            <div class="suspense-note">
+              <ion-icon name="archive-outline" aria-hidden="true" />
+              In suspense since {{ formatDate(v.receipt.date) }}. Allocate it as soon as the payer is identified.
+            </div>
+          }
+
+          <h3 class="section-title">Suggested accounts</h3>
+          @for (m of matches(); track m.accountId; let first = $first) {
+            @let recommended = first && m.confidence >= 45;
+            <div class="match" [class.top]="recommended">
+              <div class="m-head">
+                <div class="m-who">
+                  <a class="m-unit" [routerLink]="links.unit(m.summary.scheme, m.summary.unit)">{{ m.summary.scheme.code }} {{ m.summary.unit.number }}</a>
+                  <span class="m-owner">{{ m.summary.owners[0]?.displayName }}</span>
+                </div>
+                <div class="m-conf">
+                  <span class="bar"><span [class]="confidenceTone(m.confidence)" [style.width.%]="m.confidence"></span></span>
+                  <span class="pct">{{ m.confidence }}%</span>
+                </div>
+              </div>
+              <ul class="reasons">
+                @for (r of m.reasons; track r) {
+                  <li [class.warn]="isWarning(r)">
+                    <ion-icon [name]="isWarning(r) ? 'alert-circle-outline' : 'checkmark-outline'" aria-hidden="true" />{{ r }}
+                  </li>
+                }
+              </ul>
+              <div class="m-foot">
+                <span class="m-bal">
+                  Balance <span class="money">{{ m.summary.account.balance | rand }}</span>
+                  · levy {{ m.summary.unit.monthlyLevy | rand }}
+                </span>
+                <button type="button" class="btn btn-sm" [class.btn-primary]="recommended" [class.btn-secondary]="!recommended" [disabled]="busy()" (click)="allocateTo(m.accountId, m.summary.unit.accountNo)">
+                  Allocate to {{ m.summary.unit.accountNo }}
+                  @if (recommended && view() === 'open') { <kbd class="on-btn">Enter</kbd> }
+                </button>
+              </div>
+            </div>
+          } @empty {
+            <p class="none">No confident match. Search for the account below, split the amount, or park it in suspense.</p>
+          }
+          @if (matches().length && matches()[0].confidence < 45) {
+            <p class="none">These are weak guesses (amount only). Check with the owner before allocating.</p>
+          }
+
+          <h3 class="section-title">{{ splitting() ? 'Split across accounts' : 'Find another account' }}</h3>
+          <label class="find">
+            <ion-icon name="search-outline" aria-hidden="true" />
+            <span class="visually-hidden">Search unit</span>
+            <input type="search" placeholder="Unit number or “{{ v.scheme.code }} 12”…" [value]="search()" (input)="search.set($any($event.target).value)" />
+          </label>
+          @if (searchResults().length) {
+            <ul class="results">
+              @for (s of searchResults(); track s.account.id) {
+                <li>
+                  <span><strong>{{ s.scheme.code }} {{ s.unit.number }}</strong> · {{ s.owners[0]?.displayName }} · <span class="money">{{ s.account.balance | rand }}</span></span>
+                  @if (splitting()) {
+                    <button type="button" class="btn btn-secondary btn-sm" (click)="addToSplit(s)">Add to split</button>
+                  } @else {
+                    <button type="button" class="btn btn-secondary btn-sm" [disabled]="busy()" (click)="allocateTo(s.account.id, s.unit.accountNo)">Allocate</button>
+                  }
+                </li>
+              }
+            </ul>
+          }
+
+          @if (splitting()) {
+            <div class="split-lines">
+              @for (l of split(); track l.accountId; let i = $index) {
+                <div class="split-line">
+                  <span>{{ l.label }}</span>
+                  <input type="number" step="0.01" min="0" [value]="l.amount" (input)="setSplitAmount(i, $any($event.target).value)" [attr.aria-label]="'Amount for ' + l.label" />
+                  <button type="button" class="btn btn-ghost btn-icon btn-sm" (click)="removeSplit(i)" [attr.aria-label]="'Remove ' + l.label"><ion-icon name="close-outline" aria-hidden="true" /></button>
+                </div>
+              } @empty {
+                <p class="none">Search above and add the accounts this payment covers.</p>
+              }
+              <div class="split-foot">
+                <span [class.bad]="splitRemaining() !== 0">Remaining <span class="money">{{ splitRemaining() | rand }}</span></span>
+                <button type="button" class="btn btn-primary btn-sm" [disabled]="splitRemaining() !== 0 || !split().length || busy()" (click)="confirmSplit()">Allocate split</button>
+              </div>
+            </div>
+          }
+
+          <div class="d-foot">
+            <label class="check">
+              <input type="checkbox" [checked]="remember()" (change)="remember.set(!remember())" [disabled]="splitting()" />
+              Remember this payer for future imports
+            </label>
+            <span class="spacer"></span>
+            <button type="button" class="btn btn-ghost btn-sm" (click)="splitting.set(!splitting()); split.set([])">
+              <ion-icon name="git-branch-outline" aria-hidden="true" /> {{ splitting() ? 'Cancel split' : 'Split' }}
+            </button>
+            @if (v.receipt.status === 'unallocated') {
+              <button type="button" class="btn btn-secondary btn-sm" [disabled]="busy()" (click)="suspense()">
+                <ion-icon name="archive-outline" aria-hidden="true" /> Move to suspense
+              </button>
+            }
+          </div>
+        }
+      </section>
+    }
+  </div>
+}

@@ -1,0 +1,72 @@
+<ui-page-header
+  eyebrow="Settings"
+  title="Users & access"
+  [subtitle]="'Everyone who can sign in to ' + (session.organisation()?.shortName ?? 'your agency') + ' in Humo Property Management. One person, one Humo sign-in — however many roles they hold. Role decides what they can do; where it applies decides what they can see.'"
+>
+  <a class="btn btn-ghost" routerLink="/settings/roles">
+    <ion-icon name="key-outline" aria-hidden="true" />
+    Roles & permissions
+  </a>
+  @if (session.can('Users.Manage')) {
+    <button type="button" class="btn btn-primary" (click)="invite()"><ion-icon name="person-add-outline" aria-hidden="true" /> Invite someone</button>
+  }
+</ui-page-header>
+
+<ui-view-tabs [tabs]="tabs()" [active]="state().view ?? 'agency'" (activeChange)="set('view', $event)" label="People by role" />
+
+<div class="toolbar">
+  <label class="search">
+    <ion-icon name="search-outline" aria-hidden="true" />
+    <input type="search" placeholder="Name or email…" [value]="state().q ?? ''" (input)="set('q', $any($event.target).value)" aria-label="Search people" />
+  </label>
+  <span class="hint">
+    <ion-icon name="information-circle-outline" aria-hidden="true" />
+    Humo’s own staff never appear here, and their roles can’t be granted from your agency.
+  </span>
+</div>
+
+@if (failed()) {
+  <ui-error-state (retry)="result.retry()" />
+} @else if (loading()) {
+  <ui-skeleton [count]="6" />
+} @else if (!rows().length) {
+  <div class="surface">
+    <ui-empty-state kind="filtered" title="No one here yet" message="Try another tab or clear the search." />
+  </div>
+} @else {
+  <ui-data-table [rows]="rows()" [columns]="columns" [rowId]="rowId" caption="People with access" (rowClick)="open($event)">
+    <ng-template uiCell="person" let-r>
+      <div class="person">
+        <span class="avatar">{{ r.initials }}</span>
+        <span class="p-text">
+          <span class="p-name">
+            {{ r.name }}
+            @if (r.id === session.actor().id) {
+              <span class="you">You</span>
+            }
+            @if (r.status !== 'active') {
+              <ui-status-pill [label]="statusLabel(r)" [tone]="r.status === 'invited' ? 'info' : 'danger'" />
+            } @else if (suspendedHere(r)) {
+              <ui-status-pill label="Access suspended" tone="danger" />
+            }
+          </span>
+          <span class="p-sub">{{ r.email }}</span>
+        </span>
+      </div>
+    </ng-template>
+    <ng-template uiCell="roles" let-r>
+      <div class="chips">
+        @for (a of assignments(r); track a.id) {
+          <span class="chip" [style.--role-c]="roleColor(a)">
+            <span class="dot" aria-hidden="true"></span>
+            <strong>{{ roleLabels[a.role] }}</strong>
+            <span class="scope">{{ a.label }}</span>
+          </span>
+        }
+      </div>
+    </ng-template>
+    <ng-template uiCell="manage" let-r>
+      <button type="button" class="btn btn-secondary btn-sm" (click)="$event.stopPropagation(); open(r)">Manage access</button>
+    </ng-template>
+  </ui-data-table>
+}

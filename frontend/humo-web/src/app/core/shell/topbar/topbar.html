@@ -1,0 +1,312 @@
+@let persona = session.identity();
+@let m = session.assignment();
+
+<div class="left">
+  @if (showMenuButton()) {
+    <button type="button" class="btn btn-ghost btn-icon" (click)="openMenu.emit()" aria-label="Open navigation">
+      <ion-icon name="menu-outline" aria-hidden="true" />
+    </button>
+  }
+
+  @if (scope.canChangeScope()) {
+    <!-- Scheme scope: every portfolio-wide list, count and search follows this. -->
+    <button
+      type="button"
+      class="scope"
+      [class.on]="!!scope.scheme()"
+      [cdkMenuTriggerFor]="scopeMenu"
+      [attr.aria-label]="'Scheme scope: ' + (scope.scheme()?.name ?? 'All schemes')"
+    >
+      <ion-icon [name]="scope.scheme() ? 'business-outline' : 'layers-outline'" aria-hidden="true" />
+      <span class="scope-text">
+        <span class="scope-label">{{ session.organisation()?.shortName }}</span>
+        <span class="scope-name">{{ scope.scheme()?.name ?? 'All schemes' }}</span>
+      </span>
+      <ion-icon class="chev" name="chevron-down-outline" aria-hidden="true" />
+    </button>
+    @if (scope.scheme()) {
+      <button type="button" class="btn btn-ghost btn-icon btn-sm clear-scope" (click)="scope.setScope(null)" aria-label="Show all schemes" title="Show all schemes">
+        <ion-icon name="close-outline" aria-hidden="true" />
+      </button>
+    }
+  } @else if (session.isHumo()) {
+    <button type="button" class="context" [cdkMenuTriggerFor]="agencyMenu" aria-label="Choose agency to support">
+      <span class="context-label">{{ session.supportOrganisationId() ? 'Support view' : 'Platform' }}</span>
+      <span class="context-name">{{ session.supportOrganisationId() ? session.organisation()?.shortName : 'All agencies' }}</span>
+      <ion-icon name="chevron-down-outline" aria-hidden="true" />
+    </button>
+  } @else {
+    <div class="context static">
+      <span class="context-name">{{ ownScheme()?.name }}</span>
+      <span class="context-sub">
+        {{ session.isResident() ? m.label : 'Managed by ' + session.organisation()?.shortName }}
+      </span>
+    </div>
+  }
+</div>
+
+<button type="button" class="search" (click)="openPalette.emit()" aria-label="Search or jump to (Ctrl K)">
+  <ion-icon name="search-outline" aria-hidden="true" />
+  <span class="search-text">{{ scope.scheme() ? 'Search ' + scope.scheme()!.name + '…' : 'Search schemes, pages, actions…' }}</span>
+  <span class="search-keys"><kbd>Ctrl</kbd><kbd>K</kbd></span>
+</button>
+
+<div class="right">
+  @if (quickActions().length) {
+    <button type="button" class="btn btn-primary new-btn" [cdkMenuTriggerFor]="createMenu">
+      <ion-icon name="add-outline" aria-hidden="true" />
+      <span class="new-label">New</span>
+    </button>
+  }
+  @if (session.isResident() && !session.readOnly()) {
+    <button type="button" class="btn btn-primary new-btn" (click)="go('/my/requests/new')">
+      <ion-icon name="construct-outline" aria-hidden="true" />
+      <span class="new-label">Report a problem</span>
+    </button>
+  }
+
+  <button
+    type="button"
+    class="btn btn-ghost btn-icon bell"
+    [cdkMenuTriggerFor]="notificationsMenu"
+    [attr.aria-label]="unread() ? 'Notifications, ' + unread() + ' unread' : 'Notifications'"
+  >
+    <ion-icon name="notifications-outline" aria-hidden="true" />
+    @if (unread()) {
+      <span class="bell-count">{{ unread() }}</span>
+    }
+  </button>
+
+  <!-- Identity + active role. Switching role changes the hat, never the person. -->
+  <button
+    type="button"
+    class="identity"
+    [class.imp]="session.isImpersonating()"
+    [class.pulse]="switcher.lastChange()"
+    [style.--role-c]="roleColor(m)"
+    [cdkMenuTriggerFor]="userMenu"
+    [attr.aria-label]="
+      session.isImpersonating()
+        ? 'Impersonating ' + persona.name + ' as ' + roleLabels[m.role] + '. Open menu'
+        : persona.name + ', working as ' + roleLabels[m.role] + '. Switch role or open account menu'
+    "
+  >
+    <span class="avatar">{{ persona.initials }}</span>
+    <span class="id-text">
+      <span class="id-name">{{ persona.name }}</span>
+      <span class="id-role">
+        @if (session.isImpersonating()) {
+          <span class="imp-tag">Impersonating</span>
+        } @else {
+          <span class="role-dot" aria-hidden="true"></span>
+        }
+        {{ roleLabels[m.role] }}
+      </span>
+    </span>
+    <ion-icon class="chev" name="chevron-down-outline" aria-hidden="true" />
+  </button>
+</div>
+
+<!-- ===== Menus ===== -->
+
+<ng-template #scopeMenu>
+  <div class="menu-panel scope-panel" cdkMenu>
+    <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="scope.setScope(null)">
+      <ion-icon name="layers-outline" aria-hidden="true" />
+      <span>All schemes</span>
+      @if (!scope.scheme()) { <ion-icon class="menu-item-meta check" name="checkmark-outline" aria-hidden="true" /> }
+    </button>
+    @if (scopeOptions().pinned.length) {
+      <div class="menu-divider"></div>
+      <div class="menu-section-label label-caps">Pinned</div>
+      @for (s of scopeOptions().pinned; track s.id) {
+        <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="scope.setScope(s.id)">
+          <span class="code">{{ s.code }}</span>
+          <span>{{ s.name }}</span>
+          @if (scope.scopeId() === s.id) { <ion-icon class="menu-item-meta check" name="checkmark-outline" aria-hidden="true" /> }
+        </button>
+      }
+    }
+    <div class="menu-divider"></div>
+    <div class="menu-section-label label-caps">All schemes</div>
+    @for (s of scopeOptions().others; track s.id) {
+      <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="scope.setScope(s.id)">
+        <span class="code">{{ s.code }}</span>
+        <span>{{ s.name }}</span>
+        @if (scope.scopeId() === s.id) { <ion-icon class="menu-item-meta check" name="checkmark-outline" aria-hidden="true" /> }
+      </button>
+    }
+  </div>
+</ng-template>
+
+<ng-template #agencyMenu>
+  <div class="menu-panel" cdkMenu>
+    <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="session.viewOrganisation(null)">
+      <ion-icon name="pulse-outline" aria-hidden="true" />
+      <span>Platform view (all agencies)</span>
+    </button>
+    <div class="menu-divider"></div>
+    <div class="menu-section-label label-caps">Support an agency</div>
+    @for (a of organisations(); track a.id) {
+      <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="session.viewOrganisation(a)">
+        <ion-icon name="business-outline" aria-hidden="true" />
+        <span>{{ a.shortName }}</span>
+        <span class="menu-item-meta">{{ a.city }}</span>
+      </button>
+    }
+  </div>
+</ng-template>
+
+<ng-template #createMenu>
+  <div class="menu-panel" cdkMenu>
+    <div class="menu-section-label label-caps">
+      Create{{ scope.scheme() ? ' in ' + scope.scheme()!.name : '' }}
+    </div>
+    @for (a of quickActions(); track a.route) {
+      <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="go(a.route)">
+        <ion-icon [name]="a.icon" aria-hidden="true" />
+        <span>{{ a.label }}</span>
+      </button>
+    }
+  </div>
+</ng-template>
+
+<ng-template #notificationsMenu>
+  <div class="menu-panel notif-panel" cdkMenu>
+    <div class="notif-head">
+      <span class="notif-title">Notifications</span>
+      @if (unread()) {
+        <button type="button" class="link-btn" cdkMenuItem (cdkMenuItemTriggered)="markAllRead()">Mark all read</button>
+      }
+    </div>
+    @for (n of notifications(); track n.id) {
+      <button type="button" class="notif" [class.unread]="!n.read" cdkMenuItem (cdkMenuItemTriggered)="openNotification(n)">
+        <span class="notif-icon"><ion-icon [name]="kindIcon[n.kind]" aria-hidden="true" /></span>
+        <span class="notif-body">
+          <span class="notif-line">
+            <span class="notif-name">{{ n.title }}</span>
+            <span class="notif-time">{{ relativeTime(n.at) }}</span>
+          </span>
+          <span class="notif-detail">{{ n.detail }}</span>
+          @if (n.schemeId && !session.isResident()) {
+            <span class="notif-scheme">{{ scope.findScheme(n.schemeId)?.name }}</span>
+          }
+        </span>
+      </button>
+    } @empty {
+      <div class="notif-empty">You’re all caught up.</div>
+    }
+    <div class="notif-foot">Things to <em>do</em> live in My work. Notifications tell you what happened.</div>
+  </div>
+</ng-template>
+
+<ng-template #userMenu>
+  <div class="menu-panel user-panel" cdkMenu>
+    @if (session.isImpersonating()) {
+      <!-- Two identities on screen: who is really signed in, and whose view this is. -->
+      <div class="imp-block">
+        <div class="label-caps">Impersonating</div>
+        <div class="user-head">
+          <span class="avatar lg imp">{{ persona.initials }}</span>
+          <span class="user-text">
+            <span class="user-name">{{ persona.name }}</span>
+            <span class="user-sub">{{ roleLabels[m.role] }} · {{ session.organisation()?.shortName }}</span>
+          </span>
+        </div>
+        <div class="imp-actor">Signed in as <strong>{{ session.actor().name }}</strong></div>
+        <button type="button" class="btn btn-imp" cdkMenuItem (cdkMenuItemTriggered)="impersonation.exit()">
+          <ion-icon name="exit-outline" aria-hidden="true" />
+          Exit impersonation
+        </button>
+      </div>
+    } @else {
+      <div class="user-head">
+        <span class="avatar lg">{{ persona.initials }}</span>
+        <span class="user-text">
+          <span class="user-name">{{ persona.name }}</span>
+          <span class="user-sub">{{ persona.email }}</span>
+        </span>
+      </div>
+
+      @if (session.assignments().length > 1) {
+        <div class="menu-divider"></div>
+        <div class="menu-section-label label-caps">Switch role</div>
+        <div cdkMenuGroup>
+          @for (mm of session.assignments(); track mm.id) {
+            <button
+              type="button"
+              class="menu-item role-item"
+              cdkMenuItemRadio
+              [cdkMenuItemChecked]="mm.id === m.id"
+              [style.--role-c]="roleColor(mm)"
+              (cdkMenuItemTriggered)="switchRole(mm.id)"
+            >
+              <span class="role-icon"><ion-icon [name]="roleMeta[mm.role].icon" aria-hidden="true" /></span>
+              <span class="ctx-text">
+                <span class="ctx-role">{{ roleLabels[mm.role] }}</span>
+                <span class="ctx-label">{{ mm.label }}</span>
+              </span>
+              @if (switcher.switching() === mm.id) {
+                <span class="menu-item-meta mini-spinner" aria-label="Switching"></span>
+              } @else if (mm.id === m.id) {
+                <ion-icon class="menu-item-meta check" name="checkmark-outline" aria-label="Current role" />
+              }
+            </button>
+          }
+        </div>
+        <div class="identity-note">
+          <ion-icon name="finger-print-outline" aria-hidden="true" />
+          <span>Same sign-in, different role. Everything you do is recorded as {{ firstName() }}, with the role you used.</span>
+        </div>
+      } @else {
+        <div class="menu-divider"></div>
+        <div class="menu-section-label label-caps">Your role</div>
+        <div class="single-role" [style.--role-c]="roleColor(m)">
+          <span class="role-icon"><ion-icon [name]="roleMeta[m.role].icon" aria-hidden="true" /></span>
+          <span class="ctx-text">
+            <span class="ctx-role">{{ roleLabels[m.role] }}</span>
+            <span class="ctx-label">{{ m.label }}</span>
+          </span>
+        </div>
+      }
+    }
+
+    <div class="menu-divider"></div>
+    <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="go('/settings/profile')">
+      <ion-icon name="person-circle-outline" aria-hidden="true" />
+      <span>My profile</span>
+    </button>
+    <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="go('/settings/security')">
+      <ion-icon name="lock-closed-outline" aria-hidden="true" />
+      <span>Security</span>
+      <span class="menu-item-meta">Passkeys, sessions</span>
+    </button>
+    <div class="menu-divider"></div>
+    <div class="menu-section-label label-caps">Appearance</div>
+    <div cdkMenuGroup>
+      @for (t of themes; track t.value) {
+        <button
+          type="button"
+          class="menu-item"
+          cdkMenuItemRadio
+          [cdkMenuItemChecked]="proto.theme() === t.value"
+          (cdkMenuItemTriggered)="proto.theme.set(t.value)"
+        >
+          <ion-icon [name]="t.icon" aria-hidden="true" />
+          <span>{{ t.label }}</span>
+          @if (proto.theme() === t.value) {
+            <ion-icon class="menu-item-meta check" name="checkmark-outline" aria-hidden="true" />
+          }
+        </button>
+      }
+    </div>
+    <div class="menu-divider"></div>
+    <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="signOut.signOut('property-management')">
+      <ion-icon name="log-out-outline" aria-hidden="true" />
+      <span>Sign out of Humo Property Management</span>
+      @if (session.isImpersonating()) {
+        <span class="menu-item-meta">Ends impersonation</span>
+      }
+    </button>
+  </div>
+</ng-template>

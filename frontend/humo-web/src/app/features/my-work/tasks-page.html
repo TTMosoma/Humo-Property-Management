@@ -1,0 +1,109 @@
+@let sum = summary();
+<ui-page-header
+  eyebrow="My work"
+  title="Tasks"
+  [subtitle]="
+    sum.total === 0
+      ? 'Nothing assigned to you right now.'
+      : sum.overdue + ' overdue · ' + sum.today + ' due today · ' + sum.total + ' open for you'
+  "
+/>
+
+<app-smart-nudge placement="tasks" />
+<app-scope-notice />
+
+<ui-view-tabs label="Task views" [tabs]="tabs()" [active]="state().view ?? 'mine'" (activeChange)="setView($event)" />
+
+<ui-filter-bar
+  searchLabel="Search tasks, units, people…"
+  [filters]="filters()"
+  [values]="filterValues()"
+  (valuesChange)="setFilters($event)"
+  [search]="state().q ?? ''"
+  (searchChange)="setSearch($event)"
+/>
+
+@switch (attention.status()) {
+  @case ('loading') {
+    <ui-skeleton [count]="7" />
+  }
+  @case ('error') {
+    <div class="surface"><ui-error-state title="We couldn’t load your tasks" (retry)="attention.retry()" /></div>
+  }
+  @default {
+    @if (rows().length === 0) {
+      <div class="surface">
+        @if (hasFilters()) {
+          <ui-empty-state kind="filtered" title="No tasks match these filters" message="Try a different area or scheme, or clear the filters.">
+            <button type="button" class="btn btn-secondary" (click)="clearFilters()">Clear filters</button>
+          </ui-empty-state>
+        } @else if (state().view === 'done') {
+          <ui-empty-state kind="first-use" title="No completed tasks yet" message="Tasks you mark as done appear here, so you can reopen them if needed." />
+        } @else {
+          <ui-empty-state kind="done" title="You’re all caught up" message="Nothing needs your attention right now. New work appears here as soon as it comes in — from billing, maintenance, meetings or owners." />
+        }
+      </div>
+    } @else {
+      <ui-data-table
+        caption="Tasks"
+        [rows]="rows()"
+        [columns]="columns"
+        [rowId]="rowId"
+        [selectable]="session.isStaff() && session.can('Work.Manage') && state().view !== 'done'"
+        [(selected)]="selected"
+        [activeId]="activeId()"
+        [muted]="isDone"
+        (rowClick)="open($event)"
+      >
+        <ng-template uiCell="task" let-w>
+          <div class="task">
+            <span class="area-icon" [attr.title]="view(w).area"><ion-icon [name]="areaIcon[view(w).area]" aria-hidden="true" /></span>
+            <div class="task-text">
+              <div class="task-title">{{ w.title }}</div>
+              <div class="task-sub">
+                <span class="ref">{{ w.ref }}</span> · {{ view(w).typeLabel }}
+                @if (w.count) { · {{ w.count }} items }
+              </div>
+            </div>
+          </div>
+        </ng-template>
+        <ng-template uiCell="scheme" let-w>
+          <div class="scheme">{{ schemeName(w.schemeId) }}</div>
+          @if (w.unitLabel) {
+            <div class="sub">{{ w.unitLabel }}@if (w.personName) { · {{ w.personName }} }</div>
+          }
+        </ng-template>
+        <ng-template uiCell="due" let-w>
+          <ui-status-pill [label]="view(w).due" [tone]="view(w).tone" />
+        </ng-template>
+        <ng-template uiCell="assignee" let-w>
+          <span class="assignee" [class.none]="!w.assigneeId">
+            <span class="avatar">{{ initials(w.assigneeId) }}</span>
+            {{ assigneeName(w.assigneeId) }}
+          </span>
+        </ng-template>
+      </ui-data-table>
+
+      @if (selected().length) {
+        <ui-bulk-bar [count]="selected().length" (clear)="selected.set([])">
+          <button type="button" class="btn btn-primary btn-sm on-dark" (click)="completeSelected()">
+            <ion-icon name="checkmark-outline" aria-hidden="true" /> Mark done
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" [cdkMenuTriggerFor]="assignMenu">Assign to…</button>
+        </ui-bulk-bar>
+      }
+    }
+  }
+}
+
+<ng-template #assignMenu>
+  <div class="menu-panel" cdkMenu>
+    <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="assignSelected(null)">Unassigned (team)</button>
+    <div class="menu-divider"></div>
+    @for (s of staff(); track s.id) {
+      <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="assignSelected(s.id)">
+        {{ s.name }} <span class="menu-item-meta">{{ s.title }}</span>
+      </button>
+    }
+  </div>
+</ng-template>

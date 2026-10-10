@@ -1,0 +1,156 @@
+@if (result.loading()) {
+  <ui-skeleton variant="tiles" [count]="5" />
+} @else if (result.failed()) {
+  <div class="surface"><ui-error-state title="We couldn’t load this supplier" (retry)="result.retry()" /></div>
+} @else if (result.value() === false) {
+  <div class="surface"><ui-empty-state illustration="not-found" title="We couldn’t find that supplier"><a class="btn btn-primary" routerLink="/suppliers">All suppliers</a></ui-empty-state></div>
+} @else {
+  @let d = detail()!;
+  <ui-record-header [eyebrow]="d.supplier.trades.join(' · ')" [title]="d.supplier.name" [subtitle]="d.supplier.contactName + ' · ' + d.supplier.phone + ' · ' + d.supplier.email" [status]="status()" [facts]="facts()">
+    <ng-container recordActions>
+      @if (canManage()) {
+        <button type="button" class="btn btn-secondary" (click)="edit(d.supplier)"><ion-icon name="create-outline" aria-hidden="true" /> Edit</button>
+        @switch (d.supplier.status) {
+          @case ('active') {
+            <button type="button" class="btn btn-ghost" (click)="setStatus(d.supplier, 'on-hold')">Put on hold</button>
+            <button type="button" class="btn btn-ghost" (click)="setStatus(d.supplier, 'archived')">Archive</button>
+          }
+          @case ('on-hold') {
+            <button type="button" class="btn btn-secondary" (click)="setStatus(d.supplier, 'active')">Release hold</button>
+            <button type="button" class="btn btn-ghost" (click)="setStatus(d.supplier, 'archived')">Archive</button>
+          }
+          @case ('archived') {
+            <button type="button" class="btn btn-secondary" (click)="setStatus(d.supplier, 'active')">Restore</button>
+          }
+        }
+      }
+      @if (session.can('Suppliers.ChangeBankDetails') && d.supplier.status !== 'archived') {
+        <button type="button" class="btn btn-secondary" (click)="changeBank()">
+          <ion-icon name="finger-print-outline" aria-hidden="true" /> Change banking details
+        </button>
+      }
+    </ng-container>
+  </ui-record-header>
+
+  <div class="grid">
+    <div class="main">
+      <section class="surface panel">
+        <h2 class="section-title">Vetting documents</h2>
+        <p class="muted small">Work orders warn (and need an explicit override) when a site-work document is expired or missing.</p>
+        <ul class="docs">
+          @for (doc of d.supplier.documents; track doc.type) {
+            @let st = docState(doc);
+            <li>
+              <ion-icon name="document-text-outline" aria-hidden="true" />
+              <span class="doc-name">{{ doc.type }}</span>
+              <span class="doc-note">{{ st.note }}</span>
+              <ui-status-pill [label]="st.label" [tone]="st.tone" />
+              @if (st.tone !== 'success' && session.can('Suppliers.Manage')) {
+                <button type="button" class="btn btn-ghost btn-sm" (click)="request(doc)">Request</button>
+              }
+              @if (canUpload()) {
+                <button type="button" class="btn btn-ghost btn-sm" (click)="uploadDoc(doc.type)">Upload</button>
+              }
+            </li>
+          }
+        </ul>
+      </section>
+
+      <section class="surface panel">
+        <app-attachments kind="supplier" [recordId]="d.supplier.id" [label]="d.supplier.name" [preset]="{ category: 'vetting' }" heading="Documents on file" />
+      </section>
+
+      <section class="surface panel">
+        <h2 class="section-title">Open jobs <span class="muted">{{ openJobs().length }}</span></h2>
+        @for (j of openJobs(); track j.job.id) {
+          <a class="job" [routerLink]="['/maintenance', j.job.ref]">
+            <span class="ref">{{ j.job.ref }}</span>
+            <span class="title">{{ j.job.title }} <span class="muted">· {{ j.scheme.code }}</span></span>
+            <ui-status-pill [label]="stageLabel[j.job.stage]" [tone]="stageTone[j.job.stage]" />
+          </a>
+        } @empty {
+          <p class="muted small">No open jobs.</p>
+        }
+        @if (pastJobs().length) {
+          <h3 class="sub">Recent history</h3>
+          @for (j of pastJobs(); track j.job.id) {
+            <a class="job past" [routerLink]="['/maintenance', j.job.ref]">
+              <span class="ref">{{ j.job.ref }}</span>
+              <span class="title">{{ j.job.title }} <span class="muted">· {{ j.scheme.code }}</span></span>
+              <span class="muted small">{{ formatDate(j.job.reportedAt, true) }}</span>
+            </a>
+          }
+        }
+      </section>
+
+      <section class="surface panel">
+        <h2 class="section-title">Invoices & payments</h2>
+        <table class="inv">
+          <thead><tr><th>Invoice</th><th>Scheme</th><th class="end">Amount</th><th>Status</th></tr></thead>
+          <tbody>
+            @for (iv of d.invoices.slice(0, 12); track iv.invoice.id) {
+              <tr>
+                <td>{{ iv.invoice.id }}<div class="muted small">{{ iv.invoice.description }}</div></td>
+                <td>{{ iv.scheme.code }}</td>
+                <td class="end money">{{ iv.invoice.amount | rand }}</td>
+                <td>{{ iv.invoice.status === 'paid' ? 'Paid ' + formatDate(iv.invoice.paidAt, true) : iv.invoice.status.replace('-', ' ') }}</td>
+              </tr>
+            } @empty {
+              <tr><td colspan="4" class="muted">No invoices yet.</td></tr>
+            }
+          </tbody>
+        </table>
+      </section>
+    </div>
+
+    <aside class="side">
+      @if (network(); as np) {
+        <section class="surface panel humo">
+          <div class="humo-head">
+            <span class="humo-label"><ion-icon name="hammer-outline" aria-hidden="true" /> On Humo Contractor</span>
+            <ct-verification-badge [level]="np.verification.level" />
+          </div>
+          <ct-reputation [profile]="np" [compact]="true" />
+          <ct-endorsed-by class="endorsed" [profile]="np" />
+          <p class="muted small">Reputation across every Humo customer they work for. Your own numbers with them are on the left.</p>
+          @if (endorsedByUs()) {
+            <p class="ok"><ion-icon name="thumbs-up-outline" aria-hidden="true" /> {{ session.organisation()?.shortName }} has endorsed them.</p>
+          } @else if (canEndorse()) {
+            @if (endorsing()) {
+              <label class="endorse">
+                <span class="small">What should other Humo customers know? (based on your {{ d.supplier.performance.jobsCompleted }} completed jobs)</span>
+                <textarea rows="2" [value]="endorseNote()" (input)="endorseNote.set($any($event.target).value)" placeholder="e.g. Reliable on after-hours call-outs; quotes match invoices."></textarea>
+              </label>
+              <div class="btns">
+                <button type="button" class="btn btn-primary btn-sm" [disabled]="endorseNote().trim().length < 10" (click)="endorse()">Endorse on Humo Contractor</button>
+                <button type="button" class="btn btn-ghost btn-sm" (click)="endorsing.set(false)">Cancel</button>
+              </div>
+            } @else {
+              <button type="button" class="btn btn-secondary btn-sm" (click)="endorsing.set(true)"><ion-icon name="thumbs-up-outline" aria-hidden="true" /> Endorse {{ d.supplier.name }}</button>
+              <p class="muted small">Only customers who’ve completed work with a contractor can endorse them. Contractors can’t endorse themselves.</p>
+            }
+          }
+        </section>
+      }
+      <section class="surface panel">
+        <h2 class="section-title">Banking</h2>
+        <p class="bank">{{ d.supplier.bankAccount }}</p>
+        @if (d.supplier.bankVerified) {
+          <p class="ok"><ion-icon name="shield-checkmark-outline" aria-hidden="true" /> Verified against a bank confirmation letter</p>
+        } @else {
+          <p class="warn"><ion-icon name="alert-circle-outline" aria-hidden="true" /> Not verified — payments are held until a bank confirmation letter is on file.</p>
+        }
+        <p class="muted small">Changes to bank details are verified by phone with the supplier and approved by a second person before any payment — a common fraud route.</p>
+      </section>
+      <section class="surface panel">
+        <h2 class="section-title">Schemes served</h2>
+        <div class="chips">
+          @for (s of d.schemes; track s.id) {
+            <a class="chip" [routerLink]="['/schemes', s.id, 'overview']">{{ s.code }}</a>
+          }
+        </div>
+        <p class="muted small">B-BBEE level {{ d.supplier.bbbeeLevel }}</p>
+      </section>
+    </aside>
+  </div>
+}

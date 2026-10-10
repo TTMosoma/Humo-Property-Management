@@ -1,0 +1,208 @@
+:host {
+  display: block;
+  overflow-x: auto;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+}
+
+table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+  // Fixed layout: columns with a width keep it; the rest share the remaining space.
+  table-layout: fixed;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  height: 40px;
+  padding: 0 var(--s-4);
+  font-family: var(--font-display);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.1em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--c-text-muted);
+  background: var(--c-surface-2);
+  border-bottom: 1px solid var(--c-border);
+
+  &:first-child {
+    border-top-left-radius: var(--r-lg);
+  }
+
+  &:last-child {
+    border-top-right-radius: var(--r-lg);
+  }
+}
+
+.sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+
+  ion-icon {
+    font-size: 12px;
+    opacity: 0.35;
+
+    &.on {
+      opacity: 1;
+      color: var(--c-text);
+    }
+  }
+
+  &:hover {
+    color: var(--c-text);
+  }
+}
+
+td {
+  height: 52px;
+  padding: var(--s-2) var(--s-4);
+  vertical-align: middle;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.end {
+  text-align: right;
+
+  .sort {
+    flex-direction: row-reverse;
+  }
+}
+
+.center {
+  text-align: center;
+}
+
+.select {
+  width: 44px;
+  padding-right: 0;
+
+  input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--c-primary);
+    cursor: pointer;
+  }
+}
+
+tbody tr {
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease);
+
+  &:hover {
+    background: var(--c-surface-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--c-focus);
+    outline-offset: -2px;
+  }
+
+  &:last-child td {
+    border-bottom: 0;
+  }
+
+  &.selected {
+    background: var(--c-primary-soft);
+  }
+
+  &.active {
+    background: var(--c-accent-soft);
+    box-shadow: inset 3px 0 0 var(--c-accent);
+  }
+
+  &.muted td {
+    color: var(--c-text-faint);
+  }
+}
+
+// ---------- Phones: rows become cards ----------
+@media (max-width: 767px) {
+  :host {
+    background: none;
+    border: 0;
+    overflow: visible;
+  }
+
+  table,
+  tbody,
+  tr,
+  td {
+    display: block;
+  }
+
+  table {
+    min-width: 0;
+  }
+
+  thead {
+    display: none;
+  }
+
+  tbody tr {
+    position: relative;
+    margin-bottom: var(--s-3);
+    padding: var(--s-3) var(--s-4);
+    background: var(--c-surface);
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-lg);
+
+    &.active {
+      box-shadow: inset 3px 0 0 var(--c-accent);
+    }
+  }
+
+  td {
+    height: auto;
+    padding: 2px 0;
+    border: 0;
+    text-align: left;
+  }
+
+  td.select {
+    position: absolute;
+    top: var(--s-3);
+    right: var(--s-3);
+    width: auto;
+  }
+
+  .m-title {
+    padding-right: 32px;
+    font-weight: var(--fw-semibold);
+  }
+
+  .m-meta {
+    font-size: var(--fs-xs);
+    color: var(--c-text-muted);
+  }
+
+  .m-hidden {
+    display: none;
+  }
+
+  .m-field {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--s-4);
+
+    &::before {
+      content: attr(data-label);
+      font-size: var(--fs-xs);
+      color: var(--c-text-muted);
+    }
+  }
+}

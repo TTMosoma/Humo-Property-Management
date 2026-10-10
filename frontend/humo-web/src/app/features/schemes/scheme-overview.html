@@ -1,0 +1,114 @@
+@switch (unitRows.status()) {
+  @case ('loading') {
+    <div class="grid">
+      <ui-skeleton [count]="6" />
+      <ui-skeleton variant="tiles" [count]="2" />
+    </div>
+  }
+  @case ('error') {
+    <div class="surface"><ui-error-state title="We couldn’t load this scheme’s overview" (retry)="unitRows.retry()" /></div>
+  }
+  @default {
+    <div class="grid">
+      <!-- Needs attention -->
+      <section class="surface attention" aria-labelledby="attention-title">
+        <header class="panel-head">
+          <h2 id="attention-title" class="section-title">Needs attention</h2>
+          <span class="count">{{ openCount() }} open</span>
+        </header>
+        @for (g of groups(); track g.urgency) {
+          <div class="group">
+            <div class="group-head">
+              <ui-status-pill [label]="g.label" [tone]="g.tone" />
+              <span class="group-count">{{ g.items.length }}</span>
+            </div>
+            <ul>
+              @for (w of g.items; track w.id) {
+                <li>
+                  <button type="button" class="item" (click)="open(w)">
+                    <span class="icon"><ion-icon [name]="areaIcon[view(w).area]" aria-hidden="true" /></span>
+                    <span class="item-text">
+                      <span class="item-title">{{ w.title }}</span>
+                      <span class="item-sub">{{ w.ref }} · {{ view(w).typeLabel }} · {{ view(w).due }}</span>
+                    </span>
+                    @if (w.amount) {
+                      <span class="money amount">{{ w.amount | rand: 'whole' }}</span>
+                    }
+                    <ion-icon class="chev" name="chevron-forward-outline" aria-hidden="true" />
+                  </button>
+                </li>
+              }
+            </ul>
+          </div>
+        } @empty {
+          <ui-empty-state kind="done" title="Nothing outstanding here" message="No open tasks, approvals or messages for this scheme." />
+        }
+      </section>
+
+      <!-- Health -->
+      <div class="side">
+        @if (health(); as h) {
+          <section class="surface panel" aria-labelledby="fin-title">
+            <h2 id="fin-title" class="section-title">Financial health</h2>
+            <div class="big">
+              <span class="big-num" [class]="collectionTone(h.collectionRate)">{{ h.collectionRate }}%</span>
+              <span class="big-label">of levies collected over 3 months</span>
+            </div>
+            <div class="meter" aria-hidden="true"><span [style.width.%]="h.collectionRate" [class]="collectionTone(h.collectionRate)"></span></div>
+            <dl>
+              <dt>Arrears</dt><dd class="money">{{ h.arrears | rand }}</dd>
+              <dt>Accounts 90+ days</dt><dd [class.danger]="h.accounts90Plus > 2">{{ h.accounts90Plus }}</dd>
+              <dt>Monthly levy roll</dt><dd class="money">{{ h.monthlyLevyRoll | rand: 'whole' }}</dd>
+            </dl>
+          </section>
+
+          <section class="surface panel" aria-labelledby="gov-title">
+            <h2 id="gov-title" class="section-title">Governance & compliance</h2>
+            <dl>
+              <dt>Compliance</dt>
+              <dd>
+                <a [routerLink]="['/schemes', scheme().id, 'compliance']" class="pill-link"><ui-status-pill [label]="compliance[h.compliance].label" [tone]="compliance[h.compliance].tone" /></a>
+                @if (h.complianceOpenItems) { <span class="muted"> {{ h.complianceOpenItems }} due</span> }
+              </dd>
+              <dt>Next meeting</dt>
+              <dd>
+                @if (h.nextMeeting; as m) {
+                  {{ m.type }}<br /><span class="muted">{{ formatDate(m.at) }}</span>
+                } @else {
+                  <span class="muted">None scheduled</span>
+                }
+              </dd>
+              <dt>Maintenance</dt>
+              <dd>{{ h.openJobs }} open@if (h.overdueJobs) {<span class="danger"> · {{ h.overdueJobs }} overdue</span>}</dd>
+            </dl>
+          </section>
+        } @else {
+          <ui-error-state variant="inline" title="Health figures unavailable" message="The rest of the overview still works." (retry)="healthLoad.retry()" />
+        }
+
+        @if (units(); as u) {
+          <section class="surface panel" aria-labelledby="units-title">
+            <h2 id="units-title" class="section-title">Units & occupancy</h2>
+            <div class="occ" role="img" [attr.aria-label]="u.owner + ' owner-occupied, ' + u.tenanted + ' tenanted, ' + u.vacant + ' vacant'">
+              <span class="o" [style.flex]="u.owner"></span>
+              <span class="t" [style.flex]="u.tenanted"></span>
+              <span class="v" [style.flex]="u.vacant || 0"></span>
+            </div>
+            <dl>
+              <dt><i class="k o"></i>Owner-occupied</dt><dd>{{ u.owner }}</dd>
+              <dt><i class="k t"></i>Tenanted</dt><dd>{{ u.tenanted }}</dd>
+              <dt><i class="k v"></i>Vacant</dt><dd>{{ u.vacant }}</dd>
+              <dt>Accounts in arrears</dt><dd [class.danger]="u.arrears > 0">{{ u.arrears }}</dd>
+            </dl>
+            @if (session.isStaff()) {
+              <div class="links">
+                <a [routerLink]="['/schemes', scheme().id, 'units']">All {{ u.total }} units</a>
+                <a [routerLink]="['/schemes', scheme().id, 'units']" [queryParams]="{ view: 'arrears' }">Units in arrears</a>
+              </div>
+            }
+          </section>
+        }
+      </div>
+    </div>
+  }
+}

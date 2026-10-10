@@ -1,0 +1,99 @@
+// The levy statement's own parts. The page, sheet, letterhead, table and
+// footer come from ../document-sheet.scss.
+
+// Three across, two rows: on an A4 page six across leaves ~110px a box, which
+// clips amounts of R 100 000 and more.
+.summary {
+  break-inside: avoid;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 1px solid #e0e6ee;
+  border-radius: var(--r);
+  overflow: hidden;
+}
+
+.box {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--s-3);
+  border-right: 1px solid #e0e6ee;
+
+  &:nth-child(3n) {
+    border-right: 0;
+  }
+
+  &:nth-child(-n + 3) {
+    border-bottom: 1px solid #e0e6ee;
+  }
+
+  span {
+    font-size: var(--fs-xs);
+    color: #5b6a82;
+  }
+
+  strong {
+    font-size: var(--fs-md);
+  }
+
+  &.total {
+    color: #fff;
+    background: var(--doc-primary);
+
+    span {
+      color: #b6c3d9;
+    }
+  }
+}
+
+.pay {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-6);
+  padding: var(--s-4);
+  background: #f4f6f9;
+  border-radius: var(--r);
+}
+
+.due {
+  flex: none;
+  text-align: right;
+
+  &.ok {
+    align-self: center;
+    font-weight: var(--fw-semibold);
+    color: var(--doc-accent);
+  }
+}
+
+.due-amount {
+  font-family: var(--font-display);
+  font-size: var(--fs-2xl);
+  color: var(--doc-primary);
+}
+
+@media screen and (max-width: 760px) {
+  .pay {
+    flex-direction: column;
+  }
+
+  .due {
+    text-align: left;
+  }
+
+  .summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .box:nth-child(3n) {
+    border-right: 1px solid #e0e6ee;
+  }
+
+  .box:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .box:nth-child(-n + 4) {
+    border-bottom: 1px solid #e0e6ee;
+  }
+}

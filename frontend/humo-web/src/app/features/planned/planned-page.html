@@ -1,0 +1,74 @@
+@if (!embedded()) {
+  <ui-page-header [eyebrow]="section()" [title]="title()" [subtitle]="meta()?.job">
+    @if (meta()) {
+      <span class="checkpoint">Not built yet</span>
+    }
+  </ui-page-header>
+}
+
+@switch (view()) {
+  @case ('loading') {
+    <ui-skeleton variant="tiles" [count]="4" />
+    <div class="gap"></div>
+    <ui-skeleton [count]="6" />
+  }
+  @case ('error') {
+    <div class="surface">
+      <ui-error-state />
+    </div>
+  }
+  @default {
+    @if (view() === 'empty') {
+      <div class="surface">
+        <ui-empty-state
+          kind="first-use"
+          title="Nothing here yet"
+          message="This is how a first-use empty state looks: it explains why it’s empty and offers the next step."
+        >
+          <button type="button" class="btn btn-primary">
+            <ion-icon name="add-outline" aria-hidden="true" /> Add the first item
+          </button>
+        </ui-empty-state>
+      </div>
+    } @else {
+      <div class="plan">
+        <section class="surface plan-main">
+          <div class="plan-head">
+            <ui-illustration name="coming-soon" [size]="96" />
+            <div>
+              @if (embedded()) {
+                <div class="label-caps">{{ title() }}</div>
+                <h2>{{ meta()?.job }}</h2>
+              } @else {
+                <h2>Planned screen</h2>
+              }
+              <p class="text-muted">
+                Not built yet. It’s in the navigation so the whole product can be reviewed end to end.
+              </p>
+            </div>
+          </div>
+          @if (meta()?.planned?.length) {
+            <ul class="planned">
+              @for (item of meta()!.planned; track item) {
+                <li><ion-icon name="checkmark-outline" aria-hidden="true" /> {{ item }}</li>
+              }
+            </ul>
+          }
+        </section>
+        <aside class="surface plan-side">
+          <div class="label-caps">Who can access this</div>
+          @if (permission(); as p) {
+            <p class="perm">{{ p }}</p>
+          }
+          <ul class="roles">
+            @for (r of roles(); track r) {
+              <li>{{ r }}</li>
+            } @empty {
+              <li>Everyone signed in</li>
+            }
+          </ul>
+        </aside>
+      </div>
+    }
+  }
+}

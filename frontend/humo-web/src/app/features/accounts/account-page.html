@@ -1,0 +1,127 @@
+@if (summary.loading() || detail() === undefined) {
+  <ui-skeleton variant="tiles" [count]="4" />
+  <div class="gap"></div>
+  <ui-skeleton [count]="8" />
+} @else if (summary.failed() || detail() === null) {
+  <div class="surface"><ui-error-state title="We couldn’t load this account" (retry)="summary.retry()" /></div>
+} @else if (summary.value() === false) {
+  <div class="surface"><ui-empty-state illustration="not-found" title="We couldn’t find that account" /></div>
+} @else {
+  @let d = detail()!;
+  <ui-record-header
+    [eyebrow]="'Levy account · ' + d.scheme.name + ', Unit ' + d.unit.number"
+    [title]="d.account.accountNo"
+    [subtitle]="'Held by ' + d.holder.displayName + ' · ' + d.holder.phone"
+    [status]="status()"
+    [facts]="facts()"
+    [chain]="chain()"
+  >
+    @if (d.statementPeriods[0]; as latest) {
+      <ng-container recordActions>
+        <a class="btn btn-primary" [routerLink]="links.statement(d.scheme, d.unit, latest)">
+          <ion-icon name="document-text-outline" aria-hidden="true" /> {{ periodLabel(latest, false) }} statement
+        </a>
+        <button type="button" class="btn btn-secondary" (click)="sendStatement()">
+          <ion-icon name="mail-outline" aria-hidden="true" /> Re-send
+        </button>
+        @if (canAdjust()) {
+          <button type="button" class="btn btn-ghost" (click)="adjust()">
+            <ion-icon name="swap-vertical-outline" aria-hidden="true" /> Journal adjustment
+          </button>
+        }
+      </ng-container>
+    }
+  </ui-record-header>
+
+  <!-- The moment that saves the phone call: a payment we have but haven't matched. -->
+  @for (v of suggestions(); track v.receipt.id) {
+    <div class="found" role="status">
+      <ion-icon name="sparkles-outline" aria-hidden="true" />
+      <div class="found-text">
+        <strong>A payment of {{ v.receipt.amount | rand }} may belong to this account.</strong>
+        It arrived on {{ formatDate(v.receipt.date) }} with reference “{{ v.receipt.reference }}”{{ v.receipt.payer ? ' from ' + v.receipt.payer : '' }}, and hasn’t been allocated yet.
+      </div>
+      @if (session.can('Receipts.Allocate')) {
+        <button type="button" class="btn btn-primary btn-sm" [disabled]="busyReceipt() === v.receipt.id" (click)="allocateHere(v)">Allocate to {{ d.account.accountNo }}</button>
+        <a class="btn btn-ghost btn-sm" routerLink="/finance/receipts" [queryParams]="{ receipt: v.receipt.id }">Review</a>
+      } @else {
+        <span class="muted small">Ask Finance to allocate it.</span>
+      }
+    </div>
+  }
+
+  <div class="grid">
+    <section class="surface panel">
+      @if (explain(); as e) {
+        <h2 class="section-title">Why the balance is {{ e.closing | rand }}</h2>
+        <div class="explain">
+          <div class="eq">
+            <span class="term"><span class="t-label">Brought forward</span><span class="money">{{ e.opening | rand }}</span></span>
+            <span class="op">+</span>
+            <span class="term"><span class="t-label">{{ e.month }} charges</span><span class="money">{{ e.charges | rand }}</span></span>
+            <span class="op">−</span>
+            <span class="term"><span class="t-label">Payments & credits</span><span class="money credit">{{ -e.credits | rand }}</span></span>
+            <span class="op">=</span>
+            <span class="term total"><span class="t-label">Balance</span><span class="money">{{ e.closing | rand }}</span></span>
+          </div>
+          <ul class="items">
+            @for (i of e.items; track i.id) {
+              <li><span>{{ i.description }}</span><span class="money">{{ i.amount | rand }}</span></li>
+            }
+          </ul>
+        </div>
+      }
+      @if (d.account.balance > 0) {
+        <h3 class="sub-title">Ageing</h3>
+        <ui-ageing-bar [ageing]="d.account.ageing" />
+      }
+      @if (collection(); as c) {
+        @if (c.overdueAmount > 0 || c.case.stage !== 'not-started') {
+          <div class="collection">
+            <span class="label-caps">Credit control</span>
+            <ui-status-pill [label]="collectionLabel(c)" [tone]="collectionTone(c)" />
+            @if (c.next; as n) {
+              <span class="muted small" [class.late]="n.overdue">{{ n.label }} · {{ n.overdue ? 'overdue since' : 'due' }} {{ formatDate(n.dueAt) }}</span>
+            }
+            <a class="btn btn-ghost btn-sm" [routerLink]="['/finance/credit-control', d.account.id]">Open</a>
+          </div>
+        }
+      }
+    </section>
+
+    <section class="surface panel">
+      <h2 class="section-title">Statements</h2>
+      <ul class="statements">
+        @for (p of d.statementPeriods; track p) {
+          <li>
+            <a [routerLink]="links.statement(d.scheme, d.unit, p)">
+              <ion-icon name="document-text-outline" aria-hidden="true" />
+              <span>{{ periodLabel(p) }}</span>
+              <ion-icon class="chev" name="chevron-forward-outline" aria-hidden="true" />
+            </a>
+          </li>
+        }
+      </ul>
+      <p class="muted small">Sent {{ d.account.statementBy === 'email' ? 'by email to ' + d.holder.email : d.account.statementBy === 'post' ? 'by post' : 'to the owner portal' }}.</p>
+    </section>
+  </div>
+
+  <h2 class="section-title ledger-title">Transactions</h2>
+  <ui-view-tabs label="Period" [tabs]="tabs()" [active]="period()" (activeChange)="period.set($event)" />
+  <ui-data-table caption="Account transactions" [rows]="rows()" [columns]="columns" [rowId]="rowId">
+    <ng-template uiCell="date" let-t><span class="num">{{ formatDate(t.date) }}</span></ng-template>
+    <ng-template uiCell="description" let-t>
+      <div class="desc">{{ t.description }}</div>
+      @if (t.reference) {
+        <div class="sub">Ref “{{ t.reference }}”</div>
+      }
+    </ng-template>
+    <ng-template uiCell="charge" let-t>
+      @if (t.amount > 0) { <span class="money">{{ t.amount | rand }}</span> }
+    </ng-template>
+    <ng-template uiCell="credit" let-t>
+      @if (t.amount < 0) { <span class="money credit">{{ -t.amount | rand }}</span> }
+    </ng-template>
+    <ng-template uiCell="balance" let-t><span class="money bal">{{ t.balance | rand }}</span></ng-template>
+  </ui-data-table>
+}

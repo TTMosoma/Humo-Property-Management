@@ -1,0 +1,180 @@
+<ui-page-header
+  [eyebrow]="platform ? 'Platform' : 'Settings'"
+  [title]="platform ? 'Platform audit log' : 'Audit log'"
+  [subtitle]="
+    platform
+      ? 'Every agency and every Humo staff action, including impersonation. Records are written by the server and can’t be edited.'
+      : 'What happened in ' + (session.organisation()?.shortName ?? 'your agency') + ' — by your team, and by Humo staff when they help you. Records can’t be edited or deleted.'
+  "
+>
+  <button type="button" class="btn btn-secondary" (click)="exportLog()" [disabled]="exporting() || !rows().length">
+    <ion-icon name="download-outline" aria-hidden="true" />
+    Export CSV
+  </button>
+</ui-page-header>
+
+@if (!platform && humoSessions()) {
+  <div class="transparency surface">
+    <ion-icon name="eye-outline" aria-hidden="true" />
+    <span>
+      Humo staff opened your agency as one of your users <strong>{{ humoSessions() }} {{ humoSessions() === 1 ? 'time' : 'times' }}</strong> in this period.
+      Each session shows who, as whom, why, in which mode, and everything they did.
+    </span>
+    <button type="button" class="btn btn-ghost btn-sm" (click)="set('view', 'impersonation')">Review Humo access</button>
+  </div>
+}
+
+<ui-view-tabs [tabs]="tabs()" [active]="state().view ?? 'all'" (activeChange)="set('view', $event)" label="Audit categories" />
+
+<div class="filters">
+  <label class="search">
+    <ion-icon name="search-outline" aria-hidden="true" />
+    <input type="search" placeholder="Person, action or reference…" [value]="state().q ?? ''" (input)="set('q', $any($event.target).value)" aria-label="Search the audit log" />
+  </label>
+  @if (platform) {
+    <select [value]="state().agency ?? ''" (change)="set('agency', $any($event.target).value)" aria-label="Agency">
+      <option value="">All agencies</option>
+      @for (a of agencies(); track a.id) {
+        <option [value]="a.id">{{ a.shortName }}</option>
+      }
+      <option value="humo">Humo platform only</option>
+    </select>
+  }
+  <select [value]="state().actor ?? ''" (change)="set('actor', $any($event.target).value)" aria-label="Actor or acting as">
+    <option value="">Anyone</option>
+    @for (p of people(); track p.id) {
+      <option [value]="p.id">{{ p.name }}</option>
+    }
+  </select>
+  <select [value]="state().role ?? ''" (change)="set('role', $any($event.target).value)" aria-label="Role">
+    <option value="">Any role</option>
+    @for (r of roles(); track r.id) {
+      <option [value]="r.id">{{ r.label }}</option>
+    }
+  </select>
+  @if (!platform) {
+    <select [value]="state().scheme ?? ''" (change)="set('scheme', $any($event.target).value)" aria-label="Scheme">
+      <option value="">Any scheme</option>
+      @for (s of schemesSeen(); track s.id) {
+        <option [value]="s.id">{{ s.name }}</option>
+      }
+    </select>
+  }
+  <select [value]="state().range ?? ''" (change)="set('range', $any($event.target).value)" aria-label="Date">
+    <option value="">Any date</option>
+    <option value="1">Last 24 hours</option>
+    <option value="7">Last 7 days</option>
+    <option value="30">Last 30 days</option>
+  </select>
+  @if (filtered()) {
+    <button type="button" class="btn btn-ghost btn-sm" (click)="clearFilters()">Clear filters</button>
+  }
+  <label class="check">
+    <input type="checkbox" [checked]="state().only === 'problems'" (change)="set('only', $any($event.target).checked ? 'problems' : null)" />
+    Only denied or failed
+  </label>
+</div>
+
+@if (failed()) {
+  <ui-error-state (retry)="result.retry()" />
+} @else if (loading()) {
+  <ui-skeleton [count]="8" />
+} @else if (!rows().length) {
+  <div class="surface">
+    <ui-empty-state kind="filtered" title="No events match" message="Try another tab, or clear the search." />
+  </div>
+} @else {
+  @for (day of days(); track day.label) {
+    <section class="day">
+      <h2 class="day-label label-caps">{{ day.label }}</h2>
+      <ol class="events surface">
+        @for (e of day.events; track e.id) {
+          <li class="event" [class.open]="expanded() === e.id" [class.imp]="!!e.actingAs" [class.bad]="e.result !== 'success'">
+            <button type="button" class="row" (click)="toggle(e.id)" [attr.aria-expanded]="expanded() === e.id">
+              <span class="time">{{ time(e.at) }}</span>
+              <span class="cat" [attr.data-cat]="e.category" aria-hidden="true">
+                <ion-icon [name]="e.category === 'security' ? 'lock-closed-outline' : e.category === 'impersonation' ? 'eye-outline' : 'pulse-outline'" />
+              </span>
+              <span class="main">
+                <span class="who">
+                  <strong>{{ e.actor.name }}</strong>
+                  @if (e.actingAs) {
+                    <span class="as">as {{ e.actingAs.name }}</span>
+                  }
+                  <span class="role">{{ roleLabels[e.role] }}</span>
+                  @if (platform) {
+                    <span class="role">{{ agencyName(e.organisationId) }}</span>
+                  }
+                </span>
+                <span class="what">
+                  {{ e.action }}
+                  @if (e.resourceId && showRef(e)) {
+                    <span class="ref">{{ e.resourceId }}</span>
+                  }
+                  @if (e.amount) {
+                    <span class="money">{{ rand(e.amount) }}</span>
+                  }
+                  @if (e.category === 'impersonation' && e.impersonation) {
+                    <span class="why-imp">· {{ reasons[e.impersonation.reason] }}</span>
+                  }
+                </span>
+              </span>
+              <span class="badges">
+                @if (e.stepUp) {
+                  <span class="stepup" [title]="'Verified with ' + (e.stepUp.device ?? e.stepUp.method)">
+                    <ion-icon [name]="e.stepUp.method === 'passkey' ? 'finger-print-outline' : 'phone-portrait-outline'" aria-hidden="true" />
+                    <span class="sr-only">Step-up verified</span>
+                  </span>
+                }
+                @if (e.impersonation) {
+                  <ui-status-pill [label]="e.impersonation.mode === 'act' ? 'Act' : 'Observe'" tone="warning" />
+                }
+                @if (e.result === 'denied') {
+                  <ui-status-pill label="Denied" tone="danger" />
+                } @else if (e.result === 'failed') {
+                  <ui-status-pill label="Failed" tone="danger" />
+                }
+                <ion-icon class="chev" name="chevron-down-outline" aria-hidden="true" />
+              </span>
+            </button>
+
+            @if (expanded() === e.id) {
+              <dl class="details">
+                <div><dt>Timestamp</dt><dd>{{ stamp(e.at) }}</dd></div>
+                <div><dt>Actor</dt><dd>{{ e.actor.name }}</dd></div>
+                @if (e.actingAs) {
+                  <div class="hl"><dt>Acting as</dt><dd>{{ e.actingAs.name }} (impersonated)</dd></div>
+                }
+                <div><dt>Role</dt><dd>{{ roleLabels[e.role] }}</dd></div>
+                <div><dt>Organisation</dt><dd>{{ agencyName(e.organisationId) }}</dd></div>
+                @if (schemeName(e.schemeId); as s) {
+                  <div><dt>Scope</dt><dd>{{ s }}</dd></div>
+                }
+                <div><dt>Action</dt><dd>{{ e.action }}</dd></div>
+                @if (e.resource) {
+                  <div><dt>Resource</dt><dd>{{ e.resource }}{{ e.resourceId ? ' · ' + e.resourceId : '' }}</dd></div>
+                }
+                @if (e.amount) {
+                  <div><dt>Amount</dt><dd class="money">{{ rand(e.amount) }}</dd></div>
+                }
+                <div>
+                  <dt>Result</dt>
+                  <dd>{{ e.result === 'success' ? 'Succeeded' : e.result === 'denied' ? 'Denied by policy' : 'Failed' }}{{ e.reason ? ' — ' + e.reason : '' }}</dd>
+                </div>
+                <div>
+                  <dt>Step-up</dt>
+                  <dd>{{ e.stepUp ? (e.stepUp.method === 'passkey' ? 'Passkey' : 'Humo Mobile') + (e.stepUp.device ? ' · ' + e.stepUp.device : '') : 'Not required' }}</dd>
+                </div>
+                @if (e.impersonation; as i) {
+                  <div class="hl"><dt>Impersonation</dt><dd>{{ i.mode === 'act' ? 'Act' : 'Observe' }} · {{ reasons[i.reason] }}{{ i.note ? ' · ' + i.note : '' }}</dd></div>
+                }
+                <div><dt>Session</dt><dd>{{ e.session.device }} · {{ e.session.ip }} · {{ e.session.sessionId }}</dd></div>
+              </dl>
+            }
+          </li>
+        }
+      </ol>
+    </section>
+  }
+  <p class="foot">Audit records are written by Humo Property Management’s servers when an action is accepted or refused — never by the browser — and can’t be edited by anyone, including Humo.</p>
+}

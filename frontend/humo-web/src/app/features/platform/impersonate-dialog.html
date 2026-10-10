@@ -1,0 +1,77 @@
+<header>
+  <span class="seal" aria-hidden="true"><ion-icon name="eye-outline" /></span>
+  <div>
+    <h2>Impersonate {{ target.name }}</h2>
+    <p>You’ll see Humo Property Management exactly as they do. You stay {{ session.actor().name }} — every page and action is recorded against you, acting as them.</p>
+  </div>
+</header>
+
+<div class="body">
+  <fieldset>
+    <legend class="label-caps">View as</legend>
+    @for (m of assignments; track m.id) {
+      <label class="choice" [class.on]="assignmentId() === m.id">
+        <input type="radio" name="assignment" [checked]="assignmentId() === m.id" (change)="assignmentId.set(m.id)" />
+        <span>
+          <strong>{{ roleLabels[m.role] }}</strong>
+          <span class="sub">{{ m.label }}</span>
+        </span>
+      </label>
+    }
+  </fieldset>
+
+  <fieldset>
+    <legend class="label-caps">Mode</legend>
+    <div class="modes">
+      <label class="mode" [class.on]="mode() === 'observe'">
+        <input type="radio" name="mode" [checked]="mode() === 'observe'" (change)="mode.set('observe')" />
+        <ion-icon name="eye-outline" aria-hidden="true" />
+        <strong>Observe</strong>
+        <span class="sub">See what they see. Nothing can be changed — Humo refuses every change.</span>
+        <span class="tag">Recommended</span>
+      </label>
+      <label class="mode act" [class.on]="mode() === 'act'">
+        <input type="radio" name="mode" [checked]="mode() === 'act'" (change)="mode.set('act')" />
+        <ion-icon name="create-outline" aria-hidden="true" />
+        <strong>Act</strong>
+        <span class="sub">Make changes as them. Needs a case reference, a note and verification with your passkey.</span>
+      </label>
+    </div>
+  </fieldset>
+
+  <div class="grid">
+    <label class="field">
+      <span class="f-label">Reason</span>
+      <select (change)="reason.set($any($event.target).value)">
+        @for (r of reasons; track r[0]) {
+          <option [value]="r[0]" [selected]="reason() === r[0]">{{ r[1] }}</option>
+        }
+      </select>
+    </label>
+    <label class="field">
+      <span class="f-label">Case reference{{ mode() === 'act' ? '' : ' (optional)' }}</span>
+      <input type="text" placeholder="e.g. HUMO-2317" [value]="ticket()" (input)="ticket.set($any($event.target).value)" />
+    </label>
+  </div>
+
+  <label class="field">
+    <span class="f-label">What are you checking or fixing?{{ noteRequired() ? '' : ' (optional)' }}</span>
+    <textarea rows="2" [value]="note()" (input)="note.set($any($event.target).value)" placeholder="e.g. Sarah reports the Scheduled column is empty on the Protea Gardens job board"></textarea>
+    @if (noteRequired() && note().trim().length < 10) {
+      <span class="f-help">Required for {{ mode() === 'act' ? 'Act mode' : 'reason “Other”' }} — at least a short sentence.</span>
+    }
+  </label>
+
+  <label class="ack">
+    <input type="checkbox" [checked]="acknowledged()" (change)="acknowledged.set($any($event.target).checked)" />
+    <span>I understand this session is visible to {{ agencyName() }}’s administrators in their audit log, with my name and reason.</span>
+  </label>
+</div>
+
+<footer>
+  <button type="button" class="btn btn-ghost" (click)="cancel()">Cancel</button>
+  <button type="button" class="btn btn-imp" (click)="start()" [disabled]="!valid() || busy()">
+    <ion-icon [name]="mode() === 'act' ? 'finger-print-outline' : 'eye-outline'" aria-hidden="true" />
+    {{ mode() === 'act' ? 'Verify and start acting' : 'Start observing' }}
+  </button>
+</footer>

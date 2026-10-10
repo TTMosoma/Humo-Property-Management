@@ -1,0 +1,118 @@
+@let v = view();
+@let st = v.statement;
+@let d = design();
+@let b = branding();
+<article
+  class="sheet"
+  [class.branded]="isBranded()"
+  [style.--doc-primary]="b.source === 'humo' ? null : b.palette.primary"
+  [style.--doc-accent]="b.source === 'humo' ? null : b.palette.accent"
+  [style.font-family]="fontStack()"
+  [style.--font-display]="fontStack()"
+  [attr.aria-label]="title()"
+>
+  @if (isBranded()) {
+    <div class="brand-bar" aria-hidden="true"></div>
+  }
+  <header class="letterhead">
+    <div>
+      @if (isBranded() && b.logo) {
+        <div class="logo"><span class="logo-mark" aria-hidden="true">{{ b.logo.text.charAt(0) }}</span>{{ b.logo.text }}</div>
+      }
+      <div class="agency">{{ organisationName() }}</div>
+      <div class="agency-sub">Managing agent for {{ v.scheme.name }} · {{ v.scheme.type }}</div>
+      <div class="agency-sub">{{ settings().contact.email }} · {{ settings().contact.phone }}</div>
+    </div>
+    <div class="doc">
+      <div class="doc-title">{{ title() }}</div>
+      <div class="doc-period">{{ st.periodLabel }}</div>
+      @if (number(); as no) {
+        <div class="doc-no">No. {{ no }}</div>
+      }
+    </div>
+  </header>
+
+  <section class="parties">
+    <div>
+      <div class="label">To</div>
+      <div class="strong">{{ v.holder.displayName }}</div>
+      <div>Unit {{ v.unit.number }}, {{ v.scheme.name }}</div>
+      <div>{{ v.scheme.suburb }}, {{ v.scheme.city }}</div>
+    </div>
+    <dl class="refs">
+      <dt>Account number</dt><dd>{{ v.account.accountNo }}</dd>
+      <dt>Statement date</dt><dd>{{ formatDate(st.issuedOn) }}</dd>
+      <dt>Payment due</dt><dd>{{ formatDate(st.dueOn) }}</dd>
+      <dt>Participation quota</dt><dd>{{ v.unit.participationQuota.toFixed(4) }}%</dd>
+    </dl>
+  </section>
+
+  @if (shows('summary')) {
+    <section class="summary" aria-label="Summary">
+      <div class="box"><span>Opening balance</span><strong class="money">{{ st.opening | rand }}</strong></div>
+      <div class="box"><span>Charges</span><strong class="money">{{ st.charges | rand }}</strong></div>
+      <div class="box"><span>Payments</span><strong class="money">{{ -st.payments | rand }}</strong></div>
+      <div class="box"><span>Adjustments</span><strong class="money">{{ st.adjustments | rand }}</strong></div>
+      <div class="box"><span>Interest</span><strong class="money">{{ st.interest | rand }}</strong></div>
+      <div class="box total"><span>Amount due</span><strong class="money">{{ st.closing | rand }}</strong></div>
+    </section>
+  }
+
+  <table class="lines">
+    <thead>
+      <tr><th>Date</th><th>Description</th><th class="end">Debit</th><th class="end">Credit</th><th class="end">Balance</th></tr>
+    </thead>
+    <tbody>
+      <tr class="bf"><td>{{ formatDate(st.issuedOn) }}</td><td>Balance brought forward</td><td></td><td></td><td class="end money">{{ st.opening | rand }}</td></tr>
+      @for (l of st.lines; track l.id) {
+        <tr>
+          <td>{{ formatDate(l.date) }}</td>
+          <td>{{ l.description }}@if (l.reference) { <span class="ref"> · ref “{{ l.reference }}”</span> }</td>
+          <td class="end money">@if (l.amount > 0) { {{ l.amount | rand }} }</td>
+          <td class="end money">@if (l.amount < 0) { {{ -l.amount | rand }} }</td>
+          <td class="end money">{{ l.balance | rand }}</td>
+        </tr>
+      }
+    </tbody>
+    <tfoot>
+      <tr><td colspan="4">Closing balance</td><td class="end money">{{ st.closing | rand }}</td></tr>
+    </tfoot>
+  </table>
+
+  <!-- Payment instructions and footer stay together: never split across a page. -->
+  <div class="closing">
+    @if (shows('payment')) {
+      <section class="pay">
+        <div>
+          <div class="label">How to pay</div>
+          <div>EFT to <strong>{{ v.payTo.accountName }}</strong></div>
+          <div>{{ v.payTo.bank }} · Account {{ v.payTo.accountNumber }} · Branch {{ v.payTo.branchCode }}</div>
+          <div>Use reference <strong>{{ v.account.accountNo }}</strong> so we can match your payment automatically.</div>
+        </div>
+        @if (st.closing > 0) {
+          <div class="due">
+            <div class="label">Please pay by {{ formatDate(st.dueOn) }}</div>
+            <div class="due-amount money">{{ st.closing | rand }}</div>
+          </div>
+        } @else {
+          <div class="due ok">Nothing to pay — thank you.</div>
+        }
+      </section>
+    }
+
+    <footer class="foot">
+      <span>
+        @if (shows('queries')) {
+          {{ d.footerText ?? 'Queries: reply to this email or call your managing agent. Interest on arrears is charged as set out in the scheme’s rules.' }}
+        }
+      </span>
+      <span class="powered">Powered by <ui-logo variant="wordmark" [height]="12" /></span>
+    </footer>
+    @if (settings().footerText; as line) {
+      <p class="org-foot">{{ line }}</p>
+    }
+    @if (d.legalText; as legal) {
+      <p class="legal">{{ legal }}</p>
+    }
+  </div>
+</article>

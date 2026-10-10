@@ -1,0 +1,183 @@
+@let person = identity();
+
+<ui-drawer eyebrow="Users & access" [title]="person?.name ?? 'Person'">
+  <div drawerMeta class="meta">{{ person?.email }} · one sign-in, {{ assignments().length }} {{ assignments().length === 1 ? 'role' : 'roles' }} here</div>
+
+  @if (person && !isSelf() && session.can('Users.Manage')) {
+    <div class="person-actions">
+      @if (person.status === 'invited') {
+        <span class="state invited">Invited — hasn’t accepted yet</span>
+        <button type="button" class="btn btn-secondary btn-sm" (click)="resend()"><ion-icon name="mail-outline" aria-hidden="true" /> Resend invitation</button>
+        @if (prototype) {
+          <button type="button" class="btn btn-ghost btn-sm" (click)="acceptInvite()" title="Prototype only">Simulate: invitation accepted</button>
+        }
+      }
+      @if (membership()?.status === 'suspended') {
+        <span class="state suspended">Access suspended</span>
+      }
+      <button type="button" class="btn btn-ghost btn-sm" (click)="editDetails()"><ion-icon name="create-outline" aria-hidden="true" /> Edit details</button>
+      @if (membership()?.status === 'suspended') {
+        <button type="button" class="btn btn-secondary btn-sm" (click)="setMembership('active')">Restore access</button>
+      } @else {
+        <button type="button" class="btn btn-ghost btn-sm" (click)="setMembership('suspended')">Suspend access</button>
+      }
+      <button type="button" class="btn btn-ghost btn-sm danger" (click)="setMembership('ended')">Remove from agency</button>
+    </div>
+  }
+
+  @if (isSelf()) {
+    <div class="notice">
+      <ion-icon name="hand-left-outline" aria-hidden="true" />
+      <span><strong>You can’t change your own roles.</strong> Ask another Agency Administrator — that way no one can quietly give themselves more access.</span>
+    </div>
+  }
+
+  <h3 class="label-caps">Roles</h3>
+  <ul class="assignments">
+    @for (m of assignments(); track m.id) {
+      <li [style.--role-c]="roleColor(m)">
+        <span class="r-icon"><ion-icon [name]="roleMeta[m.role].icon" aria-hidden="true" /></span>
+        <span class="r-text">
+          <span class="r-name">{{ roleLabels[m.role] }}</span>
+          <span class="r-scope">{{ m.label }}</span>
+          <span class="r-by">Granted by {{ m.grantedBy ?? 'Humo onboarding' }}{{ m.grantedAt ? ' · ' + formatDate(m.grantedAt, true) : '' }}</span>
+        </span>
+        @if (!isSelf()) {
+          @if (confirmRemove() === m.id) {
+            <span class="confirm">
+              <button type="button" class="btn btn-danger btn-sm" (click)="remove(m)">End role</button>
+              <button type="button" class="btn btn-ghost btn-sm" (click)="confirmRemove.set(null)">Keep</button>
+            </span>
+          } @else {
+            <button type="button" class="btn btn-ghost btn-sm" (click)="confirmRemove.set(m.id)" [attr.aria-label]="'End ' + roleLabels[m.role]">End</button>
+          }
+        }
+      </li>
+    }
+  </ul>
+
+  @if (ended().length) {
+    <details class="history">
+      <summary>Ended roles ({{ ended().length }})</summary>
+      <ul>
+        @for (m of ended(); track m.id) {
+          <li>
+            <span class="r-name">{{ roleLabels[m.role] }}</span> · {{ m.label }}
+            <span class="r-by">Ended{{ m.endedAt ? ' ' + formatDate(m.endedAt, true) : '' }}{{ m.endedBy ? ' by ' + m.endedBy : '' }}</span>
+          </li>
+        }
+      </ul>
+    </details>
+  }
+
+  @if (!isSelf()) {
+    @if (!adding()) {
+      <button type="button" class="btn btn-secondary" (click)="adding.set(true)">
+        <ion-icon name="add-outline" aria-hidden="true" /> Add a role
+      </button>
+    } @else {
+      <section class="add">
+        <h3 class="label-caps">Add a role</h3>
+
+        <label class="field">
+          <span class="f-label">Role</span>
+          <select [value]="role()" (change)="pickRole($any($event.target).value)">
+            @for (g of groups; track g.label) {
+              <optgroup [label]="g.label">
+                @for (r of g.roles; track r) {
+                  <option [value]="r" [selected]="r === role()">{{ roleLabels[r] }}</option>
+                }
+              </optgroup>
+            }
+          </select>
+          <span class="f-help">{{ meta().summary }}</span>
+          <ui-field-error [errors]="errors()" field="role" />
+        </label>
+
+        @if (role() === 'agency-admin') {
+          <div class="warn">
+            <ion-icon name="key-outline" aria-hidden="true" />
+            <span>Agency Administrators manage everyone’s access, including other administrators. Adding one asks you to verify it’s you.</span>
+          </div>
+        }
+
+        @switch (meta().scopeKind) {
+          @case ('agency') {
+            <div class="f-static"><span class="f-label">Applies to</span>All of {{ session.organisation()?.shortName }}</div>
+          }
+          @case ('schemes') {
+            <div class="field">
+              <span class="f-label">{{ role() === 'trustee' ? 'Scheme (one board per assignment)' : 'Where it applies' }}</span>
+              <ui-field-error [errors]="errors()" field="scope" />
+              @if (role() !== 'trustee') {
+                <label class="opt"><input type="radio" name="all" [checked]="allSchemes()" (change)="allSchemes.set(true)" /> All schemes, including new ones</label>
+                <label class="opt"><input type="radio" name="all" [checked]="!allSchemes()" (change)="allSchemes.set(false)" /> Selected schemes</label>
+              }
+              @if (!allSchemes() || role() === 'trustee') {
+                <div class="schemes">
+                  @for (s of schemes(); track s.id) {
+                    <label class="opt">
+                      <input
+                        [type]="role() === 'trustee' ? 'radio' : 'checkbox'"
+                        name="scheme"
+                        [checked]="schemeIds().includes(s.id)"
+                        (change)="toggleScheme(s.id, role() === 'trustee')"
+                      />
+                      <span class="code">{{ s.code }}</span> {{ s.name }}
+                    </label>
+                  }
+                </div>
+              }
+            </div>
+          }
+          @case ('unit') {
+            <div class="field">
+              <span class="f-label">Scheme</span>
+              <select (change)="toggleScheme($any($event.target).value, true)">
+                <option value="" disabled [selected]="!schemeIds().length">Choose a scheme</option>
+                @for (s of schemes(); track s.id) {
+                  <option [value]="s.id">{{ s.name }}</option>
+                }
+              </select>
+            </div>
+            <label class="field">
+              <span class="f-label">Unit</span>
+              <input type="text" placeholder="e.g. 42" [value]="unit()" (input)="unit.set($any($event.target).value); errors.set({})" [attr.aria-invalid]="!!errors()['unit']" />
+              <ui-field-error [errors]="errors()" field="unit" />
+            </label>
+          }
+          @case ('supplier') {
+            <label class="field">
+              <span class="f-label">Supplier company</span>
+              <input type="text" placeholder="e.g. Rand Plumbing & Geysers" [value]="supplier()" (input)="supplier.set($any($event.target).value)" />
+              <span class="f-help">They’ll only see their own work orders, quotes and invoices with your agency.</span>
+            </label>
+          }
+        }
+
+        <div class="preview">
+          <span class="f-label">They’ll be able to</span>
+          <ul>
+            @for (p of preview(); track p) {
+              <li>{{ p }}</li>
+            }
+          </ul>
+        </div>
+
+        <p class="humo-note">
+          <ion-icon name="information-circle-outline" aria-hidden="true" />
+          Humo platform roles aren’t listed — only Humo can grant those.
+        </p>
+      </section>
+    }
+  }
+
+  <div drawerFooter>
+    @if (adding()) {
+      <button type="button" class="btn btn-primary" (click)="grant()" [disabled]="!scopeValid() || busy()">
+        <ion-icon name="finger-print-outline" aria-hidden="true" /> Verify and grant
+      </button>
+      <button type="button" class="btn btn-ghost" (click)="adding.set(false)">Cancel</button>
+    }
+  </div>
+</ui-drawer>

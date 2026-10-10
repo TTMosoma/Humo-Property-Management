@@ -1,0 +1,111 @@
+@let w = item();
+@let v = view();
+
+@if (!compact()) {
+  <div class="head">
+    <div class="head-text">
+      <div class="eyebrow">
+        <span class="label-caps">{{ v.typeLabel }}</span>
+        <span class="ref">{{ w.ref }}</span>
+      </div>
+      <h3>
+        <button type="button" class="title-btn" (click)="details.emit(w)">{{ w.title }}</button>
+      </h3>
+      <div class="meta">
+        @if (scheme(); as s) {
+          <a [routerLink]="['/schemes', s.id, 'overview']">{{ s.name }}</a>
+        }
+        @if (w.supplierName) {
+          <span>· {{ w.supplierName }}</span>
+        }
+      </div>
+    </div>
+    <div class="amount-block">
+      @if (w.amount !== undefined) {
+        <div class="amount money">{{ w.amount | rand }}</div>
+      }
+      <ui-status-pill [label]="v.due" [tone]="v.tone" />
+    </div>
+  </div>
+}
+
+<p class="detail">{{ w.detail }}</p>
+
+@if (budget(); as b) {
+  <div class="budget">
+    <div class="budget-line">
+      <span>{{ b.category }} budget</span>
+      @if (b.remaining >= 0) {
+        <span class="money">{{ b.remaining | rand: 'whole' }} left after this</span>
+      } @else {
+        <span class="money over">Over budget by {{ -b.remaining | rand: 'whole' }}</span>
+      }
+    </div>
+    <div class="bar" role="img" [attr.aria-label]="'Spent ' + b.spentPct.toFixed(0) + '% of annual budget before this item'">
+      <span class="spent" [style.width.%]="b.spentPct"></span>
+      <span class="this" [style.width.%]="b.thisPct"></span>
+      <span class="overrun" [style.width.%]="b.overPct"></span>
+    </div>
+    <div class="legend">
+      <span><i class="k spent"></i>Spent</span>
+      <span><i class="k this"></i>This {{ v.typeLabel.toLowerCase() }}</span>
+      <span class="annual">Annual <span class="money">{{ b.annual | rand: 'whole' }}</span></span>
+    </div>
+  </div>
+}
+
+@if (w.evidence?.length) {
+  <ul class="evidence" aria-label="Evidence">
+    @for (e of w.evidence; track e) {
+      <li><ion-icon name="document-attach-outline" aria-hidden="true" />{{ e }}</li>
+    }
+  </ul>
+}
+
+@if (w.status !== 'open') {
+  <div class="outcome" [class.rejected]="w.status === 'rejected'">
+    <ion-icon [name]="w.status === 'approved' ? 'checkmark-circle-outline' : 'close-circle-outline'" aria-hidden="true" />
+    <span>
+      <strong>{{ w.status === 'approved' ? 'Approved' : 'Rejected' }}</strong> by {{ w.decidedBy }} · {{ formatDate(w.decidedAt) }}
+      @if (w.comment) {
+        <span class="comment">“{{ w.comment }}”</span>
+      }
+    </span>
+  </div>
+} @else if (canDecide()) {
+  @if (rejecting()) {
+    <div class="reject">
+      <label for="reason-{{ w.id }}">Reason for rejecting <span class="text-muted">(sent to the portfolio manager)</span></label>
+      <textarea
+        id="reason-{{ w.id }}"
+        rows="2"
+        [value]="comment()"
+        (input)="comment.set($any($event.target).value)"
+        placeholder="e.g. Please obtain a third quote before we proceed."
+      ></textarea>
+      <div class="actions">
+        <button type="button" class="btn btn-danger" [disabled]="!comment().trim() || busy()" (click)="confirmReject()">Reject {{ w.ref }}</button>
+        <button type="button" class="btn btn-ghost" (click)="rejecting.set(false)">Cancel</button>
+      </div>
+    </div>
+  } @else {
+    <div class="actions">
+      <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="approve()">
+        <ion-icon [name]="needsStepUp() ? 'finger-print-outline' : 'checkmark-outline'" aria-hidden="true" /> {{ needsStepUp() ? 'Verify and approve' : 'Approve' }}@if (w.amount !== undefined) { {{ w.amount | rand }} }
+      </button>
+      <button type="button" class="btn btn-secondary" [disabled]="busy()" (click)="rejecting.set(true)">Reject…</button>
+      @if (!compact()) {
+        <button type="button" class="btn btn-ghost details" (click)="details.emit(w)">Details</button>
+      }
+    </div>
+  }
+} @else {
+  <p class="waiting">
+    <ion-icon name="time-outline" aria-hidden="true" />
+    @if (session.readOnly()) {
+      Observe mode — decisions are disabled.
+    } @else {
+      Waiting for {{ w.approverRoles?.includes('trustee') ? 'trustee' : 'agency' }} approval. You can view it, but your role doesn’t decide it.
+    }
+  </p>
+}

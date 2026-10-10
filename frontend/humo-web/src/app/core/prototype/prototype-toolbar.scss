@@ -1,0 +1,260 @@
+// Deliberately styled differently from the product (violet accent, dashed border)
+// so reviewers never mistake it for a real feature.
+:host {
+  --proto: #6b4fd8;
+  --proto-soft: rgba(107, 79, 216, 0.1);
+
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--s-2);
+  font-size: var(--fs-sm);
+}
+
+.fab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  height: 40px;
+  padding: 0 var(--s-4) 0 var(--s-3);
+  color: var(--proto);
+  background: var(--c-surface);
+  border: 1px dashed var(--proto);
+  border-radius: var(--r-pill);
+  box-shadow: var(--shadow-overlay);
+  cursor: pointer;
+
+  ion-icon {
+    font-size: 18px;
+  }
+
+  &.active {
+    background: var(--proto-soft);
+  }
+}
+
+.fab-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  text-align: left;
+}
+
+.fab-label {
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.fab-role {
+  font-size: var(--fs-xs);
+  color: var(--c-text-2);
+}
+
+.fab-state {
+  padding: 2px 8px;
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--proto);
+  border-radius: var(--r-pill);
+}
+
+.panel {
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  padding: var(--s-4);
+  background: var(--c-surface);
+  border: 1px dashed var(--proto);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-overlay);
+
+  header {
+    display: flex;
+    gap: var(--s-2);
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: var(--s-3);
+  }
+}
+
+.title {
+  font-weight: var(--fw-semibold);
+  color: var(--proto);
+}
+
+.sub {
+  font-size: var(--fs-xs);
+  color: var(--c-text-muted);
+}
+
+.group-label {
+  margin: var(--s-4) 0 var(--s-2);
+}
+
+.personas {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.persona {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  padding: var(--s-2);
+  text-align: left;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--r);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--c-surface-hover);
+  }
+
+  &[aria-checked='true'] {
+    background: var(--proto-soft);
+    border-color: var(--proto);
+
+    .avatar {
+      color: #fff;
+      background: var(--proto);
+    }
+  }
+}
+
+.avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semibold);
+  color: var(--c-text-2);
+  background: var(--c-surface-sunken);
+  border-radius: 50%;
+}
+
+.persona-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.role {
+  font-weight: var(--fw-medium);
+}
+
+.who {
+  overflow: hidden;
+  font-size: var(--fs-xs);
+  color: var(--c-text-muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding: 2px;
+  background: var(--c-surface-sunken);
+  border-radius: var(--r);
+
+  button {
+    height: 30px;
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-medium);
+    color: var(--c-text-2);
+    background: none;
+    border: 0;
+    border-radius: var(--r-sm);
+    cursor: pointer;
+
+    &[aria-checked='true'] {
+      color: var(--proto);
+      background: var(--c-surface);
+      box-shadow: var(--shadow-sm);
+    }
+  }
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin-top: var(--s-4);
+  font-size: var(--fs-xs);
+  color: var(--c-text-2);
+  cursor: pointer;
+
+  input {
+    accent-color: var(--proto);
+  }
+}
+
+// On phones, sit above the resident tab bar and shrink to an icon.
+@media (max-width: 991px) {
+  :host {
+    bottom: 76px;
+    right: 12px;
+  }
+
+  .fab-text {
+    display: none;
+  }
+
+  .fab {
+    width: 40px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .fab-state {
+    display: none;
+  }
+}
+
+.multi {
+  margin-left: var(--s-1);
+  padding: 1px 6px;
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semibold);
+  color: var(--proto);
+  background: var(--proto-soft);
+  border-radius: var(--r-pill);
+}
+
+.multi.humo {
+  color: var(--role-humo);
+  background: color-mix(in srgb, var(--role-humo) 12%, transparent);
+}
+
+.avatar.humo {
+  color: var(--role-humo);
+  background: color-mix(in srgb, var(--role-humo) 14%, transparent);
+}
+
+.hint {
+  margin: -4px 0 var(--s-2);
+  font-size: var(--fs-2xs);
+  color: var(--c-text-muted);
+}
+
+.reset {
+  margin-top: var(--s-3);
+}
+
+.saved { display: block; margin-top: 2px; font-size: var(--fs-2xs); color: var(--c-text-faint); }
+.sim-actions { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-bottom: var(--s-3); }

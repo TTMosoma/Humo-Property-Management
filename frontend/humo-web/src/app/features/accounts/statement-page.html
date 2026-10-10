@@ -1,0 +1,74 @@
+@if (result.loading()) {
+  <ui-skeleton [count]="10" />
+} @else if (result.failed()) {
+  <div class="surface"><ui-error-state title="We couldn’t load this statement" (retry)="result.retry()" /></div>
+} @else if (!view()) {
+  <div class="surface">
+    <ui-empty-state illustration="not-found" title="No statement for this period" message="Statements are kept for the periods shown on the account." />
+  </div>
+} @else {
+  <div class="toolbar no-print">
+    @if (isOwnerView()) {
+      <a class="btn btn-ghost btn-sm" routerLink="/my/account"><ion-icon name="chevron-back-outline" aria-hidden="true" /> My account</a>
+    } @else {
+      <ui-relationship-chain [links]="chain()" />
+    }
+    <div class="actions">
+      @if (!isOwnerView()) {
+        <button type="button" class="btn btn-secondary" (click)="email()"><ion-icon name="mail-outline" aria-hidden="true" /> Email to owner</button>
+      }
+      <button type="button" class="btn btn-primary" (click)="print()"><ion-icon name="print-outline" aria-hidden="true" /> Print or save PDF</button>
+    </div>
+  </div>
+
+  @if (canPreview()) {
+    <section class="template-bar no-print" aria-label="Template">
+      <div class="tb-row">
+        <div class="tb-text">
+          @if (shown(); as t) {
+            <span class="tb-label">Template</span>
+            <strong>{{ t.template.name }}</strong>
+            <span class="muted">{{ tierLabel(t.template.tier) === t.template.name ? '' : tierLabel(t.template.tier) + ' · ' }}v{{ t.version.version }}</span>
+            @if (previewing()) {
+              <span class="preview-tag">Preview</span>
+            } @else {
+              <span class="muted">· as issued</span>
+            }
+          }
+        </div>
+        <div class="tb-actions">
+          @if (previewing()) {
+            <button type="button" class="btn btn-ghost btn-sm" (click)="showIssued()">Show as issued</button>
+          }
+          <button type="button" class="btn btn-secondary btn-sm" [attr.aria-expanded]="choosing()" (click)="choosing.set(!choosing())">
+            <ion-icon name="color-palette-outline" aria-hidden="true" /> {{ choosing() ? 'Done' : 'Preview another template' }}
+          </button>
+        </div>
+      </div>
+      @if (previewing() && issued(); as i) {
+        <p class="tb-note">This statement was issued with {{ i.template.name }} v{{ i.version.version }}. The preview uses the same figures; nothing that was sent changes.</p>
+      } @else if (defaultTemplate(); as def) {
+        @if (def.id !== shown()?.template?.id) {
+          <p class="tb-note">New statements use your default, {{ def.name }}.</p>
+        }
+      }
+      @if (choosing()) {
+        <app-template-picker
+          label="Levy statement template"
+          [options]="options()"
+          [selected]="shown()?.template?.id ?? null"
+          [defaultId]="defaultTemplate()?.id ?? null"
+          (choose)="choose($event)"
+        />
+      }
+    </section>
+  }
+
+  @if (shown(); as t) {
+    @if (registry.settings(); as settings) {
+      <app-document-renderer [data]="document()!" [template]="t" [settings]="settings" [organisationName]="session.organisation()?.name ?? ''" />
+    }
+  } @else {
+    <ui-skeleton [count]="10" />
+  }
+}

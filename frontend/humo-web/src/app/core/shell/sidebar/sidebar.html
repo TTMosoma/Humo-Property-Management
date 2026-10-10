@@ -1,0 +1,164 @@
+<!-- The product, not the family: "Humo" + "Property Management" reads as Humo Property Management. -->
+<div class="brand" role="img" [attr.aria-label]="product.name" [attr.title]="product.name + ' — ' + tagline">
+  @if (collapsed()) {
+    <ui-logo variant="mark" [reverse]="true" [height]="30" />
+  } @else {
+    <ui-logo variant="wordmark" [reverse]="true" [height]="26" />
+    <span class="brand-tag" aria-hidden="true">Property<br />Management</span>
+  }
+</div>
+
+@if (!collapsed()) {
+  <app-context-card />
+}
+
+<nav class="nav" aria-label="Main">
+  @for (section of mainSections(); track section.id) {
+    @if (section.label && !collapsed()) {
+      <div class="section-label">{{ section.label }}</div>
+    } @else if (section.label) {
+      <div class="section-rule"></div>
+    }
+    <ul class="list">
+      @for (node of section.nodes; track node.id) {
+        <ng-container *ngTemplateOutlet="nodeTpl; context: { $implicit: node }" />
+        @if (node.id === 'schemes' && !collapsed() && scope.pinned().length) {
+          <li>
+            <ul class="pinned" aria-label="Pinned schemes">
+              @for (s of scope.pinned(); track s.id) {
+                <li>
+                  <a
+                    class="pin-item"
+                    [routerLink]="['/schemes', s.id, 'overview']"
+                    [class.active]="activeSchemeId() === s.id"
+                    [attr.aria-current]="activeSchemeId() === s.id ? 'page' : null"
+                    (click)="navigated.emit()"
+                  >
+                    <span class="code">{{ s.code }}</span>
+                    <span class="item-label">{{ s.name }}</span>
+                    @if (scope.scopeId() === s.id) {
+                      <span class="scoped" title="You are working on this scheme" aria-label="Current scope"></span>
+                    }
+                  </a>
+                </li>
+              }
+            </ul>
+          </li>
+        }
+      }
+    </ul>
+  }
+</nav>
+
+<div class="footer">
+  <ul class="list">
+    @for (node of footerNodes(); track node.id) {
+      <ng-container *ngTemplateOutlet="nodeTpl; context: { $implicit: node }" />
+    }
+  </ul>
+  @if (canCollapse()) {
+    <button
+      type="button"
+      class="item collapse-toggle"
+      (click)="toggleCollapse.emit()"
+      [attr.aria-label]="collapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+      [attr.title]="collapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+    >
+      <ion-icon [name]="collapsed() ? 'chevron-forward-outline' : 'chevron-back-outline'" aria-hidden="true" />
+      @if (!collapsed()) {
+        <span class="item-label">Collapse</span>
+      }
+    </button>
+  }
+</div>
+
+<ng-template #nodeTpl let-node>
+  @if (isGroup(node)) {
+    @let group = asGroup(node);
+    @let open = nav.isExpanded(group.id) && !collapsed();
+    <li class="group-li">
+      <button
+        type="button"
+        class="item"
+        [class.has-active]="nav.activeGroupId() === group.id"
+        [attr.aria-expanded]="collapsed() ? null : open"
+        [attr.title]="collapsed() ? group.label : null"
+        [attr.aria-haspopup]="collapsed() ? 'menu' : null"
+        (click)="onGroupClick(group)"
+        [cdkMenuTriggerFor]="collapsed() ? flyout : null"
+        [cdkMenuPosition]="flyoutPosition"
+      >
+        <ion-icon [name]="group.icon" aria-hidden="true" />
+        @if (!collapsed()) {
+          <span class="item-label">{{ group.label }}</span>
+          @if (!open && groupAttention(group)) {
+            <span class="dot" aria-hidden="true"></span>
+          }
+          <ion-icon class="chevron" [class.open]="open" name="chevron-down-outline" aria-hidden="true" />
+        } @else if (groupAttention(group)) {
+          <span class="rail-dot" aria-hidden="true"></span>
+        }
+      </button>
+      @if (open) {
+        <ul class="sub">
+          @for (child of group.children; track child.id) {
+            <li>
+              <a
+                class="sub-item"
+                [routerLink]="child.route"
+                [class.active]="nav.isActive(child)"
+                [attr.aria-current]="nav.isActive(child) ? 'page' : null"
+                (click)="navigated.emit()"
+              >
+                <span class="item-label">{{ child.label }}</span>
+                @if (child.locked) {
+                  <ion-icon class="lock" name="lock-closed-outline" aria-label="Not in your plan" />
+                } @else if (nav.badgeCount(child); as n) {
+                  <span class="badge" [class.attention]="nav.badgeAttention(child)">{{ n }}</span>
+                }
+              </a>
+            </li>
+          }
+        </ul>
+      }
+      <!-- Collapsed rail: the group opens as a flyout instead of jumping to its first page. -->
+      <ng-template #flyout>
+        <div class="menu-panel flyout" cdkMenu>
+          <div class="menu-section-label label-caps">{{ group.label }}</div>
+          @for (child of group.children; track child.id) {
+            <a class="menu-item" cdkMenuItem [routerLink]="child.route" (click)="navigated.emit()">
+              {{ child.label }}
+              @if (nav.badgeCount(child); as n) {
+                <span class="menu-item-meta">{{ n }}</span>
+              }
+            </a>
+          }
+        </div>
+      </ng-template>
+    </li>
+  } @else {
+    @let link = asLink(node);
+    <li>
+      <a
+        class="item"
+        [routerLink]="link.route"
+        [class.active]="nav.isActive(link) && !(link.id === 'schemes' && activeSchemeId() && isPinned(activeSchemeId()!))"
+        [attr.aria-current]="nav.isActive(link) ? 'page' : null"
+        [attr.title]="collapsed() ? link.label : null"
+        (click)="navigated.emit()"
+      >
+        <ion-icon [name]="link.icon ?? 'ellipsis-horizontal-outline'" aria-hidden="true" />
+        @if (!collapsed()) {
+          <span class="item-label">{{ link.label }}</span>
+          @if (link.locked) {
+            <ion-icon class="lock" name="lock-closed-outline" aria-label="Not in your plan" />
+          } @else if (nav.badgeCount(link); as n) {
+            <span class="badge" [class.attention]="nav.badgeAttention(link)" [attr.aria-label]="n + ' ' + link.label.toLowerCase()">{{ n }}</span>
+          }
+        } @else if (nav.badgeCount(link)) {
+          <span class="rail-dot" [class.neutral]="!nav.badgeAttention(link)" aria-hidden="true"></span>
+        }
+      </a>
+    </li>
+  }
+</ng-template>

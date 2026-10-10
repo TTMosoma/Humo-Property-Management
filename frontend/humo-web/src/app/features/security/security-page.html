@@ -1,0 +1,163 @@
+@let actor = session.actor();
+
+<ui-page-header
+  eyebrow="Settings"
+  title="Security"
+  subtitle="How you sign in to Humo and prove it’s you for sensitive actions. Humo uses your device’s own security — fingerprint, face or PIN — so there are no codes to type and no extra authenticator app."
+/>
+
+@if (session.isImpersonating()) {
+  <div class="notice surface">
+    <ion-icon name="lock-closed-outline" aria-hidden="true" />
+    <div>
+      <strong>{{ session.identity().name }}’s security settings aren’t available while impersonating.</strong>
+      <p>Passkeys, devices and sessions belong to the person who owns them. Below are your own, {{ actor.name }}.</p>
+    </div>
+  </div>
+}
+
+@if (failed()) {
+  <ui-error-state (retry)="result.retry()" />
+} @else if (loading() || !profile()) {
+  <ui-skeleton variant="tiles" [count]="4" />
+} @else {
+  @let p = profile()!;
+  <div class="layout">
+    <div class="col">
+      <!-- Identity -->
+      <section class="card surface identity">
+        <span class="avatar">{{ actor.initials }}</span>
+        <div class="id-text">
+          <h2>{{ actor.name }}</h2>
+          <div class="muted">{{ actor.email }}</div>
+          <div class="roles">
+            @for (m of session.assignments(); track m.id) {
+              <span class="role-chip">{{ roleLabels[m.role] }} · {{ m.label }}</span>
+            }
+          </div>
+          <p class="small muted">One Humo identity{{ session.assignments().length > 1 ? ' with ' + session.assignments().length + ' roles' : '' }}. These settings protect every role you hold.</p>
+        </div>
+        <div class="fresh" [class.on]="fresh()">
+          <ion-icon [name]="fresh() ? 'shield-checkmark-outline' : 'shield-outline'" aria-hidden="true" />
+          <span>{{ fresh() ? 'Verified in the last 5 minutes' : 'Sensitive actions will ask you to verify' }}</span>
+        </div>
+      </section>
+
+      <!-- Passkeys -->
+      <section class="card surface">
+        <header>
+          <div>
+            <h2>Passkeys</h2>
+            <p class="muted small">Sign in and verify with Windows Hello, Face ID, Touch ID or your phone’s screen lock.</p>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" (click)="addPasskey()" [disabled]="session.isImpersonating()">
+            <ion-icon name="add-outline" aria-hidden="true" /> Add a passkey
+          </button>
+        </header>
+        <ul class="list">
+          @for (k of p.passkeys; track k.id) {
+            <li>
+              <span class="ico"><ion-icon name="finger-print-outline" aria-hidden="true" /></span>
+              <span class="li-text">
+                <span class="li-name">{{ k.name }}</span>
+                <span class="li-sub">{{ k.provider }} · added {{ formatDate(k.createdAt, true) }} · {{ k.lastUsedAt ? 'last used ' + relativeTime(k.lastUsedAt) : 'not used yet' }}</span>
+              </span>
+              <button type="button" class="btn btn-ghost btn-sm" (click)="removePasskey(k.id, k.name)" [disabled]="session.isImpersonating()">Remove</button>
+            </li>
+          } @empty {
+            <li class="empty">No passkeys yet. Add one so you can sign in without a password.</li>
+          }
+        </ul>
+      </section>
+
+      <!-- Devices -->
+      <section class="card surface">
+        <header>
+          <div>
+            <h2>Humo Mobile & trusted devices</h2>
+            <p class="muted small">A phone with Humo Mobile can approve sign-ins and sensitive actions with a tap and a matching number.</p>
+          </div>
+        </header>
+        <ul class="list">
+          @for (d of p.devices; track d.id) {
+            <li>
+              <span class="ico"><ion-icon [name]="d.kind === 'phone' ? 'phone-portrait-outline' : 'laptop-outline'" aria-hidden="true" /></span>
+              <span class="li-text">
+                <span class="li-name">
+                  {{ d.name }}
+                  @if (d.humoMobile) {
+                    <ui-status-pill label="Humo Mobile" tone="accent" />
+                  }
+                </span>
+                <span class="li-sub">Trusted since {{ formatDate(d.addedAt, true) }} · last seen {{ relativeTime(d.lastSeenAt) }}</span>
+              </span>
+              <button type="button" class="btn btn-ghost btn-sm" (click)="removeDevice(d.id, d.name)" [disabled]="session.isImpersonating()">Remove</button>
+            </li>
+          }
+        </ul>
+      </section>
+
+      <!-- Sessions -->
+      <section class="card surface">
+        <header>
+          <div>
+            <h2>Where you’re signed in</h2>
+            <p class="muted small">If you don’t recognise a session, sign it out and tell your administrator.</p>
+          </div>
+          @if (otherSessions()) {
+            <button type="button" class="btn btn-secondary btn-sm" (click)="signOutOthers()" [disabled]="session.isImpersonating()">Sign out all others</button>
+          }
+        </header>
+        <ul class="list">
+          @for (s of p.sessions; track s.id) {
+            <li>
+              <span class="ico"><ion-icon [name]="s.browser === 'Humo Mobile' ? 'phone-portrait-outline' : 'globe-outline'" aria-hidden="true" /></span>
+              <span class="li-text">
+                <span class="li-name">
+                  {{ s.browser }} · {{ s.device }}
+                  @if (s.current) {
+                    <ui-status-pill label="This session" tone="success" />
+                  }
+                </span>
+                <span class="li-sub">{{ s.location }} · {{ s.ip }} · {{ s.current ? 'active now' : 'active ' + relativeTime(s.lastActiveAt) }}</span>
+              </span>
+              @if (!s.current) {
+                <button type="button" class="btn btn-ghost btn-sm" (click)="signOut(s.id, s.device)" [disabled]="session.isImpersonating()">Sign out</button>
+              }
+            </li>
+          }
+        </ul>
+      </section>
+    </div>
+
+    <aside class="col side">
+      <section class="card surface">
+        <h2>When Humo asks again</h2>
+        <p class="muted small">Day-to-day work uses your normal sign-in. These ask for a quick fresh verification:</p>
+        <ul class="bullets">
+          @for (a of sensitive(); track a) {
+            <li>{{ sensitiveLabels[a] }}</li>
+          }
+        </ul>
+        <p class="muted small">After verifying, you won’t be asked again for 5 minutes.</p>
+      </section>
+
+      <section class="card surface">
+        <h2>Recent security activity</h2>
+        <ul class="activity">
+          @for (e of activity(); track e.id) {
+            <li [class.bad]="e.result !== 'success'">
+              <span class="a-what">{{ e.action }}</span>
+              <span class="a-when">{{ relativeTime(e.at) }} · {{ e.session.device }}</span>
+            </li>
+          } @empty {
+            <li class="empty">Nothing recent.</li>
+          }
+        </ul>
+        @if (session.can('Audit.View') && session.hasFeature('audit-log')) {
+          <a routerLink="/settings/audit" class="link">Open the audit log</a>
+        }
+      </section>
+    </aside>
+  </div>
+}

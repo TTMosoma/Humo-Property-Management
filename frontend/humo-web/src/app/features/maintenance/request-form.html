@@ -1,0 +1,161 @@
+@if (mode() === 'resident') {
+  <ui-page-header eyebrow="Maintenance" title="Report a problem" subtitle="Tell us what’s wrong. We’ll keep you updated until it’s fixed." />
+} @else {
+  <ui-page-header eyebrow="Maintenance" title="Log a request" subtitle="Capture the problem now; triage, quotes and booking follow on the job." />
+}
+
+<form class="form" (submit)="$event.preventDefault(); submit()" novalidate>
+  @if (capture()) {
+  <!-- Photos -->
+  <section class="block" [class.capture]="capture()">
+    <h2 class="q">@if (capture()) { Start with a photo } @else { Photos <span class="opt">(they help suppliers quote faster)</span> }</h2>
+    <div class="photos">
+      @for (p of photos(); track p) {
+        <ui-photo-tile [caption]="p" [seed]="title()" />
+      }
+      <label class="add-photo">
+        <input type="file" accept="image/*" capture="environment" multiple class="visually-hidden" (change)="takePhotos($event)" />
+        <ion-icon name="camera-outline" aria-hidden="true" />
+        <span>{{ photos().length ? 'Add another' : 'Take or add a photo' }}</span>
+      </label>
+    </div>
+    <p class="hint">On a phone this opens the camera. Prototype: the photo’s name is kept, not the image.</p>
+  </section>
+
+  }
+
+  @if (attempted() && errors().length) {
+    <div class="errors" role="alert">
+      <strong>Please check:</strong>
+      <ul>@for (e of errors(); track e) { <li>{{ e }}</li> }</ul>
+    </div>
+  }
+
+  <!-- Where -->
+  <section class="block">
+    <h2 class="q">Where is the problem?</h2>
+    @if (mode() === 'staff') {
+      <label class="field">Scheme
+        <select [value]="schemeId()" (change)="schemeId.set($any($event.target).value); unit.set(null)">
+          <option value="">Choose a scheme…</option>
+          @for (s of scope.accessible(); track s.id) { <option [value]="s.id">{{ s.name }} ({{ s.code }})</option> }
+        </select>
+      </label>
+    }
+    <div class="seg" role="radiogroup" aria-label="Location type">
+      <button type="button" role="radio" [attr.aria-checked]="where() === 'unit'" (click)="where.set('unit')">
+        <ion-icon name="home-outline" aria-hidden="true" /> {{ mode() === 'resident' ? 'In my unit' : 'In a unit' }}
+      </button>
+      <button type="button" role="radio" [attr.aria-checked]="where() === 'common'" (click)="where.set('common')">
+        <ion-icon name="business-outline" aria-hidden="true" /> Common property
+      </button>
+    </div>
+    @if (where() === 'unit') {
+      @if (mode() === 'staff') {
+        @if (unit(); as u) {
+          <div class="picked">
+            <strong>{{ u.scheme.code }} {{ u.unit.number }}</strong> · {{ u.owners[0]?.displayName }}@if (u.tenant) { · tenant {{ u.tenant.displayName }} }
+            <button type="button" class="btn btn-ghost btn-sm" (click)="unit.set(null)">Change</button>
+          </div>
+        } @else {
+          <label class="field">Unit
+            <input type="search" placeholder="Unit number, e.g. 23" [disabled]="!schemeId()" [value]="unitQuery()" (input)="unitQuery.set($any($event.target).value)" />
+          </label>
+          @if (unitResults().length) {
+            <ul class="results">
+              @for (r of unitResults(); track r.unit.id) {
+                <li><button type="button" (click)="pickUnit(r)"><strong>{{ r.scheme.code }} {{ r.unit.number }}</strong> · {{ r.owners[0]?.displayName }}</button></li>
+              }
+            </ul>
+          }
+        }
+      } @else if (unit(); as u) {
+        <p class="hint">{{ u.scheme.name }}, Unit {{ u.unit.number }}</p>
+      }
+      <label class="field">Which room or area? <span class="opt">(optional)</span>
+        <input type="text" placeholder="e.g. Kitchen ceiling" [value]="location()" (input)="location.set($any($event.target).value)" />
+      </label>
+    } @else {
+      <label class="field">Where on the property?
+        <input type="text" placeholder="e.g. Main gate, pool, Block B stairwell" [value]="location()" (input)="location.set($any($event.target).value)" />
+        <ui-field-error [errors]="serverErrors()" field="location" />
+      </label>
+    }
+  </section>
+
+  <!-- What -->
+  <section class="block">
+    <h2 class="q">What kind of problem is it?</h2>
+    <div class="tiles" role="radiogroup" aria-label="Kind of problem">
+      @for (t of tiles; track t.trade) {
+        <button type="button" role="radio" class="tile" [attr.aria-checked]="category() === t.trade" (click)="category.set(t.trade)">
+          <ion-icon [name]="t.icon" aria-hidden="true" />
+          <span>{{ t.label }}</span>
+        </button>
+      }
+    </div>
+    <label class="field">Short title
+      <input type="text" maxlength="80" placeholder="e.g. Geyser leaking into the ceiling" [value]="title()" (input)="title.set($any($event.target).value)" [attr.aria-invalid]="!!serverErrors()['title']" />
+      <ui-field-error [errors]="serverErrors()" field="title" />
+    </label>
+    <label class="field">Describe it <span class="opt">(optional)</span>
+      <textarea rows="3" placeholder="What happened, since when, and anything we should know about access." [value]="description()" (input)="description.set($any($event.target).value)"></textarea>
+    </label>
+  </section>
+
+  <!-- How urgent -->
+  <section class="block">
+    @if (mode() === 'resident') {
+      <h2 class="q">Is it urgent?</h2>
+      <p class="hint">Urgent means water is running, there’s no power, or someone could get hurt.</p>
+      <div class="seg" role="radiogroup" aria-label="Urgency">
+        <button type="button" role="radio" [attr.aria-checked]="urgent() === true" (click)="urgent.set(true)">Yes, urgent</button>
+        <button type="button" role="radio" [attr.aria-checked]="urgent() === false" (click)="urgent.set(false)">No, it can wait a few days</button>
+      </div>
+    } @else {
+      <div class="row">
+        <label class="field">Priority
+          <select [value]="priority()" (change)="priority.set($any($event.target).value)">
+            @for (p of priorities; track p) { <option [value]="p">{{ priorityLabel[p] }}</option> }
+          </select>
+        </label>
+        <label class="field">Reported by
+          <select [value]="reporterRole()" (change)="reporterRole.set($any($event.target).value)">
+            <option value="staff">Me ({{ session.identity().name }})</option>
+            <option value="owner">An owner</option>
+            <option value="tenant">A tenant</option>
+            <option value="trustee">A trustee</option>
+          </select>
+        </label>
+        @if (reporterRole() !== 'staff') {
+          <label class="field">Their name
+            <input type="text" [value]="reporterName()" (input)="reporterName.set($any($event.target).value)" />
+          </label>
+        }
+      </div>
+    }
+  </section>
+
+  @if (!capture()) {
+  <!-- Photos -->
+  <section class="block" [class.capture]="capture()">
+    <h2 class="q">@if (capture()) { Start with a photo } @else { Photos <span class="opt">(they help suppliers quote faster)</span> }</h2>
+    <div class="photos">
+      @for (p of photos(); track p) {
+        <ui-photo-tile [caption]="p" [seed]="title()" />
+      }
+      <label class="add-photo">
+        <input type="file" accept="image/*" capture="environment" multiple class="visually-hidden" (change)="takePhotos($event)" />
+        <ion-icon name="camera-outline" aria-hidden="true" />
+        <span>{{ photos().length ? 'Add another' : 'Take or add a photo' }}</span>
+      </label>
+    </div>
+    <p class="hint">On a phone this opens the camera. Prototype: the photo’s name is kept, not the image.</p>
+  </section>
+
+  }
+  <div class="submit">
+    <button type="button" class="btn btn-ghost" (click)="cancel()">Cancel</button>
+    <button type="submit" class="btn btn-primary" [disabled]="busy()">{{ mode() === 'resident' ? 'Send to managing agent' : 'Log request' }}</button>
+  </div>
+</form>
