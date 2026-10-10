@@ -8,6 +8,7 @@ import {
   AuditQuery,
   CurrentSession,
   FieldErrors,
+  HUMO_EMAIL_DOMAIN,
   IMPERSONATION_REASONS,
   Identity,
   ImpersonationSession,
@@ -72,7 +73,8 @@ export class InMemoryAccessDataSource extends AccessDataSource {
           const e: FieldErrors = {};
           if (input.name.trim().split(/\s+/).length < 2) e['name'] = 'Enter their first name and surname.';
           if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) e['email'] = 'Enter the email address the invitation goes to.';
-          else if (existing?.kind === 'humo') e['email'] = 'That’s a Humo staff address; Humo roles are granted by Humo.';
+          // Humo addresses are reserved for Humo staff, who are managed on the platform, never in an agency.
+          else if (existing?.kind === 'humo' || email.endsWith(`@${HUMO_EMAIL_DOMAIN}`)) e['email'] = 'That’s a Humo staff address. Humo staff are managed by Humo, not from an agency.';
           else if (existing?.memberships.some((m) => m.organisationId === input.organisationId && m.status !== 'ended')) e['email'] = `${existing.name} already has access here. Add the role from their access instead.`;
           if (a.scope.type === 'schemes' && a.scope.schemeIds.length === 0) e['scope'] = 'Choose at least one scheme.';
           if (a.scope.type === 'unit' && !a.scope.unitId) e['unit'] = 'Choose the unit.';
@@ -127,6 +129,7 @@ export class InMemoryAccessDataSource extends AccessDataSource {
             if (details.name.trim().split(/\s+/).length < 2) e['name'] = 'Enter their first name and surname.';
             if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) e['email'] = 'Enter a valid email address.';
             else if (this.store.identities().some((i) => i.id !== identityId && i.email.toLowerCase() === email)) e['email'] = 'Someone else already signs in with this email.';
+            else if (target?.kind === 'customer' && email.endsWith(`@${HUMO_EMAIL_DOMAIN}`)) e['email'] = 'That’s a Humo staff address. Use the person’s own email.';
             return e;
           },
         },

@@ -304,11 +304,12 @@ export class InMemoryHumoTeamDataSource extends HumoTeamDataSource {
         this.platform.setAccountManager(a.organisationIds, { id: identityId, name: target.name });
         return;
       case 'suspend':
-        this.store.changeIdentity(identityId, (i) => ({ ...i, status: 'suspended' }));
+        this.store.changeIdentity(identityId, (i) => ({ ...i, status: 'suspended', suspendedFrom: i.status === 'invited' ? 'invited' : 'active' }));
         this.endSessions(identityId);
         return;
       case 'restore':
-        this.store.changeIdentity(identityId, (i) => ({ ...i, status: 'active' }));
+        // Back to where they were: an invitee who never accepted is still invited, not active.
+        this.store.changeIdentity(identityId, (i) => ({ ...i, status: i.suspendedFrom ?? 'active', suspendedFrom: undefined }));
         return;
       case 'offboard': {
         const customers = this.customersOf(identityId);

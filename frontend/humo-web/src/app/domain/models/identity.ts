@@ -91,6 +91,8 @@ export interface Identity {
   email: string;
   kind: IdentityKind;
   status: IdentityStatus;
+  /** While suspended: the status a restore returns to. Someone suspended before accepting their invitation is still invited. */
+  suspendedFrom?: 'invited' | 'active';
   /** Job title, for agency staff (e.g. "Senior Accountant"). */
   title?: string;
   /** Id that work items, jobs and schemes use to refer to agency staff. */

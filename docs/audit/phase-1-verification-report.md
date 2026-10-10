@@ -172,3 +172,40 @@ The P0-7 defects and the missing test tooling don't change the merge decision fo
 **Scope:** two files of application code plus one doc. No screens, design system or decisions change.
 
 *Stopping here. Phase 2 starts only after your approval.*
+
+---
+
+## 11. Phase 2 result: P0-7 (approved and implemented on 10 October 2026)
+
+**Changes** (application code; no screens, design system or decisions changed):
+
+| File | Change |
+|---|---|
+| `domain/models/identity.ts` | `Identity.suspendedFrom?: 'invited' \| 'active'`: the status a restore returns to |
+| `mock/data-sources/in-memory-humo-team-data-source.ts` | `suspend` records `suspendedFrom`; `restore` returns to it (default `active`) and clears it |
+| `mock/data-sources/in-memory-access-data-sources.ts` | `invite` refuses any `@humo.example` address (`HUMO_EMAIL_DOMAIN`), not only existing Humo identities; `updateIdentity` refuses changing an agency user's email to a Humo address |
+
+**Re-verification (live, dev server):**
+
+| Check | Persona | Observed | Status |
+|---|---|---|---|
+| S11: restore a suspended invitee | Terry | New invitee `humo-59`: Invited → Suspended (`suspendedFrom: 'invited'`) → **Invited** (`suspendedFrom` cleared). The "Invited: they haven't signed in yet" banner and the accept button are back. | **Pass** |
+| S11 regression: restore an active member | Terry | Kagiso: Active → Suspended → **Active** | **Pass** |
+| S15: agency invite with a Humo address | Thandeka | `phase2.reserved@HUMO.example` (mixed case) → field error "That's a Humo staff address. Humo staff are managed by Humo, not from an agency."; nothing created | **Pass** |
+| S15 regression: ordinary agency invite | Thandeka | `reserved.address@acacia-ma.example` → "Invitation sent…", listed | **Pass** |
+| Edit an agency user's email to a Humo address | Thandeka (direct `updateIdentity` call) | Refused: "That's a Humo staff address. Use the person's own email." | **Pass** |
+| Console errors | — | None | **Pass** |
+| `tsc -p tsconfig.app.json --noEmit` | — | Exit 0 | **Pass** |
+| `ng build` (production) | — | Exit 0; 1.36 MB initial (unchanged budget warning) | **Pass** |
+
+**Known limitation:**
+- An identity suspended *before* this fix has no `suspendedFrom`, so it restores to Active.
+- Zinhle (`humo-38`) had already been restored to Active during Phase 1. Restoring her doesn't undo that.
+- Both are simulated-data artefacts; the backend will store the previous status from the start.
+
+**Still open from Phase 1:**
+- H-2 (validate before step-up);
+- the PR #3 title and description;
+- closing PRs #1 and #2;
+- the other P0 items in the remediation plan.
+
