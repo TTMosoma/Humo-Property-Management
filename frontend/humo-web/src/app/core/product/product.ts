@@ -5,7 +5,7 @@
  *   │                               audit, billing, subscriptions, the Humo company and staff)
  *   ├── Humo Property Management  — THIS application ("Humo PM" where space is short)
  *   ├── Humo Valuations           — future, separate product
- *   └── Humo Contractor           — future, separate product
+ *   └── Humo Contractor           — separate product with its own app (projects/humo-contractor)
  *
  * Keep the layers apart in copy and code:
  *   product family (Humo) ≠ application (Humo Property Management) ≠ organisation
@@ -49,7 +49,8 @@ export const HUMO_PRODUCTS: Record<HumoProductId, HumoProduct> = {
     name: 'Humo Contractor',
     shortName: 'Humo Contractor',
     purpose: 'Contractor profiles, quotation workflows and the contractor ecosystem.',
-    // Its portal is prototyped in this codebase (/contractor) to prove the boundary; it's a separate product.
+    // A separate Angular application in this workspace (projects/humo-contractor): only a foundation so far.
+    // Humo PM consumes its quote-request network through the ContractorNetwork port.
     status: 'prototype',
   },
 };

@@ -1,5 +1,7 @@
 # 06 — One product, many experiences: integration review
 
+> **Update, 11 October 2026:** the Humo Contractor experience described below has moved out of Humo PM into its own app ([20-humo-contractor-separation.md](20-humo-contractor-separation.md)).
+
 This pass ties the identity, role, security, SaaS, Executive, Account Manager and Contractor work into one product. It reuses one shell, one design system and one set of patterns. There are no new applications.
 
 ## 1. Experiences by role

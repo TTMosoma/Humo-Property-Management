@@ -36,46 +36,6 @@ export const routes: Routes = [
     loadComponent: () => import('./features/access/sign-in-page').then((m) => m.SignInPage),
   },
 
-  // ---------------- Humo Contractor (a separate Humo product, prototyped here behind its own shell) ----------------
-  {
-    path: 'contractor',
-    loadComponent: () => import('./features/contractor-portal/contractor-shell').then((m) => m.ContractorShell),
-    canActivate: [signedInGuard],
-    canActivateChild: [accessGuard],
-    data: { section: 'Humo Contractor' },
-    children: [
-      {
-        path: '',
-        title: 'Dashboard',
-        data: { permission: 'Contractor.Respond', view: 'dashboard' },
-        loadComponent: () => import('./features/contractor-portal/contractor-home-page').then((m) => m.ContractorHomePage),
-      },
-      {
-        path: 'requests',
-        title: 'Quote requests',
-        data: { permission: 'Contractor.Respond', view: 'requests' },
-        loadComponent: () => import('./features/contractor-portal/contractor-home-page').then((m) => m.ContractorHomePage),
-      },
-      {
-        path: 'requests/:id',
-        title: 'Quote request',
-        data: { permission: 'Contractor.Respond' },
-        loadComponent: () => import('./features/contractor-portal/contractor-request-page').then((m) => m.ContractorRequestPage),
-      },
-      {
-        path: 'jobs',
-        title: 'Jobs',
-        data: { permission: 'Contractor.Respond', view: 'jobs' },
-        loadComponent: () => import('./features/contractor-portal/contractor-home-page').then((m) => m.ContractorHomePage),
-      },
-      {
-        path: 'profile',
-        title: 'Profile',
-        data: { permission: 'Contractor.Respond' },
-        loadComponent: () => import('./features/contractor-portal/contractor-profile-page').then((m) => m.ContractorProfilePage),
-      },
-    ],
-  },
   {
     path: '',
     component: Shell,
@@ -687,8 +647,6 @@ export const routes: Routes = [
         ],
       },
 
-      // Humo Contractor lives outside the PM shell (see the 'contractor' route above).
-      { path: 'supplier', redirectTo: '/contractor' },
 
       // ---------------- Platform (Humo internal roles) ----------------
       {

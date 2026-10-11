@@ -3,9 +3,9 @@ import { IonIcon } from '@ionic/angular/standalone';
 import { ContractorProfile, VERIFICATION_LABEL, VerificationLevel } from '../../domain/contractor';
 
 /**
- * Contractor building blocks shared by Humo PM and the Humo Contractor portal.
- * They depend only on the contractor domain, so they can move with it into a
- * standalone app.
+ * How Humo PM shows a business's Humo Contractor profile: verification,
+ * reputation and endorsements (quote requests, comparisons, supplier pages).
+ * They depend only on the contractor domain.
  */
 
 /** Listed · Verified · Humo Recommended — never a fake check, just the state Humo holds. */

@@ -3,10 +3,12 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
-    "build": "ng build",
-    "build:demo": "ng build --configuration production,demo",
-    "watch": "ng build --watch --configuration development",
+    "start": "ng serve humo-web",
+    "build": "ng build humo-web",
+    "build:demo": "ng build humo-web --configuration production,demo",
+    "watch": "ng build humo-web --watch --configuration development",
+    "start:contractor": "ng serve humo-contractor --port 4320",
+    "build:contractor": "ng build humo-contractor",
     "test": "ng test"
   },
   "private": true,

@@ -51,8 +51,6 @@ export type Permission =
   // Residents
   | 'Resident.Portal'
   | 'Resident.Requests'
-  // Contractors (Humo Contractor)
-  | 'Contractor.Respond'
   // Agency administration
   | 'Organisation.Manage'
   | 'Documents.Configure'
@@ -137,7 +135,6 @@ export const PERMISSIONS: PermissionMeta[] = [
   { id: 'Reports.View', area: 'Records', label: 'Run and view reports', mutates: false },
   { id: 'Resident.Portal', area: 'Residents', label: 'Use the resident portal for your own unit', mutates: false },
   { id: 'Resident.Requests', area: 'Residents', label: 'Report problems and confirm fixes', mutates: true },
-  { id: 'Contractor.Respond', area: 'Residents', label: 'Respond to quote requests and manage work orders (Humo Contractor)', mutates: true },
   { id: 'Organisation.Manage', area: 'Administration', label: 'Edit agency details and trust bank accounts', mutates: true },
   { id: 'Documents.Configure', area: 'Administration', label: 'Choose default document templates, branding and the agency’s custom template', mutates: true },
   { id: 'Notifications.Configure', area: 'Administration', label: 'Set agency-wide notification rules', mutates: true },
@@ -209,7 +206,6 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   trustee: [...TRUSTEE_VIEW, 'Work.Manage', 'Approvals.Decide', 'Security.ManageOwn'],
   owner: ['Resident.Portal', 'Account.ViewOwn', 'Resident.Requests', 'Security.ManageOwn'],
   tenant: ['Resident.Portal', 'Resident.Requests', 'Security.ManageOwn'],
-  supplier: ['Contractor.Respond', 'Security.ManageOwn'],
   // Highest operational authority — but impersonation is still an individual grant.
   'system-admin': [
     'Platform.View', 'Platform.Customers.View', 'Platform.Customers.Manage', 'Platform.Customers.Users', 'Platform.Subscriptions.View',

@@ -1,5 +1,7 @@
 # 05 — Humo Contractor: the foundation
 
+> **Update, 11 October 2026:** the Contractor portal described here (`features/contractor-portal`, `/contractor`, the "Contractor / Supplier" role and the Themba persona) was **removed from Humo PM**. Humo Contractor is now a separate app, `frontend/humo-web/projects/humo-contractor`, with only a landing screen. Humo PM keeps its side: quote requests, comparison, messages, email invites, supplier profiles and endorsements, through the `ContractorNetwork` port. See [20-humo-contractor-separation.md](20-humo-contractor-separation.md). The rest of this page is kept as the original design record.
+
 Status: **Foundation implemented in the frontend prototype (mock data).** This is **not a marketplace**. Humo PM remains the product; Humo Contractor is a separate capability it consumes, built so it can become its own product later. Decisions marked ⚑ need approval.
 
 ```

@@ -12,7 +12,7 @@ export function assignmentTitle(a: RoleAssignment): string {
 
 /** Which tab a person falls under in Users & access (by their most senior assignment). */
 export function familyOf(i: Identity, organisationId: string | null): RoleFamily {
-  const order: RoleFamily[] = ['agency', 'governance', 'supplier', 'resident'];
+  const order: RoleFamily[] = ['agency', 'governance', 'resident'];
   const fams = heldAssignments(i).filter((m) => organisationId === null || m.scope.organisationId === organisationId).map((m) => ROLE_META[m.role].family);
   return order.find((f) => fams.includes(f)) ?? 'resident';
 }
@@ -21,6 +21,5 @@ export const FAMILY_LABELS: Record<RoleFamily, string> = {
   agency: 'Agency staff',
   governance: 'Trustees',
   resident: 'Owners & tenants',
-  supplier: 'Suppliers',
   humo: 'Humo',
 };

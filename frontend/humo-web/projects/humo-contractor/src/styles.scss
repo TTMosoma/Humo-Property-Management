@@ -1,0 +1,71 @@
+/*
+ * Humo Contractor — global styles.
+ *
+ * The Humo brand values (navy, leaf, cream; DM Sans and Outfit) match the
+ * Humo Property Management design tokens on purpose, but they're copied, not
+ * imported: the two applications stay independent. Move them to a shared
+ * design-token package once both products need more than a handful.
+ */
+:root {
+  --brand-navy-950: #020f26;
+  --brand-navy-900: #041b40;
+  --brand-navy-700: #143a75;
+  --brand-leaf-300: #9be3bf;
+  --brand-leaf-400: #6cd3a0;
+  --brand-leaf-600: #2e9e6e;
+  --brand-cream: #f2f0e4;
+
+  --font-display: 'Outfit', 'DM Sans', system-ui, sans-serif;
+  --font-sans: 'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  --c-bg: #f4f6f9;
+  --c-surface: #ffffff;
+  --c-border: #e0e6ee;
+  --c-text: #0a1a33;
+  --c-text-muted: #5b6a82;
+  --c-text-faint: #8b97ab;
+  --c-accent-soft: #e3f5ec;
+  --c-accent-text: #1d7a52;
+}
+
+@mixin dark-tokens {
+  --c-bg: #07142b;
+  --c-surface: #0c1d3a;
+  --c-border: #1d3157;
+  --c-text: #eef2f8;
+  --c-text-muted: #a3b1c8;
+  --c-text-faint: #7487a8;
+  --c-accent-soft: rgba(108, 211, 160, 0.14);
+  --c-accent-text: #6cd3a0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    @include dark-tokens;
+  }
+}
+
+:root[data-theme='dark'] {
+  @include dark-tokens;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--c-text);
+  background: var(--c-bg);
+  -webkit-font-smoothing: antialiased;
+}

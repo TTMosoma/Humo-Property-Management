@@ -5,12 +5,7 @@
     <img class="watermark" src="brand/humo-mark-reverse.png" alt="" />
 
     <div class="brand-top">
-      @if (product().id === 'contractor') {
-        <ui-logo variant="wordmark" [reverse]="true" [height]="34" />
-        <span class="product-tag">Contractor</span>
-      } @else {
-        <ui-logo variant="full" [reverse]="true" [height]="46" />
-      }
+      <ui-logo variant="full" [reverse]="true" [height]="46" />
     </div>
 
     <div class="story">
@@ -24,31 +19,19 @@
       </ul>
     </div>
 
-    @if (product().id === 'contractor') {
-      <div class="glimpse" aria-hidden="true">
-        <div class="g-row"><span class="g-label">Quote request</span><span class="g-pill">Viewed</span></div>
-        <strong class="g-title">Gate motor replacement</strong>
-        <span class="g-sub">Kingfisher Court · Bryanston</span>
-        <div class="g-foot"><span><ion-icon name="time-outline" /> Deadline in 5 days</span><span>R 18 400</span></div>
-      </div>
-    } @else {
-      <div class="glimpse" aria-hidden="true">
-        <div class="g-row"><span class="g-label">October levies</span><span class="g-pill">On track</span></div>
-        <strong class="g-title">Kingfisher Court</strong>
-        <div class="g-bar"><span style="width: 96.9%"></span></div>
-        <div class="g-foot"><span>96.9% collected</span><span><ion-icon name="checkmark-circle-outline" /> Statements sent</span></div>
-      </div>
-    }
+    <div class="glimpse" aria-hidden="true">
+      <div class="g-row"><span class="g-label">October levies</span><span class="g-pill">On track</span></div>
+      <strong class="g-title">Kingfisher Court</strong>
+      <div class="g-bar"><span style="width: 96.9%"></span></div>
+      <div class="g-foot"><span>96.9% collected</span><span><ion-icon name="checkmark-circle-outline" /> Statements sent</span></div>
+    </div>
   </aside>
 
   <!-- Sign-in -->
   <main class="panel">
     <!-- Small screens: the brand panel is hidden, so the white logo sits on a navy band instead. -->
     <div class="mobile-brand">
-      <ui-logo [variant]="product().id === 'contractor' ? 'wordmark' : 'full'" [reverse]="true" [height]="product().id === 'contractor' ? 28 : 34" />
-      @if (product().id === 'contractor') {
-        <span class="product-tag">Contractor</span>
-      }
+      <ui-logo variant="full" [reverse]="true" [height]="34" />
     </div>
     <div class="form-wrap">
 

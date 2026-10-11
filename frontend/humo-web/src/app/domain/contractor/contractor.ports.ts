@@ -1,13 +1,11 @@
 import { Observable } from 'rxjs';
 import {
   ContactDisclosure,
-  ContractorEndorsement,
   ContractorProfile,
   ContractorQuote,
   QuoteLifecycleEvent,
   QuoteRequest,
   ServiceCategory,
-  WorkOrder,
 } from './contractor.models';
 
 /** A quote request with everything a customer needs to compare offers. */
@@ -59,46 +57,4 @@ export abstract class ContractorNetwork {
   abstract message(quoteRequestId: string, partyId: string, body: string): Observable<void>;
   /** Only possible with a genuine relationship (completed work together). */
   abstract endorse(partyId: string, customerId: string, customerName: string, note: string, completedJobs: number): Observable<void>;
-}
-
-/** The contractor's own dashboard numbers. */
-export interface ContractorDashboard {
-  profile: ContractorProfile;
-  openRequests: number;
-  activeJobs: number;
-  completedJobs: number;
-  awaitingResponse: QuoteRequest[];
-  /** `viewed`: the customer has opened the quote (a lifecycle event the contractor may see). */
-  submitted: { request: QuoteRequest; quote: ContractorQuote; viewed: boolean }[];
-  workOrders: WorkOrder[];
-}
-
-export interface ContractorRequestView {
-  request: QuoteRequest;
-  invitation: QuoteRequest['invitations'][number];
-  myQuote?: ContractorQuote;
-  /** How many others were invited — never who, never their prices. */
-  competing: number;
-}
-
-export interface QuoteSubmission {
-  amount: number;
-  proposedWork: string[];
-  exclusions?: string;
-  startBy: string;
-  completeBy: string;
-  validUntil: string;
-  guaranteeMonths: number;
-}
-
-/**
- * What the contractor-facing product (the Humo Contractor portal, later a
- * standalone app) needs. Scoped to one business party.
- */
-export abstract class ContractorPortal {
-  abstract dashboard(partyId: string): Observable<ContractorDashboard | undefined>;
-  abstract request(partyId: string, quoteRequestId: string): Observable<ContractorRequestView | undefined>;
-  abstract submitQuote(partyId: string, quoteRequestId: string, quote: QuoteSubmission): Observable<void>;
-  abstract decline(partyId: string, quoteRequestId: string, reason: string): Observable<void>;
-  abstract endorsements(partyId: string): Observable<ContractorEndorsement[]>;
 }

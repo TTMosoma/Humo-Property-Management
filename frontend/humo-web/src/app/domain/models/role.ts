@@ -13,8 +13,7 @@ export type CustomerRole =
   | 'operations'
   | 'trustee'
   | 'owner'
-  | 'tenant'
-  | 'supplier';
+  | 'tenant';
 
 export type HumoRole = 'system-admin' | 'humo-account-manager' | 'humo-support' | 'humo-executive';
 
@@ -28,7 +27,6 @@ export const ROLE_LABELS: Record<Role, string> = {
   trustee: 'Trustee',
   owner: 'Owner',
   tenant: 'Tenant',
-  supplier: 'Contractor / Supplier',
   'system-admin': 'Humo System Administrator',
   'humo-account-manager': 'Humo Account Manager',
   'humo-support': 'Humo Support',
@@ -36,7 +34,7 @@ export const ROLE_LABELS: Record<Role, string> = {
 };
 
 /** Who a role belongs to. Drives grouping in pickers and the subtle role accent in the shell. */
-export type RoleFamily = 'agency' | 'governance' | 'resident' | 'supplier' | 'humo';
+export type RoleFamily = 'agency' | 'governance' | 'resident' | 'humo';
 
 export interface RoleMeta {
   role: Role;
@@ -45,7 +43,7 @@ export interface RoleMeta {
   /** One line: what this role is for. */
   summary: string;
   /** What a person in this role can see (assignment determines where). */
-  scopeKind: 'agency' | 'schemes' | 'unit' | 'supplier' | 'platform';
+  scopeKind: 'agency' | 'schemes' | 'unit' | 'platform';
   /** The role that may grant this one. */
   grantedBy: Role;
   /** Granting this role is a privileged change: it requires step-up verification. */
@@ -83,10 +81,6 @@ export const ROLE_META: Record<Role, RoleMeta> = {
     role: 'tenant', family: 'resident', icon: 'key-outline', scopeKind: 'unit', grantedBy: 'agency-admin', privileged: false,
     summary: 'The unit they live in: maintenance requests and notices.',
   },
-  supplier: {
-    role: 'supplier', family: 'supplier', icon: 'hammer-outline', scopeKind: 'supplier', grantedBy: 'agency-admin', privileged: false,
-    summary: 'Works in Humo Contractor: quote requests, work orders and reputation — across every Humo customer they serve.',
-  },
   'system-admin': {
     role: 'system-admin', family: 'humo', icon: 'shield-outline', scopeKind: 'platform', grantedBy: 'system-admin', privileged: true,
     summary: 'Operates the Humo platform. Impersonation is a separate, individual grant.',
@@ -113,7 +107,6 @@ export const CUSTOMER_ROLES: readonly CustomerRole[] = [
   'trustee',
   'owner',
   'tenant',
-  'supplier',
 ];
 export const HUMO_ROLES: readonly HumoRole[] = ['system-admin', 'humo-account-manager', 'humo-support', 'humo-executive'];
 

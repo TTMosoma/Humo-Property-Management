@@ -34,7 +34,7 @@ export interface CurrentSession {
   pagePermissions: Permission[];
   /** The actor's own permissions across their assignments (e.g. System.Impersonate). */
   actorPermissions: Permission[];
-  /** The organisation of the active assignment; null for Humo staff and contractors. */
+  /** The organisation of the active assignment; null for Humo staff. */
   organisation: Organisation | null;
   /** The organisation's subscription and effective entitlements; null when no customer plan applies. */
   subscription: Subscription | null;

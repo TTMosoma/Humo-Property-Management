@@ -5,7 +5,6 @@ import { SCHEMES } from './schemes';
 interface SeedAssignment extends Omit<RoleAssignment, 'scope' | 'status' | 'version'> {
   organisationId: string | null;
   schemeIds: string[];
-  partyId?: string;
   /** Owners and tenants: "Unit 42" in the scheme above. */
   unit?: string;
   status?: RoleAssignment['status'];
@@ -188,20 +187,6 @@ const SEED: SeedIdentity[] = [
     ],
   },
 
-  // ---------------- Humo Contractor ----------------
-  {
-    // A contractor's identity isn't owned by any one agency: they serve many Humo customers.
-    id: 'p-themba',
-    name: 'Themba Khoza',
-    initials: 'TK',
-    email: 'themba@secureaccess.example',
-    kind: 'customer',
-    demo: true,
-    assignments: [
-      { id: 'm-themba', role: 'supplier', organisationId: null, partyId: 'party-secureaccess', schemeIds: [], label: 'SecureAccess Systems', grantedBy: 'Self-registered on Humo Contractor', grantedAt: '2025-09-14T09:00:00+02:00' },
-    ],
-  },
-
   // ---------------- Directory only (not in the prototype's sign-in list) ----------------
   {
     id: 'p-naledi',
@@ -263,16 +248,6 @@ const SEED: SeedIdentity[] = [
     kind: 'customer',
     assignments: [
       { id: 'm-mpho', role: 'trustee', organisationId: 'acacia', schemeIds: ['the-willows'], label: 'Trustee · The Willows', grantedBy: 'Johan van der Merwe', grantedAt: '2026-03-18T18:00:00+02:00' },
-    ],
-  },
-  {
-    id: 'p-rand-plumbing',
-    name: 'Kevin Pillay',
-    initials: 'KP',
-    email: 'kevin@randplumbing.example',
-    kind: 'customer',
-    assignments: [
-      { id: 'm-kevin', role: 'supplier', organisationId: null, partyId: 'party-rand-plumbing', schemeIds: [], label: 'Rand Plumbing & Drainage', grantedBy: 'Self-registered on Humo Contractor', grantedAt: '2026-06-02T09:00:00+02:00' },
     ],
   },
   {
@@ -349,13 +324,13 @@ function unitIdFor(schemeId: string, unit: string): string {
 }
 
 function toAssignment(a: SeedAssignment): RoleAssignment {
-  const { organisationId, schemeIds, partyId, unit, status, ...rest } = a;
-  const type: ScopeType = isHumoRole(a.role) ? 'platform' : partyId ? 'party' : unit ? 'unit' : schemeIds.length ? 'schemes' : 'organisation';
+  const { organisationId, schemeIds, unit, status, ...rest } = a;
+  const type: ScopeType = isHumoRole(a.role) ? 'platform' : unit ? 'unit' : schemeIds.length ? 'schemes' : 'organisation';
   return {
     ...rest,
     version: 1,
     status: status ?? 'active',
-    scope: { type, organisationId, schemeIds, ...(unit ? { unitId: unitIdFor(schemeIds[0], unit) } : {}), ...(partyId ? { partyId } : {}) },
+    scope: { type, organisationId, schemeIds, ...(unit ? { unitId: unitIdFor(schemeIds[0], unit) } : {}) },
   };
 }
 

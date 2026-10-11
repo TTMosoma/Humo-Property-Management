@@ -31,7 +31,7 @@ import { editPersonDetailsForm, membershipForm } from './user-forms';
 import { formatDate } from '../../ui/format/money';
 import { FAMILY_LABELS, roleColor } from './access-view';
 
-const GROUPS: RoleFamily[] = ['agency', 'governance', 'resident', 'supplier'];
+const GROUPS: RoleFamily[] = ['agency', 'governance', 'resident'];
 
 /**
  * Manage one person's access: the roles they hold and where each applies.
@@ -99,7 +99,6 @@ export class AccessDrawer {
   protected readonly allSchemes = signal(false);
   protected readonly schemeIds = signal<string[]>([]);
   protected readonly unit = signal('');
-  protected readonly supplier = signal('');
   protected readonly busy = signal(false);
   /** The server's verdict on the last attempt, per field. Cleared when the person edits the form. */
   protected readonly errors = signal<FieldErrors>({});
@@ -121,8 +120,6 @@ export class AccessDrawer {
         return this.role() === 'trustee' ? this.schemeIds().length === 1 : this.allSchemes() || this.schemeIds().length > 0;
       case 'unit':
         return this.schemeIds().length === 1 && this.unit().trim().length > 0;
-      case 'supplier':
-        return this.supplier().trim().length > 1;
       default:
         return true;
     }
@@ -198,7 +195,6 @@ export class AccessDrawer {
     const org = this.organisationId;
     const names = this.schemeIds().map((id) => this.scope.findScheme(id)?.name ?? id);
     if (kind === 'agency') return of({ role, scope: { type: 'organisation', organisationId: org, schemeIds: [] }, label: this.session.organisation()?.shortName ?? 'Agency' });
-    if (kind === 'supplier') return of({ role, scope: { type: 'organisation', organisationId: org, schemeIds: [] }, label: this.supplier().trim() });
     if (kind === 'unit') {
       const number = this.unit().trim().replace(/^unit\s*/i, '');
       const schemeId = this.schemeIds()[0];

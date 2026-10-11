@@ -11,8 +11,8 @@ The operating system for community-scheme management, built for professional man
 Humo — property technology platform
 ├── Humo Property Management   ← this application
 ├── Humo Valuations            (future, separate product)
-├── Humo Contractor            (future, separate product; its portal is prototyped here at /contractor
-│                               behind its own shell to prove the boundary)
+├── Humo Contractor            (separate product; its own app in frontend/humo-web/projects/humo-contractor,
+│                               only a foundation so far)
 └── future Humo products
 ```
 
@@ -40,7 +40,7 @@ See `docs/07-brand-architecture.md`.
 
 | Path | What |
 |---|---|
-| `frontend/humo-web` | Angular 22 + Ionic 8 UI prototype (mock data, no backend) |
+| `frontend/humo-web` | Angular workspace with two separate apps: **Humo Property Management** (`src/`, Angular 22 + Ionic 8 UI prototype, mock data, no backend) and **Humo Contractor** (`projects/humo-contractor/`, a minimal foundation) |
 | `backend/` | .NET Clean Architecture API — *later phase*, planned as `Humo.PropertyManagement.*` (`.Api`, `.Application`, `.Domain`, `.Infrastructure`), leaving room for `Humo.Valuations.*` and `Humo.Contractor.*` |
 | `docs/` | Information architecture and product decisions |
 
@@ -52,6 +52,16 @@ npm --prefix frontend/humo-web start -- --port 4310
 ```
 
 Open http://localhost:4310. (Port 4200 is avoided because Docker Desktop commonly holds it.)
+
+**Humo Contractor** is a separate app in the same workspace. It runs and builds on its own; neither app needs the other:
+
+```bash
+npm --prefix frontend/humo-web run start:contractor     # http://localhost:4320
+npm --prefix frontend/humo-web run build:contractor     # dist/humo-contractor
+npm --prefix frontend/humo-web run build                # Humo PM only: dist/humo-web
+```
+
+It's only a landing screen so far. See `docs/20-humo-contractor-separation.md`.
 
 Use the dashed **Prototype** button (bottom-right) to:
 - sign in as any demo identity (and switch role from your name in the top bar)
@@ -154,26 +164,20 @@ The model is described in `docs/04-platform-commercial.md`.
 
 To see a nudge again, use **Prototype › Reset Smart Nudges**. Nudges follow their frequency rules, so a nudge that was shown once won't reappear for 30 days.
 
-## Demo: Humo Contractor foundation (not a marketplace)
+## Demo: quotes through the Humo Contractor network
 
-The design is described in `docs/05-humo-contractor.md`.
+Humo PM requests and compares quotes through Humo Contractor's network. Humo Contractor itself is a separate app (`docs/20-humo-contractor-separation.md`); the design of the network is in `docs/05-humo-contractor.md`.
 
-1. As **Johan**, open **MR-1070 — Replace damaged entrance gate**. Its Next step shows the Humo quote request **QR-2041**. Choose **Compare quotes**:
+1. As **Johan**, open **MR-1070: Replace damaged entrance gate**. Its Next step shows the quote request **QR-2041**. Choose **Compare quotes**:
    - a workflow stepper
    - who was invited and who declined
    - ABC Gates R 38 500, XYZ Security R 42 000, SecureAccess R 35 900, side by side: price, timing, proposed work, reputation, endorsements, response time and compliance
-   - SecureAccess's contact details hidden ("New to you")
+   - SecureAccess's contact details hidden ("New to you"); **Message through Humo** instead
 2. **Accept & send for approval** on SecureAccess. Then:
    - **Sipho** approves it in Approvals.
    - Johan issues the work order. The bank letter needs an override, because SecureAccess is a new supplier.
-3. Sign in as **Themba Khoza** (SecureAccess). **Humo Contractor** has its own look:
-   - dashboard: 3 open requests, 5 active jobs, 28 completed, 4.8 rating, 12 endorsements, Verified
-   - the gate quote shows **Accepted**
-   - the job shows **Scheduled**
-   - quote on Tshikrand's **boom gate** request
-   - open **Profile** to see the verification levels and endorsements
-4. In Humo PM, open **Suppliers › PaintPro Gauteng** and choose **Endorse**. This is only possible because Acacia has completed work with them.
-5. Open **MR-1061 — Request quotes through Humo** to create a new quote request from a reported job.
+3. Open **Suppliers › PaintPro Gauteng** and choose **Endorse**. This is only possible because Acacia has completed work with them.
+4. Open **MR-1061** and choose **Request quotes** to create a new quote request from a reported job.
 
 ## Progress
 
@@ -185,7 +189,7 @@ Build order follows workflow slices (see `docs/02-ux-review.md` §4.2).
 - [x] Checkpoint 4 — Slice B: Fix the leaking geyser (Job → Quote → Approval → Work order → Verification → Invoice → Payment, suppliers, resident requests)
 - [x] Identity & access — one identity with many roles, Switch role, permissions, scope by assignment, plan entitlements, step-up (passkey / Humo Mobile), impersonation (Observe/Act) and the audit log
 - [x] Humo platform layer — internal roles, packages/add-ons/overrides → effective entitlements, Account Health, opportunities, Smart Nudges, Executive dashboard, Account Manager home, customer 360
-- [x] Humo Contractor foundation — business party, contractor profile, verification, reputation, endorsements, quote requests with multiple quotes, side-by-side comparison, protected contact, lifecycle events, Contractor portal
+- [x] Humo Contractor foundation — business party, contractor profile, verification, reputation, endorsements, quote requests with multiple quotes, side-by-side comparison, protected contact, lifecycle events (the Contractor portal later moved out of Humo PM: see below)
 - [x] Experience integration — role-specific homes (operational Dashboard, resident Home), context card, locked plan states with upgrade requests, red impersonation / amber step-up language, Executive and Account Manager navigation, audit filters, phone layouts (`docs/06-experience-review.md`)
 - [x] Backend readiness (P1) — `GET /me` session bootstrap, Organisation model, identity → membership → assignment with explicit scope and lifecycle states, server-side errors with field messages, request-driven loading states, server-side contact disclosure (`docs/08-api-contract.md`)
 - [x] Backend readiness (P2) — permission-gated routes and navigation, paged list contract, optimistic concurrency versions, money/time transport, catalogue endpoint, prototype tools only with the mock data layer (`docs/08-api-contract.md` §7)
@@ -202,3 +206,4 @@ Build order follows workflow slices (see `docs/02-ux-review.md` §4.2).
 - [x] Decisions D1–D10: scope by assignment, the board as the trustee source of truth, resident invites, fixed roles, identity provider with passkeys, staff conflict rule, immutable issued statements, Chrome PDF rendering, link delivery, statement numbering (`docs/17-decisions.md`)
 - [x] Demo ready: statement emails and re-sends recorded in Sent, contractor messages and email invites on quote requests, statements labelled as previews, placeholder and dead code removed; simulated actions tracked for production (`docs/18-production-readiness-register.md`); demo build and hosting at pm-demo.humo.co.za (`docs/19-demo-deployment.md`)
 - [x] Humo sign-in page: passkey first, emailed one-time link as the fallback, no account enumeration, return to the page you wanted, signed-out and paused states, per-product branding (Property Management, Contractor), demo accounts in the prototype (`docs/18` R-8)
+- [x] Humo Contractor separated: its portal, routes, role and personas removed from Humo PM; Humo Contractor is now its own app in the workspace (`projects/humo-contractor`, a landing screen only), built and run independently (`docs/20-humo-contractor-separation.md`)

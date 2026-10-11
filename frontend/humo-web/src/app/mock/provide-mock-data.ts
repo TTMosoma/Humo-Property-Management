@@ -62,8 +62,8 @@ import {
   InMemoryStepUpAuthenticator,
 } from './data-sources/in-memory-access-data-sources';
 import { InMemoryNotificationDataSource, InMemoryOrganisationDataSource } from './data-sources/in-memory-organisation-data-sources';
-import { ContractorNetwork, ContractorPortal } from '../domain/contractor';
-import { InMemoryContractorNetwork, InMemoryContractorPortal } from './contractor/in-memory-contractor';
+import { ContractorNetwork } from '../domain/contractor';
+import { InMemoryContractorNetwork } from './contractor/in-memory-contractor';
 import { InMemoryCatalogueDataSource, InMemoryNudgeDataSource, InMemoryPlanDataSource, InMemoryPlatformDataSource } from './data-sources/in-memory-platform-data-sources';
 import { InMemorySchemeDataSource } from './data-sources/in-memory-scheme-data-source';
 import { InMemoryDocumentTemplateDataSource, InMemoryPlatformTemplateDataSource } from './data-sources/in-memory-document-data-sources';
@@ -131,9 +131,8 @@ export function provideMockData(): EnvironmentProviders {
     { provide: RulesDataSource, useClass: InMemoryRulesDataSource },
     // The inbox store turns the seeded owner messages into conversations, so start it with the app.
     provideAppInitializer(() => void inject(InboxStore)),
-    // Humo Contractor — a separate product's capabilities, consumed by Humo PM.
+    // Humo Contractor is a separate product (its own app); Humo PM only uses its quote-request network.
     { provide: ContractorNetwork, useClass: InMemoryContractorNetwork },
-    { provide: ContractorPortal, useClass: InMemoryContractorPortal },
     // Prototype-only review tools (toolbar, "sign in as"). Not provided by the HTTP data layer.
     { provide: PrototypeControls, useClass: MockPrototypeControls },
     // Start the maintenance store eagerly so approvals decided anywhere update their jobs.
