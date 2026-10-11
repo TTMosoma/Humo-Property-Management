@@ -4,7 +4,7 @@
 HUMO — property technology platform (the product family)
 ├── Humo Property Management   — this application ("Humo PM")
 ├── Humo Valuations            — future, separate product
-├── Humo Contractor            — future, separate product (portal prototyped here behind its own shell)
+├── Humo Contractor            — separate product: its own app (projects/humo-contractor), a foundation only
 └── future Humo products
 ```
 
@@ -24,7 +24,7 @@ HUMO — property technology platform (the product family)
 | Place | Shows |
 |---|---|
 | Browser tab | `{Page} · Humo Property Management`, or `Humo Property Management` alone (`HumoTitleStrategy`) |
-| Humo Contractor portal tabs | `{Page} · Humo Contractor`: it's another product, so it doesn't take PM's name |
+| Humo Contractor app | `Humo Contractor`: it's another product (its own app since 11 Oct 2026), so it doesn't take PM's name |
 | `index.html` | Title "Humo Property Management"; description with the tagline |
 | Web app manifest | `name`: Humo Property Management; `short_name`: **Humo PM** (was "Humo") |
 | Sidebar | Humo wordmark + "Property Management"; accessible name and tooltip "Humo Property Management — One platform. Every scheme. Everything managed." |
@@ -78,7 +78,7 @@ HUMO — property technology platform (the product family)
   - Recommended: rename to `frontend/humo-property-management-web` (or `Humo.PropertyManagement.Web`) when the .NET solution is created, in one dedicated commit.
 - **Class names `HumoTitleStrategy` and the `Humo*Role` types, and the CSS prefix `humo-`.** These are platform-level or design-system names and correct as they are.
 - **Storage keys `humo.*`** (persona, scope, nudges). These are platform-level, and renaming them would reset prototype state.
-- **Routes.** No route changes: `/platform/*` holds Humo staff tools and `/contractor` is the prototyped Humo Contractor portal.
+- **Routes.** No route changes: `/platform/*` holds Humo staff tools. (`/contractor` was removed on 11 Oct 2026, when Humo Contractor became its own app.)
 - **Repository name `Humo-Property-Management`.** Already correct.
 
 ## Recommendations for multi-product support
@@ -91,5 +91,5 @@ HUMO — property technology platform (the product family)
    - Feature keys could be namespaced (`pm.governance`) when a second product arrives.
 3. **Shared platform services as a separate layer.** Identity, step-up, audit, notifications and billing should become `Humo.Platform.*` services (and a shared Angular library), consumed by each product.
 4. **Move the Humo staff console out of Humo PM** into a "Humo Console" app once a second product exists. Humo staff work across products.
-5. **Extract the Humo Contractor portal** (`features/contractor-portal`, `domain/contractor`) into its own app when that product starts. The ports already define the boundary.
+5. ✅ **Done 11 Oct 2026: Humo Contractor is its own app** (`projects/humo-contractor`). The portal was removed from Humo PM; PM keeps `domain/contractor` to consume the network. See [20-humo-contractor-separation.md](20-humo-contractor-separation.md).
 6. **Backend naming:** `Humo.PropertyManagement.{Api,Application,Domain,Infrastructure}`, `Humo.Platform.*`, and later `Humo.Valuations.*` and `Humo.Contractor.*`.

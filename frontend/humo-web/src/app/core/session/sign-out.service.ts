@@ -5,10 +5,10 @@ import { HumoProductId, HUMO_PRODUCTS } from '../product/product';
 import { SessionService } from './session.service';
 
 /**
- * Sign out of Humo. It's an identity action, not a product action: one Humo
- * session covers Humo Property Management and Humo Contractor, so signing out
- * of either ends both (and ends any impersonation). The API records it; the
- * browser forgets the session even if that call fails.
+ * Sign out of Humo. It's an identity action, not a product action: the Humo
+ * session is shared by every Humo product (D5), so signing out ends it
+ * everywhere (and ends any impersonation). The API records it; the browser
+ * forgets the session even if that call fails.
  */
 @Injectable({ providedIn: 'root' })
 export class SignOutService {
@@ -25,7 +25,7 @@ export class SignOutService {
     const done = () => {
       this.busy.set(false);
       this.session.signedOutLocally();
-      this.router.navigate(['/signed-out'], { queryParams: { product: from, name: name.split(' ')[0] } });
+      this.router.navigate(['/signed-out'], { queryParams: { name: name.split(' ')[0] } });
     };
     this.access.signOut(HUMO_PRODUCTS[from].name).subscribe({ next: done, error: done });
   }

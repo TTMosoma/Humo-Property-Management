@@ -113,15 +113,13 @@ export class SessionService {
       case 'owner':
       case 'tenant':
         return '/my/home';
-      case 'supplier':
-        return '/contractor';
       // Agency staff and trustees start on their dashboard: "what needs my attention?"
       default:
         return '/dashboard';
     }
   });
 
-  /** The organisation's subscription (null for Humo staff and contractors). */
+  /** The organisation's subscription (null for Humo staff). */
   readonly subscription = computed(() => this.snapshot().subscription ?? undefined);
 
   /** The organisation's effective entitlements (package + add-ons + overrides), as the server resolved them. */

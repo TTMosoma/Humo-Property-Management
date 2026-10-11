@@ -2,41 +2,21 @@ import { Injectable, computed, inject } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Observable, defer, map, of, switchMap } from 'rxjs';
 import {
-  ContractorDashboard,
-  ContractorEndorsement,
   ContractorNetwork,
-  ContractorPortal,
   ContractorProfile,
-  ContractorRequestView,
   NewQuoteRequest,
   QuoteRequest,
   QuoteRequestView,
-  QuoteSubmission,
-  WorkOrder,
   disclosureFor,
 } from '../../domain/contractor';
-import { FieldErrors, JobStage, PolicyError } from '../../domain';
+import { FieldErrors, PolicyError } from '../../domain';
 import { MockAuthSession } from '../server/mock-auth-session';
 import { MaintenanceStore } from '../db/maintenance-store';
-import { MockDb } from '../db/mock-db';
 import { mockResponder } from '../mock-latency';
 import { MockGateway } from '../server/mock-gateway';
 import { ContractorStore } from './contractor-store';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-/** Simulated integration feed: a PM job's stage drives the contractor's work order status. */
-const FROM_JOB: Partial<Record<JobStage, WorkOrder['status']>> = {
-  approval: 'awarded',
-  approved: 'awarded',
-  scheduled: 'scheduled',
-  'in-progress': 'in-progress',
-  completed: 'completed',
-  verified: 'completed',
-  invoiced: 'invoiced',
-  paid: 'paid',
-  closed: 'paid',
-};
 
 @Injectable()
 export class InMemoryContractorNetwork extends ContractorNetwork {
@@ -107,7 +87,7 @@ export class InMemoryContractorNetwork extends ContractorNetwork {
     });
   }
 
-  /** SIMULATED (docs/18 R-3): kept on the request and shown in the contractor's portal; nobody is notified. */
+  /** SIMULATED (docs/18 R-3): kept on the quote request; nobody is notified. */
   message(quoteRequestId: string, partyId: string, body: string): Observable<void> {
     const by = this.session.current.identity.name;
     const request = this.store.requests().find((r) => r.id === quoteRequestId);
@@ -161,10 +141,6 @@ export class InMemoryContractorNetwork extends ContractorNetwork {
           for (const other of this.store.quotes().filter((q) => q.quoteRequestId === quoteRequestId && q.id !== quoteId)) {
             this.store.emit({ type: 'quote-rejected', quoteRequestId, customerId: request.customerId, partyId: other.partyId, quoteId: other.id, actor: by });
           }
-          this.store.addWorkOrder({
-            id: this.store.nextId('WO'), partyId: quote.partyId, customerId: request.customerId, customerName: request.customerName, quoteRequestId,
-            source: request.source, title: request.title, site: `${request.site.name}, ${request.site.suburb}`, amount: quote.amount, status: 'awarded',
-          });
         },
       )
       .pipe(map(() => undefined));
@@ -192,127 +168,5 @@ export class InMemoryContractorNetwork extends ContractorNetwork {
       this.store.profiles().filter((p) => ids.has(p.party.id)).map((p) => [p.party.id, this.forCustomer(p, disclosure[p.party.id].contactVisible)!]),
     );
     return { request, quotes, profiles, disclosure, events: this.store.events().filter((e) => e.quoteRequestId === request.id) };
-  }
-}
-
-@Injectable()
-export class InMemoryContractorPortal extends ContractorPortal {
-  private readonly store = inject(ContractorStore);
-  private readonly maintenance = inject(MaintenanceStore);
-  private readonly db = inject(MockDb);
-  private readonly gateway = inject(MockGateway);
-  private readonly session = inject(MockAuthSession);
-  private readonly respond = mockResponder();
-  private readonly state$ = toObservable(
-    computed(() => ({ profiles: this.store.profiles(), requests: this.store.requests(), quotes: this.store.quotes(), workOrders: this.store.workOrders(), events: this.store.events() })),
-  );
-
-  dashboard(partyId: string): Observable<ContractorDashboard | undefined> {
-    // Re-read when PM jobs change, so linked work orders follow the customer's job.
-    return this.db.changes$.pipe(
-      switchMap(() => this.state$),
-      switchMap((s) => {
-        const profile = s.profiles.find((p) => p.party.id === partyId);
-        if (!profile) return this.respond(undefined);
-        const mine = s.requests.filter((r) => r.invitations.some((i) => i.partyId === partyId));
-        const open = mine.filter((r) => r.status === 'open' && ['invited', 'viewed'].includes(r.invitations.find((i) => i.partyId === partyId)!.status));
-        const submitted = s.quotes
-          .filter((q) => q.partyId === partyId)
-          .map((quote) => ({
-            quote,
-            request: s.requests.find((r) => r.id === quote.quoteRequestId)!,
-            viewed: s.events.some((e) => e.type === 'quote-viewed' && e.quoteId === quote.id),
-          }))
-          .filter((x) => !!x.request);
-        const workOrders = s.workOrders
-          .filter((w) => w.partyId === partyId)
-          .map((w) => {
-            const job = w.source ? this.maintenance.detail(w.source.ref)?.job : undefined;
-            return job ? { ...w, status: FROM_JOB[job.stage] ?? w.status, scheduledFor: job.workOrder?.scheduledFor ?? w.scheduledFor } : w;
-          });
-        const active = workOrders.filter((w) => !['invoiced', 'paid'].includes(w.status));
-        return this.respond<ContractorDashboard>({
-          profile,
-          openRequests: open.length,
-          activeJobs: active.length,
-          completedJobs: profile.reputation.completedJobs,
-          awaitingResponse: open.sort((a, b) => a.deadline.localeCompare(b.deadline)),
-          submitted,
-          workOrders,
-        });
-      }),
-    );
-  }
-
-  request(partyId: string, quoteRequestId: string): Observable<ContractorRequestView | undefined> {
-    return this.state$.pipe(
-      switchMap((s) => {
-        const request = s.requests.find((r) => r.id === quoteRequestId);
-        const invitation = request?.invitations.find((i) => i.partyId === partyId);
-        if (!request || !invitation) return this.respond(undefined);
-        if (invitation.status === 'invited') queueMicrotask(() => this.setInvitation(partyId, quoteRequestId, 'viewed'));
-        // A contractor sees only their own messages, and never who else was invited by email.
-        const own = { ...request, emailInvites: undefined, messages: request.messages?.filter((m) => m.partyId === partyId) };
-        return this.respond<ContractorRequestView>({
-          request: own,
-          invitation,
-          myQuote: s.quotes.find((q) => q.quoteRequestId === quoteRequestId && q.partyId === partyId),
-          competing: request.invitations.length - 1,
-        });
-      }),
-    );
-  }
-
-  submitQuote(partyId: string, quoteRequestId: string, sub: QuoteSubmission): Observable<void> {
-    const request = this.store.requests().find((r) => r.id === quoteRequestId);
-    return this.gateway
-      .command(
-        {
-          action: `Submitted a quote for ${request?.title}`,
-          resource: 'Quote',
-          resourceId: quoteRequestId,
-          amount: sub.amount,
-          permission: 'Contractor.Respond',
-          // The API checks the offer is complete and makes sense before the customer sees it.
-          validate: () => {
-            const e: Record<string, string> = {};
-            if (!(sub.amount > 0)) e['amount'] = 'Enter the total price.';
-            else if (sub.amount > 10_000_000) e['amount'] = 'That looks too high. Check the amount (in rands, incl. VAT).';
-            if (!sub.proposedWork.length) e['work'] = 'List at least one thing you’ll do.';
-            if (new Date(sub.completeBy) < new Date(sub.startBy)) e['completeBy'] = 'The completion date is before the start date.';
-            if (sub.guaranteeMonths < 0 || sub.guaranteeMonths > 120) e['guarantee'] = 'Use 0–120 months.';
-            return e;
-          },
-        },
-        () => {
-        if (!request || request.status !== 'open') throw new PolicyError('forbidden', 'This request is closed');
-        const id = this.store.nextId('CQ');
-        this.store.addQuote({ ...sub, id, quoteRequestId, partyId, submittedAt: new Date().toISOString(), status: 'submitted' });
-        this.setInvitation(partyId, quoteRequestId, 'quoted');
-        this.store.emit({ type: 'quote-submitted', quoteRequestId, customerId: request.customerId, partyId, quoteId: id, amount: sub.amount, actor: this.session.current.identity.name });
-        },
-      )
-      .pipe(map(() => undefined));
-  }
-
-  decline(partyId: string, quoteRequestId: string, reason: string): Observable<void> {
-    const request = this.store.requests().find((r) => r.id === quoteRequestId);
-    return this.gateway
-      .command({ action: `Declined to quote: ${request?.title}`, resource: 'Quote', resourceId: quoteRequestId, permission: 'Contractor.Respond' }, () => {
-        this.setInvitation(partyId, quoteRequestId, 'declined', reason);
-        this.store.emit({ type: 'quote-declined', quoteRequestId, customerId: request?.customerId ?? '', partyId, actor: this.session.current.identity.name });
-      })
-      .pipe(map(() => undefined));
-  }
-
-  endorsements(partyId: string): Observable<ContractorEndorsement[]> {
-    return this.state$.pipe(switchMap((s) => this.respond(s.profiles.find((p) => p.party.id === partyId)?.endorsements ?? [])));
-  }
-
-  private setInvitation(partyId: string, quoteRequestId: string, status: 'viewed' | 'quoted' | 'declined', declineReason?: string): void {
-    this.store.updateRequest(quoteRequestId, (r) => ({
-      ...r,
-      invitations: r.invitations.map((i) => (i.partyId === partyId ? { ...i, status, declineReason } : i)),
-    }));
   }
 }

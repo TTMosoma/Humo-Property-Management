@@ -2,8 +2,9 @@
  * Humo Contractor — domain models.
  *
  * This folder is a separate bounded context: it imports nothing from Humo PM.
- * Humo PM *consumes* it (through ports in ./contractor.ports.ts); a future
- * standalone Humo Contractor app can own it.
+ * Humo PM *consumes* the contractor network through the ContractorNetwork port
+ * (quote requests, profiles, endorsements). Humo Contractor itself is a separate
+ * app (projects/humo-contractor); it will own its side of this model when it's built.
  *
  *   Humo Platform
  *    ├─ Humo Property Management   (managing agents, schemes, jobs)
@@ -259,21 +260,6 @@ export interface ContractorQuote {
   /** Set by the customer when comparing. The recommendation is theirs, not Humo's. */
   recommendedByCustomer?: boolean;
   status: 'submitted' | 'accepted' | 'not-selected' | 'withdrawn';
-}
-
-/** A work order: an accepted quote turned into work. Its progress mirrors the customer's job. */
-export interface WorkOrder {
-  id: string;
-  partyId: string;
-  customerId: string;
-  customerName: string;
-  quoteRequestId?: string;
-  source?: { product: 'humo-pm'; ref: string };
-  title: string;
-  site: string;
-  amount: number;
-  scheduledFor?: string;
-  status: 'awarded' | 'scheduled' | 'in-progress' | 'completed' | 'invoiced' | 'paid';
 }
 
 // ---------------------------------------------------------------- Contact disclosure

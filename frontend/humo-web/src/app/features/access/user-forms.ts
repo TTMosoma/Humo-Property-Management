@@ -3,8 +3,8 @@ import { AccessDataSource, ApiError, CUSTOMER_ROLES, CustomerRole, Identity, New
 import { DrawerService } from '../../ui/drawer/drawer.service';
 import { FormValues, REASON_FIELD, openForm } from '../shared/form-drawer';
 
-/** Roles an agency can invite people into (contractors join through Humo Contractor). */
-const INVITABLE = CUSTOMER_ROLES.filter((r) => r !== 'supplier');
+/** Roles an agency can invite people into. */
+const INVITABLE = CUSTOMER_ROLES;
 const kindOf = (v: FormValues) => ROLE_META[(v['role'] || 'portfolio-manager') as CustomerRole].scopeKind;
 
 /**

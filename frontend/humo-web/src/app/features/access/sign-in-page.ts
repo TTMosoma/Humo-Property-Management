@@ -4,7 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { Subscription, map } from 'rxjs';
 import { Identity, ROLE_LABELS, SessionDataSource, SignInError, activeAssignments } from '../../domain';
-import { HUMO_PRODUCTS, HumoProductId } from '../../core/product/product';
+import { HUMO_PRODUCTS } from '../../core/product/product';
 import { PrototypeControls } from '../../core/prototype/prototype-controls';
 import { SessionService } from '../../core/session/session.service';
 import { Logo } from '../../ui/brand/logo';
@@ -14,34 +14,22 @@ type Step = 'start' | 'passkey' | 'no-passkey' | 'paused' | 'link-sent' | 'redee
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const RESEND_AFTER_S = 30;
 
-/** What the brand panel says, per product. */
-const STORY: Record<'property-management' | 'contractor', { eyebrow: string; headline: string; accent: string; lede: string; points: { icon: string; text: string }[] }> = {
-  'property-management': {
-    eyebrow: 'For managing agents and community schemes',
-    headline: 'Every scheme, levy and trustee,',
-    accent: 'in one place.',
-    lede: 'Billing and collections, maintenance, governance and owner communication, with a full audit trail behind every decision.',
-    points: [
-      { icon: 'receipt-outline', text: 'Levies billed, receipted and reconciled every month' },
-      { icon: 'construct-outline', text: 'Maintenance from the first report to the paid invoice' },
-      { icon: 'people-outline', text: 'Trustees approve and owners stay informed' },
-    ],
-  },
-  contractor: {
-    eyebrow: 'For trades and service businesses',
-    headline: 'Quote, win and deliver work',
-    accent: 'for the agents you know.',
-    lede: 'Quote requests from the managing agents you already work with, your compliance documents in one place, and work orders without the chasing.',
-    points: [
-      { icon: 'document-text-outline', text: 'Quote requests from agents you already work with' },
-      { icon: 'shield-checkmark-outline', text: 'Insurance and compliance documents, always current' },
-      { icon: 'construct-outline', text: 'Work orders and invoices in one place' },
-    ],
-  },
+/** What the brand panel says. */
+const STORY = {
+  eyebrow: 'For managing agents and community schemes',
+  headline: 'Every scheme, levy and trustee,',
+  accent: 'in one place.',
+  lede: 'Billing and collections, maintenance, governance and owner communication, with a full audit trail behind every decision.',
+  points: [
+    { icon: 'receipt-outline', text: 'Levies billed, receipted and reconciled every month' },
+    { icon: 'construct-outline', text: 'Maintenance from the first report to the paid invoice' },
+    { icon: 'people-outline', text: 'Trustees approve and owners stay informed' },
+  ],
 };
 
 /**
- * The Humo sign-in: one page for every Humo product (D5: one Humo sign-in).
+ * The sign-in to Humo Property Management. Humo Contractor is a separate app
+ * (projects/humo-contractor) with its own front door when it's built.
  * Passkeys first; an emailed one-time link when there's no passkey on this
  * device. It never says whether an email address has an account.
  *
@@ -66,16 +54,13 @@ export class SignInPage {
   /** Demo accounts and "open the email" exist only with the mock data layer. */
   protected readonly prototype = inject(PrototypeControls, { optional: true });
 
-  private readonly params = toSignal(this.route.queryParamMap.pipe(map((p) => ({ product: p.get('product'), name: p.get('name'), returnUrl: p.get('returnUrl'), token: p.get('token') }))), {
-    initialValue: { product: null, name: null, returnUrl: null, token: null },
+  private readonly params = toSignal(this.route.queryParamMap.pipe(map((p) => ({ name: p.get('name'), returnUrl: p.get('returnUrl'), token: p.get('token') }))), {
+    initialValue: { name: null, returnUrl: null, token: null },
   });
   private readonly mode = (this.route.snapshot.data['mode'] as 'sign-in' | 'signed-out' | 'link' | undefined) ?? 'sign-in';
 
-  protected readonly product = computed(() => {
-    const id = this.params().product as HumoProductId | null;
-    return id && HUMO_PRODUCTS[id] ? HUMO_PRODUCTS[id] : HUMO_PRODUCTS['property-management'];
-  });
-  protected readonly story = computed(() => STORY[this.product().id === 'contractor' ? 'contractor' : 'property-management']);
+  protected readonly product = signal(HUMO_PRODUCTS['property-management']);
+  protected readonly story = signal(STORY);
   protected readonly signedOutName = computed(() => (this.mode === 'signed-out' ? (this.params().name ?? '') : null));
   protected readonly year = new Date().getFullYear();
 
@@ -182,7 +167,7 @@ export class SignInPage {
   protected startOver(): void {
     this.pending?.unsubscribe();
     if (this.mode === 'link') {
-      void this.router.navigate(['/sign-in'], { queryParams: { product: this.product().id, returnUrl: this.params().returnUrl ?? undefined } });
+      void this.router.navigate(['/sign-in'], { queryParams: { returnUrl: this.params().returnUrl ?? undefined } });
       return;
     }
     this.step.set('start');
@@ -194,7 +179,7 @@ export class SignInPage {
   protected openDemoLink(): void {
     const link = this.demoLink();
     if (!link) return;
-    void this.router.navigate(['/sign-in/link'], { queryParams: { token: link.token, product: this.product().id, returnUrl: this.params().returnUrl ?? undefined } });
+    void this.router.navigate(['/sign-in/link'], { queryParams: { token: link.token, returnUrl: this.params().returnUrl ?? undefined } });
   }
 
   protected useDemoAccount(p: Identity): void {

@@ -62,17 +62,6 @@
   gap: var(--s-3);
 }
 
-.product-tag {
-  padding: 3px var(--s-3);
-  font-size: var(--fs-xs);
-  font-weight: var(--fw-semibold);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--brand-leaf-300);
-  border: 1px solid rgba(108, 211, 160, 0.35);
-  border-radius: var(--r-pill);
-}
-
 .story {
   max-width: 600px;
 

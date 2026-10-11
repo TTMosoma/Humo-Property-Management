@@ -48,7 +48,7 @@ export class UsersPage {
   protected readonly tabs = computed(() => {
     const all = this.people();
     const n = (f: RoleFamily) => all.filter((p) => familyOf(p, this.organisationId()) === f).length;
-    return (['agency', 'governance', 'resident', 'supplier'] as RoleFamily[]).map((f) => ({ id: f, label: FAMILY_LABELS[f], count: n(f) }));
+    return (['agency', 'governance', 'resident'] as RoleFamily[]).map((f) => ({ id: f, label: FAMILY_LABELS[f], count: n(f) }));
   });
 
   protected readonly rows = computed(() => {

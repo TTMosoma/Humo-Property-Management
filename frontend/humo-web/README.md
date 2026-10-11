@@ -1,59 +1,40 @@
-# HumoWeb
+# Humo frontend workspace
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.0.8.
+An Angular 22 workspace with **two separate applications**:
 
-## Development server
+| Project | Product | Source | Dev server | Build output |
+|---|---|---|---|---|
+| `humo-web` | **Humo Property Management**: the UI prototype (Angular + Ionic, mock data, no backend) | `src/` | `npm start -- --port 4310` | `dist/humo-web/browser` |
+| `humo-contractor` | **Humo Contractor**: a minimal foundation (one landing screen) | `projects/humo-contractor/src/` | `npm run start:contractor` (port 4320) | `dist/humo-contractor/browser` |
 
-To start a local development server, run:
+The two apps share installed packages and the base `tsconfig.json`, nothing else. Neither imports the other, and each runs and builds on its own. Details are in `../../docs/20-humo-contractor-separation.md`.
 
-```bash
-ng serve
-```
-
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## Install
 
 ```bash
-ng generate component component-name
+npm install
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## Humo Property Management
 
 ```bash
-ng generate --help
+npm start -- --port 4310     # dev server: http://localhost:4310
+npm run build                # production build
+npm run build:demo           # production build + demo hosting files (docs/19-demo-deployment.md)
 ```
 
-## Building
-
-To build the project run:
+## Humo Contractor
 
 ```bash
-ng build
+npm run start:contractor     # dev server: http://localhost:4320
+npm run build:contractor     # production build
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+## Checks
 
 ```bash
-ng test
+npx tsc -p tsconfig.app.json --noEmit                            # Humo PM types
+npx tsc -p projects/humo-contractor/tsconfig.app.json --noEmit   # Humo Contractor types
 ```
 
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+There's no test runner or linter yet (remediation plan P1-1).

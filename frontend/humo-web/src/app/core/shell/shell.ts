@@ -92,7 +92,7 @@ export class Shell {
     // The session can end while you're here (signed out elsewhere, organisation suspended, person
     // suspended). Like a 401 from the API: leave the product for the signed-out page, which explains why.
     effect(() => {
-      if (!this.session.signedIn()) untracked(() => this.router.navigate(['/signed-out'], { queryParams: { product: 'property-management' } }));
+      if (!this.session.signedIn()) untracked(() => this.router.navigate(['/signed-out']));
     });
 
     effect((onCleanup) => {

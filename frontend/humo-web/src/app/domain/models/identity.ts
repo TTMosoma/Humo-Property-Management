@@ -18,19 +18,17 @@ import { Role } from './role';
  * - organisation: every scheme in the organisation
  * - schemes:      the listed schemes only
  * - unit:         one unit (owners and tenants); `schemeIds` holds its scheme
- * - party:        a Humo Contractor business, not tied to one organisation
  * Room for later: portfolio.
  */
-export type ScopeType = 'platform' | 'organisation' | 'schemes' | 'unit' | 'party';
+export type ScopeType = 'platform' | 'organisation' | 'schemes' | 'unit';
 
 export interface AssignmentScope {
   type: ScopeType;
-  /** Null for platform and party scopes. */
+  /** Null for the platform scope. */
   organisationId: string | null;
   /** The schemes covered: for `schemes`, the list; for `unit`, the unit's scheme; otherwise empty. */
   schemeIds: string[];
   unitId?: string;
-  partyId?: string;
 }
 
 export type AssignmentStatus = 'active' | 'ended';
@@ -65,7 +63,7 @@ export interface OrganisationMembership {
   endedAt?: string;
 }
 
-/** Customer identities belong to organisations (or to none, for residents and contractors); Humo identities to Humo. */
+/** Customer identities belong to organisations (or to none, for residents); Humo identities to Humo. */
 export type IdentityKind = 'customer' | 'humo';
 
 /** Invited → Active → Suspended → Deactivated. Credentials are the identity provider's concern, not this record's. */

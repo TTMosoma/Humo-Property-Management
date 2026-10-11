@@ -93,9 +93,6 @@ export class MobileTabBar {
         more,
       ];
     }
-    if (role === 'supplier') {
-      return [{ id: 'orders', label: 'Work orders', icon: 'hammer-outline', route: '/supplier' }, more];
-    }
     // Staff who log jobs trade Home (one tap away in More) for Report; search stays, as the top bar hides it on phones.
     return [
       canReport ? { id: 'tasks', label: 'Tasks', icon: 'checkmark-done-outline', route: '/tasks', badge: 'tasks' } : { id: 'home', label: 'Home', icon: 'grid-outline', route: '/dashboard' },

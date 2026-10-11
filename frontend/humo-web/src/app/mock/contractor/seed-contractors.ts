@@ -7,7 +7,6 @@ import {
   QuoteRequest,
   ServiceCategory,
   VerificationLevel,
-  WorkOrder,
 } from '../../domain/contractor';
 import { seeded } from '../db/random';
 
@@ -178,7 +177,7 @@ const SERVICE_TEXT: Record<ServiceCategory, string> = {
 
 // ---------------------------------------------------------------- Quote requests
 
-export function seedQuoteRequests(): { requests: QuoteRequest[]; quotes: ContractorQuote[]; events: QuoteLifecycleEvent[]; workOrders: WorkOrder[] } {
+export function seedQuoteRequests(): { requests: QuoteRequest[]; quotes: ContractorQuote[]; events: QuoteLifecycleEvent[] } {
   const gate: QuoteRequest = {
     id: 'QR-2041',
     customerId: 'acacia',
@@ -219,30 +218,6 @@ export function seedQuoteRequests(): { requests: QuoteRequest[]; quotes: Contrac
     },
   ];
 
-  const others: QuoteRequest[] = [
-    {
-      id: 'QR-2038', customerId: 'tshikrand', customerName: 'Tshikrand', site: { name: 'Silver Oaks Estate', suburb: 'Faerie Glen', city: 'Pretoria' },
-      title: 'Boom gate and guardhouse intercom upgrade', description: 'Replace the visitor boom gate and integrate the guardhouse intercom with resident phones.',
-      category: 'Gate automation', requirements: ['Replace visitor boom', 'Integrate intercom with resident phones', 'Train guards'], photos: 4,
-      deadline: day(5, 17), createdAt: day(-4), createdBy: 'Tshikrand portfolio manager', status: 'open',
-      invitations: [{ partyId: 'party-secureaccess', invitedAt: day(-4), via: 'existing-relationship', status: 'invited' }, { partyId: 'party-abc-gates', invitedAt: day(-4), via: 'existing-relationship', status: 'quoted' }],
-    },
-    {
-      id: 'QR-2044', customerId: 'umgeni', customerName: 'Umgeni BC Services', site: { name: 'Ridgeview Gardens', suburb: 'Hillcrest', city: 'Durban' },
-      title: 'Pedestrian gate access control', description: 'Add tag access to two pedestrian gates; current keypads fail in the rain.',
-      category: 'Security', requirements: ['Replace two keypads with tag readers', 'Supply 120 tags', 'Weatherproof housings'], photos: 2,
-      deadline: day(9, 17), createdAt: day(-2), createdBy: 'Umgeni portfolio manager', status: 'open',
-      invitations: [{ partyId: 'party-secureaccess', invitedAt: day(-2), via: 'existing-relationship', status: 'viewed' }],
-    },
-    {
-      id: 'QR-2046', customerId: 'cust-oakridge', customerName: 'Oakridge Managing Agents', site: { name: 'Oakwood Estate', suburb: 'Midrand', city: 'Johannesburg' },
-      title: 'Electric fence zone keeps alarming', description: 'Zone 3 alarms nightly; suspect vegetation and an energiser fault.',
-      category: 'Security', requirements: ['Fault-find zone 3', 'Clear vegetation contact points', 'Replace energiser if needed', 'Issue an electric fence certificate'], photos: 1,
-      deadline: day(2, 17), createdAt: day(-1), createdBy: 'Oakridge portfolio manager', status: 'open',
-      invitations: [{ partyId: 'party-secureaccess', invitedAt: day(-1), via: 'email-invite', status: 'invited' }],
-    },
-  ];
-
   const ev = (at: string, type: QuoteLifecycleEvent['type'], extra: Partial<QuoteLifecycleEvent> = {}): QuoteLifecycleEvent => ({
     id: `qe-${Math.random().toString(36).slice(2, 9)}`, at, type, quoteRequestId: 'QR-2041', customerId: 'acacia', actor: 'Johan van der Merwe', ...extra,
   });
@@ -253,14 +228,5 @@ export function seedQuoteRequests(): { requests: QuoteRequest[]; quotes: Contrac
     ...quotes.map((q) => ev(q.submittedAt, 'quote-submitted', { partyId: q.partyId, quoteId: q.id, amount: q.amount, actor: 'Contractor' })),
   ];
 
-  const sites = ['Silver Oaks Estate, Faerie Glen', 'Morningside Manor, Sandton', 'Waterkloof Ridge Estate, Pretoria', 'Lonehill Village, Sandton', 'Craighall Mews, Johannesburg'];
-  const titles = ['Gate motor replacement', 'CCTV upgrade, 6 cameras', 'Electric fence repair, zone 2', 'Boom gate service', 'Intercom handsets, Block B'];
-  const status: WorkOrder['status'][] = ['scheduled', 'in-progress', 'scheduled', 'awarded', 'in-progress'];
-  const customers = [ENDORSERS[0], ENDORSERS[5], ENDORSERS[6], ENDORSERS[3], ENDORSERS[9]];
-  const workOrders: WorkOrder[] = titles.map((t, i) => ({
-    id: `WO-${7801 + i}`, partyId: 'party-secureaccess', customerId: customers[i].id, customerName: customers[i].name, title: t, site: sites[i],
-    amount: [14_200, 32_800, 6_400, 3_900, 9_750][i], scheduledFor: day([1, 0, 3, 8, -1][i], [8, 9, 10, 8, 13][i]), status: status[i],
-  }));
-
-  return { requests: [gate, ...others], quotes, events, workOrders };
+  return { requests: [gate], quotes, events };
 }

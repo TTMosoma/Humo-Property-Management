@@ -27,7 +27,6 @@ const SCOPE_TEXT: Record<string, string> = {
   agency: 'The whole agency',
   schemes: 'All or selected schemes',
   unit: 'One unit',
-  supplier: 'Their own company',
 };
 
 /**

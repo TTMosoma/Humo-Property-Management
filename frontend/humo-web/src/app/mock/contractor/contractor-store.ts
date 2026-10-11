@@ -7,7 +7,6 @@ import {
   NO_CHARGE_POLICY,
   QuoteLifecycleEvent,
   QuoteRequest,
-  WorkOrder,
 } from '../../domain/contractor';
 import { seedProfiles, seedQuoteRequests } from './seed-contractors';
 
@@ -23,7 +22,6 @@ interface ContractorSnapshot {
   requests: QuoteRequest[];
   quotes: ContractorQuote[];
   events: QuoteLifecycleEvent[];
-  workOrders: WorkOrder[];
   seq: number;
 }
 
@@ -36,7 +34,6 @@ export class ContractorStore {
   readonly requests = signal<QuoteRequest[]>(this.seed.requests);
   readonly quotes = signal<ContractorQuote[]>(this.seed.quotes);
   readonly events = signal<QuoteLifecycleEvent[]>(this.seed.events);
-  readonly workOrders = signal<WorkOrder[]>(this.seed.workOrders);
 
   /** Profiles with their endorsements joined and counted. */
   readonly profiles = computed<ContractorProfile[]>(() => {
@@ -52,7 +49,7 @@ export class ContractorStore {
   constructor() {
     // DEVELOPMENT / SIMULATION ONLY: Humo Contractor's simulated data survives a refresh.
     effect(() => {
-      const snapshot = { profiles: this.base(), endorsements: this.endorsements(), requests: this.requests(), quotes: this.quotes(), events: this.events(), workOrders: this.workOrders() };
+      const snapshot = { profiles: this.base(), endorsements: this.endorsements(), requests: this.requests(), quotes: this.quotes(), events: this.events() };
       untracked(() => simulationStorage.save('contractor', (): ContractorSnapshot => ({ ...snapshot, seq: this.seq })));
     });
   }
@@ -82,10 +79,6 @@ export class ContractorStore {
 
   addQuote(q: ContractorQuote): void {
     this.quotes.update((all) => [...all, q]);
-  }
-
-  addWorkOrder(w: WorkOrder): void {
-    this.workOrders.update((all) => [w, ...all]);
   }
 
   addEndorsement(e: ContractorEndorsement): void {

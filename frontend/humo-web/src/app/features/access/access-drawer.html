@@ -146,13 +146,6 @@
               <ui-field-error [errors]="errors()" field="unit" />
             </label>
           }
-          @case ('supplier') {
-            <label class="field">
-              <span class="f-label">Supplier company</span>
-              <input type="text" placeholder="e.g. Rand Plumbing & Geysers" [value]="supplier()" (input)="supplier.set($any($event.target).value)" />
-              <span class="f-help">They’ll only see their own work orders, quotes and invoices with your agency.</span>
-            </label>
-          }
         }
 
         <div class="preview">
