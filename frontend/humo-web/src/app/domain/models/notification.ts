@@ -1,6 +1,6 @@
 import { Role } from './role';
 
-export type NotificationKind = 'maintenance' | 'finance' | 'compliance' | 'communication' | 'governance';
+export type NotificationKind = 'maintenance' | 'finance' | 'compliance' | 'communication' | 'governance' | 'platform';
 
 /**
  * Something that happened (informational). Distinct from a WorkItem, which asks

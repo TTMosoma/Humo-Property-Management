@@ -3,7 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { map, take } from 'rxjs';
-import { HumoRole, HumoTeamDataSource, HumoTeamMember, IDENTITY_STATUS_LABELS, PlatformDataSource, ROLE_LABELS, RoleAssignment } from '../../../domain';
+import { HumoRole, HumoTeamDataSource, HumoTeamMember, IDENTITY_STATUS_LABELS, PERMISSION_META, Permission, PlatformDataSource, ROLE_LABELS, ROLE_PERMISSIONS, RoleAssignment } from '../../../domain';
 import { FeedbackService } from '../../../core/feedback/feedback.service';
 import { loadable } from '../../../core/data/loadable';
 import { PrototypeControls } from '../../../core/prototype/prototype-controls';
@@ -15,7 +15,7 @@ import { KeyFact, RecordHeader } from '../../../ui/record/record-header';
 import { EmptyState } from '../../../ui/states/empty-state';
 import { ErrorState } from '../../../ui/states/error-state';
 import { Skeleton } from '../../../ui/states/skeleton';
-import { customersForm, detailsForm, endRoleForm, grantRoleForm, impersonationForm, offboardForm, roleHelp, statusForm } from './team-forms';
+import { customersForm, delegatedActivationForm, detailsForm, endRoleForm, grantRoleForm, impersonationForm, offboardForm, roleHelp, statusForm } from './team-forms';
 import { MEMBER_TONE } from './team-page';
 
 /** One person on the Humo team: roles, impersonation, the customers they look after, and their access. */
@@ -129,6 +129,29 @@ import { MEMBER_TONE } from './team-page';
               <p class="muted">Only System Administrators can be allowed to impersonate.</p>
             }
           </section>
+          @if (hasRole('humo-account-manager')) {
+            <section class="surface panel">
+              <h2 class="section-title">Delegated account activation</h2>
+              <p>
+                @if (m.canActivateWithoutApproval) {
+                  <strong>Granted.</strong> They activate new customer accounts themselves, without a separate approval. System Administrators are notified of each one, and it’s in the audit log.
+                } @else {
+                  <strong>Not granted.</strong> Their new customer accounts wait for a System Administrator’s approval.
+                }
+              </p>
+              @if (editable()) {
+                <button type="button" class="btn btn-secondary btn-sm" (click)="delegatedActivation()">{{ m.canActivateWithoutApproval ? 'Revoke' : 'Grant delegated activation' }}</button>
+              }
+            </section>
+          }
+          <section class="surface panel">
+            <h2 class="section-title">What they can do</h2>
+            <ul class="perms">
+              @for (p of permissions(); track p.id) {
+                <li [class.granted]="p.individual">{{ p.label }}@if (p.individual) {<span class="tag">Granted individually</span>}</li>
+              }
+            </ul>
+          </section>
           <section class="surface panel">
             <h2 class="section-title">Activity</h2>
             <p class="muted">{{ m.lastActiveAt ? 'Last active ' + relativeTime(m.lastActiveAt) : 'No active sessions.' }}</p>
@@ -148,6 +171,9 @@ import { MEMBER_TONE } from './team-page';
     .sub { margin: var(--s-3) 0 var(--s-1); font-size: var(--fs-sm); }
     .muted { font-size: var(--fs-sm); color: var(--c-text-muted); }
     .danger { color: var(--c-danger); }
+    .perms { display: flex; flex-direction: column; gap: 4px; margin: var(--s-2) 0 0; padding: 0; list-style: none; font-size: var(--fs-sm); }
+    .perms li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); }
+    .perms .tag { padding: 0 6px; font-size: var(--fs-2xs); font-weight: var(--fw-semibold); color: var(--c-warning); background: var(--c-warning-soft); border-radius: 999px; }
   `,
 })
 export class MemberPage {
@@ -192,6 +218,7 @@ export class MemberPage {
       { label: 'Roles', value: String(m.roles.length) },
       { label: 'Customers', value: String(m.customers.length) },
       { label: 'Impersonation', value: m.canImpersonate ? 'Allowed' : 'No', tone: m.canImpersonate ? 'warning' : 'default' },
+      ...(this.hasRole('humo-account-manager') ? [{ label: 'Delegated activation', value: m.canActivateWithoutApproval ? 'Granted' : 'No', tone: (m.canActivateWithoutApproval ? 'warning' : 'default') as KeyFact['tone'] }] : []),
       { label: 'On the team since', value: since ? formatDate(since, true) : '—' },
     ];
   });
@@ -213,6 +240,20 @@ export class MemberPage {
   protected impersonation(): void {
     impersonationForm(this.drawer, this.data, this.view()!);
   }
+
+  protected delegatedActivation(): void {
+    delegatedActivationForm(this.drawer, this.data, this.view()!);
+  }
+
+  /** Their Humo roles' permissions, plus anything granted to them individually. */
+  protected readonly permissions = computed(() => {
+    const m = this.view();
+    if (!m) return [];
+    const individual = new Set(m.roles.flatMap((r) => r.grants ?? []));
+    const all = new Set<Permission>([...m.roles.flatMap((r) => ROLE_PERMISSIONS[r.role]), ...individual]);
+    all.delete('Security.ManageOwn');
+    return [...all].map((id) => ({ id, label: PERMISSION_META[id].label, individual: individual.has(id) }));
+  });
 
   protected setStatus(kind: 'suspend' | 'restore'): void {
     statusForm(this.drawer, this.data, this.view()!, kind);

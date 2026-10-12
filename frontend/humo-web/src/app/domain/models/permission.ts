@@ -66,6 +66,8 @@ export type Permission =
   | 'Platform.View'
   | 'Platform.Customers.View'
   | 'Platform.Customers.Manage'
+  | 'Platform.Customers.Approve'
+  | 'Platform.Customers.ActivateWithoutApproval'
   | 'Platform.Customers.Users'
   | 'Platform.Accounts.Own'
   | 'Platform.Subscriptions.View'
@@ -147,6 +149,8 @@ export const PERMISSIONS: PermissionMeta[] = [
   { id: 'Platform.View', area: 'Platform', label: 'Use the Humo platform console', mutates: false },
   { id: 'Platform.Customers.View', area: 'Platform', label: 'View customer organisations', mutates: false },
   { id: 'Platform.Customers.Manage', area: 'Platform', label: 'Onboard and configure customer accounts', mutates: true },
+  { id: 'Platform.Customers.Approve', area: 'Platform', label: 'Approve or reject new customer accounts', mutates: true },
+  { id: 'Platform.Customers.ActivateWithoutApproval', area: 'Platform', label: 'Activate new customer accounts without separate approval (granted individually)', mutates: true },
   { id: 'Platform.Customers.Users', area: 'Platform', label: 'See and assist customer users', mutates: false },
   { id: 'Platform.Accounts.Own', area: 'Platform', label: 'Look after a book of customer accounts', mutates: false },
   { id: 'Platform.Subscriptions.View', area: 'Platform', label: 'View subscriptions and entitlements', mutates: false },
@@ -185,8 +189,9 @@ const TRUSTEE_VIEW: Permission[] = [
  * Default permissions per role. Prototype assumption: fixed roles first;
  * custom roles (an agency editing these) are a later, Enterprise-plan feature.
  *
- * System.Impersonate is deliberately absent from every role — it is granted to
- * named individuals only (see RoleAssignment.grants).
+ * System.Impersonate and Platform.Customers.ActivateWithoutApproval are
+ * deliberately absent from every role — they're granted to named individuals
+ * only (see RoleAssignment.grants), by a System Administrator.
  */
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   'agency-admin': [
@@ -208,7 +213,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   tenant: ['Resident.Portal', 'Resident.Requests', 'Security.ManageOwn'],
   // Highest operational authority — but impersonation is still an individual grant.
   'system-admin': [
-    'Platform.View', 'Platform.Customers.View', 'Platform.Customers.Manage', 'Platform.Customers.Users', 'Platform.Subscriptions.View',
+    'Platform.View', 'Platform.Customers.View', 'Platform.Customers.Manage', 'Platform.Customers.Approve', 'Platform.Customers.Users', 'Platform.Subscriptions.View',
     'Platform.Subscriptions.Manage', 'Platform.Packages.Manage', 'Platform.Templates.Manage', 'Platform.Health.View', 'Platform.Revenue.View', 'Platform.Insights.View',
     'Platform.Support.Assist', 'Platform.Config.Manage', 'Platform.Operations.View', 'Platform.Operations.Manage', 'Platform.ManageHumoRoles', 'Platform.Audit', 'Security.ManageOwn',
   ],

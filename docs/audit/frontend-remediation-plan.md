@@ -43,7 +43,7 @@
 
 | # | Item | Notes | Evidence | Effort |
 |---|---|---|---|---|
-| P1-1 | **Test harness:** test target (Vitest, as `tsconfig.spec.json` expects); lint; Prettier check; **contract tests per port**, run against the in-memory adapter now and the HTTP adapter later | No tests today; `npm test` fails (F-01) | Audit evidence C1, C2 | M |
+| P1-1 | 🟡 **Started 11 Oct 2026:** `npm test` runs (Vitest via `@angular/build:unit-test`), with the first contract-style tests for account approval (doc 21). Lint, Prettier and per-port contract tests remain. **Test harness:** test target (Vitest, as `tsconfig.spec.json` expects); lint; Prettier check; **contract tests per port**, run against the in-memory adapter now and the HTTP adapter later | No tests today; `npm test` fails (F-01) | Audit evidence C1, C2 | M |
 | P1-2 | **Environment-specific providers:** mock data and prototype controls only in development; an empty HTTP data layer behind the same ports for production builds | Mocks and the persona switcher ship in production (F-05) | `app.config.ts` | S–M |
 | P1-3 | **Implement D3:** *Invite* on the person, unit and board pages, prefilled; Portfolio Managers may invite residents and trustees in scope (new permission); first-administrator invite restricted to Agency Administrator (F-22) | | Person page "Not invited yet" (F-27) | M |
 | P1-4 | **Implement D4 hygiene:** replace security-relevant `role ===` checks with permissions | 29 checks, most harmless (meeting attendee roles) | Read-only search | S |

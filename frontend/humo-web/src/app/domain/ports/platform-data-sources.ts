@@ -5,6 +5,7 @@ import { AddOn, AddOnId, Feature, FeatureDef, Package, PackageId } from '../mode
 import { NudgeDefinition, NudgePlacement } from '../models/nudge';
 import { UpgradeRequest } from '../models/opportunity';
 import { BusinessOverview, CustomerPlan, PlatformCustomer, SubscriptionChange } from '../models/platform';
+import { AccountApprovalPolicy, AccountDecision, AccountPolicySetting, AccountRequestView, AccountSubmission, NewAccountDetails } from '../models/account-request';
 
 /** The product catalogue: what can be sold, and what each package and add-on contains. */
 export interface Catalogue {
@@ -77,4 +78,25 @@ export abstract class OpsDataSource {
   abstract retryJob(jobId: string): Observable<void>;
   abstract declareIncident(input: NewIncident): Observable<string>;
   abstract updateIncident(id: string, status: IncidentStatus, message: string, expectedVersion?: number): Observable<void>;
+}
+
+/**
+ * New customer accounts (docs/21). Opening an account is a request: the API
+ * decides from the submitter's permissions and the policy whether it waits for
+ * a System Administrator or is activated under delegated authority. The client
+ * never says which.
+ *
+ *   GET   /platform/account-requests                 requests, with their organisation's status
+ *   POST  /platform/account-requests                 submit → { outcome: pending | activated }
+ *   POST  /platform/account-requests/{id}/decision   approve | reject (Platform.Customers.Approve)
+ *   GET   /platform/account-policy                   the policy in force
+ *   PUT   /platform/account-policy                   change it (Platform.Config.Manage, step-up, reason)
+ */
+export abstract class AccountRequestDataSource {
+  abstract list(): Observable<AccountRequestView[]>;
+  abstract get(id: string): Observable<AccountRequestView | undefined>;
+  abstract submit(details: NewAccountDetails): Observable<AccountSubmission>;
+  abstract decide(id: string, decision: AccountDecision, expectedVersion?: number): Observable<void>;
+  abstract policy(): Observable<AccountPolicySetting>;
+  abstract setPolicy(policy: AccountApprovalPolicy, reason: string, expectedVersion?: number): Observable<void>;
 }

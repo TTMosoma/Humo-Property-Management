@@ -39,6 +39,7 @@ export const NAV: NavSection[] = [
       { id: 'exec-overview', label: 'Overview', icon: 'analytics-outline', route: '/platform/executive', permission: 'Platform.Insights.View', keywords: 'mrr arr board business' },
       // Account Manager: customer success.
       { id: 'am-accounts', label: 'My accounts', icon: 'heart-outline', route: '/platform/accounts', permission: 'Platform.Accounts.Own', keywords: 'customer portfolio' },
+      { id: 'platform-account-requests', label: 'New accounts', icon: 'person-add-outline', route: '/platform/account-requests', permission: 'Platform.Customers.Manage', keywords: 'onboard new customer account approval approve reject delegated activation' },
       { id: 'platform-customers', label: 'Customers', icon: 'business-outline', route: '/platform/customers', permission: 'Platform.Customers.View', audience: ['system-admin', 'humo-support', 'humo-executive'], keywords: 'agencies organisations subscriptions tshikrand' },
       { id: 'exec-revenue', label: 'Revenue', icon: 'trending-up-outline', route: '/platform/executive/revenue', permission: 'Platform.Insights.View', audience: ['humo-executive'], keywords: 'mrr arr package' },
       { id: 'exec-growth', label: 'Growth', icon: 'people-outline', route: '/platform/executive/growth', permission: 'Platform.Insights.View', audience: ['humo-executive'], keywords: 'new customers churn retention adoption' },

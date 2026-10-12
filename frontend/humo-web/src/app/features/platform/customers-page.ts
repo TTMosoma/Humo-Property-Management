@@ -1,12 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { CatalogueService } from '../../core/catalogue/catalogue.service';
-import { toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { catchError, map, of } from 'rxjs';
-import { AccessDataSource, Identity, OrganisationDataSource, PlatformCustomer, PlatformDataSource, activeAssignments } from '../../domain';
-import { DrawerService } from '../../ui/drawer/drawer.service';
-import { newCustomerForm } from './organisation-forms';
+import { map } from 'rxjs';
+import { PlatformCustomer, PlatformDataSource } from '../../domain';
+import { NewAccountLauncher } from './accounts/account-request-forms';
 import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
 import { CellDef, ColumnDef, DataTable } from '../../ui/data-table/data-table';
@@ -36,20 +34,12 @@ export class CustomersPage {
   protected readonly catalogue = inject(CatalogueService);
   private readonly data = inject(PlatformDataSource);
   private readonly router = inject(Router);
-  private readonly drawer = inject(DrawerService);
-  private readonly organisations = inject(OrganisationDataSource);
-  /** Humo Account Managers, for the onboarding form. */
-  private readonly managers = toSignal(
-    inject(AccessDataSource).humoTeam().pipe(
-      map((team) => team.filter((i) => activeAssignments(i).some((a) => a.role === 'humo-account-manager'))),
-      catchError(() => of([] as Identity[])),
-    ),
-    { initialValue: [] as Identity[] },
-  );
+  private readonly launcher = inject(NewAccountLauncher);
   protected readonly session = inject(SessionService);
 
+  /** New customers start as an account request: approved by a System Administrator, or activated under delegated authority. */
   protected onboard(): void {
-    newCustomerForm(this.drawer, this.organisations, this.router, this.catalogue.packages(), this.managers(), this.session.actor().id);
+    this.launcher.open();
   }
   protected readonly state = urlState({ view: 'all', q: null, pkg: null });
 

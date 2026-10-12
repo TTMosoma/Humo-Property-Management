@@ -41,6 +41,8 @@ export interface HumoTeamMember {
   formerRoles: RoleAssignment[];
   /** Individually granted System.Impersonate (on their System Administrator role). */
   canImpersonate: boolean;
+  /** Individually granted Platform.Customers.ActivateWithoutApproval (on their Account Manager role). */
+  canActivateWithoutApproval: boolean;
   /** Customers they look after as Account Manager. */
   customers: HumoCustomerRef[];
   pending?: PendingHumoGrant;
@@ -62,6 +64,8 @@ export type HumoTeamAction =
   | { type: 'grant-role'; role: HumoRole; label: string; reason: string }
   | { type: 'end-role'; assignmentId: string; reason: string }
   | { type: 'set-impersonation'; allowed: boolean; reason: string }
+  /** Delegated account activation: an Account Manager may activate new customer accounts without a separate approval. */
+  | { type: 'set-delegated-activation'; allowed: boolean; reason: string }
   | { type: 'set-customers'; organisationIds: string[]; reason: string }
   | { type: 'suspend'; reason: string }
   | { type: 'restore'; reason: string }

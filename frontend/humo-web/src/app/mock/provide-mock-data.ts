@@ -28,6 +28,7 @@ import {
   OrganisationDataSource,
   PlanDataSource,
   PlatformDataSource,
+  AccountRequestDataSource,
   SecurityDataSource,
   StepUpAuthenticator,
   JobDataSource,
@@ -62,6 +63,7 @@ import {
   InMemoryStepUpAuthenticator,
 } from './data-sources/in-memory-access-data-sources';
 import { InMemoryNotificationDataSource, InMemoryOrganisationDataSource } from './data-sources/in-memory-organisation-data-sources';
+import { InMemoryAccountRequestDataSource } from './data-sources/in-memory-account-request-data-source';
 import { ContractorNetwork } from '../domain/contractor';
 import { InMemoryContractorNetwork } from './contractor/in-memory-contractor';
 import { InMemoryCatalogueDataSource, InMemoryNudgeDataSource, InMemoryPlanDataSource, InMemoryPlatformDataSource } from './data-sources/in-memory-platform-data-sources';
@@ -108,6 +110,7 @@ export function provideMockData(): EnvironmentProviders {
     { provide: SecurityDataSource, useClass: InMemorySecurityDataSource },
     { provide: StepUpAuthenticator, useClass: InMemoryStepUpAuthenticator },
     { provide: PlatformDataSource, useClass: InMemoryPlatformDataSource },
+    { provide: AccountRequestDataSource, useClass: InMemoryAccountRequestDataSource },
     { provide: PlanDataSource, useClass: InMemoryPlanDataSource },
     { provide: NudgeDataSource, useClass: InMemoryNudgeDataSource },
     { provide: CatalogueDataSource, useClass: InMemoryCatalogueDataSource },
