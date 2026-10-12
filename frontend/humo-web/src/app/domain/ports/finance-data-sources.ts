@@ -2,6 +2,7 @@ import { Observable } from 'rxjs';
 import { BillingAction, BillingRun, BillingRunSummary, NewBillingRun, SchemeBillingStatus } from '../models/billing';
 import { CollectionAction, CollectionView } from '../models/collections';
 import { MeterEntry, MeterSheet } from '../models/meter';
+import { LevyMethod, LevyRollProposal, LevySetting } from '../models/levy';
 import { ListQuery, Page } from './list-query';
 
 /**
@@ -53,4 +54,20 @@ export abstract class MeterDataSource {
   /** Returns how many readings were saved. */
   abstract saveReadings(schemeId: string, period: string, readOn: string, entries: MeterEntry[]): Observable<number>;
   abstract setRate(schemeId: string, ratePerKl: number, reason: string, expectedVersion?: number): Observable<void>;
+}
+
+/**
+ * How each scheme's levies are set (D13, docs/22 §3, flag `levy-model`, Billing.Run).
+ *   GET   /schemes/{id}/levy-setting
+ *   PUT   /schemes/{id}/levy-setting                 manual | budget (reason)
+ *   GET   /schemes/{id}/levy-roll/proposal           from the approved budget
+ *   POST  /schemes/{id}/levy-roll/apply              apply it from the next run (reason)
+ */
+export abstract class LevyDataSource {
+  abstract setting(schemeId: string): Observable<LevySetting>;
+  abstract setMethod(schemeId: string, method: LevyMethod, reason: string, expectedVersion?: number): Observable<void>;
+  /** undefined when the scheme has no approved budget with a Levies income line. */
+  abstract proposal(schemeId: string): Observable<LevyRollProposal | undefined>;
+  /** Applies the proposed roll to every unit; returns how many levies changed. */
+  abstract apply(schemeId: string, budgetId: string, reason: string, expectedVersion?: number): Observable<number>;
 }

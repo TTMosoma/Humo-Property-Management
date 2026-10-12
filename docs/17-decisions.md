@@ -290,7 +290,7 @@ Approved on 12 October 2026 by Terry Mosoma (product owner). Scope: [22-billing-
 **Replaces:** the open question "is the monthly levy derived from the quota and the approved budget, or entered?" (audit F-14). Both are supported, chosen per scheme.
 
 **Consequences:**
-- **Frontend:** behind the `levy-model` flag (doc 22).
+- **Frontend:** behind the `levy-model` flag (doc 22); built 12 Oct 2026 (Levies & billing › How levies are set).
 - **Backend:**
   - store the method per scheme, and the applied levy roll with its effective period, budget and approver;
   - billing reads the levy in force for the period.

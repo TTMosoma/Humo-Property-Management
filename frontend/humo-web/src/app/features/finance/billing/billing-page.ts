@@ -32,6 +32,9 @@ import { BILLING_STAGE_TONE, billingStageLabel } from './billing-view';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-page-header eyebrow="Finance" title="Levies & billing" subtitle="Each scheme’s monthly run: charges checked, exceptions decided, approved, posted and statements sent.">
+      @if (flags.on('levy-model')) {
+        <a class="btn btn-ghost" routerLink="/finance/billing/levies">How levies are set</a>
+      }
       @if (flags.on('meter-readings')) {
         <a class="btn btn-secondary" routerLink="/finance/billing/meters"><ion-icon name="water-outline" aria-hidden="true" /> Meter readings</a>
       }
