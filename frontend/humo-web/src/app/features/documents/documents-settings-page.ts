@@ -20,7 +20,7 @@ import { Skeleton } from '../../ui/states/skeleton';
 import { StatusPill } from '../../ui/status-pill/status-pill';
 import { formatDate } from '../../ui/format/money';
 import { TemplatePicker } from './template-picker';
-import { brandingForm, customTemplateForm, defaultTemplateForm } from './document-forms';
+import { brandingForm, defaultTemplateForm } from './document-forms';
 
 /**
  * Settings → Documents & templates. Which template each document type uses by
@@ -91,8 +91,4 @@ export class DocumentsSettingsPage {
     if (s) brandingForm(this.drawer, this.data, s, this.branded());
   }
 
-  protected publish(): void {
-    const t = this.custom();
-    if (t) customTemplateForm(this.drawer, this.data, t);
-  }
 }

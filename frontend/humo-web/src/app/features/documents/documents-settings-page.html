@@ -98,16 +98,13 @@
   <section class="block surface" aria-labelledby="custom-h">
     <div class="block-head">
       <h2 id="custom-h" class="block-title">Your custom template</h2>
-      @if (custom() && customEntitled() && canEdit()) {
-        <button type="button" class="btn btn-primary btn-sm" (click)="publish()">Edit and publish a new version</button>
-      }
     </div>
     @if (!customEntitled()) {
       <div class="locked">
         <ion-icon name="lock-closed-outline" aria-hidden="true" />
         <div>
           <strong>Enterprise custom</strong>
-          <p>Create documents using your organisation’s own branding and layout. Available with Enterprise.</p>
+          <p>Humo designs your documents from your own brand designs, as a paid Enterprise service. Available with Enterprise.</p>
           @if (session.canOpen('Subscription.View')) {
             <a class="btn btn-ghost btn-sm" routerLink="/settings/plan" [queryParams]="{ feature: 'document-templates-custom' }">Explore Enterprise</a>
           }
@@ -117,13 +114,14 @@
       <p class="block-sub">
         <strong>{{ t.name }}</strong> — {{ t.description }} Each version is kept: documents issued with an earlier version keep rendering exactly as they were sent.
       </p>
+      <p class="block-sub">Humo designs and maintains this template. To change it, ask your Humo account manager: they’ll send you a proof to approve before anything is published.</p>
       <ol class="versions">
         @for (v of history(); track v.version) {
           <li class="version">
             <span class="v-no">v{{ v.version }}</span>
             <span class="v-main">
               <span>{{ v.notes }}</span>
-              <span class="muted small">{{ v.publishedBy }} · {{ v.publishedAt ? formatDate(v.publishedAt) : 'Draft' }}</span>
+              <span class="muted small">{{ v.publishedBy }} · {{ v.publishedAt ? formatDate(v.publishedAt) : 'Draft' }}{{ v.clientApproval ? ' · approved by ' + v.clientApproval.approvedBy + ', ' + formatDate(v.clientApproval.approvedOn) : '' }}</span>
             </span>
             <ui-status-pill [label]="v.status === 'published' ? 'Current' : v.status === 'retired' ? 'Earlier version' : 'Draft'" [tone]="v.status === 'published' ? 'success' : 'neutral'" />
             <button type="button" class="btn btn-ghost btn-sm" (click)="preview(t.id, v.version)">Preview</button>
@@ -131,7 +129,7 @@
         }
       </ol>
     } @else {
-      <p class="block-sub">Your plan includes a custom template. Your Humo account manager sets it up with you; after that you change it here.</p>
+      <p class="block-sub">Your plan includes a custom template. It’s a paid design service: your Humo account manager takes your brief and designs, and Humo publishes it once you approve a proof.</p>
     }
   </section>
 }

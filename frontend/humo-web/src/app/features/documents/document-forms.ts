@@ -99,17 +99,20 @@ export function brandingForm(drawer: DrawerService, data: DocumentTemplateDataSo
   });
 }
 
-/** An Enterprise custom template: structured fields only — the API validates every value. */
-export function customTemplateForm(drawer: DrawerService, data: DocumentTemplateDataSource, t: DocumentTemplate): void {
+/**
+ * An Enterprise custom template's next version (D12: Humo-owned, published by Humo after
+ * the client approves a proof). Structured fields only: the API validates every value.
+ */
+export function customTemplateForm(drawer: DrawerService, data: PlatformTemplateDataSource, t: DocumentTemplate, customer: string): void {
   const d = templateVersion(t)?.design;
   const sections = Object.keys(STATEMENT_SECTIONS) as StatementSection[];
   const toggles: FormField[] = sections
     .filter((s) => s !== 'transactions')
     .map((s) => ({ key: `s-${s}`, label: STATEMENT_SECTIONS[s], type: 'select', required: true, half: true, options: SHOW_HIDE }));
   openForm(drawer, {
-    eyebrow: t.name,
+    eyebrow: `${customer} · ${t.name}`,
     title: `Publish version ${t.currentVersion + 1}`,
-    intro: `Version ${t.currentVersion} stays on record: documents already issued with it keep rendering exactly as they were sent.`,
+    intro: `Publish only what ${customer} approved as a proof. Version ${t.currentVersion} stays on record: documents already issued with it keep rendering exactly as they were sent.`,
     fields: [
       { key: 'title', label: 'Document title', type: 'text', placeholder: 'Levy statement', help: 'Your organisation’s word for it, e.g. “Statement of account”.' },
       { key: 'primary', label: 'Main colour', type: 'color', required: true, half: true },
@@ -120,6 +123,8 @@ export function customTemplateForm(drawer: DrawerService, data: DocumentTemplate
       { key: 'footerText', label: 'Footer text', type: 'textarea', help: `Replaces the standard queries line. Plain text, up to ${MAX_TEMPLATE_TEXT} characters.` },
       { key: 'legalText', label: 'Legal notice', type: 'textarea', help: 'Printed in small type at the end of the document.' },
       { key: 'notes', label: 'What changed', type: 'text', required: true, help: 'Shown in the version history.' },
+      { key: 'approvedBy', label: 'Proof approved by', type: 'text', required: true, half: true, placeholder: 'Name and role at the client' },
+      { key: 'approvedOn', label: 'Approved on', type: 'date', required: true, half: true },
     ],
     initial: {
       title: d?.title ?? '',
@@ -130,9 +135,10 @@ export function customTemplateForm(drawer: DrawerService, data: DocumentTemplate
       footerText: d?.footerText ?? '',
       legalText: d?.legalText ?? '',
       ...Object.fromEntries(sections.map((s) => [`s-${s}`, !d || d.sections.includes(s) ? 'show' : 'hide'])),
+      approvedOn: new Date().toISOString().slice(0, 10),
     },
     submitLabel: `Publish version ${t.currentVersion + 1}`,
-    submit: (v) => data.publishVersion(t.id, designFrom(v, sections), v['notes'], t.version),
+    submit: (v) => data.publishCustomVersion(t.id, designFrom(v, sections), v['notes'], { approvedBy: v['approvedBy'], approvedOn: v['approvedOn'] }, t.version),
     success: (n) => `Version ${n} is live. New documents use it; earlier ones keep their version.`,
     failure: 'The new version wasn’t published',
   });
@@ -176,7 +182,7 @@ export function setUpCustomTemplateForm(drawer: DrawerService, data: PlatformTem
   openForm(drawer, {
     eyebrow: 'Document templates',
     title: 'Set up a custom template',
-    intro: 'Starts from Humo’s Standard design. The customer’s administrator then changes colours, wording and legal text from their own settings. The customer must be entitled to custom templates.',
+    intro: 'A paid Enterprise service (D12): Humo designs the template from the customer’s brief, and publishes each version once they approve a proof. It starts from Humo’s Standard design. The customer must be entitled to custom templates.',
     fields: [
       { key: 'organisationId', label: 'Customer', type: 'select', required: true, options: customers.map((c) => ({ value: c.id, label: c.name })) },
       { key: 'documentType', label: 'Document', type: 'select', required: true, options: [{ value: 'levy-statement', label: DOCUMENT_TYPE_META['levy-statement'].label }] },
@@ -184,7 +190,7 @@ export function setUpCustomTemplateForm(drawer: DrawerService, data: PlatformTem
     initial: { documentType: 'levy-statement' },
     submitLabel: 'Set up template',
     submit: (v) => data.createCustomTemplate(v['organisationId'], v['documentType'] as DocumentType),
-    success: () => 'Custom template set up. The customer can now choose it and edit it.',
+    success: () => 'Custom template set up. Publish its first design from this page once the customer approves a proof.',
     failure: 'The template wasn’t set up',
   });
 }

@@ -20,6 +20,7 @@ import {
   isHexColour,
   templateAvailability,
   validateDesign,
+  ClientApproval,
 } from '../../domain';
 import { DocumentStore } from '../db/document-store';
 import { PlatformStore } from '../db/platform-store';
@@ -111,45 +112,12 @@ export class InMemoryDocumentTemplateDataSource extends DocumentTemplateDataSour
         })),
     );
   }
-
-  publishVersion(templateId: string, design: TemplateDesign, notes: string, expectedVersion: number): Observable<number> {
-    const orgId = this.orgId();
-    const t = this.store.template(templateId);
-    return this.gateway.command(
-      {
-        action: `Published a new version of ${t?.name ?? templateId}`,
-        resource: 'DocumentTemplate',
-        resourceId: templateId,
-        permission: 'Documents.Configure',
-        feature: 'document-templates-custom',
-        version: { expected: expectedVersion, current: t?.version },
-        validate: () => {
-          if (!t || t.organisationId !== orgId) return { templateId: 'This isn’t one of your organisation’s templates.' };
-          const e: FieldErrors = validateDesign(design);
-          if (!notes.trim()) e['notes'] = 'Say what changed, for the version history.';
-          return Object.keys(e).length ? e : null;
-        },
-      },
-      () => {
-        const next = Math.max(...t!.versions.map((v) => v.version)) + 1;
-        this.store.changeTemplate(templateId, (x) => ({
-          ...x,
-          currentVersion: next,
-          // Earlier versions are kept, retired, for the documents that were generated with them.
-          versions: [
-            ...x.versions.map((v) => (v.status === 'published' ? { ...v, status: 'retired' as const } : v)),
-            { version: next, status: 'published', design, notes: notes.trim(), publishedAt: new Date().toISOString(), publishedBy: this.auth.current.identity.name },
-          ],
-        }));
-        return next;
-      },
-    );
-  }
 }
 
 /** Humo's view across customers: the catalogue, every custom template and how widely templates are used. */
 @Injectable()
 export class InMemoryPlatformTemplateDataSource extends PlatformTemplateDataSource {
+  private readonly auth = inject(MockAuthSession);
   private readonly store = inject(DocumentStore);
   private readonly platform = inject(PlatformStore);
   private readonly orgs = inject(OrganisationStore);
@@ -243,6 +211,51 @@ export class InMemoryPlatformTemplateDataSource extends PlatformTemplateDataSour
           versions: [{ version: 1, status: 'published', design, notes: 'Set up from Humo’s Standard design.', publishedAt: new Date().toISOString(), publishedBy: 'Humo' }],
         });
         return id;
+      },
+    );
+  }
+
+  /**
+   * D12: custom templates are Humo-owned. Humo publishes a version only with the
+   * client's recorded proof approval, and only while the customer is entitled.
+   */
+  publishCustomVersion(templateId: string, design: TemplateDesign, notes: string, approval: ClientApproval, expectedVersion: number): Observable<number> {
+    const t = this.store.template(templateId);
+    const customer = t?.organisationId ? this.platform.customers().find((c) => c.organisationId === t.organisationId) : undefined;
+    const today = new Date().toISOString().slice(0, 10);
+    return this.gateway.command(
+      {
+        action: `Published version ${t ? Math.max(...t.versions.map((v) => v.version)) + 1 : '?'} of ${t?.name ?? templateId} — client approval: ${approval.approvedBy.trim()} on ${approval.approvedOn}`,
+        resource: 'DocumentTemplate',
+        resourceId: templateId,
+        permission: 'Platform.Customers.Manage',
+        version: { expected: expectedVersion, current: t?.version },
+        validate: () => {
+          if (!t || !t.organisationId) return { templateId: 'Only a customer’s custom template is published here.' };
+          if (!customer || !entitlementSet(customer.entitlements).has(TEMPLATE_TIERS.custom.feature!)) return { templateId: 'The customer isn’t entitled to custom templates any more.' };
+          const e: FieldErrors = validateDesign(design);
+          if (!notes.trim()) e['notes'] = 'Say what changed, for the version history.';
+          if (approval.approvedBy.trim().length < 3) e['approvedBy'] = 'Who at the client approved the proof?';
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(approval.approvedOn) || approval.approvedOn > today) e['approvedOn'] = 'The date they approved it (not in the future).';
+          return Object.keys(e).length ? e : null;
+        },
+      },
+      () => {
+        const next = Math.max(...t!.versions.map((v) => v.version)) + 1;
+        this.store.changeTemplate(templateId, (x) => ({
+          ...x,
+          currentVersion: next,
+          // Earlier versions are kept, retired, for the documents that were generated with them.
+          versions: [
+            ...x.versions.map((v) => (v.status === 'published' ? { ...v, status: 'retired' as const } : v)),
+            {
+              version: next, status: 'published', design, notes: notes.trim(),
+              publishedAt: new Date().toISOString(), publishedBy: this.auth.current.identity.name,
+              clientApproval: { approvedBy: approval.approvedBy.trim(), approvedOn: approval.approvedOn },
+            },
+          ],
+        }));
+        return next;
       },
     );
   }

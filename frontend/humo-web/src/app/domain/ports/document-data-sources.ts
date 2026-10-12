@@ -1,6 +1,7 @@
 import { Observable } from 'rxjs';
 import {
   AgencyBranding,
+  ClientApproval,
   DocumentContact,
   DocumentTemplate,
   DocumentType,
@@ -23,7 +24,9 @@ export interface DocumentBrandingDetails {
  *   GET   /documents/settings                   defaults, contact details, branding
  *   PUT   /documents/settings/defaults/{type}   choose the default template for a type
  *   PUT   /documents/settings/branding          contact details, footer, branding
- *   POST  /documents/templates/{id}/versions    publish a new version of a custom template
+ *
+ * Custom templates are Humo-owned (D12): the organisation sees and chooses its
+ * custom template, but only Humo publishes its versions (PlatformTemplateDataSource).
  *
  * The API never returns another organisation's custom template. It works out
  * availability with the same entitlement rule as `templateAvailability`, and
@@ -34,8 +37,6 @@ export abstract class DocumentTemplateDataSource {
   abstract settings(): Observable<OrganisationDocumentSettings>;
   abstract setDefault(type: DocumentType, templateId: string, expectedVersion: number): Observable<void>;
   abstract updateBranding(details: DocumentBrandingDetails, expectedVersion: number): Observable<void>;
-  /** Publishes the design as the template's next version; earlier versions stay for the documents that used them. Returns the new version number. */
-  abstract publishVersion(templateId: string, design: TemplateDesign, notes: string, expectedVersion: number): Observable<number>;
 }
 
 /** A template across Humo's customers (platform console). */
@@ -62,9 +63,16 @@ export interface TemplateAdoption {
  *   GET   /platform/document-templates                   catalogue, every custom template, adoption
  *   PUT   /platform/document-templates/{id}/status       move a platform template through planned → preview → active → deprecated
  *   POST  /platform/customers/{id}/document-templates    set up a customer's custom template (from Humo's standard design)
+ *   POST  /platform/document-templates/{id}/versions     publish a custom template's next version, with the client's proof approval (D12)
  */
 export abstract class PlatformTemplateDataSource {
   abstract adoption(): Observable<TemplateAdoption>;
   abstract setStatus(templateId: string, status: TemplateStatus, reason: string, expectedVersion: number): Observable<void>;
   abstract createCustomTemplate(organisationId: string, documentType: DocumentType): Observable<string>;
+  /**
+   * D12: Humo builds and publishes custom templates, after the client approves a proof.
+   * Publishes the design as the template's next version; earlier versions stay for the
+   * documents that used them. Returns the new version number.
+   */
+  abstract publishCustomVersion(templateId: string, design: TemplateDesign, notes: string, clientApproval: ClientApproval, expectedVersion: number): Observable<number>;
 }

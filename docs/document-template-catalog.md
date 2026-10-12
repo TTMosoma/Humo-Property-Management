@@ -20,7 +20,7 @@ The initial catalogue: what exists, what's planned, and why each template exists
 | **Standard** (`levy-statement.standard`) | Standard | Active | v1 | `levy-statement/classic`, Humo branding | Every customer gets a clear, correct statement without setting anything up. This is the A4 reference implementation. |
 | **Professional** (`levy-statement.professional`) | Premium | Active | v1 | `levy-statement/branded`, agency branding | Agencies want owners to recognise statements as theirs: their wordmark, colours and font. |
 | **Executive** (`levy-statement.executive`) | Premium | Planned | — | (not built) | Larger schemes and trustees ask for the trend: 12-month balance and arrears ageing panel. |
-| **Enterprise custom** (one per organisation, e.g. `acacia.levy-statement`) | Enterprise custom | Active | Acacia v2 (v1 retired) | `levy-statement/branded`, template branding | The organisation's own colours, font, wording ("Statement of account"), numbered statements, footer and legal notice. |
+| **Enterprise custom** (one per organisation, e.g. `acacia.levy-statement`) | Enterprise custom | Active | Acacia v2 (v1 retired) | `levy-statement/branded`, template branding (a bespoke layout where needed, D12) | The organisation's own design, built and published by Humo from their brief after they approve a proof (paid Enterprise service, D12). |
 
 **Seeded simulation data:**
 - **Acacia** has a custom template on version 2. The entitlement comes from a time-boxed pilot override on its Professional subscription.
@@ -67,7 +67,7 @@ Each letter records the version it was sent with (`docs/11-billing-credit-contro
 |---|---|
 | Humo Essentials | Standard templates; contact details on documents |
 | Humo Professional | + Premium templates (`document-templates-premium`), document branding (`document-branding`) |
-| Humo Enterprise | + Enterprise custom templates (`document-templates-custom`) |
+| Humo Enterprise | + Enterprise custom templates (`document-templates-custom`); the design itself is a paid Humo service (D12) |
 | **Document & Branding Pack** (add-on) | Premium templates + document branding, for customers on Essentials |
 | Per-customer override | Any of the above, time-boxed (e.g. Acacia's custom statement pilot) |
 

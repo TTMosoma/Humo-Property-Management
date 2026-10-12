@@ -16,7 +16,7 @@ import { PageHeader } from '../../ui/page-header/page-header';
 import { ErrorState } from '../../ui/states/error-state';
 import { Skeleton } from '../../ui/states/skeleton';
 import { StatusPill, Tone } from '../../ui/status-pill/status-pill';
-import { setUpCustomTemplateForm, templateStatusForm } from '../documents/document-forms';
+import { customTemplateForm, setUpCustomTemplateForm, templateStatusForm } from '../documents/document-forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, map, of } from 'rxjs';
 
@@ -70,6 +70,9 @@ const STATUS_TONE: Record<TemplateStatus, Tone> = { planned: 'neutral', preview:
                 <td class="end">
                   @if (canManage() && !u.template.organisationId) {
                     <button type="button" class="btn btn-ghost btn-sm" (click)="changeStatus(u.template)">Status</button>
+                  }
+                  @if (canSetUp() && u.template.organisationId) {
+                    <button type="button" class="btn btn-ghost btn-sm" (click)="publish(u.template, u.owner ?? '')">Publish version</button>
                   }
                 </td>
               </tr>
@@ -131,5 +134,10 @@ export class DocumentTemplatesPage {
 
   protected setUp(): void {
     setUpCustomTemplateForm(this.drawer, this.data, this.customers());
+  }
+
+  /** D12: Humo publishes a customer's custom template once they've approved the proof. */
+  protected publish(t: DocumentTemplate, customer: string): void {
+    customTemplateForm(this.drawer, this.data, t, customer);
   }
 }
