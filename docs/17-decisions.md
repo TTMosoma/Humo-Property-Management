@@ -100,6 +100,16 @@ Each entry records:
 
 **Open:** when profiles are reconsidered, the role editor and its migration.
 
+> **Correction, 12 October 2026 (Terry Mosoma):** Humo Property Management now has **11** fixed roles, not 12. The decision itself is unchanged: fixed roles in version 1, every check by permission.
+>
+> **Why:** the Contractor / Supplier role (`supplier`) moved out with Humo Contractor on 11 October 2026 ([20-humo-contractor-separation.md](20-humo-contractor-separation.md)). It belongs to that product, not to Humo PM.
+>
+> **The 11 roles:**
+> - customer: Agency Administrator, Portfolio Manager, Finance User, Operations / Maintenance, Trustee, Owner, Tenant;
+> - Humo: System Administrator, Account Manager, Support, Executive.
+>
+> **Individually granted permissions** (not roles; held by no role by default): `System.Impersonate` on the System Administrator role; `Platform.Customers.ActivateWithoutApproval` on the Account Manager role ([21-account-creation-and-approval.md](21-account-creation-and-approval.md)).
+
 ## D5 — Identity provider with passkeys; not built in-house
 
 **Decision:**
