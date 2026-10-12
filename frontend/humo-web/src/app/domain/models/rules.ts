@@ -49,9 +49,26 @@ export interface SchemeRule {
   repealed?: { at: string; resolutionRef: string };
 }
 
-/** A scheme's rule book: when owners were last given a copy. */
+/** The registered rules as a PDF (the scheme's official document), with how they were adopted. */
+export interface RulesSource {
+  documentId: string;
+  fileName: string;
+  sizeBytes: number;
+  /** yyyy-mm-dd: when these rules took effect. */
+  adoptedOn: string;
+  /** "Registered with the CSOS", "AGM 2024, special resolution RES-KC-14". */
+  resolutionRef: string;
+  uploadedAt: string;
+  uploadedBy: string;
+  /** Owners and residents can see it. */
+  shared: boolean;
+}
+
+/** A scheme's rule book: the registered rules PDF, and when owners were last given a copy. */
 export interface RuleBook {
   schemeId: string;
+  /** Uploaded registered-rules PDFs, newest first. The first is in force. */
+  sources?: RulesSource[];
   /** The published copy in Documents (visible to owners and residents). */
   shared?: { at: string; by: string; documentId: string; rulesVersion: string };
   /** Rule changes since the copy was shared. */
@@ -70,7 +87,9 @@ export type RuleAction =
   | { type: 'add'; number: string; title: string; category: RuleCategory; text: string; resolutionId: string }
   | { type: 'amend'; ruleId: string; text: string; resolutionId: string }
   | { type: 'repeal'; ruleId: string; resolutionId: string }
-  | { type: 'share' };
+  | { type: 'share' }
+  /** Upload the registered rules as a PDF (the file goes with the request). */
+  | { type: 'upload'; fileName: string; mimeType: string; sizeBytes: number; adoptedOn: string; resolutionRef: string; shareWithOwners: boolean };
 
 // ---------------------------------------------------------------- Breaches
 

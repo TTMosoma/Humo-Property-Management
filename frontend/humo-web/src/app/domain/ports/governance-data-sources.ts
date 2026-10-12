@@ -63,7 +63,8 @@ export abstract class BoardDataSource {
  */
 export abstract class RulesDataSource {
   abstract rules(schemeId: string): Observable<RulesView | undefined>;
-  abstract actRules(schemeId: string, action: RuleAction): Observable<string | void>;
+  /** `file`: the PDF, for an upload. */
+  abstract actRules(schemeId: string, action: RuleAction, file?: File): Observable<string | void>;
   abstract breaches(schemeIds: string[]): Observable<BreachView[]>;
   abstract breach(id: string): Observable<BreachView | undefined>;
   abstract logBreach(input: NewBreach): Observable<string>;

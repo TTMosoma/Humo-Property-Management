@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { Router, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { map, of, take } from 'rxjs';
-import { BREACH_STATUS_LABELS, BreachStatus, BreachView, RULE_CATEGORY_LABELS, ResolutionDataSource, RulesDataSource, SchemeRule, UnitDataSource } from '../../domain';
+import { BREACH_STATUS_LABELS, BreachStatus, BreachView, RULE_CATEGORY_LABELS, ResolutionDataSource, RulesDataSource, SchemeRule, UnitDataSource, formatBytes, RulesView } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { loadable } from '../../core/data/loadable';
 import { ScopeNotice } from '../../core/scope/scope-notice';
@@ -18,7 +18,7 @@ import { EmptyState } from '../../ui/states/empty-state';
 import { ErrorState } from '../../ui/states/error-state';
 import { Skeleton } from '../../ui/states/skeleton';
 import { StatusPill, Tone } from '../../ui/status-pill/status-pill';
-import { addRuleForm, amendRuleForm, logBreachForm, repealRuleForm } from './rules-forms';
+import { addRuleForm, amendRuleForm, logBreachForm, repealRuleForm, uploadRulesForm } from './rules-forms';
 
 export const BREACH_TONE: Record<BreachStatus, Tone> = { open: 'warning', warned: 'info', 'final-warning': 'warning', 'with-trustees': 'danger', resolved: 'success' };
 
@@ -53,6 +53,7 @@ export const BREACH_TONE: Record<BreachStatus, Tone> = { open: 'warning', warned
         </label>
         @if (canManage() && rulesView(); as v) {
           <div class="tools">
+            <button type="button" class="btn btn-secondary" (click)="uploadRules()"><ion-icon name="cloud-upload-outline" aria-hidden="true" /> Upload rules PDF</button>
             <button type="button" class="btn btn-secondary" (click)="addRule()"><ion-icon name="add-outline" aria-hidden="true" /> Add a rule</button>
             <button type="button" class="btn btn-primary" (click)="share()" [disabled]="sharing()"><ion-icon name="share-outline" aria-hidden="true" /> Share with owners</button>
           </div>
@@ -64,9 +65,37 @@ export const BREACH_TONE: Record<BreachStatus, Tone> = { open: 'warning', warned
       } @else if (rules.failed()) {
         <div class="surface"><ui-error-state title="We couldn’t load the rules" (retry)="rules.retry()" /></div>
       } @else if (rulesView(); as v) {
+        <!-- The registered rules as a PDF: the scheme's official document. -->
+        <section class="surface panel source">
+          <h2 class="section-title">Registered rules</h2>
+          @if (v.book.sources?.[0]; as src) {
+            <div class="src-row">
+              <ion-icon name="document-text-outline" aria-hidden="true" />
+              <div>
+                <a [routerLink]="['/documents', src.documentId]"><strong>{{ src.fileName }}</strong></a>
+                <div class="muted">In force from {{ formatDate(src.adoptedOn) }} · {{ src.resolutionRef }} · {{ size(src.sizeBytes) }}</div>
+                <div class="muted">Uploaded by {{ src.uploadedBy }}, {{ formatDate(src.uploadedAt) }} · {{ src.shared ? 'shared with owners and residents' : 'staff only' }}</div>
+              </div>
+            </div>
+            @let older = earlierSources(v);
+            @if (older.length) {
+              <details class="earlier">
+                <summary>{{ older.length }} earlier {{ older.length === 1 ? 'version' : 'versions' }}</summary>
+                <ul>
+                  @for (e of older; track e.documentId) {
+                    <li><a [routerLink]="['/documents', e.documentId]">{{ e.fileName }}</a> · in force from {{ formatDate(e.adoptedOn) }} · {{ e.resolutionRef }}</li>
+                  }
+                </ul>
+              </details>
+            }
+          } @else {
+            <p class="muted">No registered rules PDF yet. Upload the scheme’s conduct rules as registered, so staff, owners and residents all refer to the same document.</p>
+          }
+        </section>
+
         <p class="banner surface" [class.warn]="v.book.changedSinceShared || !v.book.shared">
           @if (v.book.shared; as sh) {
-            Owners and residents have the rule book shared {{ formatDate(sh.at) }}
+            Owners and residents have {{ sh.documentId === v.book.sources?.[0]?.documentId ? 'the registered rules PDF' : 'the rule book' }}, shared {{ formatDate(sh.at) }}
             (<a [routerLink]="['/documents', sh.documentId]">open it</a>).
             @if (v.book.changedSinceShared) {
               <strong>Rules have changed since: share the current version.</strong>
@@ -164,6 +193,11 @@ export const BREACH_TONE: Record<BreachStatus, Tone> = { open: 'warning', warned
     }
   `,
   styles: `
+    .source { display: flex; flex-direction: column; gap: var(--s-2); }
+    .src-row { display: flex; gap: var(--s-3); align-items: flex-start; }
+    .src-row > ion-icon { flex: none; margin-top: 2px; font-size: 22px; color: var(--c-primary-text); }
+    .earlier { font-size: var(--fs-sm); color: var(--c-text-muted); }
+    .earlier ul { margin: var(--s-2) 0 0; padding-left: var(--s-5); }
     :host { display: flex; flex-direction: column; gap: var(--s-4); }
     .toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--s-3); }
     .field { display: flex; flex-direction: column; gap: var(--s-1); font-size: var(--fs-sm); color: var(--c-text-muted); }
@@ -282,6 +316,14 @@ export class RulesPage {
       map((p) => p.items),
     );
   }
+
+  protected uploadRules(): void {
+    const v = this.rulesView();
+    if (v) uploadRulesForm(this.drawer, this.data, v);
+  }
+
+  protected readonly size = formatBytes;
+  protected readonly earlierSources = (v: RulesView) => (v.book.sources ?? []).slice(1);
 
   protected addRule(): void {
     const v = this.rulesView()!;

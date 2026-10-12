@@ -8,6 +8,56 @@ import { resolutionOptions } from './board-forms';
 const today = () => new Date().toISOString().slice(0, 10);
 const CATEGORY_OPTIONS = (Object.keys(RULE_CATEGORY_LABELS) as RuleCategory[]).map((c) => ({ value: c, label: RULE_CATEGORY_LABELS[c] }));
 
+/**
+ * The scheme's registered rules as a PDF: the official document, kept with its
+ * history. Owners and residents see it when it's shared. Individual rules you
+ * enforce still go in the register (breaches cite a rule).
+ */
+export function uploadRulesForm(drawer: DrawerService, data: RulesDataSource, v: RulesView): void {
+  const current = v.book.sources?.[0];
+  openForm(drawer, {
+    eyebrow: `${v.scheme.name} · Scheme rules`,
+    title: current ? 'Upload new registered rules' : 'Upload the registered rules',
+    intro: current
+      ? `It replaces the rules in force from ${formatDate(current.adoptedOn)}. That PDF stays on record. Upload a new version only once the owners have adopted it.`
+      : 'The scheme’s conduct rules as registered, as a PDF. Add the rules you enforce to the register too, so breaches can cite them.',
+    fields: [
+      { key: 'file', label: 'Rules PDF', type: 'file', required: true, accept: 'application/pdf,.pdf' },
+      { key: 'adoptedOn', label: 'In force from', type: 'date', required: true, half: true },
+      {
+        key: 'share',
+        label: 'Owners and residents',
+        type: 'select',
+        required: true,
+        half: true,
+        options: [
+          { value: 'yes', label: 'Share it with them' },
+          { value: 'no', label: 'Staff only for now' },
+        ],
+      },
+      { key: 'resolutionRef', label: 'How they were adopted', type: 'text', required: true, placeholder: 'e.g. Registered with the CSOS, or AGM 2024 special resolution RES-KC-14' },
+    ],
+    initial: { adoptedOn: today(), share: 'yes' },
+    submitLabel: 'Upload rules',
+    submit: (f, files) =>
+      data.actRules(
+        v.scheme.id,
+        {
+          type: 'upload',
+          fileName: f['file'],
+          mimeType: files['file']?.type ?? '',
+          sizeBytes: files['file']?.size ?? 0,
+          adoptedOn: f['adoptedOn'],
+          resolutionRef: f['resolutionRef'],
+          shareWithOwners: f['share'] === 'yes',
+        },
+        files['file'],
+      ),
+    success: (_r, f) => (f['share'] === 'yes' ? 'Uploaded and shared: owners and residents see the rules in their documents.' : 'Uploaded. Only staff can see it until you share it.'),
+    failure: 'The rules weren’t uploaded',
+  });
+}
+
 export function addRuleForm(drawer: DrawerService, data: RulesDataSource, v: RulesView, resolutions: ResolutionView[]): void {
   openForm(drawer, {
     eyebrow: `${v.scheme.name} · Scheme rules`,

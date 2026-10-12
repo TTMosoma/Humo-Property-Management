@@ -73,6 +73,14 @@ Checkpoint 10 builds the remaining pages that showed the "Not built yet" card: C
 - **Add:** cites a passed resolution, or is *captured from the registered rules* during onboarding.
 - **Amend / Repeal:** must cite a passed resolution. Repealed rules stay in the register.
 - **Share with owners:** publishes the rule book as a readable document in Documents (visible to owners and residents) and archives the previous copy. The page warns when rules have changed since the last share.
+- **Upload rules PDF** (added 12 Oct 2026): the scheme’s **registered rules** as a PDF, the official document.
+  - **Captured with it:** when the rules took effect, and how they were adopted (“Registered with the CSOS”, or the AGM resolution).
+  - **Sharing:** shared with owners and residents, or kept staff-only for now.
+  - **What it replaces:** the PDF goes to Documents (category *Rules*). A shared upload replaces what owners had; a staff-only upload leaves their copy in place.
+  - **History:** earlier PDFs stay on record (archived) and are listed under *Registered rules* as earlier versions.
+  - **The register stays:** add the rules you enforce one by one, because breaches cite a rule. When owners have the PDF, adding rules to the register doesn’t prompt to share again.
+  - **Checks:** PDF only, within the upload limit, a date that isn’t in the future, and a note on how the rules were adopted. Needs `Meetings.Manage`, and it’s audited.
+  - **Not in this version:** reading the individual rules out of the PDF into the register. That would need PDF text extraction, and OCR for scanned rules.
 
 **Breach log (all schemes in scope):**
 
