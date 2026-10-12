@@ -80,10 +80,10 @@ Identity → role → permissions → scope → entitlements → context → aud
 
 | Who | Can | Permission |
 |---|---|---|
-| Agency Administrator | See templates, set defaults, edit contact details & branding, publish custom versions | `Documents.Configure` (plus the entitlement) |
+| Agency Administrator | See templates, set defaults, edit contact details & branding. See their custom template's versions and approvals (read-only since D12) | `Documents.Configure` (plus the entitlement) |
 | Portfolio Manager, Finance, other staff | Use templates their plan includes: preview any statement in any available template | `Accounts.View` |
 | Owners | See their statement **as issued**, never a preview | `Account.ViewOwn` |
-| Humo Account Manager | Grant template entitlements (subscription overrides/add-ons), set up a customer's custom template | `Platform.Subscriptions.Manage`, `Platform.Customers.Manage` |
+| Humo Account Manager | Grant template entitlements (subscription overrides/add-ons), set up a customer's custom template, and **publish its versions after the client approves a proof** (D12) | `Platform.Subscriptions.Manage`, `Platform.Customers.Manage` |
 | Humo System Administrator | Move platform templates through their lifecycle | `Platform.Templates.Manage` |
 | Humo Executive | Read template adoption (premium defaults, custom templates); no changes | `Platform.View` |
 
@@ -120,6 +120,8 @@ Humo defaults  →  Agency branding  →  Enterprise template design  →  (docu
 - **Defaults are per organisation**, in `OrganisationDocumentSettings.defaults`.
 
 ## 7. Enterprise customisation, safely
+
+> **D12 (12 Oct 2026):** custom templates are a **Humo-owned, paid Enterprise service** built from the client's designs. Humo publishes each version after the client approves a proof; the client can't edit it. The hybrid approach adds structured design options and, where needed, a bespoke layout per client. Everything below still holds: designs are validated data, never customer code.
 
 An Enterprise custom template is **data**, never code. The whole surface is `TemplateDesign`:
 

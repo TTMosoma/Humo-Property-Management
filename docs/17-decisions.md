@@ -1,4 +1,4 @@
-# 17 — Product and architecture decisions (D1–D11)
+# 17 — Product and architecture decisions (D1–D12)
 
 Status: **approved** on 10 October 2026 by Terry Mosoma (product owner).
 
@@ -27,6 +27,7 @@ Each entry records:
 | D9 | Statements are delivered as a portal link by default; attachment is an agency setting | Slice 2, communications |
 | D10 | No numbers on statements; gapless numbering only where the law requires it | Slice 2 |
 | D11 | Account Managers change their customers' subscriptions without approval; every change is audited with its reason | Platform |
+| D12 | Custom document templates: a Humo-owned, paid Enterprise service built from the client's designs (hybrid: expanded design settings, plus bespoke layouts where needed) | Documents, Slice 2 |
 
 ---
 
@@ -235,6 +236,42 @@ Approved on 12 October 2026 by Terry Mosoma (product owner). Raised by doc 21 §
 - **System Administrators** review subscription changes in the platform audit log (*Subscription* events).
 
 **Open:** the "own customers only" rule is checked by role name in the mock (`role === 'humo-account-manager'`). Per D4 it should become a permission or scope check (audit F-38, remediation P1-4).
+
+---
+
+## D12 — Custom document templates are a Humo-owned, paid Enterprise service
+
+Approved on 12 October 2026 by Terry Mosoma (product owner).
+
+**Decision:**
+- **What the client gets:** their documents in **their own design**, built by Humo from the designs and brief they supply. A Humo layout in their colours isn't enough.
+- **How Humo builds it (hybrid):**
+  - **Expanded design settings** for most clients, configured by Humo staff without code. Today's colours, font, sections, title, footer and legal text, extended with structured options: header style, logo position, section order, column choices, extra text blocks.
+  - **A bespoke layout** for Enterprise clients whose design needs it. Humo builds a layout for that client (for example `levy-statement/acacia`), shipped with the app and rendered by the same PDF renderer (D8).
+- **Humo-owned:**
+  - The Humo Account Manager collects the brief and designs, and Humo builds or configures the template.
+  - **The client approves a proof**, and Humo publishes that version.
+  - The client's administrator can see versions, preview them and choose the template as their default, but **can't edit or publish** it.
+- **Paid:** custom design is a **paid service** for Enterprise customers, on top of the Enterprise entitlement (`document-templates-custom`).
+
+**Replaces:** customer-edited custom templates. Before, the Agency Administrator published new versions from Settings, and "custom" meant only colours, font, sections and text on a Humo layout.
+
+**Consequences:**
+- **Done in the frontend (12 Oct 2026):**
+  - Publishing moved from the customer's Settings to **Platform › Document templates** (*Publish version*, `Platform.Customers.Manage`).
+  - Each version records **who at the client approved the proof and when** (`TemplateVersion.clientApproval`); the API requires it.
+  - The agency's Settings show the template, its versions and approvals, read-only, with how to request a change.
+  - Tests: `custom-templates.spec.ts`.
+- **Still to build:**
+  - **Expanded design settings:** new structured fields on `TemplateDesign`, never free-form markup or customer code (architecture doc §7).
+  - **Bespoke layouts:** a process to add a client layout key, its Angular component and its renderer template, versioned with the app.
+  - **A proof step in the product:** a draft version the client reviews and approves in Humo PM, instead of approval recorded by Humo staff.
+  - **Billing the design service:** a priced service line or add-on per engagement. No billing processing exists yet.
+- **Backend:** enforce Humo-only publishing and the recorded approval server-side; store the approval with the version; audit it.
+
+**Open:**
+- The price and packaging of the design service (one-off fee, per document type, or included in an Enterprise tier).
+- Whether minor changes (contact details, legal text) still need a proof.
 
 ---
 

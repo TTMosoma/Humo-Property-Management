@@ -182,6 +182,14 @@ export interface TemplateVersion {
   notes: string;
   publishedAt?: string;
   publishedBy?: string;
+  /** Custom templates (D12): who at the client approved the proof, and when. Humo publishes only after that. */
+  clientApproval?: ClientApproval;
+}
+
+export interface ClientApproval {
+  approvedBy: string;
+  /** "2026-10-12" */
+  approvedOn: string;
 }
 
 export interface DocumentTemplate {
