@@ -1,4 +1,4 @@
-# 17 — Product and architecture decisions (D1–D12)
+# 17 — Product and architecture decisions (D1–D13)
 
 Status: **approved** on 10 October 2026 by Terry Mosoma (product owner).
 
@@ -28,6 +28,7 @@ Each entry records:
 | D10 | No numbers on statements; gapless numbering only where the law requires it | Slice 2 |
 | D11 | Account Managers change their customers' subscriptions without approval; every change is audited with its reason | Platform |
 | D12 | Custom document templates: a Humo-owned, paid Enterprise service built from the client's designs (hybrid: expanded design settings, plus bespoke layouts where needed) | Documents, Slice 2 |
+| D13 | Each scheme chooses how levies are set: entered per unit (default) or derived from the approved budget and participation quotas | Slice 2, billing |
 
 ---
 
@@ -275,8 +276,35 @@ Approved on 12 October 2026 by Terry Mosoma (product owner).
 
 ---
 
+## D13 — How a scheme's levies are set
+
+Approved on 12 October 2026 by Terry Mosoma (product owner). Scope: [22-billing-inputs-scope.md](22-billing-inputs-scope.md) §3.
+
+**Decision:**
+- **Each scheme chooses** how its levies are set:
+  - **Entered per unit** (the default): each unit's monthly levy is entered and edited on the unit, as today.
+  - **Derived from the approved budget:** monthly levy = the approved budget's annual *Levies* income × the unit's participation quota (normalised to 100% across the scheme) ÷ 12, to the cent.
+- **Derived levies are proposed, never applied silently.** Someone with `Billing.Run` reviews the proposed levy roll (each unit's current and new levy) and applies it with a reason. It's audited.
+- **New levies apply from the next billing run.** Applying is refused while a run is in progress, and the run's *Levy changed* exception still asks for each change to be confirmed.
+
+**Replaces:** the open question "is the monthly levy derived from the quota and the approved budget, or entered?" (audit F-14). Both are supported, chosen per scheme.
+
+**Consequences:**
+- **Frontend:** behind the `levy-model` flag (doc 22).
+- **Backend:**
+  - store the method per scheme, and the applied levy roll with its effective period, budget and approver;
+  - billing reads the levy in force for the period.
+- **Not in v1 (doc 22 §3):** catch-up levies, exclusive-use quotas, rounding policies, mid-year revisions.
+
+**Open (needs a sectional-title expert):**
+- whether quotas must be normalised or used as registered;
+- the legal effective date of a new levy after the AGM;
+- whether a rounding difference must be absorbed.
+
+---
+
 ## Still open (needs domain expertise before slice 2)
 
-- **Levies and participation quotas:** is the monthly levy derived from the quota and the approved budget, or entered? (Audit F-14.) Also: interest rules, special levies, VAT.
+- **Levies and participation quotas:** decided per scheme in **D13**. Still open: interest rules, special levies, VAT.
 - **The trust-accounting boundary:** what Humo PM is the system of record for, versus the agency's accounting package, under property-practitioner and sectional-title rules.
 - **Data migration:** opening balances and history from the previous system.
