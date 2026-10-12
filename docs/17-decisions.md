@@ -1,4 +1,4 @@
-# 17 — Product and architecture decisions (D1–D10)
+# 17 — Product and architecture decisions (D1–D11)
 
 Status: **approved** on 10 October 2026 by Terry Mosoma (product owner).
 
@@ -26,6 +26,7 @@ Each entry records:
 | D8 | PDFs from headless Chrome in .NET, using the same templates | Slice 2 |
 | D9 | Statements are delivered as a portal link by default; attachment is an agency setting | Slice 2, communications |
 | D10 | No numbers on statements; gapless numbering only where the law requires it | Slice 2 |
+| D11 | Account Managers change their customers' subscriptions without approval; every change is audited with its reason | Platform |
 
 ---
 
@@ -209,6 +210,31 @@ Each entry records:
 **Consequences:**
 - **Custom templates:** they show the account and period reference instead of a number.
 - **Future document types:** invoices and receipts get numbering when those types are built.
+
+---
+
+## D11 — Account Managers and subscription changes
+
+Approved on 12 October 2026 by Terry Mosoma (product owner). Raised by doc 21 §9.
+
+**Decision:**
+- Humo Account Managers keep `Platform.Subscriptions.Manage`: they change packages, add-ons and feature overrides for **the customers they look after**, **without a separate approval**.
+- **Every change is audited:**
+  - who, which customer, what changed, when, and **the reason**;
+  - refused attempts too (for example, another Account Manager's customer).
+- The reason is required by the API, not only by the screen.
+- Step-up (a fresh passkey) still applies, as for every subscription change.
+
+**Replaces:** an open question. The account-approval brief said not to grant "commercial override permissions" automatically. This keeps the existing grant (doc 04) and makes the audit the control.
+
+**Consequences:**
+- **Backend:**
+  - enforce `Platform.Subscriptions.Manage`, the own-customers scope, the reason and step-up server-side;
+  - write each change to the append-only audit log.
+- **Frontend (done 12 Oct 2026):** the mock API refuses a change without a reason (at least 8 characters, as the screen asks). Tests: `subscription-changes.spec.ts`.
+- **System Administrators** review subscription changes in the platform audit log (*Subscription* events).
+
+**Open:** the "own customers only" rule is checked by role name in the mock (`role === 'humo-account-manager'`). Per D4 it should become a permission or scope check (audit F-38, remediation P1-4).
 
 ---
 

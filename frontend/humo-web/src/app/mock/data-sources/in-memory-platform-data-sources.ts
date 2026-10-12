@@ -11,6 +11,7 @@ import {
   FEATURES,
   FEATURE_META,
   Feature,
+  FieldErrors,
   ListQuery,
   NUDGES,
   NudgeDataSource,
@@ -81,6 +82,8 @@ export class InMemoryPlatformDataSource extends PlatformDataSource {
           category: 'security',
           permission: 'Platform.Subscriptions.Manage',
           version: { expected: expectedVersion, current: customer?.subscription.version },
+          // D11: no approval, but every change is audited with its reason, so the API requires one.
+          validate: (): FieldErrors | null => (!customer ? { organisationId: 'No such customer.' } : change.reason.trim().length < 8 ? { reason: 'Say why, in a few words. It goes in the audit log.' } : null),
         },
         () => {
           // "Where authorised": Account Managers change only the accounts they look after.
