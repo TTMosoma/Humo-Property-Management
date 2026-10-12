@@ -19,6 +19,7 @@ import {
 import { DocumentTemplatesService } from '../../../core/documents/document-templates.service';
 import { FeedbackService } from '../../../core/feedback/feedback.service';
 import { loadable } from '../../../core/data/loadable';
+import { FeatureFlags } from '../../../core/flags/feature-flags';
 import { SessionService } from '../../../core/session/session.service';
 import { CellDef, ColumnDef, DataTable } from '../../../ui/data-table/data-table';
 import { DrawerService } from '../../../ui/drawer/drawer.service';
@@ -63,6 +64,13 @@ export class BillingRunPage {
   private readonly feedback = inject(FeedbackService);
   private readonly registry = inject(DocumentTemplatesService);
   protected readonly session = inject(SessionService);
+  private readonly flags = inject(FeatureFlags);
+
+  /** docs/22 §2: while Preparing, water exceptions can be fixed by capturing the readings. */
+  protected meterLink(r: BillingRun): { scheme: string; period: string; label: string } | null {
+    if (!this.flags.on('meter-readings') || r.stage !== 'preview' || !r.exceptions.some((x) => x.kind === 'meter-missing' || x.kind === 'unusual-reading')) return null;
+    return { scheme: r.schemeId, period: r.period, label: periodLabel(r.period) };
+  }
 
   private readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('runId')!)), { initialValue: this.route.snapshot.paramMap.get('runId')! });
 

@@ -1,6 +1,7 @@
 import { Observable } from 'rxjs';
 import { BillingAction, BillingRun, BillingRunSummary, NewBillingRun, SchemeBillingStatus } from '../models/billing';
 import { CollectionAction, CollectionView } from '../models/collections';
+import { MeterEntry, MeterSheet } from '../models/meter';
 import { ListQuery, Page } from './list-query';
 
 /**
@@ -38,4 +39,18 @@ export abstract class CollectionDataSource {
   abstract act(accountId: string, action: CollectionAction, expectedVersion?: number): Observable<void>;
   /** Sends a reminder to each account; returns how many were sent. */
   abstract remind(accountIds: string[], channel: 'email' | 'sms'): Observable<number>;
+}
+
+/**
+ * Water meter readings (docs/22 §2, flag `meter-readings`, Billing.Run).
+ *   GET   /schemes/{id}/meter-readings/{period}    the capture sheet
+ *   PUT   /schemes/{id}/meter-readings/{period}    save readings (grid or CSV)
+ *   PUT   /schemes/{id}/water-rate                 the rate per kl
+ * Saving readings while that month's run is still Preparing updates the run's water charges.
+ */
+export abstract class MeterDataSource {
+  abstract sheet(schemeId: string, period: string): Observable<MeterSheet>;
+  /** Returns how many readings were saved. */
+  abstract saveReadings(schemeId: string, period: string, readOn: string, entries: MeterEntry[]): Observable<number>;
+  abstract setRate(schemeId: string, ratePerKl: number, reason: string, expectedVersion?: number): Observable<void>;
 }

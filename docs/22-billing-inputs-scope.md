@@ -70,6 +70,14 @@
 
 ## 2. Meter readings (water)
 
+**Status:** ✅ built 12 Oct 2026 (branch `feature/meter-readings`), behind `meter-readings`.
+- **Screens:**
+  - Levies & billing › *Meter readings* (`/finance/billing/meters`): scheme, month, read-on date; a grid with the last reading, this reading, consumption and usual use; *Fill from CSV*; *Change rate*.
+  - On a run that's Preparing, a link to capture readings when it has water exceptions.
+- **Code:** `domain/models/meter.ts`; `MeterDataSource`; `mock/db/meter-store.ts` (seeded with four months of readings); `BillingStore.refreshWater`; new exception kind `unusual-reading`.
+- **Rule for schemes not using readings yet:** if no readings are captured for a scheme's month, billing behaves exactly as before (simulated water), so nothing changes until a scheme starts capturing.
+- **Tests:** `meter-readings.spec.ts`, 6 tests.
+
 **Who:** `Billing.Run` (Agency Administrator, Finance).
 
 **In v1:**

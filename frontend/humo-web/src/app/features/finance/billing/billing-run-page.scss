@@ -250,3 +250,9 @@
     grid-template-columns: 1fr;
   }
 }
+
+.meter-link {
+  margin: 0 0 var(--s-3);
+  font-size: var(--fs-sm);
+  color: var(--c-text-2);
+}

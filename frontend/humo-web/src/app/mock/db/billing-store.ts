@@ -17,6 +17,7 @@ import {
   openExceptions,
   periodLabel,
   runTotal,
+  UNUSUAL_FACTOR,
 } from '../../domain';
 import { formatRand } from '../../ui/format/money';
 import { simulationStorage } from '../simulation/simulation-storage';
@@ -29,6 +30,7 @@ import { MockDb } from './mock-db';
 import { PlatformStore } from './platform-store';
 import { round2, seeded } from './random';
 import { SCHEME_CHARGES, monthlyCharges, specialLevyAmount } from './seed-portfolio';
+import { MeterStore } from './meter-store';
 
 /** DEVELOPMENT / SIMULATION ONLY: the shape saved to localStorage. */
 interface BillingSnapshot {
@@ -65,6 +67,7 @@ const thisPeriod = () => {
 @Injectable({ providedIn: 'root' })
 export class BillingStore {
   private readonly db = inject(MockDb);
+  private readonly meters = inject(MeterStore);
   private readonly docs = inject(DocumentStore);
   private readonly platform = inject(PlatformStore);
   private readonly settings = inject(SettingsStore);
@@ -116,6 +119,7 @@ export class BillingStore {
       lastPosted: done?.posted ? { period: done.period, total: done.posted.total, at: done.posted.at } : undefined,
       current: current ? this.summary(current) : undefined,
       nextPeriod: done ? nextPeriodAfter(done.period) : nextPeriodAfter(thisPeriod()),
+      recoversWater: !!SCHEME_CHARGES[schemeId]?.waterRecovery,
     };
   }
 
@@ -230,7 +234,15 @@ export class BillingStore {
         if (n >= 1 && n <= cfg.specialLevy.instalments) charges.push({ kind: 'special-levy', description: `${cfg.specialLevy.label} (${n} of ${cfg.specialLevy.instalments})`, amount: specialLevyAmount(unit, cfg) });
       }
       let estimated = false;
-      if (cfg.waterRecovery) {
+      let unusual: string | undefined;
+      if (cfg.waterRecovery && this.meters.inUse(scheme.id, input.period)) {
+        // docs/22 §2: readings captured for this month. Bill consumption × the scheme's rate.
+        const w = this.waterFromMeters(unit.id, input.period, month);
+        charges.push(w.charge);
+        estimated = w.estimated;
+        unusual = w.unusual;
+      } else if (cfg.waterRecovery) {
+        // No readings captured for this month (yet): the simulated amounts, as before the meter-readings slice.
         estimated = missingMeters > 0 && r() < 0.06;
         if (estimated) missingMeters--;
         const amount = Math.round((280 + r() * 280) * 2) / 2;
@@ -254,6 +266,7 @@ export class BillingStore {
         exceptions.push({ id: `${account.id}-${kind}`, accountId: account.id, accountNo: account.accountNo, kind, detail, options });
       if (!holder) add('no-holder', 'No current owner on the account: there’s nobody to bill.', ['exclude']);
       if (estimated) add('meter-missing', `No water meter reading for unit ${unit.number}. The 3-month average is ${formatRand(line.charges.find((c) => c.kind === 'utility')!.amount)}.`, ['estimate', 'exclude']);
+      if (unusual) add('unusual-reading', unusual, ['include', 'exclude']);
       const lastLevy = this.db.ledger(account.id).transactions.filter((t) => t.type === 'levy').at(-1)?.amount;
       if (lastLevy !== undefined && Math.abs(lastLevy - unit.monthlyLevy) > 0.005) add('levy-changed', `Levy changes from ${formatRand(lastLevy)} to ${formatRand(unit.monthlyLevy)}. Check the trustees approved it.`, ['include', 'exclude']);
       if (account.status === 'arrangement') add('arrangement', `On a payment arrangement: interest of ${formatRand(charges.find((c) => c.kind === 'interest')?.amount ?? 0)} is usually suspended while it’s kept.`, ['no-interest', 'include']);
@@ -279,6 +292,54 @@ export class BillingStore {
     };
     this.log(run, 'stage', `Prepared: ${lines.length} accounts, ${formatRand(runTotal(run))}, ${exceptions.length} exception${exceptions.length === 1 ? '' : 's'} to decide`, by);
     return run;
+  }
+
+  /** docs/22 §2: this month's water for a unit from its meter, or the 3-month estimate when there's no reading. */
+  private waterFromMeters(unitId: string, period: string, month: string): { charge: Charge; estimated: boolean; unusual?: string } {
+    const rate = this.meters.setting(this.db.unitById.get(unitId)!.schemeId).ratePerKl;
+    const now = this.meters.reading(unitId, period);
+    const before = this.meters.previous(unitId, period);
+    const usual = this.meters.usual(unitId, period);
+    if (now && before) {
+      const used = round2(now.reading - before.reading);
+      const unusual = this.meters.isUnusual(used, usual)
+        ? `Unit ${this.db.unitById.get(unitId)!.number} used ${used} kl, more than ${UNUSUAL_FACTOR}× its usual ${usual} kl. Check the reading (${before.reading} → ${now.reading}) before billing it.`
+        : undefined;
+      return { charge: { kind: 'utility', description: `Water — ${month}: ${used} kl at ${formatRand(rate)}/kl`, amount: round2(used * rate) }, estimated: false, unusual };
+    }
+    const est = usual ?? 0;
+    return { charge: { kind: 'utility', description: `Water — ${month} (estimated: ${est} kl at ${formatRand(rate)}/kl)`, amount: round2(est * rate) }, estimated: true };
+  }
+
+  /**
+   * Readings captured or corrected while the month's run is still Preparing:
+   * re-derive each line's water charge and its meter exceptions (their earlier
+   * decisions go with them). Other charges and decisions stay as they are.
+   */
+  refreshWater(schemeId: string, period: string, by: string): void {
+    const run = this.runs.find((x) => x.schemeId === schemeId && x.period === period && x.stage === 'preview');
+    if (!run || !(SCHEME_CHARGES[schemeId] ?? {}).waterRecovery) return;
+    const month = periodLabel(period, false);
+    let changed = 0;
+    for (const line of run.lines) {
+      const unit = this.db.accounts.get(line.accountId)?.unitId;
+      if (!unit) continue;
+      const w = this.waterFromMeters(unit, period, month);
+      const old = line.charges.find((c) => c.kind === 'utility');
+      if (old?.amount !== w.charge.amount || old?.description !== w.charge.description) changed++;
+      line.charges = [...line.charges.filter((c) => c.kind !== 'utility'), w.charge];
+      run.exceptions = run.exceptions.filter((e) => !(e.accountId === line.accountId && (e.kind === 'meter-missing' || e.kind === 'unusual-reading')));
+      const add = (kind: BillingException['kind'], detail: string, options: BillingException['options']) =>
+        run.exceptions.push({ id: `${line.accountId}-${kind}`, accountId: line.accountId, accountNo: line.accountNo, kind, detail, options });
+      if (w.estimated) add('meter-missing', `No water meter reading for unit ${line.unitNumber}. The 3-month average is ${formatRand(w.charge.amount)}.`, ['estimate', 'exclude']);
+      if (w.unusual) add('unusual-reading', w.unusual, ['include', 'exclude']);
+      const decisions = run.exceptions.filter((e) => e.accountId === line.accountId && e.decision).map((e) => e.decision);
+      line.excluded = decisions.includes('exclude');
+      line.total = round2(line.charges.reduce((sum, c) => sum + c.amount, 0));
+    }
+    this.log(run, 'exception', `Meter readings updated: water recalculated on ${changed} account${changed === 1 ? '' : 's'}`, by);
+    run.version++;
+    this.commit();
   }
 
   private applyDecision(run: BillingRun, x: BillingException, decision: BillingException['decision'] & string, by: string, note?: string): void {
