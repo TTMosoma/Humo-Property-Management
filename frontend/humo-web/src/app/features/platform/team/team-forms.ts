@@ -112,6 +112,24 @@ export function impersonationForm(drawer: DrawerService, data: HumoTeamDataSourc
   });
 }
 
+/** Delegated account activation: an individual grant on the Account Manager role (docs/21). */
+export function delegatedActivationForm(drawer: DrawerService, data: HumoTeamDataSource, m: HumoTeamMember): void {
+  const allow = !m.canActivateWithoutApproval;
+  openForm(drawer, {
+    eyebrow: m.identity.name,
+    title: allow ? 'Grant delegated account activation' : 'Revoke delegated account activation',
+    intro: allow
+      ? `${m.identity.name} will be able to activate new customer accounts without a separate approval. Each one is still validated, starts in onboarding, is recorded in the audit log, and notifies System Administrators. It doesn’t let them invite users, change roles or override packages.`
+      : `From now on, ${m.identity.name}’s new customer accounts wait for a System Administrator’s approval. Accounts they already activated stay as they are.`,
+    fields: [{ key: 'reason', label: 'Why', type: 'text', required: true }],
+    stepUp: step(`${allow ? 'Grant' : 'Revoke'} delegated account activation for ${m.identity.name}`),
+    submitLabel: allow ? 'Grant' : 'Revoke',
+    submit: (v) => act(data, m, { type: 'set-delegated-activation', allowed: allow, reason: v['reason'] }),
+    success: () => (allow ? 'Granted. It applies to their next new account.' : 'Revoked. Their next new account needs approval.'),
+    failure: 'It wasn’t changed',
+  });
+}
+
 export function customersForm(drawer: DrawerService, data: HumoTeamDataSource, m: HumoTeamMember, all: { organisationId: string; name: string; accountManager: string }[]): void {
   openForm(drawer, {
     eyebrow: m.identity.name,

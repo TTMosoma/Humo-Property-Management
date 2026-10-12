@@ -39,6 +39,7 @@ const KIND_ICON: Record<NotificationKind, string> = {
   compliance: 'shield-checkmark-outline',
   communication: 'chatbubbles-outline',
   governance: 'library-outline',
+  platform: 'business-outline',
 };
 
 @Component({

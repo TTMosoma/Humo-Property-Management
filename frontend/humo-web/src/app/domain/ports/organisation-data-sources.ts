@@ -1,6 +1,5 @@
 import { Observable } from 'rxjs';
 import { AppNotification } from '../models/notification';
-import { PackageId } from '../models/entitlement';
 import { Organisation, OrganisationStatus } from '../models/organisation';
 
 export interface OrganisationDetails {
@@ -8,12 +7,6 @@ export interface OrganisationDetails {
   shortName: string;
   city: string;
   province: string;
-}
-
-export interface NewOrganisation extends OrganisationDetails {
-  packageId: PackageId;
-  /** Humo Account Manager (identity id). */
-  accountManagerId: string;
 }
 
 /**
@@ -24,8 +17,7 @@ export interface NewOrganisation extends OrganisationDetails {
 export abstract class OrganisationDataSource {
   abstract list(): Observable<Organisation[]>;
   abstract get(id: string): Observable<Organisation | undefined>;
-  /** Onboards a customer: the organisation starts `onboarding`, on a 30-day trial of the package. Returns its id. */
-  abstract create(input: NewOrganisation): Observable<string>;
+  /** New organisations come from approved account requests (AccountRequestDataSource), never directly. */
   abstract update(id: string, details: OrganisationDetails, expectedVersion?: number): Observable<void>;
   /** active ⇄ suspended, onboarding → active, any → archived, archived → active (restore). */
   abstract setStatus(id: string, status: OrganisationStatus, reason: string, expectedVersion?: number): Observable<void>;

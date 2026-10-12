@@ -4,32 +4,23 @@ import { Observable, combineLatest, map, of, switchMap } from 'rxjs';
 import {
   AppNotification,
   FieldErrors,
-  NewOrganisation,
   NotificationDataSource,
   Organisation,
   OrganisationDataSource,
   OrganisationDetails,
   OrganisationStatus,
-  activeAssignments,
+  Role,
   isHumoRole,
 } from '../../domain';
+import { AccountRequestStore } from '../db/account-request-store';
 import { NOTIFICATIONS } from '../fixtures/notifications';
 import { MockDb } from '../db/mock-db';
 import { ResidentNotifications } from './resident-notifications';
 import { OrganisationStore } from '../db/organisation-store';
 import { PlatformStore } from '../db/platform-store';
-import { AccessStore } from '../db/access-store';
 import { mockResponder } from '../mock-latency';
 import { MockAuthSession } from '../server/mock-auth-session';
 import { MockGateway } from '../server/mock-gateway';
-
-/** "Mabena Property Group" → "mabena-property-group" (unique). */
-function slug(text: string, taken: (id: string) => boolean): string {
-  const base = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'customer';
-  let id = base;
-  for (let n = 2; taken(id); n++) id = `${base}-${n}`;
-  return id;
-}
 
 const PROVINCES = ['Eastern Cape', 'Free State', 'Gauteng', 'KwaZulu-Natal', 'Limpopo', 'Mpumalanga', 'North West', 'Northern Cape', 'Western Cape'];
 
@@ -48,7 +39,6 @@ export class InMemoryOrganisationDataSource extends OrganisationDataSource {
   private readonly auth = inject(MockAuthSession);
   private readonly orgs = inject(OrganisationStore);
   private readonly platform = inject(PlatformStore);
-  private readonly access = inject(AccessStore);
   private readonly gateway = inject(MockGateway);
   private readonly respond = mockResponder();
   private readonly all$ = toObservable(this.orgs.all);
@@ -65,26 +55,6 @@ export class InMemoryOrganisationDataSource extends OrganisationDataSource {
 
   get(id: string): Observable<Organisation | undefined> {
     return this.list().pipe(map((all) => all.find((o) => o.id === id)));
-  }
-
-  create(input: NewOrganisation): Observable<string> {
-    // Any Humo identity that holds the Account Manager role.
-    const manager = this.access.identities().find((i) => i.id === input.accountManagerId && i.kind === 'humo' && activeAssignments(i).some((a) => a.role === 'humo-account-manager'));
-    return this.gateway.command(
-      {
-        action: `Onboarded customer ${input.shortName} (${input.packageId} trial)`,
-        resource: 'Organisation',
-        category: 'security',
-        permission: 'Platform.Customers.Manage',
-        validate: () => this.check(input, null, (): FieldErrors => (!manager ? { accountManagerId: 'Choose the account manager.' } : {})),
-      },
-      () => {
-        const id = slug(input.shortName, (x) => !!this.orgs.get(x));
-        this.orgs.add({ id, version: 1, kind: 'managing-agency', status: 'onboarding', name: input.name.trim(), shortName: input.shortName.trim(), city: input.city.trim(), province: input.province, schemeCount: 0, unitCount: 0 });
-        this.platform.addCustomer({ organisationId: id, name: input.shortName.trim(), city: input.city.trim(), province: input.province, packageId: input.packageId, accountManagerId: manager!.id, accountManager: manager!.name });
-        return id;
-      },
-    );
   }
 
   update(id: string, details: OrganisationDetails, expectedVersion?: number): Observable<void> {
@@ -156,10 +126,12 @@ export class InMemoryNotificationDataSource extends NotificationDataSource {
   private readonly read = signal<Set<string>>(new Set());
   private readonly read$ = toObservable(this.read);
   private readonly residents = inject(ResidentNotifications);
+  private readonly accounts = inject(AccountRequestStore);
+  private readonly notices$ = toObservable(this.accounts.notices);
 
   /** The server filters by audience (role), scheme scope and, for residents, their unit. */
   list(): Observable<AppNotification[]> {
-    return combineLatest([this.auth.session$, this.read$, this.db.changes$]).pipe(
+    return combineLatest([this.auth.session$, this.read$, this.db.changes$, this.notices$]).pipe(
       switchMap(([s, read]) => {
         const a = s.assignments.find((x) => x.id === s.activeAssignmentId);
         if (!a) return of([]);
@@ -172,9 +144,18 @@ export class InMemoryNotificationDataSource extends NotificationDataSource {
         const resident = a.role === 'owner' || a.role === 'tenant';
         const fixtures = resident ? [] : NOTIFICATIONS.filter((n) => n.audience.includes(a.role)).filter((n) => n.schemeId === null || schemes.has(n.schemeId)).filter((n) => !n.unitLabel || n.unitLabel === unit);
         const live = resident ? this.residents.for(a, s.identity.personId) : [];
-        return this.respond([...live, ...fixtures].sort((x, y) => y.at.localeCompare(x.at)).map((n) => (read.has(n.id) ? { ...n, read: true } : n)));
+        const platform = this.platformNotices(s.identity.id, a.role);
+        return this.respond([...live, ...platform, ...fixtures].sort((x, y) => y.at.localeCompare(x.at)).map((n) => (read.has(n.id) ? { ...n, read: true } : n)));
       }),
     );
+  }
+
+  /** Humo-staff notices (new accounts, delegated activation, policy and permission changes). In-app only: no email exists yet. */
+  private platformNotices(identityId: string, role: Role): AppNotification[] {
+    return this.accounts
+      .notices()
+      .filter((n) => n.actorId !== identityId && ('identityId' in n.to ? n.to.identityId === identityId : n.to.role === role))
+      .map((n) => ({ id: n.id, kind: 'platform' as const, title: n.title, detail: n.detail, schemeId: null, audience: 'role' in n.to ? [n.to.role] : [role], at: n.at, read: false, link: n.link }));
   }
 
   markRead(ids: string[]): Observable<void> {

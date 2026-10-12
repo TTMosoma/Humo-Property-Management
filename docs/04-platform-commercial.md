@@ -15,7 +15,7 @@ Status: **Implemented in the frontend prototype (mock data, no billing).** Decis
 | Role | Purpose | Can | Deliberately cannot |
 |---|---|---|---|
 | **Humo System Administrator** | Operate the platform | Customers, subscriptions, the package catalogue, Humo roles, configuration, feature flags, audit | Impersonate unless individually granted `System.Impersonate` |
-| **Humo Account Manager** | The customer relationship | Onboard and configure customers, assist users, review health and adoption, work opportunities and requests, change subscriptions **for their own accounts** (with step-up) | Platform configuration, the package catalogue, Humo roles |
+| **Humo Account Manager** | The customer relationship | Request new customer accounts (approved by a System Administrator, or activated directly with an individual delegated-activation grant: doc 21), onboard and configure customers, assist users, review health and adoption, work opportunities and requests, change subscriptions **for their own accounts** (with step-up) | Platform configuration, the package catalogue, Humo roles |
 | **Humo Support** | Investigate and help | View customer context, users, logs (audit), help with troubleshooting and recovery | Change packages or subscriptions, change configuration or security policy, grant themselves access |
 | **Humo Executive** | Business intelligence | Executive dashboard, customers, revenue, health (read-only aggregates) | Change permissions, configuration, settings or subscriptions; see customer users or audit detail |
 

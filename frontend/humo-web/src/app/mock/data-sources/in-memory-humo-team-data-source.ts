@@ -17,6 +17,7 @@ import {
 } from '../../domain';
 import { AccessStore } from '../db/access-store';
 import { HumoTeamStore } from '../db/humo-team-store';
+import { AccountRequestStore } from '../db/account-request-store';
 import { PlatformStore } from '../db/platform-store';
 import { mockResponder } from '../mock-latency';
 import { MockAuthSession } from '../server/mock-auth-session';
@@ -29,12 +30,16 @@ const initialsOf = (name: string) => {
   return `${parts[0][0]}${parts.at(-1)![0]}`.toUpperCase();
 };
 
+/** Granted individually to Account Managers, never by role (docs/21). */
+const DELEGATED = 'Platform.Customers.ActivateWithoutApproval' as const;
+
 /** Humo's own team, managed by System Administrators (Platform › Humo team). */
 @Injectable()
 export class InMemoryHumoTeamDataSource extends HumoTeamDataSource {
   private readonly store = inject(AccessStore);
   private readonly team = inject(HumoTeamStore);
   private readonly platform = inject(PlatformStore);
+  private readonly accounts = inject(AccountRequestStore);
   private readonly auth = inject(MockAuthSession);
   private readonly gateway = inject(MockGateway);
   private readonly respond = mockResponder();
@@ -51,6 +56,7 @@ export class InMemoryHumoTeamDataSource extends HumoTeamDataSource {
       roles,
       formerRoles,
       canImpersonate: roles.some((a) => a.role === 'system-admin' && a.grants?.includes('System.Impersonate')),
+      canActivateWithoutApproval: roles.some((a) => a.role === 'humo-account-manager' && a.grants?.includes(DELEGATED)),
       customers: this.platform
         .seeds()
         .filter((c) => c.accountManagerId === i.id)
@@ -195,6 +201,8 @@ export class InMemoryHumoTeamDataSource extends HumoTeamDataSource {
       'grant-role': a.type === 'grant-role' ? `${a.role === 'system-admin' ? 'Asked to make' : 'Made'} ${name} ${ROLE_LABELS[a.role]}${a.role === 'system-admin' ? ' (needs a second System Administrator)' : ''}` : '',
       'end-role': `Ended ${ended ? ROLE_LABELS[ended.role] : 'a role'} for ${name}`,
       'set-impersonation': a.type === 'set-impersonation' ? `${a.allowed ? 'Allowed' : 'Withdrew'} impersonation for ${name}` : '',
+      'set-delegated-activation':
+        a.type === 'set-delegated-activation' ? `${a.allowed ? 'Granted' : 'Revoked'} delegated account activation (${DELEGATED}) for ${name}` : '',
       'set-customers': `Changed the customers ${name} looks after`,
       suspend: `Suspended ${name}’s Humo access`,
       restore: `Restored ${name}’s Humo access`,
@@ -248,6 +256,13 @@ export class InMemoryHumoTeamDataSource extends HumoTeamDataSource {
       case 'set-impersonation':
         if (!roles.some((x) => x.role === 'system-admin')) return { allowed: 'Only System Administrators can be allowed to impersonate.' };
         return null;
+      case 'set-delegated-activation': {
+        const am = roles.find((x) => x.role === 'humo-account-manager');
+        if (!am) return { allowed: 'Only Account Managers can be given delegated account activation.' };
+        if (target.status !== 'active') return { allowed: 'Their Humo access isn’t active.' };
+        if (a.allowed === !!am.grants?.includes(DELEGATED)) return { allowed: a.allowed ? 'They already have it.' : 'They don’t have it.' };
+        return null;
+      }
       case 'set-customers': {
         if (!roles.some((x) => x.role === 'humo-account-manager')) return { organisationIds: 'They aren’t an account manager.' };
         const keep = new Set(a.organisationIds);
@@ -299,6 +314,23 @@ export class InMemoryHumoTeamDataSource extends HumoTeamDataSource {
               : x,
           ),
         }));
+        return;
+      case 'set-delegated-activation':
+        this.store.changeIdentity(identityId, (i) => ({
+          ...i,
+          assignments: i.assignments.map((x) =>
+            x.role === 'humo-account-manager' && x.status === 'active'
+              ? { ...x, version: x.version + 1, grants: a.allowed ? [...new Set([...(x.grants ?? []), DELEGATED])] : (x.grants ?? []).filter((g) => g !== DELEGATED) }
+              : x,
+          ),
+        }));
+        this.accounts.notify({
+          to: { role: 'system-admin' },
+          actorId: this.auth.actor().id,
+          title: `Delegated account activation ${a.allowed ? 'granted' : 'revoked'}: ${target.name}`,
+          detail: a.allowed ? `${target.name} can now activate new customer accounts without a separate approval.` : `${target.name}’s new accounts need approval again.`,
+          link: `/platform/team/${identityId}`,
+        });
         return;
       case 'set-customers':
         this.platform.setAccountManager(a.organisationIds, { id: identityId, name: target.name });

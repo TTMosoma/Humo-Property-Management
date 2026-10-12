@@ -1,5 +1,4 @@
-import { Router } from '@angular/router';
-import { Identity, ORGANISATION_STATUS_LABELS, Organisation, OrganisationDataSource, OrganisationStatus, Package } from '../../domain';
+import { ORGANISATION_STATUS_LABELS, Organisation, OrganisationDataSource, OrganisationStatus } from '../../domain';
 import { DrawerService } from '../../ui/drawer/drawer.service';
 import { FormField, PROVINCE_OPTIONS, REASON_FIELD, openForm } from '../shared/form-drawer';
 
@@ -9,26 +8,6 @@ const DETAILS: FormField[] = [
   { key: 'city', label: 'City', type: 'text', required: true, half: true },
   { key: 'province', label: 'Province', type: 'select', required: true, half: true, options: PROVINCE_OPTIONS },
 ];
-
-/** Onboard a new customer organisation (Humo staff). */
-export function newCustomerForm(drawer: DrawerService, data: OrganisationDataSource, router: Router, packages: Package[], managers: Identity[], me: string): void {
-  openForm(drawer, {
-    eyebrow: 'Customers',
-    title: 'Onboard a customer',
-    intro: 'The organisation starts in onboarding, on a 30-day trial of the package. Invite their first administrator from Users & impersonation once it exists.',
-    fields: [
-      ...DETAILS,
-      { key: 'packageId', label: 'Package for the trial', type: 'select', required: true, half: true, options: packages.map((p) => ({ value: p.id, label: p.name })) },
-      { key: 'accountManagerId', label: 'Account manager', type: 'select', required: true, half: true, options: managers.map((m) => ({ value: m.id, label: m.name })) },
-    ],
-    initial: { province: 'Gauteng', packageId: 'professional', accountManagerId: managers.some((m) => m.id === me) ? me : (managers[0]?.id ?? '') },
-    submitLabel: 'Onboard customer',
-    submit: (v) => data.create({ name: v['name'], shortName: v['shortName'], city: v['city'], province: v['province'], packageId: v['packageId'] as Package['id'], accountManagerId: v['accountManagerId'] }),
-    success: (_id, v) => `${v['shortName']} is onboarding, on a 30-day trial.`,
-    done: (id) => router.navigate(['/platform/customers', id]),
-    failure: 'The customer wasn’t added',
-  });
-}
 
 export function editOrganisationForm(drawer: DrawerService, data: OrganisationDataSource, org: Organisation): void {
   openForm(drawer, {

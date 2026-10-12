@@ -37,4 +37,10 @@ npx tsc -p tsconfig.app.json --noEmit                            # Humo PM types
 npx tsc -p projects/humo-contractor/tsconfig.app.json --noEmit   # Humo Contractor types
 ```
 
-There's no test runner or linter yet (remediation plan P1-1).
+## Tests
+
+```bash
+npm test                     # Humo PM unit tests (Vitest, via ng test)
+```
+
+They're in `src/**/*.spec.ts`, starting with account creation and approval (`docs/21`). There's no linter yet (remediation plan P1-1).

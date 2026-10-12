@@ -736,6 +736,20 @@ export const routes: Routes = [
             ],
           },
           {
+            // New customer accounts: requested by Account Managers, approved by System Administrators (docs/21).
+            path: 'account-requests',
+            data: { permission: 'Platform.Customers.Manage', breadcrumb: 'New accounts' },
+            children: [
+              { path: '', title: 'New accounts', loadComponent: () => import('./features/platform/accounts/account-requests-page').then((m) => m.AccountRequestsPage) },
+              {
+                path: ':requestId',
+                title: 'New account',
+                data: { breadcrumb: 'Request' },
+                loadComponent: () => import('./features/platform/accounts/account-request-page').then((m) => m.AccountRequestPage),
+              },
+            ],
+          },
+          {
             path: 'team',
             data: { permission: 'Platform.View', breadcrumb: 'Humo team' },
             children: [

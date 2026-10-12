@@ -45,7 +45,7 @@ Sarah Jacobs has **one** identity with four assignments:
 
 | Customer roles (granted by Agency Administrator) | Humo internal roles (granted by a Humo System Administrator) |
 |---|---|
-| Agency Administrator · Portfolio Manager · Finance User · Operations / Maintenance · Trustee · Owner · Tenant · Supplier / Contractor | Humo System Administrator · Humo Account Manager · Humo Support · Humo Executive |
+| Agency Administrator · Portfolio Manager · Finance User · Operations / Maintenance · Trustee · Owner · Tenant (Supplier / Contractor moved to Humo Contractor on 11 Oct 2026: doc 20) | Humo System Administrator · Humo Account Manager · Humo Support · Humo Executive |
 
 **Granting roles:**
 - Humo roles never appear in customer screens, and the customer-side picker cannot offer them.

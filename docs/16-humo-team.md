@@ -22,6 +22,7 @@ Humo staff work across every Humo product, so the team belongs to the Humo platf
 | **Give a role** | Account Manager, Support, Executive apply at once. | **System Administrator** creates a request that a *second* System Administrator approves or declines on the team page. The requester can't approve their own request, and nobody can approve a request about themselves. |
 | **End a role** | Kept in their history. Ending System Administrator also ends impersonation and signs them out. | Not the last active System Administrator. An Account Manager's role can't end while they still look after customers. |
 | **Impersonation** | Allow or withdraw `System.Impersonate`, an individual grant on the System Administrator role. | System Administrators only. |
+| **Delegated account activation** (added 11 Oct 2026) | Grant or revoke `Platform.Customers.ActivateWithoutApproval`, an individual grant on the Account Manager role: they activate new customer accounts without a separate approval. The member page also lists what each person can do, marking individual grants. | Account Managers only. See doc 21. |
 | **Customers** | Choose the customers an Account Manager looks after; choosing one moves it from its current manager. | Every customer always has an account manager. |
 | **Suspend / restore** | Suspended: signed out everywhere, can't sign in. Roles and customers stay. Restore returns to the status held before suspension (`Identity.suspendedFrom`): an invitee who never accepted goes back to *Invited*, not *Active* (fixed 10 Oct 2026). | Not the last active System Administrator. |
 | **Offboard** | Every Humo role ends, status *Deactivated*, sessions end, pending requests are withdrawn, and their customers move to the account manager chosen in the form. They show under *Former*. | Not the last System Administrator. Customers must be reassigned. |
@@ -40,7 +41,7 @@ Humo staff work across every Humo product, so the team belongs to the Humo platf
 | `GET /platform/team/pending-grants` | System Administrator requests waiting for approval. |
 | `POST /platform/team` | Invite. |
 | `PATCH /platform/team/{id}` | Details. |
-| `POST /platform/team/{id}/actions` | `grant-role`, `end-role`, `set-impersonation`, `set-customers`, `suspend`, `restore`, `offboard`, `approve-grant`, `decline-grant`. |
+| `POST /platform/team/{id}/actions` | `grant-role`, `end-role`, `set-impersonation`, `set-delegated-activation`, `set-customers`, `suspend`, `restore`, `offboard`, `approve-grant`, `decline-grant`. |
 
 The server enforces every rule above, whatever the screen shows.
 
