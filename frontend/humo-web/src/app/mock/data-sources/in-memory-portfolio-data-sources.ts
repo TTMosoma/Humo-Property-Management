@@ -1,7 +1,17 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, map, switchMap } from 'rxjs';
+import { Observable, defer, map, switchMap, throwError } from 'rxjs';
 import {
   AccountDataSource,
+  ApiError,
+  NewReceipt,
+  StatementImportBatch,
+  StatementImportResult,
+  StatementLine,
+  StatementMapping,
+  StatementPreview,
+  mappingProblems,
+  parseCsv,
+  readStatement,
   AccountDetail,
   FieldErrors,
   ListQuery,
@@ -26,11 +36,29 @@ import {
   roundRands,
 } from '../../domain';
 import { CommsStore } from '../db/comms-store';
+import { ReceiptImportStore } from '../db/receipt-import-store';
+import { round2 } from '../db/random';
+import { formatRand } from '../../ui/format/money';
 import { MockAuthSession } from '../server/mock-auth-session';
 import { MockDb } from '../db/mock-db';
 import { mockResponder } from '../mock-latency';
 import { toPage } from '../mock-page';
 import { CommandSpec, MockGateway } from '../server/mock-gateway';
+
+/** docs/22 §1: a receipt's date can't be in the future or more than 12 months old. */
+function receiptDateProblem(date: string): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return 'Enter the date the money arrived.';
+  const today = new Date().toISOString().slice(0, 10);
+  const yearAgo = new Date(Date.now() - 365 * 86_400_000).toISOString().slice(0, 10);
+  if (date > today) return 'The date can’t be in the future.';
+  if (date < yearAgo) return 'That’s more than 12 months ago. Older receipts need a journal on the account instead.';
+  return null;
+}
+
+/** Bank receipts are stored as a moment; a deposit's date reads as 09:00 that day. */
+function atNine(date: string): string {
+  return new Date(`${date.slice(0, 10)}T09:00:00`).toISOString();
+}
 
 /** Re-runs a query whenever the mock database changes, with simulated latency. */
 function live<T>(db: MockDb, respond: <V>(v: V) => Observable<V>, query: () => T): Observable<T> {
@@ -314,6 +342,7 @@ export class InMemoryAccountDataSource extends AccountDataSource {
 @Injectable()
 export class InMemoryReceiptDataSource extends ReceiptDataSource {
   private readonly db = inject(MockDb);
+  private readonly importStore = inject(ReceiptImportStore);
   private readonly session = inject(MockAuthSession);
   private readonly gateway = inject(MockGateway);
   private readonly respond = mockResponder();
@@ -342,6 +371,154 @@ export class InMemoryReceiptDataSource extends ReceiptDataSource {
 
   moveToSuspense(receiptId: string, expectedVersion?: number): Observable<void> {
     return this.command({ action: 'Moved receipt to suspense', ...this.receiptSpec(receiptId, expectedVersion) }, () => this.db.moveToSuspense(receiptId, this.session.current.identity.name));
+  }
+
+  // ---- docs/22 §1: capture and bank-statement import
+
+  capture(input: NewReceipt): Observable<string> {
+    const reference = input.reference.trim();
+    return this.gateway.command(
+      {
+        action: `Captured a receipt of ${formatRand(input.amount)} (“${reference}”)`,
+        resource: 'Receipt',
+        amount: input.amount,
+        schemeId: input.schemeId,
+        permission: 'Receipts.Allocate',
+        validate: (): FieldErrors | null => {
+          const e: FieldErrors = {};
+          if (!this.db.schemes.has(input.schemeId)) e['schemeId'] = 'Choose the scheme.';
+          const dateProblem = receiptDateProblem(input.date);
+          if (dateProblem) e['date'] = dateProblem;
+          if (!(input.amount > 0)) e['amount'] = 'Enter the amount received.';
+          if (reference.length < 2) e['reference'] = 'Enter the reference exactly as it appears on the bank statement.';
+          if (!Object.keys(e).length && this.existingKeys(input.schemeId).has(this.db.receiptKey(input.schemeId, input.date, input.amount, reference))) {
+            e['reference'] = 'This receipt is already captured (same date, amount and reference).';
+          }
+          return Object.keys(e).length ? e : null;
+        },
+      },
+      () =>
+        this.db.addReceipts([
+          {
+            schemeId: input.schemeId,
+            bankAccount: this.db.bankAccountLabel(input.schemeId),
+            date: atNine(input.date),
+            amount: round2(input.amount),
+            reference,
+            payer: input.payer?.trim() ?? '',
+            source: 'captured',
+            capturedBy: this.session.current.identity.name,
+          },
+        ])[0],
+    );
+  }
+
+  statementMapping(schemeId: string): Observable<StatementMapping | undefined> {
+    return this.respond(this.importStore.mappings().get(schemeId));
+  }
+
+  previewStatement(schemeId: string, fileName: string, csv: string, mapping: StatementMapping): Observable<StatementPreview> {
+    return defer(() => {
+      const problems = this.statementProblems(schemeId, csv, mapping);
+      if (problems) return throwError(() => new ApiError('validation', 'The file or mapping needs attention', problems));
+      return this.respond(this.preview(schemeId, fileName, csv, mapping));
+    });
+  }
+
+  importStatement(schemeId: string, fileName: string, csv: string, mapping: StatementMapping): Observable<StatementImportResult> {
+    return this.gateway.command(
+      {
+        action: `Imported bank statement “${fileName}”`,
+        resource: 'Bank statement',
+        schemeId,
+        permission: 'Receipts.Allocate',
+        validate: () => this.statementProblems(schemeId, csv, mapping),
+      },
+      (): StatementImportResult => {
+        const p = this.preview(schemeId, fileName, csv, mapping);
+        const by = this.session.current.identity.name;
+        const bankAccount = this.db.bankAccountLabel(schemeId);
+        const counts = { imported: p.receipts.length, duplicates: p.duplicates.length, debits: p.debits, invalid: p.invalid.length, total: p.total };
+        const batchId = this.importStore.record({ schemeId, bankAccount, fileName, at: new Date().toISOString(), by, ...counts });
+        this.db.addReceipts(
+          p.receipts.map((l) => ({
+            schemeId,
+            bankAccount,
+            date: atNine(l.date!),
+            amount: l.amount!,
+            reference: l.reference ?? '',
+            payer: l.payer ?? '',
+            source: 'statement-import' as const,
+            importBatchId: batchId,
+            capturedBy: by,
+          })),
+        );
+        this.importStore.remember(schemeId, mapping);
+        return { batchId, ...counts };
+      },
+    );
+  }
+
+  imports(schemeIds: string[]): Observable<StatementImportBatch[]> {
+    const ids = new Set(schemeIds);
+    return this.db.changes$.pipe(switchMap(() => this.respond(this.importStore.batches().filter((b) => ids.has(b.schemeId)))));
+  }
+
+  remove(receiptId: string, reason: string, expectedVersion?: number): Observable<void> {
+    const r = this.db.receipts.find((x) => x.id === receiptId);
+    return this.command(
+      {
+        action: `Removed receipt ${formatRand(r?.amount ?? 0)} (“${r?.reference ?? receiptId}”) — ${reason.trim()}`,
+        ...this.receiptSpec(receiptId, expectedVersion),
+        validate: (): FieldErrors | null => {
+          if (!r) return { receiptId: 'That receipt no longer exists.' };
+          if (r.status !== 'unallocated') return { status: r.status === 'allocated' ? 'It’s allocated. Reverse the allocation first.' : 'Only an unallocated receipt can be removed.' };
+          return reason.trim().length < 5 ? { reason: 'Say why, in a few words. It goes in the audit log.' } : null;
+        },
+      },
+      () => this.db.removeReceipt(receiptId),
+    );
+  }
+
+  private existingKeys(schemeId: string): Set<string> {
+    return new Set(this.db.receipts.filter((r) => r.schemeId === schemeId).map((r) => this.db.receiptKey(schemeId, r.date, r.amount, r.reference)));
+  }
+
+  private statementProblems(schemeId: string, csv: string, mapping: StatementMapping): FieldErrors | null {
+    if (!this.db.schemes.has(schemeId)) return { schemeId: 'Choose the scheme.' };
+    const rows = parseCsv(csv);
+    if (rows.length < 2) return { file: 'The file has no rows under the header.' };
+    const e = mappingProblems(rows[0], mapping);
+    return Object.keys(e).length ? e : null;
+  }
+
+  /** The import's outcome, row by row. Dates outside the allowed range count as rows that can't be read. */
+  private preview(schemeId: string, fileName: string, csv: string, mapping: StatementMapping): StatementPreview {
+    const rows = parseCsv(csv);
+    const lines = readStatement(rows, mapping).map((l) => {
+      const dateProblem = l.date && l.kind === 'credit' ? receiptDateProblem(l.date) : null;
+      return dateProblem ? { ...l, kind: 'invalid' as const, problem: dateProblem } : l;
+    });
+    const seen = this.existingKeys(schemeId);
+    const receipts: StatementLine[] = [];
+    const duplicates: StatementLine[] = [];
+    for (const l of lines.filter((x) => x.kind === 'credit')) {
+      const key = this.db.receiptKey(schemeId, l.date!, l.amount!, l.reference ?? '');
+      if (seen.has(key)) duplicates.push(l);
+      else {
+        seen.add(key);
+        receipts.push(l);
+      }
+    }
+    return {
+      fileName,
+      header: rows[0] ?? [],
+      receipts,
+      duplicates,
+      debits: lines.filter((l) => l.kind === 'debit').length,
+      invalid: lines.filter((l) => l.kind === 'invalid'),
+      total: round2(receipts.reduce((sum, l) => sum + (l.amount ?? 0), 0)),
+    };
   }
 
   /** Commands apply only after the simulated request succeeds (and the API's policy allows them). */

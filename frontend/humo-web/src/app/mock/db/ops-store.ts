@@ -51,7 +51,9 @@ export class OpsStore {
 
   constructor() {
     const saved = simulationStorage.load<OpsSnapshot>('ops');
-    this.flags = saved?.flags ?? this.seedFlags();
+    // Flags added to the seed after a simulation was saved join it (off where the seed says off).
+    const seeded = this.seedFlags();
+    this.flags = saved?.flags ? [...saved.flags, ...seeded.filter((f) => !saved.flags.some((s) => s.key === f.key))] : seeded;
     this.config = saved?.config ?? { version: 1, maintenance: null, uploadLimitMb: 25, sessionIdleMinutes: 30, requirePasskeysForStaff: true, auditRetentionYears: 7 };
     // Notices saved before the product-name fix said "Humo will be unavailable": it's this application that goes offline.
     if (this.config.maintenance?.message.startsWith('Humo will be unavailable')) {
@@ -185,6 +187,15 @@ export class OpsStore {
       f('billing.statement-sending', 'Statement sending', 'kill-switch', 'Finance', 'Billing run › Send statements',
         'Turn off to pause sending statements from billing runs everywhere (e.g. while a template bug is fixed). Posting still works.',
         { development: all, staging: all, production: all }),
+      f('receipt-capture', 'Receipt capture and bank-statement import', 'release', 'Finance', 'Finance › Receipts › Capture, Import',
+        'Capture receipts by hand and import bank statements as CSV, with duplicates skipped (docs/22 §1). Pilot with Acacia.',
+        { development: all, staging: all, production: some(0, ['acacia']) }),
+      f('meter-readings', 'Meter readings', 'release', 'Finance', 'Levies & billing › Meter readings',
+        'Capture water readings by grid or CSV; billing charges actual consumption (docs/22 §2). Pilot with Acacia.',
+        { development: all, staging: all, production: some(0, ['acacia']) }),
+      f('levy-model', 'Levy model per scheme', 'release', 'Finance', 'Levies & billing › How levies are set',
+        'Choose manual levies or levies derived from the approved budget, proposed and applied from the next run (D13, docs/22 §3). Pilot with Acacia.',
+        { development: all, staging: all, production: some(0, ['acacia']) }),
       f('billing.correction-runs', 'Billing correction runs', 'release', 'Finance', 'Not built yet',
         'Correct a posted run in bulk instead of one journal per account. In development.',
         { development: all, staging: some(100), production: off }),

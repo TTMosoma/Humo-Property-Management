@@ -17,6 +17,12 @@ export interface Receipt {
   allocatedBy?: string;
   /** True when a remembered payer rule matched it on import. */
   autoMatched?: boolean;
+  /** How it got here (docs/22 §1). Seeded receipts stand for the bank feed. */
+  source?: 'bank-feed' | 'statement-import' | 'captured';
+  /** The statement import it came from. */
+  importBatchId?: string;
+  /** Who captured or imported it. */
+  capturedBy?: string;
 }
 
 /** A suggested account for an unallocated receipt, with the reasons — so the agent can trust it. */

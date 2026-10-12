@@ -257,9 +257,17 @@ export const routes: Routes = [
           },
           {
             path: 'receipts',
-            title: 'Receipts',
             data: { permission: 'Receipts.Allocate', breadcrumb: 'Receipts', feature: 'payment-allocation' },
-            loadComponent: () => import('./features/receipts/receipts-page').then((m) => m.ReceiptsPage),
+            children: [
+              { path: '', title: 'Receipts', loadComponent: () => import('./features/receipts/receipts-page').then((m) => m.ReceiptsPage) },
+              {
+                // docs/22 §1, behind the receipt-capture flag (the page says so when it's off).
+                path: 'import',
+                title: 'Import a bank statement',
+                data: { breadcrumb: 'Import bank statement' },
+                loadComponent: () => import('./features/receipts/statement-import-page').then((m) => m.StatementImportPage),
+              },
+            ],
           },
           {
             path: 'credit-control',
