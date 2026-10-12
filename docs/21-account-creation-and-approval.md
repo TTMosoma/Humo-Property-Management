@@ -138,7 +138,7 @@ A pending or rejected request can't look like a customer, because no organisatio
 
 ## 9. Open points and conflicts
 
-- **D4 says "12 fixed roles".** Removing the Contractor/Supplier role from Humo PM on 11 Oct 2026 (doc 20) left **11**. D4's principle (fixed roles, permission checks) is unchanged. The count in D4 needs a superseding note if you agree.
+- ✅ **Resolved 12 Oct 2026: D4 said "12 fixed roles".** Removing the Contractor/Supplier role from Humo PM on 11 Oct 2026 (doc 20) left **11**. A correction note under D4 in doc 17 now records this; the decision itself is unchanged.
 - **Account Manager and `Platform.Subscriptions.Manage`** (§1): keep it (doc 04), or move commercial changes behind approval too? This needs a decision.
 - **Seeded demo requests:** AR-1003 (Thabo, waiting) and AR-1002 (Dumisani, rejected). Nobody holds the delegated grant in the seed: the demo grants it live.
 
