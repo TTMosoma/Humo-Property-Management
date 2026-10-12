@@ -5,6 +5,10 @@
   [subtitle]="t.count ? t.count + ' receipts (' + (t.amount | rand) + ') waiting to be allocated to owner accounts.' : 'Every receipt is allocated.'"
 >
   <span class="kbd-hint"><kbd>↑</kbd><kbd>↓</kbd> move · <kbd>Enter</kbd> accept top match</span>
+  @if (canCapture()) {
+    <a class="btn btn-secondary" routerLink="/finance/receipts/import"><ion-icon name="cloud-upload-outline" aria-hidden="true" /> Import bank statement</a>
+    <button type="button" class="btn btn-primary" (click)="capture()"><ion-icon name="add-outline" aria-hidden="true" /> Capture receipt</button>
+  }
 </ui-page-header>
 <app-scope-notice />
 
@@ -60,6 +64,9 @@
               Received {{ formatDate(v.receipt.date) }} · reference <strong>“{{ v.receipt.reference || '—' }}”</strong>
               @if (v.receipt.payer) { · from <strong>{{ v.receipt.payer }}</strong> }
             </div>
+            @if (v.receipt.source === 'captured' || v.receipt.source === 'statement-import') {
+              <div class="d-meta">{{ v.receipt.source === 'captured' ? 'Captured by hand' : 'Imported from a bank statement' }}{{ v.receipt.capturedBy ? ' by ' + v.receipt.capturedBy : '' }}</div>
+            }
           </div>
         </header>
 
@@ -177,6 +184,9 @@
               <button type="button" class="btn btn-secondary btn-sm" [disabled]="busy()" (click)="suspense()">
                 <ion-icon name="archive-outline" aria-hidden="true" /> Move to suspense
               </button>
+              @if (canCapture()) {
+                <button type="button" class="btn btn-ghost btn-sm danger" [disabled]="busy()" (click)="remove(v)">Remove</button>
+              }
             }
           </div>
         }

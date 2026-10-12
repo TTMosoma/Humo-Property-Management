@@ -568,6 +568,38 @@ export class MockDb {
     this.touch();
   }
 
+  /** The label receipts carry for a scheme's trust account ("FNB Trust ••4471"). */
+  bankAccountLabel(schemeId: string): string {
+    const seen = this.receipts.find((r) => r.schemeId === schemeId)?.bankAccount;
+    if (seen) return seen;
+    const t = this.trustAccount(this.scheme(schemeId)).account;
+    return `${t.bank} Trust ••${t.accountNumber.slice(-4)}`;
+  }
+
+  /** "scheme|yyyy-mm-dd|amount|reference": two receipts with the same key are the same deposit. */
+  receiptKey(schemeId: string, date: string, amount: number, reference: string): string {
+    return `${schemeId}|${date.slice(0, 10)}|${amount.toFixed(2)}|${reference.trim().toLowerCase()}`;
+  }
+
+  /** New receipts (captured or imported) arrive unallocated (docs/22 §1). */
+  addReceipts(list: Omit<Receipt, 'id' | 'version' | 'status' | 'allocations'>[]): string[] {
+    const ids = list.map((r, i) => {
+      const id = `rcpt-${Date.now()}-${this.receipts.length + i}`;
+      this.receipts.push({ ...r, id, version: 1, status: 'unallocated', allocations: [] });
+      return id;
+    });
+    this.syncReceiptWork();
+    this.touch();
+    return ids;
+  }
+
+  /** Removes a mistaken receipt; only an unallocated one (the API checks). */
+  removeReceipt(receiptId: string): void {
+    this.receipts = this.receipts.filter((r) => r.id !== receiptId);
+    this.syncReceiptWork();
+    this.touch();
+  }
+
   moveToSuspense(receiptId: string, by: string): void {
     const receipt = this.receipts.find((r) => r.id === receiptId);
     if (!receipt) return;

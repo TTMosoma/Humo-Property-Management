@@ -21,6 +21,12 @@
 
 ## 1. Receipt capture and bank-statement import
 
+**Status:** ✅ built 12 Oct 2026 (branch `feature/receipt-capture`), behind `receipt-capture`.
+- **Screens:** Finance › Receipts › *Capture receipt* and *Import bank statement* (`/finance/receipts/import`); *Remove* on an unallocated receipt.
+- **Code:** `domain/models/bank-statement.ts` (the CSV reading rules); `ReceiptDataSource` (`capture`, `statementMapping`, `previewStatement`, `importStatement`, `imports`, `remove`).
+- **Tests:** `receipt-capture.spec.ts`, 10 tests.
+- **Extras within scope:** the first time a bank's file is seen, columns are suggested from the header names, and the date format from the first row.
+
 **Who:** people with `Receipts.Allocate` (Agency Administrator, Finance). No new permission.
 
 **In v1:**

@@ -3,6 +3,7 @@ import { ListQuery, Page } from './list-query';
 import { Person, RelationshipType } from '../models/person';
 import { Note, TimelineEvent } from '../models/timeline';
 import { Unit } from '../models/unit';
+import { NewReceipt, StatementImportBatch, StatementImportResult, StatementMapping, StatementPreview } from '../models/bank-statement';
 import {
   AccountDetail,
   MatchView,
@@ -79,6 +80,18 @@ export abstract class ReceiptDataSource {
   abstract allocate(receiptId: string, allocations: { accountId: string; amount: number }[], rememberPayer: boolean, expectedVersion?: number): Observable<void>;
   abstract unallocate(receiptId: string, expectedVersion?: number): Observable<void>;
   abstract moveToSuspense(receiptId: string, expectedVersion?: number): Observable<void>;
+  // ---- docs/22 §1: receipt capture and bank-statement import (flag `receipt-capture`, Receipts.Allocate)
+  /** A receipt captured by hand. Exact duplicates (scheme, date, amount, reference) are refused. Returns its id. */
+  abstract capture(input: NewReceipt): Observable<string>;
+  /** The column mapping remembered for the scheme's trust account, if any. */
+  abstract statementMapping(schemeId: string): Observable<StatementMapping | undefined>;
+  /** What importing this file would do: receipts, duplicates skipped, debits ignored, rows that can't be read. Changes nothing. */
+  abstract previewStatement(schemeId: string, fileName: string, csv: string, mapping: StatementMapping): Observable<StatementPreview>;
+  /** Imports the file's new credits as unallocated receipts and remembers the mapping. */
+  abstract importStatement(schemeId: string, fileName: string, csv: string, mapping: StatementMapping): Observable<StatementImportResult>;
+  abstract imports(schemeIds: string[]): Observable<StatementImportBatch[]>;
+  /** Removes a mistaken receipt, only while unallocated, with a reason. */
+  abstract remove(receiptId: string, reason: string, expectedVersion?: number): Observable<void>;
 }
 
 export abstract class TimelineDataSource {

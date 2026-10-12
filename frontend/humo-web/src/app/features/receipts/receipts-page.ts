@@ -15,6 +15,10 @@ import { EmptyState } from '../../ui/states/empty-state';
 import { ErrorState } from '../../ui/states/error-state';
 import { Skeleton } from '../../ui/states/skeleton';
 import { accountStatus, links } from '../accounts/account-view';
+import { FeatureFlags } from '../../core/flags/feature-flags';
+import { SessionService } from '../../core/session/session.service';
+import { DrawerService } from '../../ui/drawer/drawer.service';
+import { captureReceiptForm, removeReceiptForm } from './receipt-forms';
 
 interface SplitLine {
   accountId: string;
@@ -40,6 +44,9 @@ export class ReceiptsPage {
   private readonly receipts = inject(ReceiptDataSource);
   private readonly units = inject(UnitDataSource);
   private readonly feedback = inject(FeedbackService);
+  private readonly drawer = inject(DrawerService);
+  private readonly flags = inject(FeatureFlags);
+  protected readonly session = inject(SessionService);
   protected readonly scope = inject(ScopeService);
 
   protected readonly view = signal<'open' | 'suspense' | 'allocated'>('open');
@@ -170,6 +177,19 @@ export class ReceiptsPage {
     if (!v || this.splitRemaining() !== 0) return;
     const lines = this.split().filter((l) => l.amount > 0);
     this.commit(v, lines.map((l) => ({ accountId: l.accountId, amount: l.amount })), `Split ${formatRand(v.receipt.amount)} across ${lines.length} accounts`);
+  }
+
+  // ---- docs/22 §1 (flag `receipt-capture`)
+  protected readonly canCapture = computed(() => this.flags.on('receipt-capture') && this.session.can('Receipts.Allocate') && !this.session.readOnly());
+
+  protected capture(): void {
+    const scoped = this.scope.effectiveIds();
+    captureReceiptForm(this.drawer, this.receipts, this.scope.accessible(), scoped.length === 1 ? scoped[0] : undefined);
+  }
+
+  protected remove(v: ReceiptView): void {
+    const next = this.nextId(v.receipt.id);
+    removeReceiptForm(this.drawer, this.receipts, v, () => this.select(next));
   }
 
   protected suspense(): void {
