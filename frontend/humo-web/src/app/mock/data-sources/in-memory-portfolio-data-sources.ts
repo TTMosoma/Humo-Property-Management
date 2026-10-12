@@ -37,6 +37,7 @@ import {
 } from '../../domain';
 import { CommsStore } from '../db/comms-store';
 import { ReceiptImportStore } from '../db/receipt-import-store';
+import { LevyStore } from '../db/levy-store';
 import { round2 } from '../db/random';
 import { formatRand } from '../../ui/format/money';
 import { MockAuthSession } from '../server/mock-auth-session';
@@ -75,6 +76,7 @@ const OCCUPANCY: Unit['occupancy'][] = ['owner-occupied', 'tenanted', 'vacant'];
 @Injectable()
 export class InMemoryUnitDataSource extends UnitDataSource {
   private readonly db = inject(MockDb);
+  private readonly levies = inject(LevyStore);
   private readonly gateway = inject(MockGateway);
   private readonly respond = mockResponder();
 
@@ -104,7 +106,14 @@ export class InMemoryUnitDataSource extends UnitDataSource {
           amount: details.monthlyLevy,
           permission: 'Units.Manage',
           version: { expected: expectedVersion, current: unit?.version },
-          validate: () => (unit ? this.check(unit.schemeId, details, unitId) : { number: 'That unit no longer exists.' }),
+          validate: (): FieldErrors | null => {
+            if (!unit) return { number: 'That unit no longer exists.' };
+            // D13: in a scheme whose levies come from the budget, the levy changes only by applying a levy roll.
+            if (this.levies.setting(unit.schemeId).method === 'budget' && Math.abs(roundRands(Number(details.monthlyLevy)) - unit.monthlyLevy) > 0.005) {
+              return { monthlyLevy: 'This scheme’s levies come from its approved budget. Change them by applying a levy roll (Levies & billing › How levies are set).' };
+            }
+            return this.check(unit.schemeId, details, unitId);
+          },
         },
         // The unit number is part of the account number, so it doesn't change once the unit exists.
         () => this.db.changeUnit(unitId, (u) => ({ ...u, ...this.clean({ ...details, number: u.number }) })),

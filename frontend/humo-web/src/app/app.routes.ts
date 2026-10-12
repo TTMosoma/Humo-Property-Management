@@ -248,6 +248,13 @@ export const routes: Routes = [
               { path: '', title: 'Levies & billing', loadComponent: () => import('./features/finance/billing/billing-page').then((m) => m.BillingPage) },
               { path: 'new', redirectTo: () => inject(Router).parseUrl('/finance/billing?new=1') },
               {
+                // D13 / docs/22 §3, behind the levy-model flag (the page says so when it's off).
+                path: 'levies',
+                title: 'How levies are set',
+                data: { breadcrumb: 'How levies are set' },
+                loadComponent: () => import('./features/finance/billing/levies-page').then((m) => m.LeviesPage),
+              },
+              {
                 // docs/22 §2, behind the meter-readings flag (the page says so when it's off).
                 path: 'meters',
                 title: 'Meter readings',

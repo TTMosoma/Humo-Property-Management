@@ -112,6 +112,12 @@
 
 ## 3. Levy model per scheme (D13)
 
+**Status:** ✅ built 12 Oct 2026 (branch `feature/levy-model`), behind `levy-model`.
+- **Screens:** Levies & billing › *How levies are set* (`/finance/billing/levies`): the method per scheme, then the proposed roll (budgeted levies, current → proposed roll, rounding difference, effective month, each unit's quota, share, current, proposed and change), and *Apply*.
+- **Code:** `domain/models/levy.ts` (`derivedLevy`); `LevyDataSource`; `mock/db/levy-store.ts`.
+- **Rule:** in a budget scheme a unit's levy can't be edited by hand.
+- **Tests:** `levy-model.spec.ts`, 6 tests.
+
 **Who:** setting the method and applying a levy roll needs `Billing.Run`.
 
 **In v1:**

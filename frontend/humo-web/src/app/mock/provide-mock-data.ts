@@ -9,6 +9,7 @@ import {
   MeetingDataSource,
   BillingDataSource,
   MeterDataSource,
+  LevyDataSource,
   CollectionDataSource,
   ComplianceDataSource,
   LibraryDataSource,
@@ -66,6 +67,7 @@ import {
 import { InMemoryNotificationDataSource, InMemoryOrganisationDataSource } from './data-sources/in-memory-organisation-data-sources';
 import { InMemoryAccountRequestDataSource } from './data-sources/in-memory-account-request-data-source';
 import { InMemoryMeterDataSource } from './data-sources/in-memory-meter-data-source';
+import { InMemoryLevyDataSource } from './data-sources/in-memory-levy-data-source';
 import { ContractorNetwork } from '../domain/contractor';
 import { InMemoryContractorNetwork } from './contractor/in-memory-contractor';
 import { InMemoryCatalogueDataSource, InMemoryNudgeDataSource, InMemoryPlanDataSource, InMemoryPlatformDataSource } from './data-sources/in-memory-platform-data-sources';
@@ -122,6 +124,7 @@ export function provideMockData(): EnvironmentProviders {
     { provide: ResolutionDataSource, useClass: InMemoryResolutionDataSource },
     { provide: BillingDataSource, useClass: InMemoryBillingDataSource },
     { provide: MeterDataSource, useClass: InMemoryMeterDataSource },
+    { provide: LevyDataSource, useClass: InMemoryLevyDataSource },
     { provide: CollectionDataSource, useClass: InMemoryCollectionDataSource },
     { provide: LibraryDataSource, useClass: InMemoryLibraryDataSource },
     { provide: ComplianceDataSource, useClass: InMemoryComplianceDataSource },
