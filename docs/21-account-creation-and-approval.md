@@ -15,7 +15,7 @@ The brief asks for "Humo Account Admin". That's the existing fixed role **Humo A
 | **Humo System Administrator** | Platform governance and oversight | Approves or rejects waiting accounts (`Platform.Customers.Approve`); grants and revokes delegated activation (`Platform.ManageHumoRoles`); sets the policy (`Platform.Config.Manage`); reviews it all in the audit log (`Platform.Audit`). |
 | Humo Executive | Reporting | None. |
 
-**Already true before this change, not altered:** the Account Manager role includes `Platform.Subscriptions.Manage` (change packages and add-ons, with step-up), as decided in doc 04. The brief says not to grant "commercial override permissions" automatically. Removing this one would change an approved role's capabilities, so it's left as is and **flagged for a decision** (§9).
+**Subscription changes:** the Account Manager role keeps `Platform.Subscriptions.Manage` (change packages and add-ons for their own customers, with step-up) **without approval**, and every change is audited with a required reason. This is **decision D11** (12 Oct 2026).
 
 ## 2. Permissions
 
@@ -139,7 +139,7 @@ A pending or rejected request can't look like a customer, because no organisatio
 ## 9. Open points and conflicts
 
 - ✅ **Resolved 12 Oct 2026: D4 said "12 fixed roles".** Removing the Contractor/Supplier role from Humo PM on 11 Oct 2026 (doc 20) left **11**. A correction note under D4 in doc 17 now records this; the decision itself is unchanged.
-- **Account Manager and `Platform.Subscriptions.Manage`** (§1): keep it (doc 04), or move commercial changes behind approval too? This needs a decision.
+- ✅ **Resolved 12 Oct 2026: Account Manager and `Platform.Subscriptions.Manage`.** Kept, no approval, every change audited with a required reason (**D11**).
 - **Seeded demo requests:** AR-1003 (Thabo, waiting) and AR-1002 (Dumisani, rejected). Nobody holds the delegated grant in the seed: the demo grants it live.
 
 ## 10. Simulated, and what the backend must do
