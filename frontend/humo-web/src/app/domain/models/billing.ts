@@ -53,7 +53,7 @@ export interface BillingLine {
   excluded: boolean;
 }
 
-export type ExceptionKind = 'meter-missing' | 'levy-changed' | 'arrangement' | 'handed-over' | 'large-credit' | 'no-holder';
+export type ExceptionKind = 'meter-missing' | 'unusual-reading' | 'levy-changed' | 'arrangement' | 'handed-over' | 'large-credit' | 'no-holder';
 
 export type ExceptionDecision = 'include' | 'exclude' | 'estimate' | 'no-interest' | 'acknowledge';
 
@@ -73,6 +73,7 @@ export interface BillingException {
 
 export const EXCEPTION_LABELS: Record<ExceptionKind, string> = {
   'meter-missing': 'No meter reading',
+  'unusual-reading': 'Unusual meter reading',
   'levy-changed': 'Levy changed',
   arrangement: 'Payment arrangement',
   'handed-over': 'With the attorney',
@@ -159,4 +160,6 @@ export interface SchemeBillingStatus {
   current?: BillingRunSummary;
   /** The period the next run should bill. */
   nextPeriod: string;
+  /** The scheme recovers water from owners (meter readings, docs/22 §2). */
+  recoversWater?: boolean;
 }

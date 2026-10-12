@@ -100,6 +100,9 @@
       @if (r.exceptions.length) {
         <section class="surface panel">
           <h2 class="section-title">Exceptions</h2>
+          @if (meterLink(r); as q) {
+            <p class="meter-link"><a [routerLink]="['/finance/billing/meters']" [queryParams]="{ scheme: q.scheme, period: q.period }">Capture meter readings for {{ q.label }}</a>: the water charges and these exceptions update when you save.</p>
+          }
           <ul class="exceptions">
             @for (x of r.exceptions; track x.id) {
               <li [class.open]="!x.decision">

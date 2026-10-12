@@ -1,6 +1,7 @@
 export * from './models/role';
 export * from './models/organisation';
 export * from './models/bank-statement';
+export * from './models/meter';
 export * from './models/account-request';
 export * from './models/scheme';
 export * from './models/scheme-health';
