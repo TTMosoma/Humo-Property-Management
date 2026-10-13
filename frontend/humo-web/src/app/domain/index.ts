@@ -31,6 +31,8 @@ export * from './models/account-health';
 export * from './models/opportunity';
 export * from './models/nudge';
 export * from './models/platform';
+export * from './models/commercial';
+export * from './ports/commercial-data-sources';
 export * from './ports/platform-data-sources';
 export * from './ports/session-data-source';
 export * from './ports/organisation-data-sources';

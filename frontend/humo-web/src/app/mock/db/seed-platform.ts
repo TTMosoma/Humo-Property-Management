@@ -1,5 +1,6 @@
 import { FeatureModule, MonthPoint, PackageId, Subscription, UpgradeRequest, UsageSnapshot } from '../../domain';
 import { seeded } from './random';
+import { DEMO_DATA } from '../fixtures/demo-data';
 
 /** One customer as stored by the platform (everything else is computed from this). */
 export interface CustomerSeed {
@@ -8,17 +9,14 @@ export interface CustomerSeed {
   city: string;
   province: string;
   customerSince: string;
+  /** A Humo staff identity; the display name is looked up live (AccessStore). */
   accountManagerId: string;
-  accountManager: string;
   subscription: Subscription;
   snapshot: UsageSnapshot;
 }
 
-export const ACCOUNT_MANAGERS = [
-  { id: 'p-dumisani', name: 'Dumisani Ngcobo' },
-  { id: 'am-thabo', name: 'Thabo Mahlangu' },
-  { id: 'am-carla', name: 'Carla de Wet' },
-];
+/** Who looks after each customer: the canonical assignments (demo-data/platform/account-managers.json). */
+const assigned = (organisationId: string) => DEMO_DATA.accountManagers.assignments.find((a) => a.organisationId === organisationId)!.accountManagerId;
 
 /** Board-level targets the generated book of business adds up to (mock). */
 export const TARGETS = { customers: 184, mrr: 1_840_000, schemes: 3_842, units: 182_400, activeUsers: 8_214 };
@@ -44,9 +42,8 @@ function weekly(target: number, drift: number, r = Math.random): number[] {
 
 const NAMED: CustomerSeed[] = [
   {
-    organisationId: 'tshikrand', name: 'Tshikrand', city: 'Pretoria', province: 'Gauteng', customerSince: iso(16),
-    accountManagerId: 'p-dumisani', accountManager: 'Dumisani Ngcobo',
-    subscription: { version: 1, organisationId: 'tshikrand', packageId: 'professional', status: 'active', startedAt: iso(16), renewsAt: inMonths(8), addOns: [], overrides: [], mrr: 24_800, seats: 22 },
+    organisationId: 'tshikrand', name: 'Tshikrand', city: 'Pretoria', province: 'Gauteng', customerSince: iso(16), accountManagerId: assigned('tshikrand'),
+        subscription: { version: 1, organisationId: 'tshikrand', packageId: 'professional', status: 'active', startedAt: iso(16), renewsAt: inMonths(8), addOns: [], overrides: [], mrr: 24_800, seats: 22 },
     snapshot: {
       organisationId: 'tshikrand', at: new Date().toISOString(), seats: 22, activeUsers30d: 16, loginsPerUserWeek: 3.6,
       moduleUsage: usage({ portfolio: 92, finance: 96, maintenance: 88, communications: 80, documents: 71, governance: 12, reporting: 64 }),
@@ -56,9 +53,8 @@ const NAMED: CustomerSeed[] = [
     },
   },
   {
-    organisationId: 'acacia', name: 'Acacia Managing Agents', city: 'Johannesburg', province: 'Gauteng', customerSince: iso(17),
-    accountManagerId: 'p-dumisani', accountManager: 'Dumisani Ngcobo',
-    subscription: {
+    organisationId: 'acacia', name: 'Acacia Managing Agents', city: 'Johannesburg', province: 'Gauteng', customerSince: iso(17), accountManagerId: assigned('acacia'),
+        subscription: {
       version: 1, organisationId: 'acacia', packageId: 'professional', status: 'active', startedAt: iso(17), renewsAt: inMonths(7), addOns: [{ addOnId: 'governance', since: iso(2) }, { addOnId: 'compliance', since: iso(1) }], mrr: 17_400, seats: 14,
       // An Enterprise capability on a Professional plan: a time-boxed pilot, granted by the account manager.
       overrides: [{ feature: 'document-templates-custom', enabled: true, reason: 'Custom statement pilot', by: 'Dumisani Ngcobo', at: iso(3), expiresAt: inMonths(2) }],
@@ -72,9 +68,8 @@ const NAMED: CustomerSeed[] = [
     },
   },
   {
-    organisationId: 'umgeni', name: 'Umgeni BC Services', city: 'Durban', province: 'KwaZulu-Natal', customerSince: iso(11),
-    accountManagerId: 'p-dumisani', accountManager: 'Dumisani Ngcobo',
-    subscription: { version: 1,
+    organisationId: 'umgeni', name: 'Umgeni BC Services', city: 'Durban', province: 'KwaZulu-Natal', customerSince: iso(11), accountManagerId: assigned('umgeni'),
+        subscription: { version: 1,
       organisationId: 'umgeni', packageId: 'professional', status: 'active', startedAt: iso(11), renewsAt: inMonths(1, 15),
       addOns: [{ addOnId: 'governance', since: iso(4) }], overrides: [], mrr: 17_600, seats: 12,
     },
@@ -87,9 +82,8 @@ const NAMED: CustomerSeed[] = [
     },
   },
   {
-    organisationId: 'fynbos', name: 'Fynbos Property Admin', city: 'Cape Town', province: 'Western Cape', customerSince: iso(8),
-    accountManagerId: 'am-carla', accountManager: 'Carla de Wet',
-    subscription: { version: 1,
+    organisationId: 'fynbos', name: 'Fynbos Property Admin', city: 'Cape Town', province: 'Western Cape', customerSince: iso(8), accountManagerId: assigned('fynbos'),
+        subscription: { version: 1,
       organisationId: 'fynbos', packageId: 'essentials', status: 'past-due', startedAt: iso(8), renewsAt: inMonths(4), addOns: [],
       overrides: [{ feature: 'payment-allocation', enabled: true, reason: 'Trial while they evaluate Professional', by: 'Carla de Wet', at: iso(0, 1), expiresAt: inMonths(1, 1) }],
       mrr: 4_200, seats: 6,
@@ -149,12 +143,13 @@ function generate(): CustomerSeed[] {
     const months = 1 + Math.floor(r() * 40);
     const addOns: Subscription['addOns'] = packageId === 'professional' && r() < 0.18 ? [{ addOnId: 'governance', since: iso(Math.floor(r() * 10)) }] : [];
     if (packageId !== 'enterprise' && r() < 0.1) addOns.push({ addOnId: 'whatsapp', since: iso(Math.floor(r() * 6)) });
-    const am = ACCOUNT_MANAGERS[i % 3];
+    const rotation = DEMO_DATA.accountManagers.rotation;
+    const accountManagerId = rotation[i % rotation.length];
     const organisationId = `cust-${String(i + 1).padStart(3, '0')}`;
     const baseMrr = packageId === 'essentials' ? 2600 + r() * 3000 : packageId === 'professional' ? 7000 + r() * 8000 : 21000 + r() * 22000;
     out.push({
       organisationId, name, city: CITY[province] ?? place, province, customerSince: iso(months),
-      accountManagerId: am.id, accountManager: am.name,
+      accountManagerId,
       subscription: { version: 1,
         organisationId, packageId, status: e < 0.42 && r() < 0.5 ? 'past-due' : months < 1 ? 'trial' : 'active', startedAt: iso(months),
         renewsAt: inMonths(1 + Math.floor(r() * 11), 1 + Math.floor(r() * 27)), addOns, overrides: [], mrr: Math.round(baseMrr), seats,

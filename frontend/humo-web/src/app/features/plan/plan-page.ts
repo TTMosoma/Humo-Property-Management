@@ -4,11 +4,11 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { map } from 'rxjs';
-import { AddOnId, Feature, PlanDataSource, UpgradeRequest, entitlementSet } from '../../domain';
+import { AddOnId, BILLING_PREFERENCE_LABELS, Feature, GB, PlanDataSource, UpgradeRequest, entitlementSet } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
-import { formatDate } from '../../ui/format/money';
+import { formatDate, formatRand } from '../../ui/format/money';
 import { relativeTime } from '../../ui/format/relative-time';
 import { PageHeader } from '../../ui/page-header/page-header';
 import { ErrorState } from '../../ui/states/error-state';
@@ -63,6 +63,27 @@ export class PlanPage {
   protected readonly relativeTime = relativeTime;
   protected readonly packageName = this.catalogue.packageName;
   protected readonly addOnName = this.catalogue.addOnName;
+  protected readonly prefLabel = BILLING_PREFERENCE_LABELS;
+  protected readonly min = Math.min;
+  protected readonly rand = (n: number) => formatRand(n, { cents: false });
+  protected readonly gb = (bytes: number) => `${(bytes / GB).toFixed(1)} GB`;
+
+  /** Customers ask; their account manager agrees a storage pack with them. Nothing is bought here. */
+  protected askStorage(): void {
+    const p = this.plan();
+    if (!p) return;
+    this.busy.set(true);
+    this.data.requestUpgrade({ organisationId: p.organisationId, addOn: 'storage-10', note: 'We’re running out of storage.', source: 'plan-page' }).subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.feedback.success(`Sent to ${p.accountManager}, your Humo account manager. Nothing is charged until you agree.`);
+      },
+      error: () => {
+        this.busy.set(false);
+        this.feedback.error('Your request didn’t send. Try again.');
+      },
+    });
+  }
 
   /** How a module could be added: as an add-on, or from a higher package. */
   protected howToGet(module: string): { addOn?: AddOnId; label: string } {

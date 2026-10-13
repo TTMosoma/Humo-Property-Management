@@ -27,6 +27,7 @@ localStorage           (mock/simulation/simulation-storage.ts, keys humo.sim.*)
   - maintenance: suppliers, jobs, invoices, batches;
   - access: identities, credentials, audit log;
   - platform: subscriptions, upgrade requests;
+  - commercial: catalogue, agreements, storage measurements, invoices, payments (seeded from `/demo-data/`, see [demo/demo-data-strategy.md](demo/demo-data-strategy.md));
   - organisations;
   - Humo Contractor.
 - **Versioned snapshots.** If a store's shape changes, bump `SCHEMA` in `simulation-storage.ts`: old snapshots are then ignored and the store re-seeds.

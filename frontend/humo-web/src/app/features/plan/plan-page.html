@@ -24,6 +24,38 @@
     </div>
   </section>
 
+  @if (p.storage; as st) {
+    <section class="storage surface" aria-labelledby="storage-h">
+      <div class="s-head">
+        <div>
+          <div class="label-caps" id="storage-h">Storage</div>
+          <strong>{{ gb(st.usedBytes) }} of {{ st.totalGb === null ? 'your agreed allowance' : st.totalGb + ' GB' }} used</strong>
+          <div class="muted small">
+            {{ st.includedGb === null ? 'Negotiated allowance' : st.includedGb + ' GB with your package' }}{{ st.purchasedGb ? ' + ' + st.purchasedGb + ' GB purchased' : '' }}{{ st.exceptionGb ? ' + ' + st.exceptionGb + ' GB temporary' : '' }}
+            · {{ st.measurement.source === 'demo' ? 'Demo figure' : 'Measured' }} {{ formatDate(st.measurement.measuredAt, true) }}
+          </div>
+        </div>
+        @if (st.state !== 'ok' && st.state !== 'unknown') {
+          <ui-status-pill [label]="st.state === 'exhausted' ? 'Storage full' : 'Over ' + (st.state === 'critical' ? st.thresholds[1] : st.thresholds[0]) + '%'" [tone]="st.state === 'warning' ? 'warning' : 'danger'" />
+        }
+      </div>
+      <div class="meter" role="meter" [attr.aria-valuenow]="st.percent ?? 0" aria-valuemin="0" aria-valuemax="100" aria-label="Storage used">
+        <span [style.width.%]="min(st.percent ?? 0, 100)" [attr.data-state]="st.state"></span>
+      </div>
+      @if (st.state === 'exhausted') {
+        <p class="s-note">Your storage is full, so new uploads are refused. Archive files you no longer need, or ask Humo for more storage. Nothing is charged until you agree.</p>
+      } @else if (st.state === 'warning' || st.state === 'critical') {
+        <p class="s-note">You’re close to your storage allowance. Ask Humo about more storage before uploads are refused.</p>
+      }
+      @if (canRequest() && st.state !== 'ok') {
+        <button type="button" class="btn btn-secondary btn-sm" (click)="askStorage()" [disabled]="busy()">Ask Humo for more storage</button>
+      }
+      @if (p.billing; as b) {
+        <div class="muted small">Billing: {{ prefLabel[b.preference] }} · next invoice {{ formatDate(b.nextBillingDate, true) }} · renews {{ formatDate(b.renewal.on, true) }}{{ b.renewal.fee ? ' (annual renewal fee ' + rand(b.renewal.fee) + ')' : '' }}</div>
+      }
+    </section>
+  }
+
   <ul class="modules">
     @for (row of rows(); track row.module) {
       <li class="module surface" [class.off]="!row.on" [class.focus]="focusModule() === row.module">

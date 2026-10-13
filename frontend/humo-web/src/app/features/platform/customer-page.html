@@ -67,7 +67,9 @@
 
   <ui-view-tabs [tabs]="tabs()" [active]="state().view ?? 'overview'" (activeChange)="setView($event)" label="Customer sections" />
 
-  @if (state().view !== 'subscription') {
+  @if (state().view === 'commercial' && revenue()) {
+    <app-customer-commercial [organisationId]="cu.organisationId" [ownAccount]="ownAccount()" />
+  } @else if (state().view !== 'subscription') {
     <div class="grid">
       <!-- Health, explained -->
       <section class="surface panel">
@@ -245,6 +247,12 @@
         </details>
       }
     </div>
+    @if (revenue()) {
+      <p class="hint">
+        Package and add-on changes made here keep the agreed price. To change what {{ cu.name }} pays, or to schedule a change for a later date, use
+        <a href="" (click)="$event.preventDefault(); setView('commercial')">Billing &amp; agreement</a>.
+      </p>
+    }
     <p class="hint">
       The app only ever asks “is this feature on?” — never which package a customer is on. Package, add-ons and overrides combine into these effective entitlements,
       which the API checks on every request.

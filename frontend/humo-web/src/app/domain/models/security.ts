@@ -22,7 +22,8 @@ export type SensitiveAction =
   | 'change-subscription'
   | 'change-customer-status'
   | 'change-platform-config'
-  | 'change-humo-team';
+  | 'change-humo-team'
+  | 'verify-payment';
 
 export const SENSITIVE_ACTION_LABELS: Record<SensitiveAction, string> = {
   'release-payment': 'Release a supplier payment',
@@ -37,6 +38,7 @@ export const SENSITIVE_ACTION_LABELS: Record<SensitiveAction, string> = {
   'change-customer-status': 'Suspend or archive a customer',
   'change-platform-config': 'Change live platform configuration',
   'change-humo-team': 'Change Humo team access',
+  'verify-payment': 'Issue a Humo invoice or verify a payment',
 };
 
 /** Amounts at or above this need step-up when approved (prototype assumption). */

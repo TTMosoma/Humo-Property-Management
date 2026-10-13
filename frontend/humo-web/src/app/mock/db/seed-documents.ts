@@ -1,6 +1,7 @@
 import { DocumentTemplate, DocumentType, OrganisationDocumentSettings, StatementSection, TemplateDesign, TemplateTier } from '../../domain';
 import { seeded } from './random';
 import { CustomerSeed } from './seed-platform';
+import { PERSONAS } from '../fixtures/personas';
 
 const ALL_SECTIONS: StatementSection[] = ['summary', 'transactions', 'payment', 'queries'];
 const PUBLISHED = '2026-06-01T09:00:00+02:00';
@@ -182,7 +183,7 @@ export function seedCustomerDocuments(customers: CustomerSeed[], named: string[]
         organisationId: c.organisationId,
         currentVersion: 1,
         version: 1,
-        versions: [{ version: 1, status: 'published', notes: 'Set up with Humo onboarding.', publishedAt: PUBLISHED, publishedBy: c.accountManager, design: { ...BRANDED, brandingMode: 'template', palette, font: 'dm-sans' } }],
+        versions: [{ version: 1, status: 'published', notes: 'Set up with Humo onboarding.', publishedAt: PUBLISHED, publishedBy: PERSONAS.find((p) => p.id === c.accountManagerId)?.name ?? 'Humo onboarding', design: { ...BRANDED, brandingMode: 'template', palette, font: 'dm-sans' } }],
       });
     }
     if (custom || branded) {

@@ -1,6 +1,7 @@
 import { AccountHealth, UsageSnapshot } from './account-health';
 import { Entitlement, PackageId, Subscription } from './entitlement';
 import { OrganisationStatus } from './organisation';
+import { BillingPreference, StorageSummary } from './commercial';
 import { Opportunity, UpgradeRequest } from './opportunity';
 
 /**
@@ -88,6 +89,9 @@ export interface CustomerPlan {
   entitlements: Entitlement[];
   accountManager: string;
   requests: UpgradeRequest[];
+  storage?: StorageSummary;
+  /** Their own terms: how they pay, and their own renewal fee (never other customers' prices). */
+  billing?: { preference: BillingPreference; nextBillingDate: string; renewal: { on: string; fee: number | null } };
 }
 
 /** A change an authorised Humo person makes to a subscription. Always audited. */

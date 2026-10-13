@@ -2,18 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { catchError, map, of, take } from 'rxjs';
-import {
-  ACCOUNT_POLICY_LABELS,
-  AccessDataSource,
-  AccountApprovalPolicy,
-  AccountPolicySetting,
-  AccountRequestDataSource,
-  AccountRequestView,
-  Identity,
-  NewAccountDetails,
-  PackageId,
-  activeAssignments,
-} from '../../../domain';
+import { ACCOUNT_POLICY_LABELS, AccessDataSource, AccountApprovalPolicy, AccountPolicySetting, AccountRequestDataSource, AccountRequestView, CommercialDataSource, Identity, NewAccountDetails, PackageId, activeAssignments } from '../../../domain';
 import { CatalogueService } from '../../../core/catalogue/catalogue.service';
 import { SessionService } from '../../../core/session/session.service';
 import { DrawerService } from '../../../ui/drawer/drawer.service';
@@ -41,6 +30,8 @@ export class NewAccountLauncher {
       ),
     { initialValue: [] as Identity[] },
   );
+  /** New customers go to the designated account manager by default (Pricing & add-ons › Commercial settings). */
+  private readonly designated = toSignal(inject(CommercialDataSource).catalogue().pipe(map((c) => c.settings.designatedAccountManagerId), catchError(() => of(''))), { initialValue: '' });
 
   open(): void {
     this.requests
@@ -65,7 +56,7 @@ export class NewAccountLauncher {
             { key: 'accountManagerId', label: 'Account manager', type: 'select', required: true, half: true, options: managers.map((m) => ({ value: m.id, label: m.name })) },
             { key: 'notes', label: 'Notes for the approver', type: 'textarea', placeholder: 'e.g. Referred by Tshikrand. 14 schemes, moving from spreadsheets.' },
           ],
-          initial: { province: 'Gauteng', packageId: 'professional', accountManagerId: managers.some((m) => m.id === me) ? me : (managers[0]?.id ?? '') },
+          initial: { province: 'Gauteng', packageId: 'professional', accountManagerId: managers.some((m) => m.id === me) ? me : managers.some((m) => m.id === this.designated()) ? this.designated() : (managers[0]?.id ?? '') },
           submitLabel: delegated ? 'Activate account' : 'Submit for approval',
           submit: (v) => {
             const details: NewAccountDetails = {

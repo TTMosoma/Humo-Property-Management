@@ -50,6 +50,7 @@ import {
 } from '../../domain';
 import { ComplianceStore } from '../db/compliance-store';
 import { LibraryStore } from '../db/library-store';
+import { StorageMeter } from '../db/storage-meter';
 import { NoticeStore } from '../db/notice-store';
 import { CommsStore } from '../db/comms-store';
 import { InboxStore } from '../db/inbox-store';
@@ -74,6 +75,7 @@ export class InMemoryLibraryDataSource extends LibraryDataSource {
   private readonly db = inject(MockDb);
   private readonly auth = inject(MockAuthSession);
   private readonly gateway = inject(MockGateway);
+  private readonly storage = inject(StorageMeter);
   private readonly respond = mockResponder();
 
   /** The API filters by visibility: trustees see what's shared with trustees and owners; staff see everything. */
@@ -130,7 +132,8 @@ export class InMemoryLibraryDataSource extends LibraryDataSource {
         schemeId: r?.schemeIds.length === 1 ? r.schemeIds[0] : undefined,
         permission: 'Documents.Manage',
         feature: 'documents',
-        validate: () => this.store.checkUpload(input),
+        // The simulated API refuses an upload over the organisation's storage quota (docs/23 §5).
+        validate: () => this.store.checkUpload(input) ?? this.storage.checkUpload(this.auth.current.organisation?.id, input.sizeBytes),
       },
       () => this.store.upload(input, this.auth.current.identity.name, file),
     );

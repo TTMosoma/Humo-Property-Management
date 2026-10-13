@@ -1,0 +1,266 @@
+{
+  "$comment": "Commercial agreements for the named demo customers. Agreed prices are what the customer pays, independent of catalogue prices. Generated customers get an agreement at their recorded contract value (mock/db/commercial-store.ts).",
+  "agreements": [
+    {
+      "organisationId": "tshikrand",
+      "version": 1,
+      "cycle": "monthly",
+      "packages": [
+        {
+          "id": "pk-tshikrand-1",
+          "packageId": "professional",
+          "from": "2025-06-01",
+          "monthlyPrice": 24800,
+          "priceSource": "negotiated"
+        }
+      ],
+      "addOns": [],
+      "adjustments": [],
+      "storageExceptions": [],
+      "renewal": {
+        "on": "2027-06-01",
+        "fee": null,
+        "priceSource": "negotiated"
+      },
+      "billing": {
+        "preference": "card-recurring",
+        "billingEmail": "accounts@tshikrand.example",
+        "nextBillingDate": "2026-11-01",
+        "mandate": {
+          "status": "active",
+          "reference": "SIM-MANDATE-TSH-01"
+        }
+      },
+      "history": [
+        {
+          "at": "2025-06-01T09:00:00+02:00",
+          "byId": "p-dumisani",
+          "by": "Dumisani Ngcobo",
+          "action": "Agreement opened: Humo Professional at R 24 800 a month",
+          "reason": "Signed proposal, June 2025",
+          "approval": "Within the Account Manager’s authority for their own customer (D11)",
+          "effectiveFrom": "2025-06-01"
+        }
+      ]
+    },
+    {
+      "organisationId": "acacia",
+      "version": 1,
+      "cycle": "monthly",
+      "packages": [
+        {
+          "id": "pk-acacia-1",
+          "packageId": "professional",
+          "from": "2025-05-01",
+          "monthlyPrice": 17400,
+          "priceSource": "negotiated"
+        }
+      ],
+      "addOns": [
+        {
+          "id": "ao-acacia-governance",
+          "addOnId": "governance",
+          "quantity": 1,
+          "from": "2026-08-12",
+          "unitPrice": null,
+          "frequency": "monthly",
+          "priceSource": "included"
+        },
+        {
+          "id": "ao-acacia-compliance",
+          "addOnId": "compliance",
+          "quantity": 1,
+          "from": "2026-09-12",
+          "unitPrice": null,
+          "frequency": "monthly",
+          "priceSource": "included"
+        },
+        {
+          "id": "ao-acacia-whatsapp",
+          "addOnId": "whatsapp",
+          "quantity": 1,
+          "from": "2026-11-01",
+          "unitPrice": 100,
+          "frequency": "monthly",
+          "priceSource": "catalogue",
+          "catalogueVersion": 1
+        }
+      ],
+      "adjustments": [],
+      "storageExceptions": [],
+      "renewal": {
+        "on": "2027-05-01",
+        "fee": null,
+        "priceSource": "negotiated"
+      },
+      "billing": {
+        "preference": "card-recurring",
+        "billingEmail": "finance@acacia-ma.example",
+        "nextBillingDate": "2026-11-01",
+        "mandate": {
+          "status": "active",
+          "reference": "SIM-MANDATE-ACA-01"
+        }
+      },
+      "history": [
+        {
+          "at": "2026-10-09T11:20:00+02:00",
+          "byId": "am-mashoto",
+          "by": "Mashoto Moropane",
+          "action": "Scheduled the WhatsApp Communication add-on at R 100 a month",
+          "reason": "Customer asked for WhatsApp levy reminders at the October check-in",
+          "approval": "Within the Account Manager’s authority for their own customer (D11)",
+          "effectiveFrom": "2026-11-01"
+        },
+        {
+          "at": "2026-09-12T10:00:00+02:00",
+          "byId": "p-dumisani",
+          "by": "Dumisani Ngcobo",
+          "action": "Added the Compliance add-on, included in the agreed price",
+          "reason": "Bundled at renewal to support the governance roll-out",
+          "approval": "Within the Account Manager’s authority for their own customer (D11)",
+          "effectiveFrom": "2026-09-12"
+        },
+        {
+          "at": "2026-08-12T10:00:00+02:00",
+          "byId": "p-dumisani",
+          "by": "Dumisani Ngcobo",
+          "action": "Added the Governance add-on, included in the agreed price",
+          "reason": "Trustee meetings pilot agreed with the principal",
+          "approval": "Within the Account Manager’s authority for their own customer (D11)",
+          "effectiveFrom": "2026-08-12"
+        },
+        {
+          "at": "2025-05-01T09:00:00+02:00",
+          "byId": "p-dumisani",
+          "by": "Dumisani Ngcobo",
+          "action": "Agreement opened: Humo Professional at R 17 400 a month",
+          "reason": "Signed proposal, May 2025",
+          "approval": "Within the Account Manager’s authority for their own customer (D11)",
+          "effectiveFrom": "2025-05-01"
+        }
+      ]
+    },
+    {
+      "organisationId": "umgeni",
+      "version": 1,
+      "cycle": "monthly",
+      "packages": [
+        {
+          "id": "pk-umgeni-1",
+          "packageId": "professional",
+          "from": "2025-11-01",
+          "monthlyPrice": 17600,
+          "priceSource": "negotiated"
+        }
+      ],
+      "addOns": [
+        {
+          "id": "ao-umgeni-governance",
+          "addOnId": "governance",
+          "quantity": 1,
+          "from": "2026-06-12",
+          "unitPrice": null,
+          "frequency": "monthly",
+          "priceSource": "included"
+        }
+      ],
+      "adjustments": [
+        {
+          "id": "adj-umgeni-1",
+          "kind": "credit",
+          "label": "Service credit: statement run delay",
+          "amount": 500,
+          "from": "2026-10-05",
+          "reason": "September statements went out two days late after a rendering incident",
+          "by": "Dumisani Ngcobo",
+          "at": "2026-10-05T12:00:00+02:00"
+        }
+      ],
+      "storageExceptions": [],
+      "renewal": {
+        "on": "2026-11-15",
+        "fee": 3000,
+        "priceSource": "negotiated"
+      },
+      "billing": {
+        "preference": "instant-eft",
+        "billingEmail": "admin@umgeni-bc.example",
+        "nextBillingDate": "2026-11-01",
+        "mandate": {
+          "status": "none"
+        }
+      },
+      "history": [
+        {
+          "at": "2026-06-12T10:00:00+02:00",
+          "byId": "p-dumisani",
+          "by": "Dumisani Ngcobo",
+          "action": "Added the Governance add-on, included in the agreed price",
+          "reason": "Agreed when they moved trustee packs onto Humo",
+          "approval": "Within the Account Manager’s authority for their own customer (D11)",
+          "effectiveFrom": "2026-06-12"
+        },
+        {
+          "at": "2025-11-01T09:05:00+02:00",
+          "byId": "p-dumisani",
+          "by": "Dumisani Ngcobo",
+          "action": "Set an annual renewal fee of R 3 000, charged on each renewal date",
+          "reason": "Annual onboarding refresh and trustee training, as in the signed proposal",
+          "approval": "Within the Account Manager’s authority for their own customer (D11)",
+          "effectiveFrom": "2026-11-15"
+        },
+        {
+          "at": "2025-11-01T09:00:00+02:00",
+          "byId": "p-dumisani",
+          "by": "Dumisani Ngcobo",
+          "action": "Agreement opened: Humo Professional at R 17 600 a month",
+          "reason": "Signed proposal, November 2025",
+          "approval": "Within the Account Manager’s authority for their own customer (D11)",
+          "effectiveFrom": "2025-11-01"
+        }
+      ]
+    },
+    {
+      "organisationId": "fynbos",
+      "version": 1,
+      "cycle": "monthly",
+      "packages": [
+        {
+          "id": "pk-fynbos-1",
+          "packageId": "essentials",
+          "from": "2026-02-01",
+          "monthlyPrice": 4200,
+          "priceSource": "negotiated"
+        }
+      ],
+      "addOns": [],
+      "adjustments": [],
+      "storageExceptions": [],
+      "renewal": {
+        "on": "2027-02-01",
+        "fee": null,
+        "priceSource": "negotiated"
+      },
+      "billing": {
+        "preference": "manual-eft",
+        "billingEmail": "annette@fynbos-pa.example",
+        "nextBillingDate": "2026-11-01",
+        "mandate": {
+          "status": "none"
+        }
+      },
+      "history": [
+        {
+          "at": "2026-02-01T09:00:00+02:00",
+          "byId": "am-carla",
+          "by": "Carla de Wet",
+          "action": "Agreement opened: Humo Essentials at R 4 200 a month",
+          "reason": "Signed proposal, February 2026",
+          "approval": "Within the Account Manager’s authority for their own customer (D11)",
+          "effectiveFrom": "2026-02-01"
+        }
+      ]
+    }
+  ]
+}

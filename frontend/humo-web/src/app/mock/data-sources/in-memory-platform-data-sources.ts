@@ -33,6 +33,8 @@ import {
 } from '../../domain';
 import { MockAuthSession } from '../server/mock-auth-session';
 import { PlatformStore } from '../db/platform-store';
+import { CommercialStore } from '../db/commercial-store';
+import { StorageMeter } from '../db/storage-meter';
 import { mockResponder } from '../mock-latency';
 import { toPage } from '../mock-page';
 import { MockGateway } from '../server/mock-gateway';
@@ -112,13 +114,16 @@ export class InMemoryPlanDataSource extends PlanDataSource {
   private readonly session = inject(MockAuthSession);
   private readonly gateway = inject(MockGateway);
   private readonly respond = mockResponder();
-  private readonly customers$ = toObservable(this.store.customers);
+  private readonly commercial = inject(CommercialStore);
+  private readonly storage = inject(StorageMeter);
+  private readonly customers$ = toObservable(computed(() => ({ customers: this.store.customers(), agreements: this.commercial.agreements() })));
 
   /** Only what the customer should see about their own plan — not Humo's health or opportunity data. */
   mine(organisationId: string): Observable<CustomerPlan | undefined> {
     return this.customers$.pipe(
-      switchMap((all) => {
+      switchMap(({ customers: all }) => {
         const c = all.find((x) => x.organisationId === organisationId);
+        const agreement = this.commercial.agreement(organisationId);
         const plan: CustomerPlan | undefined = c && {
           organisationId,
           packageId: c.subscription.packageId,
@@ -128,6 +133,9 @@ export class InMemoryPlanDataSource extends PlanDataSource {
           entitlements: c.entitlements,
           accountManager: c.accountManager,
           requests: c.requests,
+          // Their storage and how they pay; never Humo's prices for other customers or its health data.
+          storage: this.storage.summary(organisationId),
+          billing: agreement && { preference: agreement.billing.preference, nextBillingDate: agreement.billing.nextBillingDate, renewal: { on: agreement.renewal.on, fee: agreement.renewal.fee } },
         };
         return this.respond(plan);
       }),
@@ -195,10 +203,13 @@ export class InMemoryNudgeDataSource extends NudgeDataSource {
   }
 }
 
-/** The catalogue, from the seed constants the mock server prices with. */
+/** The catalogue: features and packages from the seed constants; add-ons from the commercial catalogue (docs/23). */
 @Injectable()
 export class InMemoryCatalogueDataSource extends CatalogueDataSource {
+  private readonly addOns$ = toObservable(inject(CommercialStore).catalogue);
+
   catalogue(): Observable<Catalogue> {
-    return of({ features: FEATURES, packages: PACKAGES, addOns: ADD_ONS });
+    // Retired add-ons stay listed (existing lines still name them) but after the ones on sale.
+    return this.addOns$.pipe(map((c) => ({ features: FEATURES, packages: PACKAGES, addOns: [...c.addOns].sort((a, b) => Number(a.status === 'retired') - Number(b.status === 'retired')).map(({ id, name, description, features }) => ({ id, name, description, features })) })));
   }
 }

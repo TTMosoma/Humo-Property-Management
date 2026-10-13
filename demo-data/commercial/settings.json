@@ -1,0 +1,17 @@
+{
+  "$comment": "Commercial settings. The proration policy and the VAT position need business approval (docs/23 §3, §6).",
+  "version": 1,
+  "storageThresholds": [
+    80,
+    95
+  ],
+  "proration": "next-cycle",
+  "prorationAwaitingApproval": true,
+  "tax": {
+    "legalName": "Humo (legal entity to be confirmed)",
+    "vatRegistered": false,
+    "ratePercent": 15
+  },
+  "designatedAccountManagerId": "am-mashoto",
+  "paymentTermsDays": 7
+}

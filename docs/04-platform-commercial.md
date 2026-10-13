@@ -1,6 +1,8 @@
 # 04 — The Humo platform layer: roles, entitlements, account health and nudges
 
-Status: **Implemented in the frontend prototype (mock data, no billing).** Decisions marked ⚑ need product-owner approval.
+Status: **Implemented in the frontend prototype (mock data).** Decisions marked ⚑ need product-owner approval.
+
+**Update, 12 October 2026:** pricing, client agreements, storage quotas, billing preferences and simulated invoices and payments are now built: see [23-commercial-management.md](23-commercial-management.md). Packages and features below are unchanged; add-ons are now catalogue data, and a customer's package and add-ons in force come from their agreement.
 
 **Humo Property Management** is the product customers use. **Humo** is the business that operates it. This document covers the Humo side:
 - the internal roles
@@ -166,6 +168,8 @@ Platform › Business overview (Humo Executive; also System Administrator):
 | Customers | `/platform/customers` | All Humo roles (columns by permission) |
 | Customer 360 | `/platform/customers/:id` | All Humo roles (health, opportunities, subscription; actions by permission) |
 | Packages & features | `/platform/packages` | System Administrator, Account Manager, Executive |
+| Pricing & add-ons | `/platform/pricing` | Humo staff with `Platform.Revenue.View`; edits by System Administrator (doc 23) |
+| Customer › Billing & agreement | `/platform/customers/:id?view=commercial` | Humo staff with `Platform.Revenue.View`; changes by permission (doc 23) |
 | Feature flags | `/platform/flags` (planned) | System Administrator |
 | Plan & features | `/settings/plan` | Customer staff (only administrators can ask Humo) |
 
@@ -183,7 +187,7 @@ Platform › Business overview (Humo Executive; also System Administrator):
   - per-request entitlement checks
   - override expiry jobs
   - feature flags kept separate from entitlements
-- **Billing system:** invoicing, payment gateway, proration, pricing. **None is built**, and MRR is a recorded value.
+- **Billing system:** pricing, agreements, invoices and payments are now modelled and simulated in the frontend (doc 23). The payment provider, real invoicing and storage enforcement are backend work (register R-12 to R-14). MRR is the agreement's recurring total; existing customers' agreements carry their recorded contract value.
 - **Nudges:** server-side state, rules editable by System Administrators, measuring conversions.
 - **CRM-style records:** Account Manager assignment, request workflow and notifications.
 - **Data access:** an Executive data-access policy enforced in the API, returning aggregates only.

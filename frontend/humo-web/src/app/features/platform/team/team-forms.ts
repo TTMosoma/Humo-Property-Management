@@ -4,7 +4,7 @@ import { DrawerService } from '../../../ui/drawer/drawer.service';
 import { openForm } from '../../shared/form-drawer';
 
 const ROLE_HELP: Record<HumoRole, string> = {
-  'system-admin': 'Runs the platform and the Humo team. Needs a second System Administrator’s approval.',
+  'system-admin': 'Runs the platform and the Humo team. Needs a second System Administrator’s approval (or, while you’re the only one, your own confirmation after 24 hours).',
   'humo-account-manager': 'Looks after customers: onboarding, adoption, subscriptions.',
   'humo-support': 'Helps customers and investigates problems. Can’t change packages, configuration or roles.',
   'humo-executive': 'Business figures: revenue, growth, account health. Read-only.',
@@ -72,7 +72,7 @@ export function grantRoleForm(drawer: DrawerService, data: HumoTeamDataSource, m
     ],
     initial: { role: roleOptions(held)[0]?.value ?? '', label: DEFAULT_LABEL[(roleOptions(held)[0]?.value ?? 'humo-support') as HumoRole] },
     changed: (key, v) => (key === 'role' ? { ...v, label: DEFAULT_LABEL[v['role'] as HumoRole] } : v),
-    intro: 'System Administrator needs a second System Administrator to approve it.',
+    intro: 'System Administrator needs a second System Administrator to approve it. While you’re the only one, you confirm it yourself after a 24-hour cooling-off period, and the Humo team is told.',
     stepUp: (v) => step(`Make ${m.identity.name} ${ROLE_LABELS[v['role'] as HumoRole]}`),
     submitLabel: 'Give role',
     submit: (v) => act(data, m, { type: 'grant-role', role: v['role'] as HumoRole, label: v['label'], reason: v['reason'] }),

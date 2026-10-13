@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { IDENTITY_STATUS_LABELS, HumoTeamDataSource, HumoTeamMember, PendingHumoGrant, ROLE_LABELS, RoleAssignment } from '../../../domain';
+import { HumoTeamDataSource, HumoTeamMember, IDENTITY_STATUS_LABELS, PendingHumoGrant, ROLE_LABELS, RoleAssignment, isSoleSystemAdmin, soleAdminConfirmableFrom } from '../../../domain';
 import { FeedbackService } from '../../../core/feedback/feedback.service';
 import { loadable } from '../../../core/data/loadable';
 import { StepUpService } from '../../../core/security/step-up.service';
@@ -50,6 +50,13 @@ export const MEMBER_TONE: Record<string, Tone> = { invited: 'info', active: 'suc
           <div class="p-act">
             <button type="button" class="btn btn-ghost btn-sm" (click)="decline(g)">Decline</button>
             <button type="button" class="btn btn-primary btn-sm" (click)="approve(g)">Approve</button>
+          </div>
+        } @else if (canManage() && g.requestedById === me() && sole()) {
+          <!-- Sole-administrator safeguard: their own request, after the cooling-off period. -->
+          <div class="p-act">
+            <span class="muted">{{ ready(g) ? 'You’re the only System Administrator: you can confirm it.' : 'You’re the only System Administrator: you can confirm it from ' + confirmableFrom(g) + '. The Humo team has been told.' }}</span>
+            <button type="button" class="btn btn-ghost btn-sm" (click)="decline(g)">Withdraw</button>
+            <button type="button" class="btn btn-primary btn-sm" (click)="approve(g)" [disabled]="!ready(g)">Confirm</button>
           </div>
         } @else {
           <span class="muted">{{ mustSwitch() && g.requestedById !== me() ? 'Switch to your System Administrator role to decide' : 'Waiting for another System Administrator' }}</span>
@@ -153,6 +160,10 @@ export class TeamPage {
   /** A System Administrator working in another of their roles: they switch to change the team. */
   protected readonly mustSwitch = computed(() => !this.session.can('Platform.ManageHumoRoles') && this.session.actorCan('Platform.ManageHumoRoles'));
   protected readonly canManage = computed(() => this.session.can('Platform.ManageHumoRoles') && !this.session.readOnly());
+  /** Sole-administrator safeguard (docs/16 §2a): only while there's exactly one active System Administrator. */
+  protected readonly sole = computed(() => isSoleSystemAdmin((this.result.value() ?? []).map((m) => m.identity), this.me()));
+  protected readonly ready = (g: PendingHumoGrant) => Date.now() >= soleAdminConfirmableFrom(g).getTime();
+  protected readonly confirmableFrom = (g: PendingHumoGrant) => soleAdminConfirmableFrom(g).toLocaleString('en-ZA', { dateStyle: 'medium', timeStyle: 'short' });
 
   protected open(m: HumoTeamMember): void {
     void this.router.navigate(['/platform/team', m.identity.id]);

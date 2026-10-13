@@ -5,6 +5,8 @@ import {
   AccountDataSource,
   AuditDataSource,
   CatalogueDataSource,
+  CommercialDataSource,
+  PaymentGateway,
   DocumentTemplateDataSource,
   MeetingDataSource,
   BillingDataSource,
@@ -70,6 +72,7 @@ import { InMemoryMeterDataSource } from './data-sources/in-memory-meter-data-sou
 import { InMemoryLevyDataSource } from './data-sources/in-memory-levy-data-source';
 import { ContractorNetwork } from '../domain/contractor';
 import { InMemoryContractorNetwork } from './contractor/in-memory-contractor';
+import { InMemoryCommercialDataSource, SimulatedPaymentGateway } from './data-sources/in-memory-commercial-data-source';
 import { InMemoryCatalogueDataSource, InMemoryNudgeDataSource, InMemoryPlanDataSource, InMemoryPlatformDataSource } from './data-sources/in-memory-platform-data-sources';
 import { InMemorySchemeDataSource } from './data-sources/in-memory-scheme-data-source';
 import { InMemoryDocumentTemplateDataSource, InMemoryPlatformTemplateDataSource } from './data-sources/in-memory-document-data-sources';
@@ -118,6 +121,8 @@ export function provideMockData(): EnvironmentProviders {
     { provide: PlanDataSource, useClass: InMemoryPlanDataSource },
     { provide: NudgeDataSource, useClass: InMemoryNudgeDataSource },
     { provide: CatalogueDataSource, useClass: InMemoryCatalogueDataSource },
+    { provide: CommercialDataSource, useClass: InMemoryCommercialDataSource },
+    { provide: PaymentGateway, useClass: SimulatedPaymentGateway },
     { provide: DocumentTemplateDataSource, useClass: InMemoryDocumentTemplateDataSource },
     { provide: PlatformTemplateDataSource, useClass: InMemoryPlatformTemplateDataSource },
     { provide: MeetingDataSource, useClass: InMemoryMeetingDataSource },

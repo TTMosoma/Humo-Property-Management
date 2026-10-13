@@ -1,21 +1,12 @@
 import { Injectable, computed, inject } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Observable, combineLatest, map, switchMap } from 'rxjs';
-import {
-  ACCOUNT_POLICY_LABELS,
-  AccountApprovalPolicy,
-  AccountDecision,
-  AccountPolicySetting,
-  AccountRequestDataSource,
-  AccountRequestView,
-  AccountSubmission,
-  FieldErrors,
-  NewAccountDetails,
-} from '../../domain';
+import { ACCOUNT_POLICY_LABELS, AccountApprovalPolicy, AccountDecision, AccountPolicySetting, AccountRequestDataSource, AccountRequestView, AccountSubmission, FieldErrors, NewAccountDetails, isSoleSystemAdmin } from '../../domain';
 import { AccountRequestStore } from '../db/account-request-store';
 import { OrganisationStore } from '../db/organisation-store';
 import { mockResponder } from '../mock-latency';
 import { MockAuthSession } from '../server/mock-auth-session';
+import { AccessStore } from '../db/access-store';
 import { MockGateway } from '../server/mock-gateway';
 
 /** The permission that lets an Account Manager activate without a separate approval. Granted individually only. */
@@ -37,6 +28,7 @@ export class InMemoryAccountRequestDataSource extends AccountRequestDataSource {
   private readonly orgs = inject(OrganisationStore);
   private readonly auth = inject(MockAuthSession);
   private readonly gateway = inject(MockGateway);
+  private readonly access = inject(AccessStore);
   private readonly respond = mockResponder();
 
   private readonly views = computed<AccountRequestView[]>(() => {
@@ -108,7 +100,7 @@ export class InMemoryAccountRequestDataSource extends AccountRequestDataSource {
     return this.gateway
       .command(
         {
-          action: d.type === 'approve' ? `Approved new customer account ${r?.ref ?? id} (${name})` : `Rejected new customer account ${r?.ref ?? id} (${name}) — ${d.reason.trim()}`,
+          action: `${d.type === 'approve' ? `Approved new customer account ${r?.ref ?? id} (${name})` : `Rejected new customer account ${r?.ref ?? id} (${name}) — ${d.reason.trim()}`}${r?.requestedById === me.id ? ' — own request, decided by the sole System Administrator' : ''}`,
           resource: 'Account request',
           resourceId: id,
           category: 'security',
@@ -117,7 +109,8 @@ export class InMemoryAccountRequestDataSource extends AccountRequestDataSource {
           validate: (): FieldErrors | null => {
             if (!r) return { id: 'That request no longer exists.' };
             if (r.status !== 'pending') return { status: `It’s already ${r.status}.` };
-            if (r.requestedById === me.id) return { status: 'Another System Administrator decides on a request you submitted.' };
+            // Sole-administrator safeguard: with one System Administrator, nobody else could ever decide.
+            if (r.requestedById === me.id && !isSoleSystemAdmin(this.access.identities(), me.id)) return { status: 'Another System Administrator decides on a request you submitted.' };
             if (d.type === 'reject') return d.reason.trim().length < 5 ? { reason: 'Say why, in a few words. The submitter sees it, and it goes in the audit log.' } : null;
             // Approving re-checks: the customer may have been added since, or the account manager may have left.
             return this.store.validate(r.details, r.id);

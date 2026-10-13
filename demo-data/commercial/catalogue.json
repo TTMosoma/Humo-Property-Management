@@ -1,0 +1,372 @@
+{
+  "$comment": "Humo commercial catalogue (docs/23). Package names and features live in the entitlement catalogue (PACKAGES in domain/models/entitlement.ts); this file holds their commercial terms. Prices are null until the business decides them; example values are marked proposed.",
+  "packages": [
+    {
+      "packageId": "essentials",
+      "billingFrequencies": [
+        "monthly",
+        "annual"
+      ],
+      "status": "active",
+      "terms": [
+        {
+          "version": 1,
+          "effectiveFrom": "2026-01-01",
+          "monthlyPrice": null,
+          "annualPrice": null,
+          "priceStatus": "awaiting",
+          "includedStorageGb": 5,
+          "storageStatus": "proposed",
+          "includedSchemes": null,
+          "extraSchemePrice": null,
+          "annualRenewalFee": null,
+          "changedBy": "Humo catalogue seed",
+          "changedAt": "2026-10-12T08:00:00+02:00",
+          "reason": "Initial catalogue. Base prices not decided; storage allowance proposed (docs/23 §4)."
+        }
+      ]
+    },
+    {
+      "packageId": "professional",
+      "billingFrequencies": [
+        "monthly",
+        "annual"
+      ],
+      "status": "active",
+      "terms": [
+        {
+          "version": 1,
+          "effectiveFrom": "2026-01-01",
+          "monthlyPrice": null,
+          "annualPrice": null,
+          "priceStatus": "awaiting",
+          "includedStorageGb": 25,
+          "storageStatus": "proposed",
+          "includedSchemes": null,
+          "extraSchemePrice": null,
+          "annualRenewalFee": null,
+          "changedBy": "Humo catalogue seed",
+          "changedAt": "2026-10-12T08:00:00+02:00",
+          "reason": "Initial catalogue. Base prices not decided; storage allowance proposed (docs/23 §4)."
+        }
+      ]
+    },
+    {
+      "packageId": "enterprise",
+      "billingFrequencies": [
+        "monthly",
+        "annual"
+      ],
+      "status": "active",
+      "terms": [
+        {
+          "version": 1,
+          "effectiveFrom": "2026-01-01",
+          "monthlyPrice": null,
+          "annualPrice": null,
+          "priceStatus": "awaiting",
+          "includedStorageGb": 250,
+          "storageStatus": "proposed",
+          "includedSchemes": null,
+          "extraSchemePrice": null,
+          "annualRenewalFee": null,
+          "changedBy": "Humo catalogue seed",
+          "changedAt": "2026-10-12T08:00:00+02:00",
+          "reason": "Initial catalogue. Base prices not decided; storage allowance proposed (docs/23 §4)."
+        }
+      ]
+    }
+  ],
+  "addOns": [
+    {
+      "id": "governance",
+      "name": "Governance",
+      "description": "Trustee boards, meetings, AGMs and resolutions.",
+      "kind": "feature",
+      "features": [
+        "governance",
+        "trustee-management",
+        "meetings",
+        "agm-sgm"
+      ],
+      "allowQuantity": false,
+      "status": "active",
+      "terms": [
+        {
+          "version": 1,
+          "effectiveFrom": "2026-01-01",
+          "price": null,
+          "frequency": "monthly",
+          "priceStatus": "awaiting",
+          "changedBy": "Humo catalogue seed",
+          "changedAt": "2026-10-12T08:00:00+02:00",
+          "reason": "Initial catalogue. Price not decided."
+        }
+      ]
+    },
+    {
+      "id": "compliance",
+      "name": "Compliance",
+      "description": "Statutory deadlines across every scheme, generated from your records.",
+      "kind": "feature",
+      "features": [
+        "compliance"
+      ],
+      "allowQuantity": false,
+      "status": "active",
+      "terms": [
+        {
+          "version": 1,
+          "effectiveFrom": "2026-01-01",
+          "price": null,
+          "frequency": "monthly",
+          "priceStatus": "awaiting",
+          "changedBy": "Humo catalogue seed",
+          "changedAt": "2026-10-12T08:00:00+02:00",
+          "reason": "Initial catalogue. Price not decided."
+        }
+      ]
+    },
+    {
+      "id": "advanced-reporting",
+      "name": "Advanced Reporting",
+      "description": "Custom and scheduled reports, analytics.",
+      "kind": "feature",
+      "features": [
+        "reporting-advanced",
+        "analytics-advanced"
+      ],
+      "allowQuantity": false,
+      "status": "active",
+      "terms": [
+        {
+          "version": 1,
+          "effectiveFrom": "2026-01-01",
+          "price": null,
+          "frequency": "monthly",
+          "priceStatus": "awaiting",
+          "changedBy": "Humo catalogue seed",
+          "changedAt": "2026-10-12T08:00:00+02:00",
+          "reason": "Initial catalogue. Price not decided."
+        }
+      ]
+    },
+    {
+      "id": "api-access",
+      "name": "API Access",
+      "description": "Programmatic access to Humo Property Management data.",
+      "kind": "feature",
+      "features": [
+        "api"
+      ],
+      "allowQuantity": false,
+      "status": "active",
+      "terms": [
+        {
+          "version": 1,
+          "effectiveFrom": "2026-01-01",
+          "price": null,
+          "frequency": "monthly",
+          "priceStatus": "awaiting",
+          "changedBy": "Humo catalogue seed",
+          "changedAt": "2026-10-12T08:00:00+02:00",
+          "reason": "Initial catalogue. Price not decided."
+        }
+      ]
+    },
+    {
+      "id": "whatsapp",
+      "name": "WhatsApp Communication",
+      "description": "Notices and reminders on WhatsApp.",
+      "kind": "communication",
+      "features": [
+        "whatsapp"
+      ],
+      "allowQuantity": false,
+      "status": "active",
+      "terms": [
+        {
+          "version": 1,
+          "effectiveFrom": "2026-01-01",
+          "price": 100,
+          "frequency": "monthly",
+          "priceStatus": "proposed",
+          "changedBy": "Humo catalogue seed",
+          "changedAt": "2026-10-12T08:00:00+02:00",
+          "reason": "Initial catalogue. R100 a month and the 500-message allowance are proposed: not approved.",
+          "usageAllowance": {
+            "unit": "WhatsApp messages",
+            "included": 500
+          }
+        }
+      ]
+    },
+    {
+      "id": "advanced-automation",
+      "name": "Advanced Automation",
+      "description": "Automated multi-step workflows.",
+      "kind": "feature",
+      "features": [
+        "automation",
+        "automation-advanced"
+      ],
+      "allowQuantity": false,
+      "status": "active",
+      "terms": [
+        {
+          "version": 1,
+          "effectiveFrom": "2026-01-01",
+          "price": null,
+          "frequency": "monthly",
+          "priceStatus": "awaiting",
+          "changedBy": "Humo catalogue seed",
+          "changedAt": "2026-10-12T08:00:00+02:00",
+          "reason": "Initial catalogue. Price not decided."
+        }
+      ]
+    },
+    {
+      "id": "integrations",
+      "name": "Integrations",
+      "description": "Accounting and banking connectors.",
+      "kind": "feature",
+      "features": [
+        "integrations"
+      ],
+      "allowQuantity": false,
+      "status": "active",
+      "terms": [
+        {
+          "version": 1,
+          "effectiveFrom": "2026-01-01",
+          "price": null,
+          "frequency": "monthly",
+          "priceStatus": "awaiting",
+          "changedBy": "Humo catalogue seed",
+          "changedAt": "2026-10-12T08:00:00+02:00",
+          "reason": "Initial catalogue. Price not decided."
+        }
+      ]
+    },
+    {
+      "id": "document-branding-pack",
+      "name": "Document & Branding Pack",
+      "description": "Premium document templates and your own branding on documents.",
+      "kind": "feature",
+      "features": [
+        "document-templates-premium",
+        "document-branding"
+      ],
+      "allowQuantity": false,
+      "status": "active",
+      "terms": [
+        {
+          "version": 1,
+          "effectiveFrom": "2026-01-01",
+          "price": null,
+          "frequency": "monthly",
+          "priceStatus": "awaiting",
+          "changedBy": "Humo catalogue seed",
+          "changedAt": "2026-10-12T08:00:00+02:00",
+          "reason": "Initial catalogue. Price not decided."
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "name": "Additional Storage",
+      "description": "Replaced by the 10, 50 and 100 GB storage packs.",
+      "kind": "storage",
+      "features": [
+        "storage-extra"
+      ],
+      "allowQuantity": false,
+      "status": "retired",
+      "terms": [
+        {
+          "version": 1,
+          "effectiveFrom": "2026-01-01",
+          "price": null,
+          "frequency": "monthly",
+          "priceStatus": "awaiting",
+          "changedBy": "Humo catalogue seed",
+          "changedAt": "2026-10-12T08:00:00+02:00",
+          "reason": "Retired: replaced by sized storage packs."
+        }
+      ],
+      "retiresOn": "2026-10-12"
+    },
+    {
+      "id": "storage-10",
+      "name": "Additional storage 10 GB",
+      "description": "10 GB more for documents, photos and generated files.",
+      "kind": "storage",
+      "features": [
+        "storage-extra"
+      ],
+      "allowQuantity": true,
+      "status": "active",
+      "terms": [
+        {
+          "version": 1,
+          "effectiveFrom": "2026-01-01",
+          "price": 150,
+          "frequency": "monthly",
+          "priceStatus": "proposed",
+          "changedBy": "Humo catalogue seed",
+          "changedAt": "2026-10-12T08:00:00+02:00",
+          "reason": "Initial catalogue. Example price, proposed: not approved."
+        }
+      ],
+      "storageGb": 10
+    },
+    {
+      "id": "storage-50",
+      "name": "Additional storage 50 GB",
+      "description": "50 GB more for documents, photos and generated files.",
+      "kind": "storage",
+      "features": [
+        "storage-extra"
+      ],
+      "allowQuantity": true,
+      "status": "active",
+      "terms": [
+        {
+          "version": 1,
+          "effectiveFrom": "2026-01-01",
+          "price": 600,
+          "frequency": "monthly",
+          "priceStatus": "proposed",
+          "changedBy": "Humo catalogue seed",
+          "changedAt": "2026-10-12T08:00:00+02:00",
+          "reason": "Initial catalogue. Example price, proposed: not approved."
+        }
+      ],
+      "storageGb": 50
+    },
+    {
+      "id": "storage-100",
+      "name": "Additional storage 100 GB",
+      "description": "100 GB more for documents, photos and generated files.",
+      "kind": "storage",
+      "features": [
+        "storage-extra"
+      ],
+      "allowQuantity": true,
+      "status": "active",
+      "terms": [
+        {
+          "version": 1,
+          "effectiveFrom": "2026-01-01",
+          "price": 1000,
+          "frequency": "monthly",
+          "priceStatus": "proposed",
+          "changedBy": "Humo catalogue seed",
+          "changedAt": "2026-10-12T08:00:00+02:00",
+          "reason": "Initial catalogue. Example price, proposed: not approved."
+        }
+      ],
+      "storageGb": 100
+    }
+  ]
+}
