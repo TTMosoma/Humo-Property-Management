@@ -50,6 +50,10 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": ".htaccess",
+                "input": "deploy/spa"
               }
             ],
             "styles": ["src/styles.scss"]
@@ -159,6 +163,10 @@
               {
                 "glob": "**/*",
                 "input": "projects/humo-contractor/public"
+              },
+              {
+                "glob": ".htaccess",
+                "input": "deploy/spa"
               }
             ],
             "styles": ["projects/humo-contractor/src/styles.scss"]
