@@ -573,6 +573,20 @@ export const routes: Routes = [
             loadComponent: () => import('./features/documents/documents-settings-page').then((m) => m.DocumentsSettingsPage),
           },
           {
+            // The agency's own Humo invoices: administrators only (the API checks the organisation).
+            path: 'billing',
+            data: { breadcrumb: 'Billing & invoices' },
+            children: [
+              { path: '', title: 'Billing & invoices', data: { permission: 'Subscription.Request' }, loadComponent: () => import('./features/billing/billing-page').then((m) => m.BillingPage) },
+              {
+                path: ':invoiceId',
+                title: 'Invoice',
+                data: { permission: 'Subscription.Request', audience: 'customer', breadcrumb: 'Invoice' },
+                loadComponent: () => import('./features/billing/invoice-view-page').then((m) => m.InvoiceViewPage),
+              },
+            ],
+          },
+          {
             path: 'plan',
             title: 'Plan & features',
             // Staff can read it (nudges link here); only administrators can ask Humo for more.
@@ -743,6 +757,19 @@ export const routes: Routes = [
             title: 'Packages & features',
             data: { permission: 'Platform.Subscriptions.View', breadcrumb: 'Packages & features' },
             loadComponent: () => import('./features/platform/packages-page').then((m) => m.PackagesPage),
+          },
+          {
+            path: 'invoices',
+            data: { breadcrumb: 'Invoices' },
+            children: [
+              { path: '', title: 'Invoices', data: { permission: 'Platform.Revenue.View' }, loadComponent: () => import('./features/platform/commercial/invoices-page').then((m) => m.InvoicesPage) },
+              {
+                path: ':invoiceId',
+                title: 'Invoice',
+                data: { permission: 'Platform.Revenue.View', audience: 'humo', breadcrumb: 'Invoice' },
+                loadComponent: () => import('./features/billing/invoice-view-page').then((m) => m.InvoiceViewPage),
+              },
+            ],
           },
           {
             path: 'pricing',

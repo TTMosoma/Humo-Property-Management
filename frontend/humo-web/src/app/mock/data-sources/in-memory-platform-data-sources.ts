@@ -1,6 +1,6 @@
 import { Injectable, computed, inject } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
-import { Observable, map, of, switchMap } from 'rxjs';
+import { Observable, map, of, switchMap, throwError } from 'rxjs';
 import {
   ADD_ONS,
   AddOnId,
@@ -12,6 +12,7 @@ import {
   FEATURE_META,
   Feature,
   FieldErrors,
+  InvoiceDocument,
   ListQuery,
   NUDGES,
   NudgeDataSource,
@@ -117,6 +118,7 @@ export class InMemoryPlanDataSource extends PlanDataSource {
   private readonly commercial = inject(CommercialStore);
   private readonly storage = inject(StorageMeter);
   private readonly customers$ = toObservable(computed(() => ({ customers: this.store.customers(), agreements: this.commercial.agreements() })));
+  private readonly invoices$ = toObservable(computed(() => (this.commercial.payments(), this.commercial.invoices())));
 
   /** Only what the customer should see about their own plan — not Humo's health or opportunity data. */
   mine(organisationId: string): Observable<CustomerPlan | undefined> {
@@ -140,6 +142,40 @@ export class InMemoryPlanDataSource extends PlanDataSource {
         return this.respond(plan);
       }),
     );
+  }
+
+  /** Their own invoices only: an Agency Administrator of that organisation (the API checks the token's organisation). */
+  invoices(organisationId: string): Observable<InvoiceDocument[]> {
+    const refused = this.ownBilling(organisationId);
+    if (refused) return throwError(() => refused);
+    return this.invoices$.pipe(
+      switchMap((all) =>
+        this.respond(
+          all
+            .filter((i) => i.organisationId === organisationId)
+            .sort((x, y) => y.periodStart.localeCompare(x.periodStart))
+            .map((i) => this.commercial.invoiceDocument(i.id)!)
+            .filter(Boolean),
+        ),
+      ),
+    );
+  }
+
+  invoice(organisationId: string, invoiceId: string): Observable<InvoiceDocument | undefined> {
+    const refused = this.ownBilling(organisationId);
+    if (refused) return throwError(() => refused);
+    return this.invoices$.pipe(
+      switchMap(() => {
+        const doc = this.commercial.invoiceDocument(invoiceId);
+        return this.respond(doc?.invoice.organisationId === organisationId ? doc : undefined);
+      }),
+    );
+  }
+
+  private ownBilling(organisationId: string): PolicyError | null {
+    if (this.session.current.organisation?.id !== organisationId) return new PolicyError('forbidden', 'Not your organisation');
+    if (!this.session.can('Subscription.Request')) return new PolicyError('forbidden', 'Only agency administrators see Humo invoices');
+    return null;
   }
 
   requestUpgrade(input: { organisationId: string; addOn?: AddOnId; package?: PackageId; feature?: Feature; note?: string; source: UpgradeRequest['source'] }): Observable<void> {

@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, map, of, switchMap } from 'rxjs';
 import {
@@ -42,7 +43,7 @@ const INVOICE_TONE: Record<InvoiceStatus, Tone> = { issued: 'info', overdue: 'da
  */
 @Component({
   selector: 'app-customer-commercial',
-  imports: [IonIcon, StatusPill, ErrorState, Skeleton],
+  imports: [IonIcon, StatusPill, ErrorState, Skeleton, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (result() === undefined) {
@@ -85,7 +86,7 @@ const INVOICE_TONE: Record<InvoiceStatus, Tone> = { issued: 'info', overdue: 'da
         }
 
         <table class="table">
-          <caption class="sr-only">Recurring charges</caption>
+          <caption class="visually-hidden">Recurring charges</caption>
           <thead><tr><th scope="col">Recurring charge</th><th scope="col">Price basis</th><th scope="col" class="end">Per month</th></tr></thead>
           <tbody>
             @for (l of v.current.recurring; track $index) {
@@ -190,7 +191,7 @@ const INVOICE_TONE: Record<InvoiceStatus, Tone> = { issued: 'info', overdue: 'da
           @for (inv of v.invoices; track inv.id) {
             <article class="invoice">
               <div class="inv-head">
-                <strong>{{ inv.reference }}</strong>
+                <a [routerLink]="['/platform/invoices', inv.id]"><strong>{{ inv.reference }}</strong></a>
                 <span class="muted">{{ date(inv.periodStart) }} – {{ date(dayBefore(inv.periodEnd)) }} · due {{ date(inv.dueOn) }}</span>
                 <span class="end"><strong>{{ rand(inv.total) }}</strong></span>
                 <ui-status-pill [label]="invoiceLabel(inv)" [tone]="invoiceTone[inv.status]" />

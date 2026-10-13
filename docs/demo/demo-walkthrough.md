@@ -43,10 +43,15 @@
 2. *Issue next invoice (simulated)*: the November invoice carries the package, the renewal fee and the R500 service credit.
 3. The renewal moves to 15 Nov 2027.
 
+**6c. All invoices.** As Terry, open *Platform › Invoices*.
+- **Totals:** what's outstanding, what's overdue (Fynbos, R4 200, with a payment awaiting verification), and what was paid this month.
+- **Opening an invoice:** it shows as a document. *Print or save PDF* gives a clean printout.
+
 **7. The customer's view.** Sign in as **Thandeka** (Acacia, Agency Administrator) › *Settings › Plan & features*.
 - She sees her storage, her billing preference, the next invoice date and Mashoto as her account manager.
 - She doesn't see Humo's prices for other customers, or health data.
 - Near the limit, she can *Ask Humo for more storage*.
+- *Settings › Billing & invoices* shows her own invoices only, each printable or savable as a PDF.
 
 **8. Who can see what.**
 - **Lerato (Support):** no *Billing & agreement* tab.

@@ -719,6 +719,31 @@ export interface PaymentRecord {
   simulated: boolean;
 }
 
+/** A payment as the customer sees it: no provider notes, references or Humo staff names. */
+export interface InvoicePaymentSummary {
+  status: PaymentStatus;
+  method: BillingPreference;
+  amount: number;
+  /** When it was verified, or started. */
+  on: string;
+  simulated: boolean;
+}
+
+/**
+ * An invoice as a document: who it's from and to, its lines and totals, how
+ * to pay and what has been paid. The same view for Humo staff and for the
+ * customer's own administrators (with `payments` reduced to summaries).
+ */
+export interface InvoiceDocument {
+  invoice: Omit<HumoInvoice, 'status'> & { status: InvoiceStatus };
+  from: TaxConfig;
+  billTo: { organisationId: string; name: string; legalName: string; city: string; province: string; billingEmail: string };
+  billingPreference: BillingPreference;
+  payments: InvoicePaymentSummary[];
+  /** What's still owed, after verified payments. */
+  balance: number;
+}
+
 export function invoiceStatus(inv: HumoInvoice, today: string): InvoiceStatus {
   if (inv.status === 'paid' || inv.status === 'void') return inv.status;
   return inv.dueOn < today ? 'overdue' : 'issued';
