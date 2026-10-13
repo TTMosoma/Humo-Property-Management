@@ -2,12 +2,12 @@
   "$comment": "Commercial agreements for the named demo customers. Agreed prices are what the customer pays, independent of catalogue prices. Generated customers get an agreement at their recorded contract value (mock/db/commercial-store.ts).",
   "agreements": [
     {
-      "organisationId": "tshikrand",
+      "organisationId": "marula",
       "version": 1,
       "cycle": "monthly",
       "packages": [
         {
-          "id": "pk-tshikrand-1",
+          "id": "pk-marula-1",
           "packageId": "professional",
           "from": "2025-06-01",
           "monthlyPrice": 24800,
@@ -24,11 +24,11 @@
       },
       "billing": {
         "preference": "card-recurring",
-        "billingEmail": "accounts@tshikrand.example",
+        "billingEmail": "accounts@marula-pm.example",
         "nextBillingDate": "2026-11-01",
         "mandate": {
           "status": "active",
-          "reference": "SIM-MANDATE-TSH-01"
+          "reference": "SIM-MANDATE-MAR-01"
         }
       },
       "history": [

@@ -19,7 +19,7 @@ Update this table with every feature change (checklist in [demo-data-strategy.md
 | **Commercial catalogue** (prices, add-ons, versions) | Yes | **Canonical** (`demo-data/commercial/catalogue.json`) | Base prices *awaiting configuration*; example prices *proposed* | R-12 |
 | **Agreements, scheduled changes, preview, history** | Yes | **Canonical** for named customers; generated for the rest | Persistence | R-12 |
 | **Storage quotas** | Yes | **Canonical** measurements (demo) | Measurements; enforcement exists only in the simulated API | R-13 |
-| **Invoices and payments** | Yes, simulated | **Canonical** for Tshikrand, Acacia, Umgeni and Fynbos | Invoices aren't sent; payments, provider and bank reconciliation are simulated | R-14 |
+| **Invoices and payments** | Yes, simulated | **Canonical** for Marula Property, Acacia, Umgeni and Fynbos | Invoices aren't sent; payments, provider and bank reconciliation are simulated | R-14 |
 | **Invoice lists and documents** (Platform › Invoices; Settings › Billing & invoices) | Yes | Same invoices | Printable document; not emailed; no *Pay now* until the provider is connected | R-14 |
 | **Account manager assignment** (Mashoto Moropane) | Yes | **Canonical** (`demo-data/platform/account-managers.json`) | Demo seed identity; no real account | R-8 |
 | Tax (VAT) | Configuration only | `settings.json` (not registered) | No VAT decision yet | R-14 |

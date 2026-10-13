@@ -94,9 +94,9 @@ UsageSnapshot (analytics) → calculateHealth(snapshot, entitlements, weights) �
 **Explainable:**
 - Each signal carries its own score, weight and plain-language reason, so the customer page shows *why* an account is at risk.
 - **Module adoption** compares activity with what an agency of that size usually does.
-- For modules that aren't enabled, the same measure is a **demand signal**, for example Tshikrand's 12% Governance activity without Governance.
+- For modules that aren't enabled, the same measure is a **demand signal**, for example Marula Property's 12% Governance activity without Governance.
 
-**Tshikrand example** (mock, but computed by the real formula):
+**Marula Property example** (mock, but computed by the real formula):
 - Health **87**
 - Portfolio 92%, Finance 96%, Maintenance 88%, Documents 71%
 - Governance not enabled, with 12% demand
@@ -107,8 +107,8 @@ UsageSnapshot (analytics) → calculateHealth(snapshot, entitlements, weights) �
 
 | Rule | Fires when | Example |
 |---|---|---|
-| `governance-addon` | Governance off · more than 5 trustees · 6+ meetings a year · governance-like activity elsewhere | Tshikrand: **HIGH** (8 trustees, 14 meetings a year, Governance not enabled) |
-| `advanced-reporting-addon` | Advanced reporting off · 10+ report exports a month · finance adoption 70%+ | Tshikrand: **MEDIUM** |
+| `governance-addon` | Governance off · more than 5 trustees · 6+ meetings a year · governance-like activity elsewhere | Marula Property: **HIGH** (8 trustees, 14 meetings a year, Governance not enabled) |
+| `advanced-reporting-addon` | Advanced reporting off · 10+ report exports a month · finance adoption 70%+ | Marula Property: **MEDIUM** |
 | `professional-upgrade` | Essentials · 600+ units | |
 | `underused-feature` | An enabled module below 25% adoption | Customer success (**training, not sales**) |
 
@@ -196,7 +196,7 @@ Platform › Business overview (Humo Executive; also System Administrator):
 
 1. **Account Managers can change subscriptions, but only for their own accounts, with step-up.** The alternative is to give them requests only, leaving changes to System Administrators.
 2. **Security features are in every package** (audit log, passkeys, Humo Mobile).
-3. **Example customer:** Acacia (the demo agency) and Tshikrand are both on **Professional without Governance**. That means Compliance and Governance navigation are hidden for Acacia until the Governance add-on is added. Slice C (trustee meetings) will need the add-on or Enterprise.
+3. **Example customer:** Acacia (the demo agency) and Marula Property are both on **Professional without Governance**. That means Compliance and Governance navigation are hidden for Acacia until the Governance add-on is added. Slice C (trustee meetings) will need the add-on or Enterprise.
 4. **Customers see their own plan but not Humo's health or opportunity data.**
 5. **Nudge copy and placements**, and the default frequency policy (30 / 90 / never).
 6. **Health weights and band thresholds.**

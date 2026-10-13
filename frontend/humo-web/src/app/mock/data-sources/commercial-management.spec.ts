@@ -186,8 +186,8 @@ describe('Commercial management', () => {
       expect(inForce(acacia.addOns, later).find((l) => l.addOnId === 'whatsapp')?.unitPrice).toBe(100);
       expect(chargesOn(acacia, later, ctx(store.catalogue())).recurring.find((l) => l.label.startsWith('WhatsApp'))?.amount).toBe(100);
 
-      await run(data.change('tshikrand', { type: 'add-on', addOnId: 'whatsapp', quantity: 1, effectiveFrom: later, reason: 'Asked for WhatsApp reminders' }, 1));
-      expect(inForce(store.agreement('tshikrand')!.addOns, later).find((l) => l.addOnId === 'whatsapp')?.unitPrice).toBe(150);
+      await run(data.change('marula', { type: 'add-on', addOnId: 'whatsapp', quantity: 1, effectiveFrom: later, reason: 'Asked for WhatsApp reminders' }, 1));
+      expect(inForce(store.agreement('marula')!.addOns, later).find((l) => l.addOnId === 'whatsapp')?.unitPrice).toBe(150);
     });
 
     it('an issued invoice keeps the price it was issued with', async () => {
@@ -222,7 +222,7 @@ describe('Commercial management', () => {
       const meter = TestBed.inject(StorageMeter);
       expect(meter.summary('acacia')).toMatchObject({ state: 'warning', percent: 85.2 });
       expect(meter.summary('fynbos')!.state).toBe('exhausted');
-      expect(meter.summary('tshikrand')!.state).toBe('ok');
+      expect(meter.summary('marula')!.state).toBe('ok');
       expect(meter.checkUpload('fynbos', 1_000)?.['file']).toContain('storage is full');
       expect(meter.checkUpload('acacia', 1_000)).toBeNull();
       expect(meter.checkUpload('acacia', 4 * GB)).not.toBeNull();
@@ -325,8 +325,8 @@ describe('Commercial management', () => {
       stepUp();
       await expect(run(data.saveAddOn({ ...addOnInput('whatsapp'), price: 1, reason: 'Trying to change a price' }, false))).rejects.toBeInstanceOf(PolicyError);
       await expect(run(data.issueInvoice('acacia'))).rejects.toBeInstanceOf(PolicyError);
-      await expect(run(data.change('tshikrand', { type: 'add-on', addOnId: 'storage-10', quantity: 1, effectiveFrom: day(0), reason: 'Not my customer though' }, 1))).rejects.toBeInstanceOf(PolicyError);
-      expect(access.audit()[0]).toMatchObject({ result: 'denied', resourceId: 'tshikrand' });
+      await expect(run(data.change('marula', { type: 'add-on', addOnId: 'storage-10', quantity: 1, effectiveFrom: day(0), reason: 'Not my customer though' }, 1))).rejects.toBeInstanceOf(PolicyError);
+      expect(access.audit()[0]).toMatchObject({ result: 'denied', resourceId: 'marula' });
     });
 
     it('Support can’t see commercial terms; the Executive can see but not change them', async () => {
@@ -351,10 +351,10 @@ describe('Commercial management', () => {
     it('Manage features still works (D11) and doesn’t change what the customer pays', async () => {
       auth.signIn('p-dumisani');
       stepUp();
-      const before = platform.subscription('tshikrand')!.mrr;
-      await run(TestBed.inject(PlatformDataSource).changeSubscription('tshikrand', { type: 'add-on', addOnId: 'governance', enabled: true, reason: 'Pilot agreed at the quarterly review' }, 1));
-      expect(platform.subscription('tshikrand')!.addOns.some((a) => a.addOnId === 'governance')).toBe(true);
-      expect(platform.subscription('tshikrand')!.mrr).toBe(before);
+      const before = platform.subscription('marula')!.mrr;
+      await run(TestBed.inject(PlatformDataSource).changeSubscription('marula', { type: 'add-on', addOnId: 'governance', enabled: true, reason: 'Pilot agreed at the quarterly review' }, 1));
+      expect(platform.subscription('marula')!.addOns.some((a) => a.addOnId === 'governance')).toBe(true);
+      expect(platform.subscription('marula')!.mrr).toBe(before);
     });
   });
 

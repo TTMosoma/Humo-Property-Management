@@ -37,7 +37,7 @@ function seed(): AccountRequest[] {
   return [
     {
       id: 'ar-1003', ref: 'AR-1003', version: 1, status: 'pending', route: 'approval', policy: 'delegation-allowed',
-      details: { name: 'Mabena Property Group (Pty) Ltd', shortName: 'Mabena Property', city: 'Polokwane', province: 'Limpopo', packageId: 'professional', accountManagerId: 'am-thabo', notes: 'Referred by Tshikrand. 14 schemes, moving from spreadsheets.' },
+      details: { name: 'Mabena Property Group (Pty) Ltd', shortName: 'Mabena Property', city: 'Polokwane', province: 'Limpopo', packageId: 'professional', accountManagerId: 'am-thabo', notes: 'Referred by Marula Property. 14 schemes, moving from spreadsheets.' },
       accountManager: 'Thabo Mahlangu', requestedById: 'am-thabo', requestedBy: 'Thabo Mahlangu', requestedAt: ago(1, 15),
     },
     {

@@ -42,10 +42,10 @@ function weekly(target: number, drift: number, r = Math.random): number[] {
 
 const NAMED: CustomerSeed[] = [
   {
-    organisationId: 'tshikrand', name: 'Tshikrand', city: 'Pretoria', province: 'Gauteng', customerSince: iso(16), accountManagerId: assigned('tshikrand'),
-        subscription: { version: 1, organisationId: 'tshikrand', packageId: 'professional', status: 'active', startedAt: iso(16), renewsAt: inMonths(8), addOns: [], overrides: [], mrr: 24_800, seats: 22 },
+    organisationId: 'marula', name: 'Marula Property', city: 'Pretoria', province: 'Gauteng', customerSince: iso(16), accountManagerId: assigned('marula'),
+        subscription: { version: 1, organisationId: 'marula', packageId: 'professional', status: 'active', startedAt: iso(16), renewsAt: inMonths(8), addOns: [], overrides: [], mrr: 24_800, seats: 22 },
     snapshot: {
-      organisationId: 'tshikrand', at: new Date().toISOString(), seats: 22, activeUsers30d: 16, loginsPerUserWeek: 3.6,
+      organisationId: 'marula', at: new Date().toISOString(), seats: 22, activeUsers30d: 16, loginsPerUserWeek: 3.6,
       moduleUsage: usage({ portfolio: 92, finance: 96, maintenance: 88, communications: 80, documents: 71, governance: 12, reporting: 64 }),
       workflowsStarted30d: 451, workflowsCompleted30d: 390, openTickets: 3, criticalTickets: 0, paymentStatus: 'current',
       schemes: 38, units: 2140, trustees: 8, meetingsPerYear: 14, reportExports30d: 18, maintenanceRequests30d: 64, receiptsAllocated30d: 1_870,
