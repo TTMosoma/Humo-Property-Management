@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Channel, Conversation, ConversationAction, ConversationView, FieldErrors, Person, ResidentMessage, WorkItem } from '../../domain';
-import { personName, portfolioManagerOf } from '../fixtures/staff';
+import { StaffDirectory } from './staff-directory';
 import { simulationStorage } from '../simulation/simulation-storage';
 import { CommsStore } from './comms-store';
 import { MaintenanceStore } from './maintenance-store';
@@ -23,6 +23,7 @@ const DAY = 86_400_000;
  */
 @Injectable({ providedIn: 'root' })
 export class InboxStore {
+  private readonly directory = inject(StaffDirectory);
   private readonly db = inject(MockDb);
   private readonly maintenance = inject(MaintenanceStore);
   private readonly comms = inject(CommsStore);
@@ -49,7 +50,7 @@ export class InboxStore {
     const openJobs = this.maintenance.jobs
       .filter((j) => !['closed', 'cancelled', 'paid'].includes(j.stage) && ((unit && j.unitId === unit.id) || j.reportedBy.personId === person.id))
       .map((j) => this.maintenance.summary(j));
-    return { conversation: c, person, scheme, unit, account, openJobs, assigneeName: personName(c.assigneeId), lastAt: c.messages.at(-1)?.at ?? '' };
+    return { conversation: c, person, scheme, unit, account, openJobs, assigneeName: this.directory.name(c.assigneeId), lastAt: c.messages.at(-1)?.at ?? '' };
   }
 
   inScope(schemeIds: string[]): ConversationView[] {
@@ -162,7 +163,7 @@ export class InboxStore {
     const now = new Date().toISOString();
     let c = m.conversationId ? this.conversations.find((x) => x.id === m.conversationId && x.personId === person.id) : undefined;
     if (!c) {
-      c = { id: `cv-${++this.seq}`, version: 1, ref: `MSG-${this.seq}`, schemeId, personId: person.id, unitId, subject: m.subject.trim(), status: 'open', assigneeId: this.staff.routeTo(portfolioManagerOf(schemeId)?.staffId), messages: [], links: [] };
+      c = { id: `cv-${++this.seq}`, version: 1, ref: `MSG-${this.seq}`, schemeId, personId: person.id, unitId, subject: m.subject.trim(), status: 'open', assigneeId: this.staff.routeTo(this.directory.managerOf(schemeId)?.staffId), messages: [], links: [] };
       this.conversations = [c, ...this.conversations];
     }
     c.messages.push({ id: `cm-${++this.seq}`, at: now, from: 'them', by: person.displayName, body: m.body.trim(), channel: 'portal' });

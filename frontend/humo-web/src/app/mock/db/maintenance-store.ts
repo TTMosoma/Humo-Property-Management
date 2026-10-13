@@ -21,7 +21,7 @@ import {
   supplierCompliance,
 } from '../../domain';
 import { formatRand } from '../../ui/format/money';
-import { personName, portfolioManagerOf } from '../fixtures/staff';
+import { StaffDirectory } from './staff-directory';
 import { MockDb } from './mock-db';
 import { round2 } from './random';
 import { seedMaintenance } from './seed-maintenance';
@@ -46,6 +46,7 @@ interface MaintenanceSnapshot {
 
 @Injectable({ providedIn: 'root' })
 export class MaintenanceStore {
+  private readonly directory = inject(StaffDirectory);
   private readonly db = inject(MockDb);
   private readonly injector = inject(Injector);
 
@@ -79,7 +80,7 @@ export class MaintenanceStore {
       scheme: this.db.scheme(job.schemeId),
       unit: job.unitId ? this.db.unitById.get(job.unitId) : undefined,
       supplier: this.supplier(job.supplierId),
-      assigneeName: personName(job.assigneeId),
+      assigneeName: this.directory.name(job.assigneeId),
     };
   }
 
@@ -207,7 +208,7 @@ export class MaintenanceStore {
       stage: 'reported',
       reportedBy: input.reportedBy,
       reportedAt: now,
-      assigneeId: input.reportedBy.role === 'staff' ? (portfolioManagerOf(input.schemeId)?.staffId ?? null) : null,
+      assigneeId: input.reportedBy.role === 'staff' ? (this.directory.managerOf(input.schemeId)?.staffId ?? null) : null,
       photos: input.photoCaptions.map((caption, i) => ({ id: `${ref}-p${i + 1}`, caption, takenAt: now, by: input.reportedBy.name, stage: 'report' })),
       quotes: [],
       budgetCategory: `Maintenance — ${input.category.toLowerCase()}`,
@@ -293,7 +294,7 @@ export class MaintenanceStore {
         job.assigneeId = action.assigneeId;
         job.priority = action.priority;
         job.category = action.category;
-        this.log(job, 'stage', `Triaged: ${action.priority} priority, ${action.category}, assigned to ${personName(action.assigneeId)}`, by);
+        this.log(job, 'stage', `Triaged: ${action.priority} priority, ${action.category}, assigned to ${this.directory.name(action.assigneeId)}`, by);
         this.db.resolveWork(ref, ['maintenance-triage'], by);
         break;
 

@@ -17,7 +17,7 @@ import {
   overdueOf,
 } from '../../domain';
 import { formatDate, formatRand } from '../../ui/format/money';
-import { personName } from '../fixtures/staff';
+import { StaffDirectory } from './staff-directory';
 import { simulationStorage } from '../simulation/simulation-storage';
 import { AccessStore } from './access-store';
 import { DocumentStore } from './document-store';
@@ -65,6 +65,7 @@ const NEXT_LETTER: Partial<Record<CollectionStage, LetterKind>> = {
  */
 @Injectable({ providedIn: 'root' })
 export class CollectionsStore {
+  private readonly directory = inject(StaffDirectory);
   private readonly db = inject(MockDb);
   private readonly settings = inject(SettingsStore);
   private readonly comms = inject(CommsStore);
@@ -127,7 +128,7 @@ export class CollectionsStore {
       overdueAmount: overdueOf(a.ageing),
       next: this.next(c, a),
       lastStep: c.steps[0],
-      assigneeName: personName(this.assigneeFor(a.schemeId)),
+      assigneeName: this.directory.name(this.assigneeFor(a.schemeId)),
     };
   }
 

@@ -21,7 +21,7 @@ import {
   financialYearLabel,
 } from '../../domain';
 import { formatDate } from '../../ui/format/money';
-import { portfolioManagerOf } from '../fixtures/staff';
+import { StaffDirectory } from './staff-directory';
 import { simulationStorage } from '../simulation/simulation-storage';
 import { BoardStore } from './board-store';
 import { GovernanceStore } from './governance-store';
@@ -70,6 +70,7 @@ const AGM_NOTICE_DAYS = 14;
  */
 @Injectable({ providedIn: 'root' })
 export class ComplianceStore {
+  private readonly directory = inject(StaffDirectory);
   private readonly db = inject(MockDb);
   private readonly library = inject(LibraryStore);
   private readonly governance = inject(GovernanceStore);
@@ -481,7 +482,7 @@ export class ComplianceStore {
         supplierName: a.supplier.name,
         createdAt: new Date().toISOString(),
         dueAt: a.dueAt ?? new Date().toISOString(),
-        assigneeId: this.staff.routeTo(portfolioManagerOf(a.schemes[0])?.staffId),
+        assigneeId: this.staff.routeTo(this.directory.managerOf(a.schemes[0])?.staffId),
         status: 'open',
         route: `/suppliers/${a.supplier.id}`,
       } satisfies WorkItem;
@@ -501,7 +502,7 @@ export class ComplianceStore {
       schemeId: i.schemeId,
       createdAt: new Date().toISOString(),
       dueAt: noticeBy ?? i.dueAt ?? new Date().toISOString(),
-      assigneeId: this.staff.routeTo(portfolioManagerOf(scheme.id)?.staffId),
+      assigneeId: this.staff.routeTo(this.directory.managerOf(scheme.id)?.staffId),
       status: 'open',
       route: `/compliance/${i.id}`,
     };

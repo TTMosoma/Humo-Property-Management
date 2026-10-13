@@ -15,7 +15,7 @@ import {
   warningLetter,
 } from '../../domain';
 import { formatDate } from '../../ui/format/money';
-import { portfolioManagerOf } from '../fixtures/staff';
+import { StaffDirectory } from './staff-directory';
 import { simulationStorage } from '../simulation/simulation-storage';
 import { AccessStore } from './access-store';
 import { OpsStore } from './ops-store';
@@ -61,6 +61,7 @@ const STANDARD_RULES: [string, string, RuleCategory, string][] = [
  */
 @Injectable({ providedIn: 'root' })
 export class RulesStore {
+  private readonly directory = inject(StaffDirectory);
   private readonly db = inject(MockDb);
   private readonly comms = inject(CommsStore);
   private readonly governance = inject(GovernanceStore);
@@ -333,7 +334,7 @@ export class RulesStore {
       reportedBy: by,
       status: 'open',
       events: [{ at, by, kind: 'reported', text: `Reported: ${input.description.trim()}` }],
-      assigneeId: this.staff.routeTo(portfolioManagerOf(input.schemeId)?.staffId) ?? '',
+      assigneeId: this.staff.routeTo(this.directory.managerOf(input.schemeId)?.staffId) ?? '',
     });
     this.commit();
     return id;
