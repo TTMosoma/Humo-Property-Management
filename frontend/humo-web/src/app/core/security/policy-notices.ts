@@ -6,6 +6,7 @@ const MESSAGES: Record<PolicyDenial, string> = {
   forbidden: 'Your current role doesn’t allow this. Nothing was changed.',
   'step-up-required': 'This needs additional verification first. Nothing was changed.',
   'not-entitled': 'Your agency’s plan doesn’t include this feature.',
+  'out-of-scope': 'That scheme isn’t one of yours: you can look, but not change anything. Nothing was changed.',
 };
 
 /**

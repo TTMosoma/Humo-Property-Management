@@ -14,6 +14,7 @@ export type Permission =
   | 'Messages.Reply'
   // Portfolio
   | 'Portfolio.View'
+  | 'Portfolio.BrowseAgency'
   | 'Portfolio.Browse'
   | 'Schemes.Manage'
   | 'Units.Manage'
@@ -105,6 +106,7 @@ export const PERMISSIONS: PermissionMeta[] = [
   { id: 'Approvals.Decide', area: 'Work', label: 'Approve or reject (within the approval’s rules)', mutates: true },
   { id: 'Messages.Reply', area: 'Work', label: 'Read and reply to messages; send notices', mutates: true },
   { id: 'Portfolio.View', area: 'Portfolio', label: 'Open the schemes in scope', mutates: false },
+  { id: 'Portfolio.BrowseAgency', area: 'Portfolio', label: 'Browse every scheme in the agency, read-only (granted individually, D1)', mutates: false },
   { id: 'Portfolio.Browse', area: 'Portfolio', label: 'Browse every scheme, unit, person and staff member in scope', mutates: false },
   { id: 'Schemes.Manage', area: 'Portfolio', label: 'Add schemes, edit them and change their status', mutates: true },
   { id: 'Units.Manage', area: 'Portfolio', label: 'Add and edit units', mutates: true },
@@ -191,8 +193,8 @@ const TRUSTEE_VIEW: Permission[] = [
  * Default permissions per role. Prototype assumption: fixed roles first;
  * custom roles (an agency editing these) are a later, Enterprise-plan feature.
  *
- * System.Impersonate and Platform.Customers.ActivateWithoutApproval are
- * deliberately absent from every role — they're granted to named individuals
+ * System.Impersonate, Platform.Customers.ActivateWithoutApproval and
+ * Portfolio.BrowseAgency (D1) are deliberately absent from every role — they're granted to named individuals
  * only (see RoleAssignment.grants), by a System Administrator.
  */
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {

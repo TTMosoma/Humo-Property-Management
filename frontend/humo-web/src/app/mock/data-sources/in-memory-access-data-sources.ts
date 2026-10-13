@@ -28,6 +28,7 @@ import {
   StepUpResult,
   activeAssignments,
   isHumoRole,
+  AGENCY_STAFF,
 } from '../../domain';
 import { PrototypeStateService } from '../../core/prototype/prototype-state.service';
 import { AccessStore } from '../db/access-store';
@@ -214,6 +215,41 @@ export class InMemoryAccessDataSource extends AccessDataSource {
           // The API also refuses self-escalation, whatever the caller's role.
           if (identityId === this.auth.actor().id) throw new PolicyError('forbidden', 'You can’t change your own roles');
           this.store.assign(identityId, a, this.auth.actor().name);
+        },
+      )
+      .pipe(map(() => undefined));
+  }
+
+  setBrowseAgency(identityId: string, assignmentId: string, allowed: boolean, expectedVersion?: number): Observable<void> {
+    const target = this.store.identity(identityId);
+    const a = target?.assignments.find((m) => m.id === assignmentId);
+    return this.gateway
+      .command(
+        {
+          action: `${allowed ? 'Allowed' : 'Withdrew'} browsing every scheme (read-only) for ${target?.name} · ${a ? ROLE_LABELS[a.role] : 'a role'}`,
+          resource: 'Role assignment',
+          resourceId: assignmentId,
+          category: 'security',
+          permission: 'Users.Manage',
+          stepUp: true,
+          version: { expected: expectedVersion, current: a?.version },
+          validate: (): FieldErrors | null =>
+            !a || a.status !== 'active'
+              ? { assignmentId: 'That role isn’t active.' }
+              : a.scope.type !== 'schemes' || !AGENCY_STAFF.includes(a.role)
+                ? { assignmentId: 'Only staff roles limited to some schemes can be allowed to browse the rest.' }
+                : null,
+        },
+        () => {
+          if (identityId === this.auth.actor().id) throw new PolicyError('forbidden', 'You can’t change your own access');
+          this.store.changeIdentity(identityId, (i) => ({
+            ...i,
+            assignments: i.assignments.map((x) =>
+              x.id === assignmentId
+                ? { ...x, version: x.version + 1, grants: allowed ? [...new Set([...(x.grants ?? []), 'Portfolio.BrowseAgency' as const])] : (x.grants ?? []).filter((g) => g !== 'Portfolio.BrowseAgency') }
+                : x,
+            ),
+          }));
         },
       )
       .pipe(map(() => undefined));

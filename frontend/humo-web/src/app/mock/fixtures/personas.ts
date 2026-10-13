@@ -84,6 +84,8 @@ const SEED: SeedIdentity[] = [
         organisationId: 'acacia',
         schemeIds: ['protea-gardens', 'parkhurst-lofts', 'greenstone-commons'],
         label: 'Protea Gardens, Parkhurst Lofts, Greenstone Commons',
+        // D1: as Operations Director she may browse every scheme, read-only.
+        grants: ['Portfolio.BrowseAgency'],
         grantedBy: 'Thandeka Mokoena',
         grantedAt: '2025-08-01T09:00:00+02:00',
       },

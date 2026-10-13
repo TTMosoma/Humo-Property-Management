@@ -36,6 +36,11 @@ export abstract class AccessDataSource {
   abstract setMembershipStatus(identityId: string, organisationId: string, status: 'active' | 'suspended' | 'ended', reason: string): Observable<void>;
   abstract resendInvite(identityId: string): Observable<void>;
   abstract assign(identityId: string, assignment: NewAssignment): Observable<void>;
+  /**
+   * D1: allow or withdraw browsing every scheme in the agency, read-only
+   * (Portfolio.BrowseAgency, an individual grant on a scheme-scoped staff role).
+   */
+  abstract setBrowseAgency(identityId: string, assignmentId: string, allowed: boolean, expectedVersion?: number): Observable<void>;
   /** Ends the assignment (it stays in the person's history; nothing is deleted). */
   abstract endAssignment(identityId: string, assignmentId: string, expectedVersion?: number): Observable<void>;
   /** The API validates the identity holds the assignment and issues a token for it. */

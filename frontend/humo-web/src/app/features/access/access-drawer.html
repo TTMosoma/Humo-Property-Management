@@ -41,6 +41,12 @@
           <span class="r-name">{{ roleLabels[m.role] }}</span>
           <span class="r-scope">{{ m.label }}</span>
           <span class="r-by">Granted by {{ m.grantedBy ?? 'Humo onboarding' }}{{ m.grantedAt ? ' · ' + formatDate(m.grantedAt, true) : '' }}</span>
+          @if (canBrowseGrant(m)) {
+            <label class="r-grant">
+              <input type="checkbox" [checked]="browses(m)" [disabled]="isSelf() || busy()" (change)="setBrowse(m, $any($event.target).checked)" />
+              Can also browse every other scheme, read-only
+            </label>
+          }
         </span>
         @if (!isSelf()) {
           @if (confirmRemove() === m.id) {
