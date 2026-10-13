@@ -53,6 +53,15 @@ npm run build:demo
 | `_redirects`, `_headers` | Netlify or Cloudflare Pages | The same, in their format. |
 | `robots.txt` | Everyone | Blocks all crawlers. |
 
+**Refreshing a page (every build, added 13 Oct 2026):**
+- **Every build includes the Apache rules.** Every build of both apps (`ng build humo-web`, `ng build humo-contractor`) also includes `deploy/spa/.htaccess`: the same rewrite rules without `noindex`. A refresh or a deep link such as `/platform/invoices` serves `index.html` instead of a 404.
+- **The demo build** uses its own `deploy/demo/.htaccess` instead.
+
+**If refreshing still gives *404 Not Found* on Apache:**
+1. **Check `.htaccess` was uploaded.** It's a hidden file, so in cPanel File Manager turn on *Settings › Show hidden files*. Many FTP clients skip dotfiles unless told otherwise.
+2. **Check `.htaccess` sits next to `index.html`,** in the subdomain's document root.
+3. **Ask the host to enable `mod_rewrite` and `AllowOverride`** for the folder. Without them the rules are ignored.
+
 ## Hosting: pick one
 
 | Option | Effort | Notes |

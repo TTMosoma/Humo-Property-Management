@@ -1,11 +1,18 @@
 # Humo Property Management: demo hosting on Apache (cPanel-style hosts).
-# Single-page app: unknown paths serve index.html so deep links and refreshes work.
+# Single-page app: a refresh or a deep link serves index.html, and Angular's router shows the page.
 Options -MultiViews
-RewriteEngine On
-RewriteCond %{REQUEST_FILENAME} -f [OR]
-RewriteCond %{REQUEST_FILENAME} -d
-RewriteRule ^ - [L]
-RewriteRule ^ index.html [L]
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Do not rewrite real files or directories
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Redirect everything else to index.html for Angular routing
+  RewriteRule ^ index.html [L]
+</IfModule>
 
 <IfModule mod_headers.c>
   # The demo isn't for search engines.
