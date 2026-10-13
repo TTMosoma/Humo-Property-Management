@@ -1,4 +1,4 @@
-import { Identity, RoleAssignment } from './identity';
+import { Identity, RoleAssignment, activeAssignments } from './identity';
 import { HumoRole } from './role';
 
 /**
@@ -9,11 +9,41 @@ import { HumoRole } from './role';
  * Only System Administrators change the team, each change with a fresh
  * step-up and a reason. Nobody changes their own access; the last System
  * Administrator can't be removed; a new System Administrator needs a second
- * System Administrator's approval.
+ * System Administrator's approval, except under the sole-administrator
+ * safeguard below.
  */
 
+/**
+ * Sole-administrator safeguard (docs/16 §2a). At launch Humo may have one
+ * System Administrator, and two-person rules would lock the platform: nobody
+ * could ever approve a second one. While there is exactly one active System
+ * Administrator:
+ *   - they may confirm their own request to make someone a System
+ *     Administrator, but only after this cooling-off period, with a fresh
+ *     step-up; the rest of the Humo team is told when it's requested;
+ *   - they may decide new customer accounts they submitted themselves.
+ * Both are marked in the audit log. The moment there are two, the normal
+ * two-person rules apply again; nothing needs switching off.
+ */
+export const SOLE_ADMIN_COOLING_OFF_HOURS = 24;
+
+export function activeSystemAdmins(identities: Identity[]): Identity[] {
+  return identities.filter((i) => i.kind === 'humo' && i.status === 'active' && activeAssignments(i).some((a) => a.role === 'system-admin'));
+}
+
+/** Is this person the only active System Administrator? */
+export function isSoleSystemAdmin(identities: Identity[], identityId: string): boolean {
+  const admins = activeSystemAdmins(identities);
+  return admins.length === 1 && admins[0].id === identityId;
+}
+
+/** When the sole administrator may confirm their own request. */
+export function soleAdminConfirmableFrom(g: Pick<PendingHumoGrant, 'requestedAt'>): Date {
+  return new Date(Date.parse(g.requestedAt) + SOLE_ADMIN_COOLING_OFF_HOURS * 3_600_000);
+}
+
 /** Humo staff sign in with their Humo work address. */
-export const HUMO_EMAIL_DOMAIN = 'humo.example';
+export const HUMO_EMAIL_DOMAIN = 'humo.co.za';
 
 export interface HumoCustomerRef {
   organisationId: string;

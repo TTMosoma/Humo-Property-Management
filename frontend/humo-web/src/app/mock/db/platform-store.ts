@@ -1,5 +1,7 @@
 import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { OrganisationStore } from './organisation-store';
+import { AccessStore } from './access-store';
+import { CommercialStore } from './commercial-store';
 import { simulationStorage } from '../simulation/simulation-storage';
 import {
   ADD_ONS,
@@ -16,7 +18,14 @@ import {
   SubscriptionChange,
   SupportTicket,
   UpgradeRequest,
+  applyAgreementChange,
   calculateHealth,
+  chargesOn,
+  inForce,
+  isoDay,
+  packageById,
+  packageOn,
+  termsOn,
   entitlementSet,
   detectOpportunities,
   resolveEntitlements,
@@ -71,6 +80,8 @@ function organisationStatus(c: CustomerSeed): OrganisationStatus {
 @Injectable({ providedIn: 'root' })
 export class PlatformStore {
   private readonly orgs = inject(OrganisationStore);
+  private readonly access = inject(AccessStore);
+  private readonly commercial = inject(CommercialStore);
   private readonly saved = simulationStorage.load<{ seeds: CustomerSeed[]; requests: UpgradeRequest[] }>('platform');
   readonly seeds = signal<CustomerSeed[]>(this.saved?.seeds ?? seedCustomers());
   readonly requests = signal<UpgradeRequest[]>(this.saved?.requests ?? seedRequests());
@@ -79,14 +90,46 @@ export class PlatformStore {
   /** The one nudge served in this browser session: it stays put rather than counting as "ignored". */
   sessionNudge: string | null = null;
 
+  /**
+   * The subscription in force today: package and add-ons from the commercial
+   * agreement's dated lines (so a scheduled change takes effect on its date),
+   * and the contract value from its recurring charges.
+   */
+  readonly effective = computed(() => {
+    const today = isoDay(new Date());
+    const catalogue = this.commercial.catalogue();
+    const agreements = new Map(this.commercial.agreements().map((a) => [a.organisationId, a]));
+    return new Map(
+      this.seeds().map((c) => {
+        const a = agreements.get(c.organisationId);
+        if (!a) return [c.organisationId, c.subscription];
+        const charges = chargesOn(a, today, { catalogue, schemes: c.snapshot.schemes, packageName: (id) => packageById(id).name });
+        const sub: Subscription = {
+          ...c.subscription,
+          packageId: packageOn(a, today)?.packageId ?? c.subscription.packageId,
+          addOns: inForce(a.addOns, today).map((l) => ({ addOnId: l.addOnId, since: l.from })),
+          renewsAt: a.renewal.on,
+          mrr: charges.recurringMonthly,
+        };
+        return [c.organisationId, sub];
+      }),
+    );
+  });
+
   readonly customers = computed<PlatformCustomer[]>(() => {
     const requests = this.requests();
-    return this.seeds().map((c) => {
-      const entitlements = resolveEntitlements(c.subscription);
+    const effective = this.effective();
+    const addOns = this.commercial.catalogue().addOns;
+    const people = new Map(this.access.identities().map((i) => [i.id, i.name]));
+    return this.seeds().map((seed) => {
+      const c = { ...seed, subscription: effective.get(seed.organisationId) ?? seed.subscription };
+      const entitlements = resolveEntitlements(c.subscription, new Date(), addOns);
       const health = calculateHealth(c.snapshot, entitlements);
       const opportunities = detectOpportunities({ snapshot: c.snapshot, entitlements, subscription: c.subscription, health });
       return {
         ...c,
+        // Live from the staff record, never a stored name.
+        accountManager: people.get(c.accountManagerId) ?? 'Unassigned',
         name: this.orgs.get(c.organisationId)?.shortName ?? c.name,
         status: this.orgs.get(c.organisationId)?.status ?? organisationStatus(c),
         entitlements: entitlements.all,
@@ -163,6 +206,8 @@ export class PlatformStore {
         this.orgs.add({ id: c.organisationId, version: 1, kind: 'managing-agency', status: organisationStatus(c), name: c.name, shortName: c.name, city: c.city, province: c.province, schemeCount: c.snapshot.schemes, unitCount: c.snapshot.units });
       }
     }
+    // Every customer has a commercial agreement and a storage figure.
+    this.commercial.adopt(this.seeds());
     effect(() => safeStorage.set('humo.nudges', JSON.stringify(this.nudges())));
     // DEVELOPMENT / SIMULATION ONLY: subscriptions, accounts and upgrade requests survive a refresh.
     effect(() => {
@@ -172,7 +217,7 @@ export class PlatformStore {
   }
 
   /** A newly onboarded customer: a trial of the chosen package, and no usage yet. */
-  addCustomer(input: { organisationId: string; name: string; city: string; province: string; packageId: PackageId; accountManagerId: string; accountManager: string }): void {
+  addCustomer(input: { organisationId: string; name: string; city: string; province: string; packageId: PackageId; accountManagerId: string }): void {
     const now = new Date();
     const trialEnds = new Date(now.getTime() + 30 * 86_400_000).toISOString();
     const usage = Object.fromEntries((['portfolio', 'finance', 'maintenance', 'communications', 'documents', 'governance', 'compliance', 'reporting'] as FeatureModule[]).map((m) => [m, { events30d: 0, expected: 100 }]));
@@ -183,7 +228,6 @@ export class PlatformStore {
       province: input.province,
       customerSince: now.toISOString(),
       accountManagerId: input.accountManagerId,
-      accountManager: input.accountManager,
       subscription: { version: 1, organisationId: input.organisationId, packageId: input.packageId, status: 'trial', startedAt: now.toISOString(), renewsAt: trialEnds, addOns: [], overrides: [], mrr: 0, seats: 5 },
       snapshot: {
         organisationId: input.organisationId, at: now.toISOString(), seats: 5, activeUsers30d: 0, loginsPerUserWeek: 0, moduleUsage: usage,
@@ -192,12 +236,13 @@ export class PlatformStore {
       },
     };
     this.seeds.update((all) => [seed, ...all]);
+    this.commercial.adopt([seed]);
   }
 
   /** Who at Humo looks after the customer. */
-  setAccountManager(organisationIds: string[], manager: { id: string; name: string }): void {
+  setAccountManager(organisationIds: string[], manager: { id: string }): void {
     const ids = new Set(organisationIds);
-    this.seeds.update((all) => all.map((c) => (ids.has(c.organisationId) ? { ...c, accountManagerId: manager.id, accountManager: manager.name } : c)));
+    this.seeds.update((all) => all.map((c) => (ids.has(c.organisationId) ? { ...c, accountManagerId: manager.id } : c)));
   }
 
   /** Keeps the customer record's name and location in step with the organisation. */
@@ -205,22 +250,22 @@ export class PlatformStore {
     this.seeds.update((all) => all.map((c) => (c.organisationId === organisationId ? { ...c, ...details } : c)));
   }
 
+  /** The subscription in force today. */
   subscription(organisationId: string): Subscription | undefined {
-    return this.seeds().find((c) => c.organisationId === organisationId)?.subscription;
+    return this.effective().get(organisationId);
   }
 
-  change(organisationId: string, change: SubscriptionChange, by: string): void {
+  change(organisationId: string, change: SubscriptionChange, by: string, byId = ''): void {
     const at = new Date().toISOString();
+    if (change.type !== 'override') this.changeAgreement(organisationId, change, by, byId);
     this.seeds.update((all) =>
       all.map((c) => {
         if (c.organisationId !== organisationId) return c;
         const sub = { ...c.subscription, version: c.subscription.version + 1, addOns: [...c.subscription.addOns], overrides: [...c.subscription.overrides] };
         switch (change.type) {
           case 'package':
-            sub.packageId = change.packageId;
-            break;
           case 'add-on':
-            sub.addOns = change.enabled ? [...sub.addOns.filter((a) => a.addOnId !== change.addOnId), { addOnId: change.addOnId, since: at }] : sub.addOns.filter((a) => a.addOnId !== change.addOnId);
+            // What they have comes from the commercial agreement (changeAgreement above).
             break;
           case 'override':
             sub.overrides = sub.overrides.filter((o) => o.feature !== change.feature);
@@ -237,6 +282,35 @@ export class PlatformStore {
     );
     // Conversion closes the loop: nudges for features they now have retire for good.
     this.retireConvertedNudges(organisationId);
+  }
+
+  /**
+   * An entitlement change from Manage features, effective today. It doesn't
+   * change what the customer pays: a new package keeps the agreed price and an
+   * add-on is included in it, unless the catalogue has a price. Priced and
+   * scheduled changes are made in Billing & agreement (docs/23).
+   */
+  private changeAgreement(organisationId: string, change: Extract<SubscriptionChange, { type: 'package' | 'add-on' }>, by: string, byId: string): void {
+    const a = this.commercial.agreement(organisationId);
+    if (!a) return;
+    const cat = this.commercial.catalogue();
+    const today = isoDay(new Date());
+    const actor = { id: byId, name: by, approval: 'Within the Account Manager’s authority for their own customer (D11)' };
+    let next: typeof a;
+    if (change.type === 'package') {
+      const listed = termsOn(cat.packages.find((p) => p.packageId === change.packageId)?.terms ?? [], today)?.monthlyPrice ?? null;
+      const monthlyPrice = listed === null ? (packageOn(a, today)?.monthlyPrice ?? null) : undefined;
+      next = applyAgreementChange(a, { type: 'package', packageId: change.packageId, effectiveFrom: today, monthlyPrice, reason: change.reason }, cat, actor, new Date(), `Changed package to ${packageById(change.packageId).name}`);
+    } else if (change.enabled) {
+      const def = cat.addOns.find((x) => x.id === change.addOnId);
+      const listed = termsOn(def?.terms ?? [], today)?.price ?? null;
+      next = applyAgreementChange(a, { type: 'add-on', addOnId: change.addOnId, quantity: 1, effectiveFrom: today, unitPrice: listed === null ? null : undefined, reason: change.reason }, cat, actor, new Date(), `Added the ${def?.name ?? change.addOnId} add-on`);
+      if (listed === null) next.addOns.at(-1)!.priceSource = 'included';
+    } else {
+      const def = cat.addOns.find((x) => x.id === change.addOnId);
+      next = applyAgreementChange(a, { type: 'remove-add-on', addOnId: change.addOnId, effectiveFrom: today, reason: change.reason }, cat, actor, new Date(), `Removed the ${def?.name ?? change.addOnId} add-on`);
+    }
+    this.commercial.replaceAgreement(next);
   }
 
   addRequest(r: Omit<UpgradeRequest, 'id' | 'at' | 'status'>): void {

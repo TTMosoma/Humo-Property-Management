@@ -21,6 +21,7 @@ import { ErrorState } from '../../ui/states/error-state';
 import { Skeleton } from '../../ui/states/skeleton';
 import { StatusPill } from '../../ui/status-pill/status-pill';
 import { ManageFeaturesDrawer } from './manage-features-drawer';
+import { CustomerCommercial } from './commercial/customer-commercial';
 import { BAND_LABEL, BAND_TONE, STATUS_LABEL, STATUS_TONE } from './platform-view';
 
 /**
@@ -31,7 +32,7 @@ import { BAND_LABEL, BAND_TONE, STATUS_LABEL, STATUS_TONE } from './platform-vie
  */
 @Component({
   selector: 'app-customer-page',
-  imports: [ViewTabs, StatusPill, ScoreRing, Sparkline, EmptyState, ErrorState, Skeleton, IonIcon, RouterLink],
+  imports: [ViewTabs, StatusPill, ScoreRing, Sparkline, EmptyState, ErrorState, Skeleton, IonIcon, RouterLink, CustomerCommercial],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './customer-page.html',
   styleUrl: './customer-page.scss',
@@ -86,6 +87,8 @@ export class CustomerPage {
   protected readonly tabs = computed(() => [
     { id: 'overview', label: 'Health & opportunities' },
     { id: 'subscription', label: 'Subscription & features' },
+    // Prices and contract values: Humo staff with Platform.Revenue.View (not Support).
+    ...(this.revenue() ? [{ id: 'commercial', label: 'Billing & agreement' }] : []),
   ]);
 
   protected readonly modules = computed(() => {

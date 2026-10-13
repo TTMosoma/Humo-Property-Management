@@ -132,7 +132,7 @@ export class AccountRequestStore {
     for (let n = 2; this.orgs.get(id); n++) id = `${base}-${n}`;
     const manager = this.accountManager(d.accountManagerId)!;
     this.orgs.add({ id, version: 1, kind: 'managing-agency', status: 'onboarding', name: d.name.trim(), shortName: d.shortName.trim(), city: d.city.trim(), province: d.province, schemeCount: 0, unitCount: 0 });
-    this.platform.addCustomer({ organisationId: id, name: d.shortName.trim(), city: d.city.trim(), province: d.province, packageId: d.packageId, accountManagerId: manager.id, accountManager: manager.name });
+    this.platform.addCustomer({ organisationId: id, name: d.shortName.trim(), city: d.city.trim(), province: d.province, packageId: d.packageId, accountManagerId: manager.id });
     return id;
   }
 }

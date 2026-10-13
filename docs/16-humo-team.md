@@ -17,7 +17,7 @@ Humo staff work across every Humo product, so the team belongs to the Humo platf
 
 | Action | What happens | Rules |
 |---|---|---|
-| **Invite** | Name, Humo email, job title, role, what they do, why. They're *Invited* with no passkey or sessions until they accept and set up a passkey. | Email must be `@humo.example` (prototype domain) and unused. Humo staff can never be invited into an agency: agency invites, and edits of an agency user's email, refuse any `@humo.example` address (fixed 10 Oct 2026; before, only addresses already belonging to a Humo identity were refused). |
+| **Invite** | Name, Humo email, job title, role, what they do, why. They're *Invited* with no passkey or sessions until they accept and set up a passkey. | Email must be `@humo.co.za` (Humo's domain) and unused. Humo staff can never be invited into an agency: agency invites, and edits of an agency user's email, refuse any `@humo.co.za` address (fixed 10 Oct 2026; before, only addresses already belonging to a Humo identity were refused). |
 | **Edit details** | Name, Humo email, job title. | Version-checked (409). |
 | **Give a role** | Account Manager, Support, Executive apply at once. | **System Administrator** creates a request that a *second* System Administrator approves or declines on the team page. The requester can't approve their own request, and nobody can approve a request about themselves. |
 | **End a role** | Kept in their history. Ending System Administrator also ends impersonation and signs them out. | Not the last active System Administrator. An Account Manager's role can't end while they still look after customers. |
@@ -32,6 +32,32 @@ Humo staff work across every Humo product, so the team belongs to the Humo platf
 - **A reason:** required.
 - **The audit log:** each change is recorded in the platform audit log, including refused attempts.
 - **No self-service:** nobody changes their own access.
+
+## Sole-administrator safeguard (added 13 Oct 2026)
+
+**The problem:** at launch Humo may have one System Administrator. Two rules then can't be met:
+- a new System Administrator needs a *second* System Administrator to approve, so nobody could ever add one;
+- a new customer account a System Administrator submits needs *another* System Administrator to decide it.
+
+**The safeguard:** it applies **only while there is exactly one active System Administrator**, worked out live, with no setting to forget. It switches itself off the moment a second System Administrator exists.
+
+| Situation | With one System Administrator |
+|---|---|
+| Their own request to make someone a System Administrator | They confirm it themselves, but only after a **24-hour cooling-off period** (`SOLE_ADMIN_COOLING_OFF_HOURS`), with a fresh step-up. When it's requested, **everyone else on the Humo team is notified**, so an unexpected request can be raised with the founders before it applies. The team page shows when it can be confirmed; *Withdraw* cancels it. |
+| A new customer account they submitted | They may approve or reject it. |
+
+**Still absolute, even for the sole administrator:**
+- nobody changes their own access;
+- nobody decides a request about themselves;
+- the last System Administrator can't be removed.
+
+**Audit:** every use is written to the audit log as such, e.g. "confirmed by the sole System Administrator after the 24-hour cooling-off period" or "own request, decided by the sole System Administrator".
+
+**Recommended at launch:**
+- Make a second trusted person a System Administrator straight away; the safeguard then switches off.
+- Until then, keep a sealed recovery path with the identity provider (D5) in case the only administrator loses their passkeys.
+
+**In the demo** Terry and Nomsa are both System Administrators, so the safeguard is off. To see it, end Nomsa's System Administrator role as Terry; the tests do the same (`sole-admin.spec.ts`).
 
 ## API (for the backend)
 

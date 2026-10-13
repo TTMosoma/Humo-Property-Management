@@ -1,0 +1,48 @@
+{
+  "$comment": "The canonical Humo Property Management demo dataset. See docs/demo/demo-data-strategy.md. All data is synthetic.",
+  "dataset": "humo-pm-demo",
+  "version": "1.1.0",
+  "schemaVersion": 1,
+  "baselineDate": "2026-10-12",
+  "datesAre": "Fixture dates are absolute. Generated seeds in the frontend (mock/db/seed-*.ts) are relative to today, so the demo always looks current.",
+  "scenarios": [
+    { "id": "commercial-add-on", "title": "Schedule WhatsApp Communication for Acacia at R100 a month from 1 November 2026", "persona": "am-mashoto", "entities": ["agreements:acacia", "catalogue:whatsapp"] },
+    { "id": "storage-warning", "title": "Acacia is over 80% of its storage; add a 10 GB pack", "persona": "am-mashoto", "entities": ["storage-usage:acacia", "catalogue:storage-10"] },
+    { "id": "storage-exhausted", "title": "Fynbos has used its whole allowance: uploads are refused until storage is added", "persona": "am-mashoto", "entities": ["storage-usage:fynbos"] },
+    { "id": "manual-eft-verification", "title": "Fynbos says it paid by EFT; the invoice stays unpaid until the payment is reconciled", "persona": "p-terry", "entities": ["invoices:inv-fynbos-202610", "payments:pay-fynbos-202610-pop"] },
+    { "id": "catalogue-price-change", "title": "Change a catalogue price from a future date; existing agreements keep their price", "persona": "p-terry", "entities": ["catalogue:whatsapp"] }
+  ],
+  "files": [
+    { "path": "commercial/catalogue.json", "entities": ["CommercialPackage", "CommercialAddOn"], "key": "packageId / id", "dependsOn": ["entitlement catalogue: PACKAGES and FEATURES (frontend domain/models/entitlement.ts)"] },
+    { "path": "commercial/settings.json", "entities": ["CommercialSettings"], "dependsOn": ["identities: designatedAccountManagerId"] },
+    { "path": "platform/account-managers.json", "entities": ["AccountManagerAssignment"], "key": "organisationId", "dependsOn": ["organisations", "identities (Humo, Account Manager role)"] },
+    { "path": "commercial/agreements.json", "entities": ["CommercialAgreement"], "key": "organisationId", "dependsOn": ["organisations", "commercial/catalogue.json", "identities (history byId)"] },
+    { "path": "commercial/storage-usage.json", "entities": ["StorageMeasurement"], "key": "organisationId", "dependsOn": ["organisations"] },
+    { "path": "commercial/invoices.json", "entities": ["HumoInvoice"], "key": "id; reference unique", "dependsOn": ["organisations", "commercial/agreements.json"] },
+    { "path": "commercial/payments.json", "entities": ["PaymentRecord"], "key": "id; providerReference unique", "dependsOn": ["commercial/invoices.json"] }
+  ],
+  "insertOrder": [
+    "identities",
+    "organisations",
+    "platform/account-managers.json",
+    "commercial/settings.json",
+    "commercial/catalogue.json",
+    "commercial/agreements.json",
+    "commercial/storage-usage.json",
+    "commercial/invoices.json",
+    "commercial/payments.json"
+  ],
+  "notYetMigrated": {
+    "$comment": "Demo data still defined in TypeScript seeds. Each is deterministic (seeded random) and covered by the fixture integrity spec; move it here when the backend slice for it is built.",
+    "sources": [
+      { "area": "Identities and personas", "path": "frontend/humo-web/src/app/mock/fixtures/personas.ts" },
+      { "area": "Organisations", "path": "frontend/humo-web/src/app/mock/fixtures/organisations.ts" },
+      { "area": "Schemes, units, owners, ledger and balances", "path": "frontend/humo-web/src/app/mock/fixtures/schemes.ts, mock/db/seed-portfolio.ts, mock/db/mock-db.ts" },
+      { "area": "Customers, usage and health (book of business)", "path": "frontend/humo-web/src/app/mock/db/seed-platform.ts" },
+      { "area": "Maintenance, suppliers and contractors", "path": "frontend/humo-web/src/app/mock/db/seed-maintenance.ts" },
+      { "area": "Meetings, boards, rules and compliance", "path": "frontend/humo-web/src/app/mock/db/seed-governance.ts" },
+      { "area": "Documents and library", "path": "frontend/humo-web/src/app/mock/db/seed-documents.ts, mock/db/seed-library.ts" },
+      { "area": "Notifications and audit", "path": "frontend/humo-web/src/app/mock/fixtures/notifications.ts, mock/db/seed-audit.ts" }
+    ]
+  }
+}

@@ -1,0 +1,269 @@
+{
+  "$comment": "Humo’s invoices to the named demo customers. Snapshots: lines carry the price that applied. Simulated: no real invoice was issued.",
+  "invoices": [
+    {
+      "id": "inv-tshikrand-202609",
+      "reference": "HPM-TSH-202609",
+      "organisationId": "tshikrand",
+      "periodStart": "2026-09-01",
+      "periodEnd": "2026-10-01",
+      "issuedOn": "2026-09-01",
+      "dueOn": "2026-09-08",
+      "lines": [
+        {
+          "description": "Humo Professional",
+          "kind": "package",
+          "quantity": 1,
+          "unitPrice": 24800,
+          "amount": 24800,
+          "priceSource": "negotiated"
+        }
+      ],
+      "subtotal": 24800,
+      "tax": {
+        "registered": false,
+        "ratePercent": 15,
+        "amount": 0
+      },
+      "total": 24800,
+      "status": "paid",
+      "simulated": true
+    },
+    {
+      "id": "inv-tshikrand-202610",
+      "reference": "HPM-TSH-202610",
+      "organisationId": "tshikrand",
+      "periodStart": "2026-10-01",
+      "periodEnd": "2026-11-01",
+      "issuedOn": "2026-10-01",
+      "dueOn": "2026-10-08",
+      "lines": [
+        {
+          "description": "Humo Professional",
+          "kind": "package",
+          "quantity": 1,
+          "unitPrice": 24800,
+          "amount": 24800,
+          "priceSource": "negotiated"
+        }
+      ],
+      "subtotal": 24800,
+      "tax": {
+        "registered": false,
+        "ratePercent": 15,
+        "amount": 0
+      },
+      "total": 24800,
+      "status": "paid",
+      "simulated": true
+    },
+    {
+      "id": "inv-acacia-202609",
+      "reference": "HPM-ACA-202609",
+      "organisationId": "acacia",
+      "periodStart": "2026-09-01",
+      "periodEnd": "2026-10-01",
+      "issuedOn": "2026-09-01",
+      "dueOn": "2026-09-08",
+      "lines": [
+        {
+          "description": "Humo Professional",
+          "kind": "package",
+          "quantity": 1,
+          "unitPrice": 17400,
+          "amount": 17400,
+          "priceSource": "negotiated"
+        },
+        {
+          "description": "Governance add-on",
+          "kind": "add-on",
+          "quantity": 1,
+          "unitPrice": 0,
+          "amount": 0,
+          "priceSource": "included"
+        }
+      ],
+      "subtotal": 17400,
+      "tax": {
+        "registered": false,
+        "ratePercent": 15,
+        "amount": 0
+      },
+      "total": 17400,
+      "status": "paid",
+      "simulated": true
+    },
+    {
+      "id": "inv-acacia-202610",
+      "reference": "HPM-ACA-202610",
+      "organisationId": "acacia",
+      "periodStart": "2026-10-01",
+      "periodEnd": "2026-11-01",
+      "issuedOn": "2026-10-01",
+      "dueOn": "2026-10-08",
+      "lines": [
+        {
+          "description": "Humo Professional",
+          "kind": "package",
+          "quantity": 1,
+          "unitPrice": 17400,
+          "amount": 17400,
+          "priceSource": "negotiated"
+        },
+        {
+          "description": "Governance add-on",
+          "kind": "add-on",
+          "quantity": 1,
+          "unitPrice": 0,
+          "amount": 0,
+          "priceSource": "included"
+        },
+        {
+          "description": "Compliance add-on",
+          "kind": "add-on",
+          "quantity": 1,
+          "unitPrice": 0,
+          "amount": 0,
+          "priceSource": "included"
+        }
+      ],
+      "subtotal": 17400,
+      "tax": {
+        "registered": false,
+        "ratePercent": 15,
+        "amount": 0
+      },
+      "total": 17400,
+      "status": "paid",
+      "simulated": true
+    },
+    {
+      "id": "inv-umgeni-202609",
+      "reference": "HPM-UMG-202609",
+      "organisationId": "umgeni",
+      "periodStart": "2026-09-01",
+      "periodEnd": "2026-10-01",
+      "issuedOn": "2026-09-01",
+      "dueOn": "2026-09-08",
+      "lines": [
+        {
+          "description": "Humo Professional",
+          "kind": "package",
+          "quantity": 1,
+          "unitPrice": 17600,
+          "amount": 17600,
+          "priceSource": "negotiated"
+        },
+        {
+          "description": "Governance add-on",
+          "kind": "add-on",
+          "quantity": 1,
+          "unitPrice": 0,
+          "amount": 0,
+          "priceSource": "included"
+        }
+      ],
+      "subtotal": 17600,
+      "tax": {
+        "registered": false,
+        "ratePercent": 15,
+        "amount": 0
+      },
+      "total": 17600,
+      "status": "paid",
+      "simulated": true
+    },
+    {
+      "id": "inv-umgeni-202610",
+      "reference": "HPM-UMG-202610",
+      "organisationId": "umgeni",
+      "periodStart": "2026-10-01",
+      "periodEnd": "2026-11-01",
+      "issuedOn": "2026-10-01",
+      "dueOn": "2026-10-08",
+      "lines": [
+        {
+          "description": "Humo Professional",
+          "kind": "package",
+          "quantity": 1,
+          "unitPrice": 17600,
+          "amount": 17600,
+          "priceSource": "negotiated"
+        },
+        {
+          "description": "Governance add-on",
+          "kind": "add-on",
+          "quantity": 1,
+          "unitPrice": 0,
+          "amount": 0,
+          "priceSource": "included"
+        }
+      ],
+      "subtotal": 17600,
+      "tax": {
+        "registered": false,
+        "ratePercent": 15,
+        "amount": 0
+      },
+      "total": 17600,
+      "status": "paid",
+      "simulated": true
+    },
+    {
+      "id": "inv-fynbos-202609",
+      "reference": "HPM-FYN-202609",
+      "organisationId": "fynbos",
+      "periodStart": "2026-09-01",
+      "periodEnd": "2026-10-01",
+      "issuedOn": "2026-09-01",
+      "dueOn": "2026-09-08",
+      "lines": [
+        {
+          "description": "Humo Essentials",
+          "kind": "package",
+          "quantity": 1,
+          "unitPrice": 4200,
+          "amount": 4200,
+          "priceSource": "negotiated"
+        }
+      ],
+      "subtotal": 4200,
+      "tax": {
+        "registered": false,
+        "ratePercent": 15,
+        "amount": 0
+      },
+      "total": 4200,
+      "status": "paid",
+      "simulated": true
+    },
+    {
+      "id": "inv-fynbos-202610",
+      "reference": "HPM-FYN-202610",
+      "organisationId": "fynbos",
+      "periodStart": "2026-10-01",
+      "periodEnd": "2026-11-01",
+      "issuedOn": "2026-10-01",
+      "dueOn": "2026-10-08",
+      "lines": [
+        {
+          "description": "Humo Essentials",
+          "kind": "package",
+          "quantity": 1,
+          "unitPrice": 4200,
+          "amount": 4200,
+          "priceSource": "negotiated"
+        }
+      ],
+      "subtotal": 4200,
+      "tax": {
+        "registered": false,
+        "ratePercent": 15,
+        "amount": 0
+      },
+      "total": 4200,
+      "status": "issued",
+      "simulated": true
+    }
+  ]
+}

@@ -185,7 +185,9 @@ export const PACKAGES: Package[] = [
   },
 ];
 
-export type AddOnId = 'governance' | 'compliance' | 'advanced-reporting' | 'storage' | 'api-access' | 'whatsapp' | 'advanced-automation' | 'integrations' | 'document-branding-pack';
+export type KnownAddOnId = 'governance' | 'compliance' | 'advanced-reporting' | 'storage' | 'api-access' | 'whatsapp' | 'advanced-automation' | 'integrations' | 'document-branding-pack';
+/** Add-ons are catalogue data (docs/23): new ones, such as storage packs, need no code change. */
+export type AddOnId = KnownAddOnId | (string & {});
 
 /** Features sold independently of the package. */
 export interface AddOn {
@@ -279,9 +281,10 @@ export function tierOf(feature: Feature): Package | undefined {
 /**
  * The entitlement engine. Pure and order-defined:
  *   1. package (with inheritance)  2. add-ons  3. unexpired overrides (last word)
+ * `addOns` is the published catalogue's add-ons (the seed constants by default).
  * A suspended or cancelled subscription keeps only baseline security features.
  */
-export function resolveEntitlements(sub: Subscription | undefined, now = new Date()): EntitlementSet {
+export function resolveEntitlements(sub: Subscription | undefined, now = new Date(), addOns: Pick<AddOn, 'id' | 'name' | 'features'>[] = ADD_ONS): EntitlementSet {
   const map = new Map<Feature, Entitlement>();
   const fromPackage = sub ? packageFeatures(sub.packageId) : new Set<Feature>();
   const pkgName = sub ? packageById(sub.packageId).name : '';
@@ -292,7 +295,7 @@ export function resolveEntitlements(sub: Subscription | undefined, now = new Dat
       : { feature: f.key, enabled: false, source: 'none', sourceLabel: 'Not included' });
   }
   for (const a of sub?.addOns ?? []) {
-    const def = ADD_ONS.find((x) => x.id === a.addOnId);
+    const def = addOns.find((x) => x.id === a.addOnId);
     for (const f of def?.features ?? []) {
       if (!map.get(f)!.enabled) map.set(f, { feature: f, enabled: true, source: 'add-on', sourceLabel: `${def!.name} add-on` });
     }

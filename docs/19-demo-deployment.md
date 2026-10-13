@@ -83,6 +83,12 @@ DNS changes usually take minutes, occasionally a few hours.
 - If a change to the data model makes old saved data incompatible, the developer bumps `SCHEMA` in `mock/simulation/simulation-storage.ts`, and every visitor starts again from the seed data.
 - If a demo looks wrong after an update, reset it from *Prototype*.
 
+## Demo data and script
+
+- **Data:** the canonical demo dataset and how to keep it current: [demo/demo-data-strategy.md](demo/demo-data-strategy.md).
+- **Script:** [demo/demo-walkthrough.md](demo/demo-walkthrough.md).
+- **What's real:** [demo/demo-readiness-matrix.md](demo/demo-readiness-matrix.md) and [demo/demo-limitations.md](demo/demo-limitations.md).
+
 ## Before each demo
 
 - [ ] Open `https://pm-demo.humo.co.za` in a private window, or reset the simulation.

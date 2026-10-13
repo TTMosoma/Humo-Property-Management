@@ -54,6 +54,7 @@ export const NAV: NavSection[] = [
       { id: 'platform-users', label: 'Users & impersonation', icon: 'people-outline', route: '/platform/users', permission: 'Platform.Customers.Users', audience: ['system-admin', 'humo-support'], keywords: 'impersonate view as support customer user humo team roles' },
       { id: 'platform-team', label: 'Humo team', icon: 'people-circle-outline', route: '/platform/team', permission: 'Platform.View', audience: ['system-admin', 'humo-account-manager', 'humo-support', 'humo-executive'], keywords: 'humo staff invite offboard system administrator account manager support roles' },
       { id: 'platform-audit', label: 'Audit log', icon: 'document-lock-outline', route: '/platform/audit', permission: 'Platform.Audit', keywords: 'audit activity security impersonation history' },
+      { id: 'platform-pricing', label: 'Pricing & add-ons', icon: 'card-outline', route: '/platform/pricing', permission: 'Platform.Revenue.View', keywords: 'prices catalogue add-ons storage whatsapp vat proration billing invoices' },
       { id: 'platform-flags', label: 'Feature flags', icon: 'flag-outline', route: '/platform/flags', permission: 'Platform.Config.Manage' },
       { id: 'platform-health', label: 'Platform health', icon: 'pulse-outline', route: '/platform/health', permission: 'Platform.Operations.View' },
     ],

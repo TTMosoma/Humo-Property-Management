@@ -38,7 +38,7 @@ const SEED: SeedIdentity[] = [
     id: 'p-terry',
     name: 'Terry Mosoma',
     initials: 'TM',
-    email: 'terry@humo.example',
+    email: 'terry@humo.co.za',
     kind: 'humo',
     demo: true,
     assignments: [
@@ -58,7 +58,7 @@ const SEED: SeedIdentity[] = [
     id: 'p-lerato',
     name: 'Lerato Dube',
     initials: 'LD',
-    email: 'lerato.dube@humo.example',
+    email: 'lerato.dube@humo.co.za',
     kind: 'humo',
     demo: true,
     assignments: [
@@ -277,7 +277,7 @@ const SEED: SeedIdentity[] = [
     id: 'p-dumisani',
     name: 'Dumisani Ngcobo',
     initials: 'DN',
-    email: 'dumisani@humo.example',
+    email: 'dumisani@humo.co.za',
     kind: 'humo',
     demo: true,
     assignments: [
@@ -288,7 +288,7 @@ const SEED: SeedIdentity[] = [
     id: 'p-nomsa',
     name: 'Nomsa Khoza',
     initials: 'NK',
-    email: 'nomsa@humo.example',
+    email: 'nomsa@humo.co.za',
     kind: 'humo',
     demo: true,
     assignments: [
@@ -296,12 +296,24 @@ const SEED: SeedIdentity[] = [
       { id: 'm-nomsa-admin', role: 'system-admin', organisationId: null, schemeIds: [], label: 'Platform operations', grantedBy: 'Terry Mosoma', grantedAt: '2026-01-12T09:00:00+02:00' },
     ],
   },
-  // Account managers named on customers (seed-platform ACCOUNT_MANAGERS); not offered in "Sign in as".
+  // The designated Humo Account Manager (demo-data/commercial/settings.json). A demo seed entry only:
+  // no credentials exist; a System Administrator creates the real staff account (docs/23 §7).
+  {
+    id: 'am-mashoto',
+    name: 'Mashoto Moropane',
+    initials: 'MM',
+    email: 'mashoto@humo.co.za',
+    kind: 'humo',
+    title: 'Account Manager',
+    demo: true,
+    assignments: [{ id: 'm-mashoto', role: 'humo-account-manager', organisationId: null, schemeIds: [], label: 'Designated account manager · demo seed', grantedBy: 'Terry Mosoma', grantedAt: '2026-10-01T09:00:00+02:00' }],
+  },
+  // Account managers named on customers (demo-data/platform/account-managers.json); not offered in "Sign in as".
   {
     id: 'am-thabo',
     name: 'Thabo Mahlangu',
     initials: 'TM',
-    email: 'thabo@humo.example',
+    email: 'thabo@humo.co.za',
     kind: 'humo',
     title: 'Account Manager',
     assignments: [{ id: 'm-thabo', role: 'humo-account-manager', organisationId: null, schemeIds: [], label: 'Western Cape accounts', grantedBy: 'Terry Mosoma', grantedAt: '2026-03-16T09:00:00+02:00' }],
@@ -310,7 +322,7 @@ const SEED: SeedIdentity[] = [
     id: 'am-carla',
     name: 'Carla de Wet',
     initials: 'CW',
-    email: 'carla@humo.example',
+    email: 'carla@humo.co.za',
     kind: 'humo',
     title: 'Account Manager',
     assignments: [{ id: 'm-carla', role: 'humo-account-manager', organisationId: null, schemeIds: [], label: 'Free State & Eastern Cape accounts', grantedBy: 'Terry Mosoma', grantedAt: '2026-04-06T09:00:00+02:00' }],

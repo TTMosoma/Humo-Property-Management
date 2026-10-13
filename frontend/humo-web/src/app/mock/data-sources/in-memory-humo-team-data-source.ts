@@ -12,8 +12,12 @@ import {
   PendingHumoGrant,
   ROLE_LABELS,
   RoleAssignment,
+  SOLE_ADMIN_COOLING_OFF_HOURS,
   activeAssignments,
+  activeSystemAdmins,
   isHumoRole,
+  isSoleSystemAdmin,
+  soleAdminConfirmableFrom,
 } from '../../domain';
 import { AccessStore } from '../db/access-store';
 import { HumoTeamStore } from '../db/humo-team-store';
@@ -87,7 +91,23 @@ export class InMemoryHumoTeamDataSource extends HumoTeamDataSource {
   // =================================================================== Helpers
 
   private activeSystemAdmins(): Identity[] {
-    return this.store.identities().filter((i) => i.kind === 'humo' && i.status === 'active' && activeAssignments(i).some((a) => a.role === 'system-admin'));
+    return activeSystemAdmins(this.store.identities());
+  }
+
+  /** Sole-administrator safeguard: the rest of the Humo team hears about a self-confirmable request at once. */
+  private announceSoleAdminRequest(identityId: string, identityName: string): void {
+    const me = this.auth.actor();
+    if (!isSoleSystemAdmin(this.store.identities(), me.id)) return;
+    const from = soleAdminConfirmableFrom({ requestedAt: new Date().toISOString() });
+    for (const person of this.store.identities().filter((i) => i.kind === 'humo' && i.status !== 'deactivated' && i.id !== me.id)) {
+      this.accounts.notify({
+        to: { identityId: person.id },
+        actorId: me.id,
+        title: `${me.name} asked to make ${identityName} a System Administrator`,
+        detail: `${me.name} is Humo’s only System Administrator, so they can confirm it themselves after a ${SOLE_ADMIN_COOLING_OFF_HOURS}-hour cooling-off period (from ${from.toLocaleString('en-ZA', { dateStyle: 'medium', timeStyle: 'short' })}). If you didn’t expect this, raise it with Humo’s founders before then.`,
+        link: `/platform/team/${identityId}`,
+      });
+    }
   }
 
   /** Would this leave Humo without an active System Administrator? */
@@ -155,6 +175,7 @@ export class InMemoryHumoTeamDataSource extends HumoTeamDataSource {
         });
         if (needsSecond) {
           this.team.add({ identityId: id, identityName: name, role: input.role, label: input.label.trim(), reason: input.reason.trim(), requestedById: by.id, requestedBy: by.name, requestedAt: new Date().toISOString() });
+          this.announceSoleAdminRequest(id, name);
         } else {
           this.grantRole(id, input.role, input.label.trim(), by.name);
         }
@@ -207,7 +228,7 @@ export class InMemoryHumoTeamDataSource extends HumoTeamDataSource {
       suspend: `Suspended ${name}’s Humo access`,
       restore: `Restored ${name}’s Humo access`,
       offboard: `Offboarded ${name} from the Humo team`,
-      'approve-grant': `Approved ${grant ? `${grant.identityName} as ${ROLE_LABELS[grant.role]} (requested by ${grant.requestedBy})` : 'a grant'}`,
+      'approve-grant': `Approved ${grant ? `${grant.identityName} as ${ROLE_LABELS[grant.role]} (requested by ${grant.requestedBy})` : 'a grant'}${grant?.requestedById === me.id ? ` — confirmed by the sole System Administrator after the ${SOLE_ADMIN_COOLING_OFF_HOURS}-hour cooling-off period` : ''}`,
       'decline-grant': `Declined ${grant ? `${grant.identityName} as ${ROLE_LABELS[grant.role]}` : 'a grant'}`,
     };
     return this.gateway
@@ -233,7 +254,14 @@ export class InMemoryHumoTeamDataSource extends HumoTeamDataSource {
     if ('reason' in a && a.reason.trim().length < 5) return { reason: 'Say why, in a few words. It goes in the audit log.' };
     if (a.type === 'approve-grant' || a.type === 'decline-grant') {
       if (!grant || grant.identityId !== identityId) return { grantId: 'That request is no longer waiting.' };
-      if (a.type === 'approve-grant' && grant.requestedById === me.id) return { grantId: 'A second System Administrator approves it: not the person who asked.' };
+      if (a.type === 'approve-grant' && grant.requestedById === me.id) {
+        // Sole-administrator safeguard: otherwise nobody could ever approve a second System Administrator.
+        if (!isSoleSystemAdmin(this.store.identities(), me.id)) return { grantId: 'A second System Administrator approves it: not the person who asked.' };
+        const from = soleAdminConfirmableFrom(grant);
+        if (Date.now() < from.getTime()) {
+          return { grantId: `You’re the only System Administrator, so you can confirm your own request after a ${SOLE_ADMIN_COOLING_OFF_HOURS}-hour cooling-off period: from ${from.toLocaleString('en-ZA', { dateStyle: 'medium', timeStyle: 'short' })}.` };
+        }
+      }
       if (grant.identityId === me.id) return { grantId: 'You can’t decide on your own access.' };
       return null;
     }
@@ -294,6 +322,7 @@ export class InMemoryHumoTeamDataSource extends HumoTeamDataSource {
         if (a.role === 'system-admin') {
           const me = this.auth.actor();
           this.team.add({ identityId, identityName: target.name, role: a.role, label: a.label.trim(), reason: a.reason.trim(), requestedById: me.id, requestedBy: me.name, requestedAt: new Date().toISOString() });
+          this.announceSoleAdminRequest(identityId, target.name);
         } else {
           this.grantRole(identityId, a.role, a.label.trim(), by);
         }
@@ -333,7 +362,7 @@ export class InMemoryHumoTeamDataSource extends HumoTeamDataSource {
         });
         return;
       case 'set-customers':
-        this.platform.setAccountManager(a.organisationIds, { id: identityId, name: target.name });
+        this.platform.setAccountManager(a.organisationIds, { id: identityId });
         return;
       case 'suspend':
         this.store.changeIdentity(identityId, (i) => ({ ...i, status: 'suspended', suspendedFrom: i.status === 'invited' ? 'invited' : 'active' }));
@@ -349,7 +378,7 @@ export class InMemoryHumoTeamDataSource extends HumoTeamDataSource {
           const to = this.store.identity(a.reassignTo)!;
           this.platform.setAccountManager(
             customers.map((c) => c.organisationId),
-            { id: to.id, name: to.name },
+            { id: to.id },
           );
         }
         for (const r of activeAssignments(target).filter((x) => isHumoRole(x.role))) this.store.end(identityId, r.id, by);

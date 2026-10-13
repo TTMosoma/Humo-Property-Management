@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { map } from 'rxjs';
-import { ACCOUNT_POLICY_LABELS, ACCOUNT_REQUEST_STATUS_LABELS, ACCOUNT_ROUTE_LABELS, AccountRequestDataSource, ORGANISATION_STATUS_LABELS } from '../../../domain';
+import { catchError, map, of } from 'rxjs';
+import { ACCOUNT_POLICY_LABELS, ACCOUNT_REQUEST_STATUS_LABELS, ACCOUNT_ROUTE_LABELS, AccountRequestDataSource, HumoTeamDataSource, HumoTeamMember, ORGANISATION_STATUS_LABELS, isSoleSystemAdmin } from '../../../domain';
 import { loadable } from '../../../core/data/loadable';
 import { SessionService } from '../../../core/session/session.service';
 import { DrawerService } from '../../../ui/drawer/drawer.service';
@@ -54,7 +54,11 @@ import { REQUEST_TONE } from './account-request-view';
             <p>
               No organisation exists yet, and nobody can sign in.
               @if (ownRequest() && session.can('Platform.Customers.Approve')) {
-                Another System Administrator decides on a request you submitted.
+                @if (sole()) {
+                  You’re the only System Administrator, so you can decide your own request. It’s marked as such in the audit log.
+                } @else {
+                  Another System Administrator decides on a request you submitted.
+                }
               }
             </p>
           }
@@ -139,7 +143,10 @@ export class AccountRequestPage {
   protected readonly formatDate = formatDate;
 
   protected readonly ownRequest = computed(() => this.view()?.request.requestedById === this.session.actor().id);
-  protected readonly canDecide = computed(() => this.view()?.request.status === 'pending' && !this.ownRequest() && this.session.can('Platform.Customers.Approve') && !this.session.readOnly());
+  /** Sole-administrator safeguard (docs/16 §2a). */
+  private readonly team = toSignal(inject(HumoTeamDataSource).list().pipe(catchError(() => of([] as HumoTeamMember[]))), { initialValue: [] as HumoTeamMember[] });
+  protected readonly sole = computed(() => isSoleSystemAdmin(this.team().map((m) => m.identity), this.session.actor().id));
+  protected readonly canDecide = computed(() => this.view()?.request.status === 'pending' && (!this.ownRequest() || this.sole()) && this.session.can('Platform.Customers.Approve') && !this.session.readOnly());
 
   protected readonly status = computed(() => {
     const r = this.view()?.request;

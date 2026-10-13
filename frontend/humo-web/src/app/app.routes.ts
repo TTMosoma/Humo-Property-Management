@@ -745,6 +745,12 @@ export const routes: Routes = [
             loadComponent: () => import('./features/platform/packages-page').then((m) => m.PackagesPage),
           },
           {
+            path: 'pricing',
+            title: 'Pricing & add-ons',
+            data: { permission: 'Platform.Revenue.View', breadcrumb: 'Pricing & add-ons' },
+            loadComponent: () => import('./features/platform/commercial/pricing-page').then((m) => m.PricingPage),
+          },
+          {
             path: 'flags',
             data: { breadcrumb: 'Feature flags' },
             children: [

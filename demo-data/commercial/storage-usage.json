@@ -1,0 +1,37 @@
+{
+  "$comment": "Simulated storage measurements (source: demo). Real figures come from the storage service. Generated customers get a deterministic simulated figure.",
+  "measurements": [
+    {
+      "organisationId": "tshikrand",
+      "measuredAt": "2026-10-12T02:00:00+02:00",
+      "source": "demo",
+      "documentsBytes": 6657199309,
+      "imagesBytes": 4402341478,
+      "generatedBytes": 1288490189
+    },
+    {
+      "organisationId": "acacia",
+      "measuredAt": "2026-10-12T02:00:00+02:00",
+      "source": "demo",
+      "documentsBytes": 13314398618,
+      "imagesBytes": 7623566950,
+      "generatedBytes": 1932735283
+    },
+    {
+      "organisationId": "umgeni",
+      "measuredAt": "2026-10-12T02:00:00+02:00",
+      "source": "demo",
+      "documentsBytes": 5690831667,
+      "imagesBytes": 3650722202,
+      "generatedBytes": 1181116006
+    },
+    {
+      "organisationId": "fynbos",
+      "measuredAt": "2026-10-12T02:00:00+02:00",
+      "source": "demo",
+      "documentsBytes": 3113851290,
+      "imagesBytes": 1932735283,
+      "generatedBytes": 354334802
+    }
+  ]
+}
