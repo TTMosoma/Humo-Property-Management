@@ -18,6 +18,7 @@ import { formatDate } from '../../ui/format/money';
 import { portfolioManagerOf } from '../fixtures/staff';
 import { simulationStorage } from '../simulation/simulation-storage';
 import { AccessStore } from './access-store';
+import { OpsStore } from './ops-store';
 import { CommsStore } from './comms-store';
 import { GovernanceStore } from './governance-store';
 import { LibraryStore } from './library-store';
@@ -66,6 +67,7 @@ export class RulesStore {
   private readonly library = inject(LibraryStore);
   private readonly staff = inject(StaffStore);
   private readonly access = inject(AccessStore);
+  private readonly ops = inject(OpsStore);
 
   rules: SchemeRule[] = [];
   books: RuleBook[] = [];
@@ -88,7 +90,9 @@ export class RulesStore {
     const b = this.books.find((x) => x.schemeId === schemeId) ?? { schemeId, changedSinceShared: false };
     const shared = b.shared?.at ?? '';
     const changed = this.rules.some((r) => r.schemeId === schemeId && (r.versions[0].adoptedAt > shared.slice(0, 10) || (r.repealed?.at ?? '') > shared.slice(0, 10)));
-    return { ...b, changedSinceShared: !!b.shared && changed };
+    // When owners have the registered rules PDF, the register is the agency's working copy: no "share again" nudge.
+    const sharedIsPdf = !!b.shared && b.sources?.[0]?.documentId === b.shared.documentId;
+    return { ...b, changedSinceShared: !!b.shared && changed && !sharedIsPdf };
   }
 
   view(schemeId: string): RulesView | undefined {
@@ -112,6 +116,7 @@ export class RulesStore {
   checkRules(schemeId: string, a: RuleAction): FieldErrors | null {
     if (!this.db.schemes.has(schemeId)) return { schemeId: 'No such scheme.' };
     const e: FieldErrors = {};
+    const uploadLimitMb = this.ops.config.uploadLimitMb;
     const needsResolution = (id: string) => {
       if (!this.resolution(schemeId, id)) e['resolutionId'] = 'Rules change only by resolution of the owners: choose the passed resolution.';
     };
@@ -142,11 +147,22 @@ export class RulesStore {
       case 'share':
         if (!this.rules.some((r) => r.schemeId === schemeId && r.status === 'in-force')) return { schemeId: 'There are no rules to share yet.' };
         break;
+      case 'upload': {
+        const isPdf = a.mimeType === 'application/pdf' || a.fileName.toLowerCase().endsWith('.pdf');
+        if (!a.fileName) e['file'] = 'Choose the rules PDF.';
+        else if (!isPdf) e['file'] = 'Upload the rules as a PDF.';
+        else if (a.sizeBytes > uploadLimitMb * 1024 * 1024) e['file'] = `Files can be up to ${uploadLimitMb} MB.`;
+        else if (a.sizeBytes <= 0) e['file'] = 'The file is empty.';
+        const today = iso(new Date());
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(a.adoptedOn) || a.adoptedOn > today) e['adoptedOn'] = 'When did these rules take effect? Not in the future.';
+        if (a.resolutionRef.trim().length < 3) e['resolutionRef'] = 'How were they adopted? E.g. “Registered with the CSOS” or the AGM resolution.';
+        break;
+      }
     }
     return Object.keys(e).length ? e : null;
   }
 
-  actRules(schemeId: string, a: RuleAction, by: string): string | void {
+  actRules(schemeId: string, a: RuleAction, by: string, file?: File): string | void {
     const today = iso(new Date());
     switch (a.type) {
       case 'add': {
@@ -184,7 +200,52 @@ export class RulesStore {
       }
       case 'share':
         return this.share(schemeId, by);
+      case 'upload':
+        return this.upload(schemeId, a, by, file);
     }
+  }
+
+  /**
+   * The registered rules as a PDF: stored in Documents and kept with its
+   * history. Shared with owners, it replaces the copy they had before.
+   */
+  private upload(schemeId: string, a: Extract<RuleAction, { type: 'upload' }>, by: string, file?: File): string {
+    const scheme = this.db.scheme(schemeId);
+    const book = this.book(schemeId);
+    // Earlier PDFs are superseded. What owners have is replaced only if this one is shared with them.
+    const earlier = new Set((book.sources ?? []).map((x) => x.documentId));
+    if (book.shared && a.shareWithOwners) earlier.add(book.shared.documentId);
+    if (book.shared && !a.shareWithOwners) earlier.delete(book.shared.documentId);
+    const documentId = this.library.upload(
+      {
+        title: `Registered conduct rules (in force from ${formatDate(a.adoptedOn)})`,
+        fileName: a.fileName,
+        mimeType: 'application/pdf',
+        sizeBytes: a.sizeBytes,
+        category: 'rules',
+        record: { kind: 'scheme', id: schemeId },
+        visibility: a.shareWithOwners ? 'owners' : 'staff',
+        notes: `${scheme.name}: ${a.resolutionRef.trim()}. Uploaded in Governance › Scheme rules.`,
+      },
+      by,
+      file,
+    );
+    // The earlier rules documents stay on record (archived), so what owners had before is still known.
+    for (const d of this.library.documents.filter((x) => !x.archived && earlier.has(x.id))) {
+      d.archived = { at: new Date().toISOString(), by, reason: 'Replaced by the registered rules PDF uploaded in Scheme rules' };
+      d.version++;
+    }
+    const now = new Date().toISOString();
+    const source = { documentId, fileName: a.fileName, sizeBytes: a.sizeBytes, adoptedOn: a.adoptedOn, resolutionRef: a.resolutionRef.trim(), uploadedAt: now, uploadedBy: by, shared: a.shareWithOwners };
+    const next: RuleBook = {
+      schemeId,
+      sources: [source, ...(book.sources ?? [])],
+      shared: a.shareWithOwners ? { at: now, by, documentId, rulesVersion: a.adoptedOn } : book.shared,
+      changedSinceShared: false,
+    };
+    this.books = [...this.books.filter((b) => b.schemeId !== schemeId), next];
+    this.commit();
+    return documentId;
   }
 
   /** Publishes the rule book to Documents (owners and residents see it) and replaces the copy shared before. */
@@ -204,7 +265,7 @@ export class RulesStore {
       by,
       file,
     );
-    const book: RuleBook = { schemeId, shared: { at: new Date().toISOString(), by, documentId, rulesVersion: latest }, changedSinceShared: false };
+    const book: RuleBook = { ...this.book(schemeId), shared: { at: new Date().toISOString(), by, documentId, rulesVersion: latest }, changedSinceShared: false };
     this.books = [...this.books.filter((b) => b.schemeId !== schemeId), book];
     this.commit();
     return documentId;

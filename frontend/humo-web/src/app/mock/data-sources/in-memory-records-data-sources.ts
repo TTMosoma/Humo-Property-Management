@@ -629,10 +629,18 @@ export class InMemoryRulesDataSource extends RulesDataSource {
     return this.db.changes$.pipe(switchMap(() => this.respond(this.store.view(schemeId))));
   }
 
-  actRules(schemeId: string, action: RuleAction): Observable<string | void> {
+  actRules(schemeId: string, action: RuleAction, file?: File): Observable<string | void> {
     const rule = 'ruleId' in action ? this.store.rules.find((r) => r.id === action.ruleId) : undefined;
     const what =
-      action.type === 'add' ? `Added rule ${action.number.trim()} (${action.title.trim()})` : action.type === 'amend' ? `Amended rule ${rule?.number ?? ''}` : action.type === 'repeal' ? `Repealed rule ${rule?.number ?? ''}` : 'Shared the rule book with owners';
+      action.type === 'add'
+        ? `Added rule ${action.number.trim()} (${action.title.trim()})`
+        : action.type === 'amend'
+          ? `Amended rule ${rule?.number ?? ''}`
+          : action.type === 'repeal'
+            ? `Repealed rule ${rule?.number ?? ''}`
+            : action.type === 'upload'
+              ? `Uploaded the registered rules PDF “${action.fileName}” (in force from ${action.adoptedOn}; ${action.resolutionRef.trim()})${action.shareWithOwners ? ' and shared it with owners' : ''}`
+              : 'Shared the rule book with owners';
     return this.gateway.command(
       {
         action: `${what} · ${this.db.schemes.get(schemeId)?.name ?? schemeId}`,
@@ -643,7 +651,7 @@ export class InMemoryRulesDataSource extends RulesDataSource {
         feature: 'governance',
         validate: () => this.store.checkRules(schemeId, action),
       },
-      () => this.store.actRules(schemeId, action, this.auth.current.identity.name),
+      () => this.store.actRules(schemeId, action, this.auth.current.identity.name, file),
     );
   }
 
