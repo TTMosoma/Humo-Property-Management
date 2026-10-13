@@ -2,7 +2,6 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import {
   AGENCY_STAFF,
-  CurrentSession,
   EntitlementSet,
   Feature,
   Identity,
@@ -15,28 +14,11 @@ import {
   StepUpResult,
   entitlementSet,
   isHumoRole,
+  SIGNED_OUT_SESSION,
 } from '../../domain';
 
 /** Shown only for the instant before /me answers; guards keep the shell closed until then. */
-const SIGNED_OUT: CurrentSession = (() => {
-  const nobody: Identity = { id: 'anonymous', version: 0, name: '', initials: '', email: '', kind: 'customer', status: 'active', memberships: [], assignments: [] };
-  const none: RoleAssignment = { id: 'none', role: 'tenant', scope: { type: 'organisation', organisationId: null, schemeIds: [] }, label: '', status: 'active', version: 0 };
-  return {
-    signedIn: false,
-    blocked: null,
-    actor: nobody,
-    identity: nobody,
-    assignments: [none],
-    activeAssignmentId: none.id,
-    permissions: [],
-    pagePermissions: [],
-    actorPermissions: [],
-    organisation: null,
-    subscription: null,
-    entitlements: null,
-    impersonation: null,
-  };
-})();
+const SIGNED_OUT = SIGNED_OUT_SESSION;
 
 /**
  * Who is signed in, and in what capacity — the client's view of the server

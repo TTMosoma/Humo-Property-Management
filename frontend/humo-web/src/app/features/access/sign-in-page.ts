@@ -9,7 +9,7 @@ import { PrototypeControls } from '../../core/prototype/prototype-controls';
 import { SessionService } from '../../core/session/session.service';
 import { Logo } from '../../ui/brand/logo';
 
-type Step = 'start' | 'passkey' | 'no-passkey' | 'paused' | 'link-sent' | 'redeeming' | 'link-failed';
+type Step = 'start' | 'passkey' | 'no-passkey' | 'paused' | 'link-sent' | 'redeeming' | 'link-failed' | 'unavailable';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const RESEND_AFTER_S = 30;
@@ -138,7 +138,7 @@ export class SignInPage {
       next: () => this.done(),
       error: (e: unknown) => {
         const code = e instanceof SignInError ? e.code : 'no-passkey';
-        this.step.set(code === 'paused' ? 'paused' : code === 'cancelled' ? 'start' : 'no-passkey');
+        this.step.set(code === 'paused' ? 'paused' : code === 'cancelled' ? 'start' : code === 'unavailable' ? 'unavailable' : 'no-passkey');
       },
     });
   }
@@ -157,10 +157,13 @@ export class SignInPage {
     }
     this.email.set(email);
     this.pending?.unsubscribe();
-    this.pending = this.sessions.sendSignInLink(email).subscribe(() => {
-      this.step.set('link-sent');
-      this.demoLink.set(this.prototype?.lastSignInLink() ?? null);
-      this.countdown();
+    this.pending = this.sessions.sendSignInLink(email).subscribe({
+      next: () => {
+        this.step.set('link-sent');
+        this.demoLink.set(this.prototype?.lastSignInLink() ?? null);
+        this.countdown();
+      },
+      error: () => this.step.set('unavailable'),
     });
   }
 

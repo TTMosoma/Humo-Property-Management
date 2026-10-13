@@ -130,6 +130,17 @@
           </div>
         }
 
+        @case ('unavailable') {
+          <div class="centre">
+            <div class="icon-badge warn" aria-hidden="true"><ion-icon name="cloud-offline-outline" /></div>
+            <h1 #heading tabindex="-1">Sign-in isn’t available yet</h1>
+            <p class="sub">Humo Property Management is being connected to its sign-in service. Please try again later, or contact your Humo account manager.</p>
+            <div class="stack">
+              <button type="button" class="btn btn-ghost" (click)="startOver()">Back</button>
+            </div>
+          </div>
+        }
+
         @case ('paused') {
           <div class="centre">
             <div class="icon-badge warn" aria-hidden="true"><ion-icon name="lock-closed-outline" /></div>
