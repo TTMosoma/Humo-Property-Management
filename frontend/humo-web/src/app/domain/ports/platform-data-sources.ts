@@ -5,6 +5,7 @@ import { AddOn, AddOnId, Feature, FeatureDef, Package, PackageId } from '../mode
 import { NudgeDefinition, NudgePlacement } from '../models/nudge';
 import { UpgradeRequest } from '../models/opportunity';
 import { BusinessOverview, CustomerPlan, PlatformCustomer, SubscriptionChange } from '../models/platform';
+import { InvoiceDocument } from '../models/commercial';
 import { AccountApprovalPolicy, AccountDecision, AccountPolicySetting, AccountRequestView, AccountSubmission, NewAccountDetails } from '../models/account-request';
 
 /** The product catalogue: what can be sold, and what each package and add-on contains. */
@@ -36,6 +37,9 @@ export abstract class PlatformDataSource {
 /** The customer's own view of their plan (Agency Administrator). They can ask, not enable. */
 export abstract class PlanDataSource {
   abstract mine(organisationId: string): Observable<CustomerPlan | undefined>;
+  /** Their own Humo invoices (Agency Administrator, own organisation only), newest first. */
+  abstract invoices(organisationId: string): Observable<InvoiceDocument[]>;
+  abstract invoice(organisationId: string, invoiceId: string): Observable<InvoiceDocument | undefined>;
   abstract requestUpgrade(input: { organisationId: string; addOn?: AddOnId; package?: PackageId; feature?: Feature; note?: string; source: UpgradeRequest['source'] }): Observable<void>;
 }
 

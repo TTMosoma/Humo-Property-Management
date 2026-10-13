@@ -51,7 +51,7 @@
         <button type="button" class="btn btn-secondary btn-sm" (click)="askStorage()" [disabled]="busy()">Ask Humo for more storage</button>
       }
       @if (p.billing; as b) {
-        <div class="muted small">Billing: {{ prefLabel[b.preference] }} · next invoice {{ formatDate(b.nextBillingDate, true) }} · renews {{ formatDate(b.renewal.on, true) }}{{ b.renewal.fee ? ' (annual renewal fee ' + rand(b.renewal.fee) + ')' : '' }}</div>
+        <div class="muted small"><a routerLink="/settings/billing">Billing &amp; invoices</a> · {{ prefLabel[b.preference] }} · next invoice {{ formatDate(b.nextBillingDate, true) }} · renews {{ formatDate(b.renewal.on, true) }}{{ b.renewal.fee ? ' (annual renewal fee ' + rand(b.renewal.fee) + ')' : '' }}</div>
       }
     </section>
   }

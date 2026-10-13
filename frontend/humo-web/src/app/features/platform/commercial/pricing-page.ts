@@ -95,9 +95,9 @@ const STATUS_TONE: Record<PriceStatus, 'neutral' | 'warning' | 'success'> = { aw
       </header>
       <div class="surface table-wrap">
         <table class="table">
-          <caption class="sr-only">Add-on catalogue</caption>
+          <caption class="visually-hidden">Add-on catalogue</caption>
           <thead>
-            <tr><th scope="col">Add-on</th><th scope="col">Price</th><th scope="col">Status</th><th scope="col">Includes</th><th scope="col"><span class="sr-only">Actions</span></th></tr>
+            <tr><th scope="col">Add-on</th><th scope="col">Price</th><th scope="col">Status</th><th scope="col">Includes</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
           </thead>
           <tbody>
             @for (a of c.addOns; track a.id) {

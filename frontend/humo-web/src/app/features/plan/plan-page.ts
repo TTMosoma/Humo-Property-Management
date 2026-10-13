@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { CatalogueService } from '../../core/catalogue/catalogue.service';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { map } from 'rxjs';
 import { AddOnId, BILLING_PREFERENCE_LABELS, Feature, GB, PlanDataSource, UpgradeRequest, entitlementSet } from '../../domain';
@@ -23,7 +23,7 @@ import { STATUS_LABEL, STATUS_TONE } from '../platform/platform-view';
  */
 @Component({
   selector: 'app-plan-page',
-  imports: [PageHeader, StatusPill, ErrorState, Skeleton, IonIcon],
+  imports: [PageHeader, StatusPill, ErrorState, Skeleton, IonIcon, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plan-page.html',
   styleUrl: './plan-page.scss',

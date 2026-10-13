@@ -15,6 +15,8 @@ import {
   CommercialSettings,
   CustomerCommercialView,
   FEATURE_META,
+  InvoiceDocument,
+  InvoiceListItem,
   FieldErrors,
   PackageId,
   PackageTermsInput,
@@ -176,6 +178,33 @@ export class InMemoryCommercialDataSource extends CommercialDataSource {
   }
 
   // ---------------------------------------------------------------- Invoices and payments
+
+  invoices(): Observable<InvoiceListItem[]> {
+    if (!this.auth.can('Platform.Revenue.View')) return throwError(() => new PolicyError('forbidden', 'Not permitted to see invoices'));
+    return this.records$.pipe(
+      switchMap(({ invoices, payments, customers, agreements }) => {
+        const t = today();
+        const byOrg = new Map(customers.map((c) => [c.organisationId, c]));
+        const prefs = new Map(agreements.map((a) => [a.organisationId, a.billing.preference]));
+        const rows = invoices
+          .map<InvoiceListItem>((i) => ({
+            ...i,
+            status: invoiceStatus(i, t),
+            payments: payments.filter((p) => p.invoiceId === i.id),
+            customerName: byOrg.get(i.organisationId)?.name ?? i.organisationId,
+            accountManager: byOrg.get(i.organisationId)?.accountManager ?? '',
+            billingPreference: prefs.get(i.organisationId) ?? 'manual-eft',
+          }))
+          .sort((x, y) => y.issuedOn.localeCompare(x.issuedOn) || x.customerName.localeCompare(y.customerName));
+        return this.respond(rows);
+      }),
+    );
+  }
+
+  invoice(invoiceId: string): Observable<InvoiceDocument | undefined> {
+    if (!this.auth.can('Platform.Revenue.View')) return throwError(() => new PolicyError('forbidden', 'Not permitted to see invoices'));
+    return this.records$.pipe(switchMap(() => this.respond(this.store.invoiceDocument(invoiceId))));
+  }
 
   issueInvoice(organisationId: string): Observable<string> {
     const a = this.store.agreement(organisationId);

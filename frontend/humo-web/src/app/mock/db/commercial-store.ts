@@ -1,17 +1,20 @@
-import { Injectable, effect, signal, untracked } from '@angular/core';
+import { Injectable, effect, inject, signal, untracked } from '@angular/core';
 import {
   AddOnInput,
   CommercialAgreement,
   CommercialCatalogue,
   GB,
   HumoInvoice,
+  InvoiceDocument,
   PackageId,
   PackageTermsInput,
   PaymentRecord,
   StorageMeasurement,
+  invoiceStatus,
   isoDay,
   termsOn,
 } from '../../domain';
+import { OrganisationStore } from './organisation-store';
 import { DEMO_DATA } from '../fixtures/demo-data';
 import { simulationStorage } from '../simulation/simulation-storage';
 import { seeded } from './random';
@@ -50,6 +53,7 @@ const firstOfNextMonth = (now = new Date()) => isoDay(new Date(now.getFullYear()
  */
 @Injectable({ providedIn: 'root' })
 export class CommercialStore {
+  private readonly orgs = inject(OrganisationStore);
   private readonly saved = simulationStorage.load<Snapshot>('commercial');
   private readonly base = this.saved ?? commercialBaseline();
   readonly catalogue = signal<CommercialCatalogue>(this.base.catalogue);
@@ -171,6 +175,34 @@ export class CommercialStore {
     if (!inv) return;
     const verified = this.payments().filter((p) => p.invoiceId === invoiceId && p.status === 'verified').reduce((n, p) => n + p.amount, 0);
     if (verified + 0.005 >= inv.total && inv.status !== 'paid') this.invoices.update((all) => all.map((i) => (i.id === invoiceId ? { ...i, status: 'paid' } : i)));
+  }
+
+  /**
+   * An invoice as a document. Customers get payment summaries only: no
+   * provider references, internal notes or Humo staff names.
+   */
+  invoiceDocument(invoiceId: string): InvoiceDocument | undefined {
+    const inv = this.invoices().find((i) => i.id === invoiceId);
+    const a = inv && this.agreement(inv.organisationId);
+    if (!inv || !a) return undefined;
+    const org = this.orgs.get(inv.organisationId);
+    const payments = this.payments().filter((p) => p.invoiceId === invoiceId);
+    const paid = payments.filter((p) => p.status === 'verified').reduce((n, p) => n + p.amount, 0);
+    return {
+      invoice: { ...inv, status: invoiceStatus(inv, isoDay(new Date())) },
+      from: this.catalogue().settings.tax,
+      billTo: {
+        organisationId: inv.organisationId,
+        name: org?.shortName ?? inv.organisationId,
+        legalName: org?.name ?? inv.organisationId,
+        city: org?.city ?? '',
+        province: org?.province ?? '',
+        billingEmail: a.billing.billingEmail,
+      },
+      billingPreference: a.billing.preference,
+      payments: payments.map((p) => ({ status: p.status, method: p.method, amount: p.amount, on: p.verifiedAt ?? p.createdAt, simulated: p.simulated })),
+      balance: Math.max(0, Math.round((inv.total - paid) * 100) / 100),
+    };
   }
 
   /** Duplicate-notification protection: true the first time an id is seen. */

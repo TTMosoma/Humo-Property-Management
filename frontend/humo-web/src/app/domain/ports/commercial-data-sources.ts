@@ -11,6 +11,7 @@ import {
   CommercialCatalogue,
   CommercialSettings,
   HumoInvoice,
+  InvoiceDocument,
   InvoiceStatus,
   PackageTerms,
   PaymentRecord,
@@ -32,6 +33,13 @@ export interface ScheduledItem {
 export interface CustomerInvoice extends Omit<HumoInvoice, 'status'> {
   status: InvoiceStatus;
   payments: PaymentRecord[];
+}
+
+/** A row of Platform › Invoices: every customer's invoices in one list. */
+export interface InvoiceListItem extends CustomerInvoice {
+  customerName: string;
+  accountManager: string;
+  billingPreference: BillingPreference;
 }
 
 /** One customer's commercial position, as the API returns it to Humo staff with Platform.Revenue.View. */
@@ -82,6 +90,8 @@ export interface AddOnInput {
  *   GET   /platform/customers/{id}/commercial           (Platform.Revenue.View)
  *   POST  /platform/customers/{id}/agreement/preview    no change is saved
  *   POST  /platform/customers/{id}/agreement/changes    (Platform.Subscriptions.Manage, own accounts, step-up, D11)
+ *   GET   /platform/invoices                            every customer's invoices (Platform.Revenue.View)
+ *   GET   /platform/invoices/{id}                       one invoice as a document
  *   POST  /platform/customers/{id}/invoices             issue the next invoice (Platform.Billing.Manage)
  *   POST  /platform/invoices/{id}/checkout              a provider checkout; returns the redirect
  *   POST  /payments/notifications/{provider}            the provider's verified notification (server to server, not in this port)
@@ -97,6 +107,9 @@ export abstract class CommercialDataSource {
   abstract preview(organisationId: string, change: AgreementChange): Observable<ChangePreview>;
   abstract change(organisationId: string, change: AgreementChange, expectedVersion?: number): Observable<void>;
 
+  /** Every customer's invoices, newest first (Platform.Revenue.View). */
+  abstract invoices(): Observable<InvoiceListItem[]>;
+  abstract invoice(invoiceId: string): Observable<InvoiceDocument | undefined>;
   abstract issueInvoice(organisationId: string): Observable<string>;
   abstract startCheckout(invoiceId: string): Observable<CheckoutSession>;
   /** DEMO ONLY: stands in for the provider's server-to-server notification. Refused outside the simulation. */

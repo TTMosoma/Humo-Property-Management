@@ -238,12 +238,16 @@ There is no *Business* tier: the repository's packages are Essentials, Professio
 
 **Where invoices are, and whether they're sent:**
 - **Not sent.** In this milestone no invoice is emailed. They're created in the browser (the demo data, or *Issue next invoice (simulated)*).
-- **Humo staff** see each customer's invoices and payments on *Platform › Customers › {customer} › Billing & agreement › Invoices & payments*. There is no list of all invoices across customers yet.
-- **Customers** can't see their Humo invoices in the app yet. *Plan & features* shows only their billing preference, next invoice date and renewal.
-- **Backend work (R-14):**
-  - the billing run emails each invoice as a secure link;
-  - the customer views and pays it from *Settings › Billing* in Humo PM;
-  - Humo's finance staff work from a *Platform › Invoices* list.
+- **Humo staff** (with `Platform.Revenue.View`):
+  - ***Platform › Invoices*** (`/platform/invoices`, added 13 Oct 2026) lists every customer's invoices, with totals (outstanding, overdue, paid this month), status filters and search;
+  - each invoice opens as a printable document (*Print or save PDF*);
+  - a customer's own invoices and payment actions are on *Customer › Billing & agreement › Invoices & payments*.
+- **Customers' Agency Administrators** (`Subscription.Request`, own organisation only):
+  - ***Settings › Billing & invoices*** (`/settings/billing`) shows how they pay, what's outstanding, and their invoices;
+  - each invoice opens as the same printable document;
+  - they see payment summaries only: no provider references, internal notes or Humo staff names;
+  - another customer's invoice can't be opened, even by URL. The API checks the organisation.
+- **Backend work (R-14):** the billing run emails each invoice as a secure link to that page, and *Pay now* opens the provider's checkout.
 
 **Tax ⚑:**
 - `TaxConfig` holds Humo's legal name, registration number, VAT registration, VAT number and rate.
