@@ -153,6 +153,7 @@ export class BoardStore {
           since: new Date(`${a.since}T12:00:00`).toISOString(),
           appointment: { how: a.how, resolutionRef: r?.ref, meetingId: r?.meetingId },
         });
+        this.grantAccess(schemeId, a.personId, a.portfolio, by);
         return;
       }
       case 'end': {
@@ -177,6 +178,16 @@ export class BoardStore {
         simulationStorage.save('boards', (): BoardSnapshot => ({ minimums: [...this.minimums] }));
         this.db.touch();
         return;
+    }
+  }
+
+  /** D2: a trustee appointed to the board who has a Humo sign-in gets trustee access to the scheme. */
+  private grantAccess(schemeId: string, personId: string, portfolio: string, by: string): void {
+    const scheme = this.db.schemes.get(schemeId);
+    if (!scheme) return;
+    for (const i of this.access.identities().filter((x) => x.personId === personId && x.kind === 'customer' && x.status !== 'deactivated')) {
+      const has = i.assignments.some((x) => x.role === 'trustee' && x.status === 'active' && x.scope.schemeIds.includes(schemeId));
+      if (!has) this.access.assign(i.id, { role: 'trustee', scope: { type: 'schemes', organisationId: scheme.organisationId, schemeIds: [schemeId] }, label: `${scheme.name} · ${portfolio}` }, `${by} (board appointment)`);
     }
   }
 

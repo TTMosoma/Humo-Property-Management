@@ -43,15 +43,12 @@ function linkFields(schemes: Scheme[]): FormField[] {
       options: [
         { value: 'owner', label: 'Owner of a unit' },
         { value: 'tenant', label: 'Tenant of a unit' },
-        { value: 'trustee', label: 'Trustee of a scheme' },
       ],
+      // D2: the board register is the source of truth for trustees.
+      help: 'Trustees are appointed on the scheme’s board (Governance › Board), from a resolution or by co-option.',
     },
     { key: 'schemeId', label: 'Scheme', type: 'select', required: true, half: true, options: schemes.map((s) => ({ value: s.id, label: s.name })) },
-    { key: 'unitNumber', label: 'Unit', type: 'text', required: true, half: true, placeholder: 'e.g. 42', showIf: (v) => v['type'] !== 'trustee' },
-    {
-      key: 'portfolio', label: 'Position', type: 'select', required: true, half: true, showIf: (v) => v['type'] === 'trustee',
-      options: ['Chairperson', 'Treasurer', 'Trustee'].map((p) => ({ value: p, label: p })),
-    },
+    { key: 'unitNumber', label: 'Unit', type: 'text', required: true, half: true, placeholder: 'e.g. 42' },
     { key: 'since', label: 'Since', type: 'date', required: true, half: true },
     { key: 'until', label: 'Lease ends', type: 'date', half: true, showIf: (v) => v['type'] === 'tenant' },
   ];
@@ -60,7 +57,6 @@ function linkFields(schemes: Scheme[]): FormField[] {
 /** The relationship as the API expects it; a unit is looked up by its number, as people say it. */
 function linkFrom(v: FormValues, units: UnitDataSource, schemes: Scheme[]): Observable<NewRelationship> {
   const base = { type: v['type'] as NewRelationship['type'], schemeId: v['schemeId'], since: v['since'], until: v['type'] === 'tenant' && v['until'] ? v['until'] : undefined };
-  if (base.type === 'trustee') return of({ ...base, portfolio: v['portfolio'] });
   const number = (v['unitNumber'] ?? '').replace(/^unit\s*/i, '').trim();
   const scheme = schemes.find((s) => s.id === base.schemeId)?.name ?? 'that scheme';
   return units.get(base.schemeId, number).pipe(

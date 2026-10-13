@@ -32,6 +32,7 @@ import {
 } from '../../domain';
 import { PrototypeStateService } from '../../core/prototype/prototype-state.service';
 import { AccessStore } from '../db/access-store';
+import { MockDb } from '../db/mock-db';
 import { mockResponder } from '../mock-latency';
 import { toPage } from '../mock-page';
 import { MockAuthSession } from '../server/mock-auth-session';
@@ -42,6 +43,7 @@ export class InMemoryAccessDataSource extends AccessDataSource {
   private readonly store = inject(AccessStore);
   private readonly auth = inject(MockAuthSession);
   private readonly gateway = inject(MockGateway);
+  private readonly db = inject(MockDb);
   private readonly respond = mockResponder();
   private readonly identities$ = toObservable(this.store.identities);
 
@@ -208,7 +210,12 @@ export class InMemoryAccessDataSource extends AccessDataSource {
             const duplicate = target && activeAssignments(target).some(
               (x) => x.role === a.role && x.scope.type === a.scope.type && x.scope.organisationId === a.scope.organisationId && x.scope.schemeIds.join() === a.scope.schemeIds.join() && x.scope.unitId === a.scope.unitId,
             );
-            return duplicate ? { role: `${target!.name} already has this role here.` } : null;
+            if (duplicate) return { role: `${target!.name} already has this role here.` };
+            // D2: trustee access is derived from the board register. It can't be given here without a seat on the board.
+            if (a.role === 'trustee' && !a.scope.schemeIds.every((id) => this.onBoard(target!, id))) {
+              return { role: `${target!.name} isn’t on that scheme’s board. Appoint them on the board (Governance › Board) and trustee access follows.` };
+            }
+            return null;
           },
         },
         () => {
@@ -218,6 +225,11 @@ export class InMemoryAccessDataSource extends AccessDataSource {
         },
       )
       .pipe(map(() => undefined));
+  }
+
+  /** Is the identity's person a current trustee of the scheme (the board register, D2)? */
+  private onBoard(identity: Identity, schemeId: string): boolean {
+    return !!identity.personId && this.db.relationshipsIn(schemeId, 'trustee').some((r) => r.personId === identity.personId && this.db.isCurrent(r));
   }
 
   setBrowseAgency(identityId: string, assignmentId: string, allowed: boolean, expectedVersion?: number): Observable<void> {

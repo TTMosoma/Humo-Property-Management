@@ -275,7 +275,8 @@ export class InMemoryPersonDataSource extends PersonDataSource {
     if (!scheme) return { schemeId: 'Choose the scheme.' };
     if (scheme.status === 'archived') e['schemeId'] = `${scheme.name} is archived.`;
     if (l.type === 'trustee') {
-      if (!l.portfolio) e['portfolio'] = 'Choose their position on the board.';
+      // D2: trustees are appointed on the board (BoardDataSource), never linked as a relationship here.
+      e['type'] = 'Trustees are appointed on the scheme’s board, from a resolution or by co-option.';
     } else {
       const unit = l.unitId ? this.db.unitById.get(l.unitId) : undefined;
       if (!unit || unit.schemeId !== l.schemeId) e['unitId'] = 'Choose the unit.';
