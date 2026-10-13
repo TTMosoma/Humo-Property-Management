@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Observable, firstValueFrom } from 'rxjs';
-import { AccessDataSource, ApiError, BoardDataSource, PersonDataSource, activeAssignments } from '../../domain';
+import { AccessDataSource, ApiError, BoardDataSource, PersonDataSource, activeAssignments, todaySA } from '../../domain';
 import { AccessStore } from '../db/access-store';
 import { MockDb } from '../db/mock-db';
 import { provideMockData } from '../provide-mock-data';
@@ -19,7 +19,7 @@ describe('The board is the source of truth for trustees (D2)', () => {
   const run = <T>(o: Observable<T>) => firstValueFrom(o);
   const stepUp = () => auth.recordProof({ verified: true, method: 'passkey', device: 'Test', at: new Date().toISOString() });
   const KC = 'kingfisher-court';
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todaySA();
 
   beforeEach(() => {
     localStorage.clear();

@@ -3,19 +3,7 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, combineLatest, filter, of, switchMap } from 'rxjs';
-import {
-  BillingDataSource,
-  FieldErrors,
-  MeterDataSource,
-  MeterEntry,
-  MeterSheet,
-  SchemeBillingStatus,
-  UNUSUAL_FACTOR,
-  describeFailure,
-  fieldErrorsOf,
-  parseReadingsCsv,
-  periodLabel,
-} from '../../../domain';
+import { BillingDataSource, FieldErrors, MeterDataSource, MeterEntry, MeterSheet, SchemeBillingStatus, UNUSUAL_FACTOR, describeFailure, fieldErrorsOf, parseReadingsCsv, periodLabel, todaySA } from '../../../domain';
 import { FeedbackService } from '../../../core/feedback/feedback.service';
 import { FeatureFlags } from '../../../core/flags/feature-flags';
 import { ScopeService } from '../../../core/scope/scope.service';
@@ -182,7 +170,7 @@ export class MeterReadingsPage {
     return [...new Set([s.current?.run.period, s.nextPeriod].filter((p): p is string => !!p))];
   });
   protected readonly period = linkedSignal(() => this.query.get('period') ?? this.periods()[0] ?? '');
-  protected readonly readOn = signal(new Date().toISOString().slice(0, 10));
+  protected readonly readOn = signal(todaySA());
 
   protected readonly sheet = toSignal(
     combineLatest([toObservable(this.schemeId), toObservable(this.period)]).pipe(

@@ -1,11 +1,11 @@
 import { Router } from '@angular/router';
-import { BreachView, RULE_CATEGORY_LABELS, ResolutionView, RuleCategory, RulesDataSource, RulesView, SchemeRule, UnitSummary, warningLetter } from '../../domain';
+import { BreachView, RULE_CATEGORY_LABELS, ResolutionView, RuleCategory, RulesDataSource, RulesView, SchemeRule, UnitSummary, warningLetter, todaySA } from '../../domain';
 import { DrawerService } from '../../ui/drawer/drawer.service';
 import { formatDate } from '../../ui/format/money';
 import { openForm } from '../shared/form-drawer';
 import { resolutionOptions } from './board-forms';
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => todaySA();
 const CATEGORY_OPTIONS = (Object.keys(RULE_CATEGORY_LABELS) as RuleCategory[]).map((c) => ({ value: c, label: RULE_CATEGORY_LABELS[c] }));
 
 /**

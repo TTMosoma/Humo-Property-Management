@@ -1,4 +1,4 @@
-import { ReportCell, ReportColumn, ReportResult } from '../../domain';
+import { ReportCell, ReportColumn, ReportResult, todaySA } from '../../domain';
 import { formatDate, formatRand } from '../../ui/format/money';
 
 /** A cell as the screen shows it. CSV keeps the raw value. */
@@ -32,7 +32,7 @@ export function downloadCsv(r: ReportResult): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${r.def.id}-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = `${r.def.id}-${todaySA()}.csv`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

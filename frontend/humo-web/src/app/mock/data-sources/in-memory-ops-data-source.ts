@@ -1,22 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, combineLatest, map, switchMap } from 'rxjs';
-import {
-  BackgroundJob,
-  CURRENT_ENVIRONMENT,
-  Environment,
-  FeatureFlag,
-  FieldErrors,
-  FlagRule,
-  IncidentStatus,
-  Integration,
-  JobRun,
-  MaintenanceWindow,
-  NewIncident,
-  OpsDataSource,
-  PlatformHealth,
-  ServiceStatus,
-  SystemConfig,
-} from '../../domain';
+import { BackgroundJob, CURRENT_ENVIRONMENT, Environment, FeatureFlag, FieldErrors, FlagRule, IncidentStatus, Integration, JobRun, MaintenanceWindow, NewIncident, OpsDataSource, PlatformHealth, ServiceStatus, SystemConfig, todaySA } from '../../domain';
 import { BillingStore } from '../db/billing-store';
 import { MockDb } from '../db/mock-db';
 import { OpsStore } from '../db/ops-store';
@@ -150,7 +134,7 @@ export class InMemoryOpsDataSource extends OpsDataSource {
     const extra = (id: string) => this.store.extraRuns.get(id) ?? [];
     const hourly = (id: string, detail: (n: number) => string, failLast = 0): JobRun[] =>
       Array.from({ length: 8 }, (_, n) => ({ id: `${id}-${n}`, at: hourAgo(n), status: n < failLast ? 'failed' : 'succeeded', durationMs: n < failLast ? 30_000 : 1200 + ((n * 377) % 900), detail: n < failLast ? 'Bank feed timed out after 30 seconds.' : detail(n) }) as JobRun);
-    const todayReceipts = this.db.receipts.filter((x) => x.date.slice(0, 10) === new Date().toISOString().slice(0, 10)).length;
+    const todayReceipts = this.db.receipts.filter((x) => x.date.slice(0, 10) === todaySA()).length;
     const withExtra = (id: string, runs: JobRun[]) => [...extra(id), ...runs].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 10);
 
     const runs = this.billing.runs.filter((b) => Date.now() - new Date(b.createdAt).getTime() < 30 * DAY).sort((a, b) => b.createdAt.localeCompare(a.createdAt));

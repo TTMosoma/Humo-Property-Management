@@ -1,35 +1,7 @@
 import { Injectable, Injector, inject } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Observable, delay, map, of, switchMap, throwError, timer } from 'rxjs';
-import {
-  AccessDataSource,
-  AuditDataSource,
-  AuditEvent,
-  AuditQuery,
-  CurrentSession,
-  FieldErrors,
-  HUMO_EMAIL_DOMAIN,
-  IMPERSONATION_REASONS,
-  Identity,
-  ImpersonationSession,
-  ListQuery,
-  NewAssignment,
-  Page,
-  PolicyError,
-  ROLE_LABELS,
-  SENSITIVE_ACTION_LABELS,
-  SecurityDataSource,
-  SecurityProfile,
-  SessionDataSource,
-  SignInError,
-  StepUpAuthenticator,
-  StepUpMethod,
-  StepUpRequest,
-  StepUpResult,
-  activeAssignments,
-  isHumoRole,
-  AGENCY_STAFF,
-} from '../../domain';
+import { AccessDataSource, AuditDataSource, AuditEvent, AuditQuery, CurrentSession, FieldErrors, HUMO_EMAIL_DOMAIN, IMPERSONATION_REASONS, Identity, ImpersonationSession, ListQuery, NewAssignment, Page, PolicyError, ROLE_LABELS, SENSITIVE_ACTION_LABELS, SecurityDataSource, SecurityProfile, SessionDataSource, SignInError, StepUpAuthenticator, StepUpMethod, StepUpRequest, StepUpResult, activeAssignments, isHumoRole, AGENCY_STAFF, todaySA } from '../../domain';
 import { PrototypeStateService } from '../../core/prototype/prototype-state.service';
 import { AccessStore } from '../db/access-store';
 import { MockDb } from '../db/mock-db';
@@ -407,7 +379,7 @@ export class InMemoryAuditDataSource extends AuditDataSource {
   }
 
   export(q: AuditQuery): Observable<string> {
-    const file = `humo-audit-${q.organisationId ?? 'platform'}-${new Date().toISOString().slice(0, 10)}.csv`;
+    const file = `humo-audit-${q.organisationId ?? 'platform'}-${todaySA()}.csv`;
     return this.gateway.command(
       { action: `Exported the audit log (${q.category ?? 'all events'})`, resource: 'Export', resourceId: file, category: 'security', permission: q.organisationId === null ? 'Platform.Audit' : 'Audit.View', stepUp: true },
       () => file,

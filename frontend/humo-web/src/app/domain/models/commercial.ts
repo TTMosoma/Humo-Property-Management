@@ -1,3 +1,4 @@
+import { saDate } from './dates';
 import { AddOnId, Feature, PackageId } from './entitlement';
 
 /**
@@ -269,7 +270,7 @@ export type AgreementChange =
 
 // ---------------------------------------------------------------- Lookups
 
-export const isoDay = (d: Date | string): string => (typeof d === 'string' ? d.slice(0, 10) : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+export const isoDay = (d: Date | string): string => (typeof d === 'string' ? d.slice(0, 10) : saDate(d));
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
 /** The terms in force on a date: the newest whose `effectiveFrom` is on or before it. */

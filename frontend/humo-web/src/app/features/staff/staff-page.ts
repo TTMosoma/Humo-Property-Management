@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { ROLE_LABELS, StaffDataSource, StaffSummary } from '../../domain';
+import { ROLE_LABELS, StaffDataSource, StaffSummary, todaySA } from '../../domain';
 import { loadable } from '../../core/data/loadable';
 import { CellDef, ColumnDef, DataTable } from '../../ui/data-table/data-table';
 import { formatDate } from '../../ui/format/money';
@@ -86,7 +86,7 @@ export class StaffPage {
   protected readonly rowId = (s: StaffSummary) => s.id;
   protected readonly roles = (s: StaffSummary) => s.roles.map((r) => ROLE_LABELS[r]).join(', ');
   protected readonly schemeNames = (s: StaffSummary) => s.schemes.slice(0, 3).map((x) => x.name).join(', ') + (s.schemes.length > 3 ? ` +${s.schemes.length - 3}` : '');
-  protected readonly awayLabel = (s: StaffSummary) => (s.away!.from > new Date().toISOString().slice(0, 10) ? `Away from ${formatDate(s.away!.from, true)}` : `Away until ${formatDate(s.away!.to, true)}`);
+  protected readonly awayLabel = (s: StaffSummary) => (s.away!.from > todaySA() ? `Away from ${formatDate(s.away!.from, true)}` : `Away until ${formatDate(s.away!.to, true)}`);
 
   protected open(s: StaffSummary): void {
     void this.router.navigate(['/staff', s.id]);

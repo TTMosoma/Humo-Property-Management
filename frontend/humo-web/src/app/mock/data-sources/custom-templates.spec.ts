@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Observable, firstValueFrom } from 'rxjs';
-import { ApiError, PlatformTemplateDataSource, PolicyError, templateVersion } from '../../domain';
+import { ApiError, PlatformTemplateDataSource, PolicyError, templateVersion, todaySA } from '../../domain';
 import { AccessStore } from '../db/access-store';
 import { DocumentStore } from '../db/document-store';
 import { provideMockData } from '../provide-mock-data';
@@ -15,7 +15,7 @@ describe('Custom templates are Humo-owned (D12)', () => {
   let access: AccessStore;
   const run = <T>(o: Observable<T>) => firstValueFrom(o);
   const ID = 'acacia.levy-statement';
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todaySA();
 
   beforeEach(() => {
     localStorage.clear();

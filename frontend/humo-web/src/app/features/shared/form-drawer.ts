@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { IonIcon } from '@ionic/angular/standalone';
 import { Observable, catchError, throwError } from 'rxjs';
-import { FieldErrors, PolicyError, StepUpRequest, describeFailure, fieldErrorsOf } from '../../domain';
+import { FieldErrors, PolicyError, StepUpRequest, describeFailure, fieldErrorsOf, todaySA } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { StepUpService } from '../../core/security/step-up.service';
 import { Drawer } from '../../ui/drawer/drawer';
@@ -269,4 +269,4 @@ export const REASON_FIELD: FormField = {
 };
 
 /** Today as yyyy-mm-dd, for date fields. */
-export const today = (): string => new Date().toISOString().slice(0, 10);
+export const today = (): string => todaySA();

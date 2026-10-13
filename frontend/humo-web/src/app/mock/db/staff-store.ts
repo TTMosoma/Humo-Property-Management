@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { FieldErrors, Identity, NewCover, Role, StaffCover, StaffDetail, StaffSummary, WorkItem, activeAssignments, urgencyOf } from '../../domain';
+import { FieldErrors, Identity, NewCover, Role, StaffCover, StaffDetail, StaffSummary, WorkItem, activeAssignments, urgencyOf, todaySA } from '../../domain';
 import { simulationStorage } from '../simulation/simulation-storage';
 import { AccessStore } from './access-store';
 import { MockDb } from './mock-db';
@@ -38,7 +38,7 @@ export class StaffStore {
   private activeCover(staffId: string): StaffCover | undefined {
     const c = this.covers.get(staffId);
     if (!c) return undefined;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todaySA();
     return c.from <= today && today <= c.to ? c : undefined;
   }
 
@@ -72,7 +72,7 @@ export class StaffStore {
       overdueTasks: open.filter((w) => w.kind === 'task' && urgencyOf(w) === 'overdue').length,
       openMessages: open.filter((w) => w.kind === 'message').length,
       approvalsWaiting: this.db.workItems.filter((w) => w.kind === 'approval' && w.status === 'open' && ids.has(w.schemeId) && (w.approverRoles ?? []).some((r) => roles.includes(r))).length,
-      away: this.activeCover(i.staffId!) ?? (this.covers.get(i.staffId!) && this.covers.get(i.staffId!)!.to >= new Date().toISOString().slice(0, 10) ? this.covers.get(i.staffId!) : undefined),
+      away: this.activeCover(i.staffId!) ?? (this.covers.get(i.staffId!) && this.covers.get(i.staffId!)!.to >= todaySA() ? this.covers.get(i.staffId!) : undefined),
       covering,
     };
   }
@@ -102,7 +102,7 @@ export class StaffStore {
     else if (!team.some((i) => i.staffId === c.coverId)) e['coverId'] = 'Choose a colleague.';
     else if (this.activeCover(c.coverId)) e['coverId'] = `${this.nameOf(c.coverId)} is away too.`;
     if (!c.from || !c.to || c.to < c.from) e['to'] = 'The last day can’t be before the first.';
-    if (c.to < new Date().toISOString().slice(0, 10)) e['to'] = 'That’s already over.';
+    if (c.to < todaySA()) e['to'] = 'That’s already over.';
     if (c.reason.trim().length < 3) e['reason'] = 'E.g. leave, training, sick.';
     return Object.keys(e).length ? e : null;
   }

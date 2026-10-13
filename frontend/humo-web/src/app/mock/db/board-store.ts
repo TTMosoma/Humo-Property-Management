@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { BoardAction, BoardCandidate, BoardSummary, BoardView, DEFAULT_MIN_TRUSTEES, FieldErrors, Relationship, TRUSTEE_PORTFOLIOS, TrusteeView } from '../../domain';
+import { BoardAction, BoardCandidate, BoardSummary, BoardView, DEFAULT_MIN_TRUSTEES, FieldErrors, Relationship, TRUSTEE_PORTFOLIOS, TrusteeView, todaySA } from '../../domain';
 import { simulationStorage } from '../simulation/simulation-storage';
 import { AccessStore } from './access-store';
 import { GovernanceStore } from './governance-store';
@@ -115,7 +115,7 @@ export class BoardStore {
         if (!a.portfolio) e['portfolio'] = 'Choose a portfolio.';
         if (a.portfolio === 'Chairperson' && current.some((r) => r.portfolio === 'Chairperson')) e['portfolio'] = 'The board already has a chairperson: change their portfolio first.';
         if (!a.since) e['since'] = 'When did their term start?';
-        else if (a.since > new Date().toISOString().slice(0, 10)) e['since'] = 'Record the appointment once it has happened.';
+        else if (a.since > todaySA()) e['since'] = 'Record the appointment once it has happened.';
         if (a.how === 'elected') {
           const r = this.governance.resolutions.find((x) => x.id === a.resolutionId);
           if (!r || r.schemeId !== schemeId || r.outcome !== 'passed') e['resolutionId'] = 'Elections are by resolution of the owners: choose the passed resolution.';
