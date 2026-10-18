@@ -19,7 +19,7 @@ Status: **started 18 October 2026**, before the server exists. Fill in the blank
 |---|---|---|---|
 | **Server:** Webway VPS | ____ vCPU / ____ GB RAM / ____ GB SSD | Contract renewal: ____ | Webway client area |
 | **OS:** Ubuntu Server LTS (recommended) | 24.04 LTS | Standard support until about May 2029 | `/etc/` on the server |
-| **Docker Engine + Compose** | ____ | Rolling releases | `backend/deploy/docker-compose.yml` (to be added) |
+| **Docker Engine + Compose** | ____ | Rolling releases | `backend/deploy/docker-compose.yml` |
 | **Caddy** (reverse proxy and HTTPS) | 2.x | Rolling releases | `backend/deploy/Caddyfile` |
 | **.NET runtime** (ASP.NET Core 10, LTS) | 10.0.x | **10 November 2028** | API container image |
 | **PostgreSQL** | 18.x (recommended at setup) | About November 2030 | Database container; data volume `____` |
@@ -43,6 +43,7 @@ Status: **started 18 October 2026**, before the server exists. Fill in the blank
 | ASP.NET Core Data Protection keys (§3) | Database or a persisted volume; included in backups | |
 | Mail DKIM private key | Mail server data volume; included in backups | |
 | Mail settings (`Mail__*`: host, port, security, account) | `.env` on the server; see doc 25 §2 *Mail settings* | |
+| SMS provider settings (`Sms__Provider`, `Sms__Providers__<Name>__*`) | `.env` on the server; see `backend/README.md` | |
 | Sealed recovery envelope (§8) | ____ (a safe or a trusted person) | |
 
 **Rules:**
@@ -208,7 +209,7 @@ Write the exact commands here during the first setup. **Target: back up within 4
    - `git pull`;
    - `docker compose build` (or pull the CI image);
    - `docker compose up -d`.
-   - Database migrations run on API start, or as a step: ____ (decide in slice 1).
+   - Database migrations run when the API starts (`Database__Initialise=Migrate`), which is why step 2 comes first.
 4. **Smoke test:**
    - sign in;
    - open a scheme;
