@@ -89,9 +89,8 @@ export class InMemoryPlatformDataSource extends PlatformDataSource {
           validate: (): FieldErrors | null => (!customer ? { organisationId: 'No such customer.' } : change.reason.trim().length < 8 ? { reason: 'Say why, in a few words. It goes in the audit log.' } : null),
         },
         () => {
-          // "Where authorised": Account Managers change only the accounts they look after.
-          const role = this.session.assignment().role;
-          if (role === 'humo-account-manager' && customer?.accountManagerId !== this.session.actor().id) {
+          // "Where authorised": without Platform.Customers.AnyAccount, only the accounts you look after (D11).
+          if (!this.session.can('Platform.Customers.AnyAccount') && customer?.accountManagerId !== this.session.actor().id) {
             throw new PolicyError('forbidden', 'Not one of your accounts');
           }
           this.store.change(organisationId, change, this.session.actor().name);

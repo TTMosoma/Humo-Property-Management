@@ -71,6 +71,7 @@ export type Permission =
   | 'Platform.Customers.Approve'
   | 'Platform.Customers.ActivateWithoutApproval'
   | 'Platform.Customers.Users'
+  | 'Platform.Customers.AnyAccount'
   | 'Platform.Accounts.Own'
   | 'Platform.Subscriptions.View'
   | 'Platform.Subscriptions.Manage'
@@ -157,6 +158,7 @@ export const PERMISSIONS: PermissionMeta[] = [
   { id: 'Platform.Customers.Approve', area: 'Platform', label: 'Approve or reject new customer accounts', mutates: true },
   { id: 'Platform.Customers.ActivateWithoutApproval', area: 'Platform', label: 'Activate new customer accounts without separate approval (granted individually)', mutates: true },
   { id: 'Platform.Customers.Users', area: 'Platform', label: 'See and assist customer users', mutates: false },
+  { id: 'Platform.Customers.AnyAccount', area: 'Platform', label: 'Act on any customer’s account, not only the ones you look after (D11)', mutates: false },
   { id: 'Platform.Accounts.Own', area: 'Platform', label: 'Look after a book of customer accounts', mutates: false },
   { id: 'Platform.Subscriptions.View', area: 'Platform', label: 'View subscriptions and entitlements', mutates: false },
   { id: 'Platform.Subscriptions.Manage', area: 'Platform', label: 'Change packages, add-ons and feature overrides', mutates: true, stepUp: true },
@@ -219,7 +221,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   tenant: ['Resident.Portal', 'Resident.Requests', 'Security.ManageOwn'],
   // Highest operational authority — but impersonation is still an individual grant.
   'system-admin': [
-    'Platform.View', 'Platform.Customers.View', 'Platform.Customers.Manage', 'Platform.Customers.Approve', 'Platform.Customers.Users', 'Platform.Subscriptions.View',
+    'Platform.View', 'Platform.Customers.View', 'Platform.Customers.Manage', 'Platform.Customers.Approve', 'Platform.Customers.Users', 'Platform.Customers.AnyAccount', 'Platform.Subscriptions.View',
     'Platform.Subscriptions.Manage', 'Platform.Packages.Manage', 'Platform.Billing.Manage', 'Platform.Templates.Manage', 'Platform.Health.View', 'Platform.Revenue.View', 'Platform.Insights.View',
     'Platform.Support.Assist', 'Platform.Config.Manage', 'Platform.Operations.View', 'Platform.Operations.Manage', 'Platform.ManageHumoRoles', 'Platform.Audit', 'Security.ManageOwn',
   ],

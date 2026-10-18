@@ -81,7 +81,7 @@ export class CustomerPage {
 
   protected readonly revenue = computed(() => this.session.can('Platform.Revenue.View'));
   protected readonly canManage = computed(() => this.session.can('Platform.Subscriptions.Manage'));
-  protected readonly ownAccount = computed(() => this.session.role() !== 'humo-account-manager' || this.c()?.accountManagerId === this.session.actor().id);
+  protected readonly ownAccount = computed(() => this.session.can('Platform.Customers.AnyAccount') || this.c()?.accountManagerId === this.session.actor().id);
   protected readonly canWorkRequests = computed(() => this.session.can('Platform.Opportunities.Manage'));
 
   protected readonly tabs = computed(() => [
