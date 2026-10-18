@@ -1,0 +1,55 @@
+# Humo Property Management: checks on every pull request and on main (P1-1).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend/humo-web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend/humo-web/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/humo-web/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Type-check (both apps and the tests)
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm test
+        env:
+          # Calendar dates are South African dates; run the tests where they're used.
+          TZ: Africa/Johannesburg
+
+      - name: Production build (Humo API only)
+        run: npm run build
+
+      # R-6: a production bundle must never contain the simulation or its demo data.
+      - name: No demo data in the production build
+        run: |
+          if grep -rlE "Acacia Managing Agents|humo\.sim\.|MockPrototypeControls" dist/humo-web/browser; then
+            echo "::error::The production build contains mock or demo code (docs/18 R-6)."
+            exit 1
+          fi
+
+      - name: Demo build (pm-demo.humo.co.za)
+        run: npm run build:demo
+
+      - name: Humo Contractor build
+        run: npm run build:contractor
