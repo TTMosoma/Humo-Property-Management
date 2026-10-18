@@ -222,3 +222,7 @@
     position: static;
   }
 }
+
+.invite {
+  margin: calc(-1 * var(--s-1)) 0 var(--s-2) 52px;
+}

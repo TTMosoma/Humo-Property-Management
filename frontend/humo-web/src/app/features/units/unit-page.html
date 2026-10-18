@@ -88,6 +88,9 @@
             </span>
             <ion-icon name="chevron-forward-outline" aria-hidden="true" />
           </a>
+          @if (canInvite(s, o)) {
+            <button type="button" class="btn btn-ghost btn-sm invite" (click)="invite(s, o, 'owner')"><ion-icon name="mail-outline" aria-hidden="true" /> Invite {{ o.firstName || o.displayName }} to Humo PM</button>
+          }
         }
         @if (s.tenant; as t) {
           <a class="person" [routerLink]="links.person(t)">
@@ -98,6 +101,9 @@
             </span>
             <ion-icon name="chevron-forward-outline" aria-hidden="true" />
           </a>
+          @if (canInvite(s, t)) {
+            <button type="button" class="btn btn-ghost btn-sm invite" (click)="invite(s, t, 'tenant')"><ion-icon name="mail-outline" aria-hidden="true" /> Invite {{ t.firstName || t.displayName }} to Humo PM</button>
+          }
         } @else if (s.unit.occupancy === 'vacant') {
           <p class="muted small">The unit is currently vacant.</p>
         }

@@ -31,6 +31,9 @@ jobs:
       - name: Type-check (both apps and the tests)
         run: npm run typecheck
 
+      - name: Lint (ESLint, including templates)
+        run: npm run lint
+
       - name: Tests
         run: npm test
         env:

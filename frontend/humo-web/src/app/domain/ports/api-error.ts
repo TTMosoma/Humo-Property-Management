@@ -32,7 +32,7 @@ export class ApiError extends Error {
  * API is the security boundary: it re-checks role permissions, scope,
  * entitlements, impersonation mode and step-up freshness on every command.
  */
-export type PolicyDenial = 'observe-only' | 'forbidden' | 'step-up-required' | 'not-entitled' | 'out-of-scope';
+export type PolicyDenial = 'observe-only' | 'forbidden' | 'step-up-required' | 'not-entitled' | 'out-of-scope' | 'conflict-of-interest';
 
 export class PolicyError extends ApiError {
   constructor(

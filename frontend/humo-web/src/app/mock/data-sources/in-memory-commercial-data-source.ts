@@ -457,13 +457,13 @@ export class InMemoryCommercialDataSource extends CommercialDataSource {
     }
   }
 
-  /** "Where authorised": an Account Manager changes only the accounts they look after (D11). */
+  /** "Where authorised": without Platform.Customers.AnyAccount, only the accounts you look after (D11, checked by permission per D4). */
   private ownAccountOnly(accountManagerId: string | undefined): void {
-    if (this.auth.assignment().role === 'humo-account-manager' && accountManagerId !== this.auth.actor().id) throw new PolicyError('forbidden', 'Not one of your accounts');
+    if (!this.auth.can('Platform.Customers.AnyAccount') && accountManagerId !== this.auth.actor().id) throw new PolicyError('forbidden', 'Not one of your accounts');
   }
 
   private approval(): string {
-    return this.auth.assignment().role === 'humo-account-manager' ? D11 : 'System Administrator';
+    return this.auth.can('Platform.Customers.AnyAccount') ? 'System Administrator' : D11;
   }
 
   /** An active Humo staff member with the Account Manager role. */

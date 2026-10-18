@@ -3,7 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { map } from 'rxjs';
-import { JobDataSource, JobSummary, PRIORITY_LABEL, Priority, Scheme, Trade } from '../../domain';
+import { AGENCY_QUEUE, JobDataSource, JobSummary, PRIORITY_LABEL, Priority, Scheme, Trade } from '../../domain';
 import { loadable } from '../../core/data/loadable';
 import { ScopeNotice } from '../../core/scope/scope-notice';
 import { ScopeService } from '../../core/scope/scope.service';
@@ -20,6 +20,9 @@ import { Skeleton } from '../../ui/states/skeleton';
 import { StatusPill } from '../../ui/status-pill/status-pill';
 import { BOARD_COLUMNS, PRIORITY_TONE, STAGE_LABEL, STAGE_TONE, daysOpen, isOpenJob, isOverdue } from './job-view';
 import { JobPreview } from './job-preview';
+
+/** Open and assigned to nobody: the agency queue (P2-7). */
+const inQueue = (r: JobSummary) => isOpenJob(r.job) && !r.job.assigneeId;
 
 const PRIORITY_ORDER: Record<Priority, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
 
@@ -67,6 +70,8 @@ export class JobsPage {
         return rows.filter((r) => isOverdue(r.job));
       case 'mine':
         return rows.filter((r) => isOpenJob(r.job) && r.job.assigneeId && this.mine().has(r.job.assigneeId));
+      case 'queue':
+        return rows.filter(inQueue);
       case 'closed':
         return rows.filter((r) => !isOpenJob(r.job));
       default:
@@ -95,6 +100,8 @@ export class JobsPage {
       { id: 'open', label: 'Open', count: rows.filter((r) => isOpenJob(r.job)).length },
       { id: 'overdue', label: 'Overdue', count: rows.filter((r) => isOverdue(r.job)).length },
       ...(this.session.isStaff() ? [{ id: 'mine', label: 'Assigned to me', count: rows.filter((r) => isOpenJob(r.job) && r.job.assigneeId && this.mine().has(r.job.assigneeId)).length }] : []),
+      // P2-7: open jobs nobody is assigned to (e.g. a scheme without a portfolio manager), for someone to pick up.
+      ...(this.session.isStaff() ? [{ id: 'queue', label: AGENCY_QUEUE, count: rows.filter(inQueue).length }] : []),
       { id: 'closed', label: 'Closed (history)' },
     ];
   });

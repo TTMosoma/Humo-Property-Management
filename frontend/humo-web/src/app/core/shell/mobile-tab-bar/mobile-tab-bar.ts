@@ -53,7 +53,7 @@ export class MobileTabBar {
   private readonly router = inject(Router);
 
   readonly more = output<void>();
-  readonly search = output<void>();
+  readonly openSearch = output<void>();
 
   protected readonly counts = this.attention.counts;
 
@@ -115,7 +115,7 @@ export class MobileTabBar {
 
   protected open(tab: Tab): void {
     if (tab.route) this.router.navigateByUrl(tab.route);
-    else if (tab.id === 'search') this.search.emit();
+    else if (tab.id === 'search') this.openSearch.emit();
     else this.more.emit();
   }
 }

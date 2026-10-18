@@ -105,7 +105,7 @@ const STATUS_TONE: Record<PriceStatus, 'neutral' | 'warning' | 'success'> = { aw
               <tr [class.retired]="a.status === 'retired'">
                 <th scope="row"><strong>{{ a.name }}</strong><span class="muted block">{{ a.description }}</span></th>
                 <td>
-                  {{ t?.price == null ? 'No price yet' : rand(t!.price!) + (t!.frequency === 'annual' ? ' / year' : ' / month') }}
+                  {{ (t?.price ?? null) === null ? 'No price yet' : rand(t!.price!) + (t!.frequency === 'annual' ? ' / year' : ' / month') }}
                   @if (t) {
                     <ui-status-pill [label]="statusLabel[t.priceStatus]" [tone]="tone[t.priceStatus]" />
                   }

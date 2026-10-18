@@ -7,6 +7,7 @@ const MESSAGES: Record<PolicyDenial, string> = {
   'step-up-required': 'This needs additional verification first. Nothing was changed.',
   'not-entitled': 'Your agency’s plan doesn’t include this feature.',
   'out-of-scope': 'That scheme isn’t one of yours: you can look, but not change anything. Nothing was changed.',
+  'conflict-of-interest': 'You also work for the managing agency, so another trustee must approve its work. Nothing was changed — the attempt was logged.',
 };
 
 /**

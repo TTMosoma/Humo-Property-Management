@@ -1,5 +1,5 @@
 import { map, of, switchMap, throwError } from 'rxjs';
-import { AccessDataSource, ApiError, CUSTOMER_ROLES, CustomerRole, Identity, NewAssignment, ROLE_LABELS, ROLE_META, Scheme, UnitDataSource } from '../../domain';
+import { AccessDataSource, ApiError, CUSTOMER_ROLES, CustomerRole, Identity, NewAssignment, Person, ROLE_LABELS, ROLE_META, Scheme, Unit, UnitDataSource } from '../../domain';
 import { DrawerService } from '../../ui/drawer/drawer.service';
 import { FormValues, REASON_FIELD, openForm } from '../shared/form-drawer';
 
@@ -21,7 +21,8 @@ export function inviteForm(drawer: DrawerService, access: AccessDataSource, unit
       { key: 'name', label: 'Full name', type: 'text', required: true, placeholder: 'Lerato Mokoena' },
       { key: 'email', label: 'Email', type: 'email', required: true, help: 'The invitation goes here. It becomes their Humo sign-in.' },
       { key: 'title', label: 'Job title', type: 'text', placeholder: 'Portfolio Manager', showIf: (v) => kindOf(v) === 'agency' || kindOf(v) === 'schemes' },
-      { key: 'role', label: 'Role', type: 'select', required: true, options: INVITABLE.map((r) => ({ value: r, label: ROLE_LABELS[r] })), help: 'What they can do. Admin roles ask you to verify it’s you.' },
+      // F-22: onboarding invites the customer's own administrator; they invite everyone else.
+      { key: 'role', label: 'Role', type: 'select', required: true, options: (firstAdministrator ? (['agency-admin'] as CustomerRole[]) : INVITABLE).map((r) => ({ value: r, label: ROLE_LABELS[r] })), help: firstAdministrator ? 'They invite the rest of their team themselves.' : 'What they can do. Admin roles ask you to verify it’s you.' },
       {
         key: 'where', label: 'Where it applies', type: 'select', required: true,
         options: [{ value: 'all', label: 'All schemes, including new ones' }, ...schemeOptions],
@@ -38,6 +39,44 @@ export function inviteForm(drawer: DrawerService, access: AccessDataSource, unit
       assignmentFrom(v, organisationId, organisationName, schemes, units).pipe(
         switchMap((assignment) => access.invite({ organisationId, name: v['name'], email: v['email'], title: v['title'], assignment })),
       ),
+    success: (_id, v) => `Invitation sent to ${v['email']}. They’ll show as Invited until they accept.`,
+    failure: 'The invitation wasn’t sent',
+  });
+}
+
+/** One way to invite someone from their record: a role they hold now, and where (D3). */
+export interface ResidentInvite {
+  role: 'owner' | 'tenant' | 'trustee';
+  scheme: Scheme;
+  unit?: Unit;
+}
+
+const inviteLabel = (o: ResidentInvite) => `${ROLE_LABELS[o.role]} · ${o.unit ? `Unit ${o.unit.number}, ` : ''}${o.scheme.name}`;
+
+/**
+ * Invite from where the work happens (D3): the person, unit or board page.
+ * Prefilled from the record, so nothing is retyped, and linked to it.
+ */
+export function inviteResidentForm(drawer: DrawerService, access: AccessDataSource, organisationId: string, organisationName: string, person: Person, options: ResidentInvite[]): void {
+  openForm(drawer, {
+    eyebrow: person.displayName,
+    title: 'Invite to Humo Property Management',
+    intro: `They get an email to join ${organisationName} and set up a passkey. Until they accept, they show as Invited and can’t sign in.`,
+    fields: [
+      { key: 'name', label: 'Full name', type: 'text', required: true },
+      { key: 'email', label: 'Email', type: 'email', required: true, help: 'The invitation goes here. It becomes their Humo sign-in.' },
+      { key: 'role', label: 'Invite them as', type: 'select', required: true, options: options.map((o, i) => ({ value: String(i), label: inviteLabel(o) })), help: 'More roles can be added from their access afterwards.' },
+    ],
+    initial: { name: [person.firstName, person.lastName].filter(Boolean).join(' '), email: person.email ?? '', role: '0' },
+    submitLabel: 'Verify and send invitation',
+    stepUp: (v) => ({ action: 'change-roles', detail: `Invite ${v['name']} as ${inviteLabel(options[Number(v['role'])])}` }),
+    submit: (v) => {
+      const o = options[Number(v['role'])];
+      const assignment: NewAssignment = o.unit
+        ? { role: o.role, scope: { type: 'unit', organisationId, schemeIds: [o.scheme.id], unitId: o.unit.id }, label: `Unit ${o.unit.number}, ${o.scheme.name}` }
+        : { role: o.role, scope: { type: 'schemes', organisationId, schemeIds: [o.scheme.id] }, label: o.scheme.name };
+      return access.invite({ organisationId, name: v['name'], email: v['email'], personId: person.id, assignment });
+    },
     success: (_id, v) => `Invitation sent to ${v['email']}. They’ll show as Invited until they accept.`,
     failure: 'The invitation wasn’t sent',
   });

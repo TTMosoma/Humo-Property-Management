@@ -1,7 +1,7 @@
 import { Injectable, Injector, inject } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Observable, delay, map, of, switchMap, throwError, timer } from 'rxjs';
-import { AccessDataSource, AuditDataSource, AuditEvent, AuditQuery, CurrentSession, FieldErrors, HUMO_EMAIL_DOMAIN, IMPERSONATION_REASONS, Identity, ImpersonationSession, ListQuery, NewAssignment, Page, PolicyError, ROLE_LABELS, SENSITIVE_ACTION_LABELS, SecurityDataSource, SecurityProfile, SessionDataSource, SignInError, StepUpAuthenticator, StepUpMethod, StepUpRequest, StepUpResult, activeAssignments, isHumoRole, AGENCY_STAFF, todaySA } from '../../domain';
+import { AccessDataSource, AuditDataSource, AuditEvent, AuditQuery, CurrentSession, FieldErrors, HUMO_EMAIL_DOMAIN, IMPERSONATION_REASONS, Identity, ImpersonationSession, ListQuery, NewAssignment, Page, PolicyError, ROLE_LABELS, SENSITIVE_ACTION_LABELS, SecurityDataSource, SecurityProfile, SessionDataSource, SignInError, StepUpAuthenticator, StepUpMethod, StepUpRequest, StepUpResult, activeAssignments, isHumoRole, AGENCY_STAFF, RESIDENT_INVITES, todaySA } from '../../domain';
 import { PrototypeStateService } from '../../core/prototype/prototype-state.service';
 import { AccessStore } from '../db/access-store';
 import { MockDb } from '../db/mock-db';
@@ -33,20 +33,39 @@ export class InMemoryAccessDataSource extends AccessDataSource {
     return this.identities$.pipe(switchMap((all) => this.respond(all.filter((i) => i.kind === 'humo'))));
   }
 
-  invite(input: { organisationId: string; name: string; email: string; title?: string; assignment: NewAssignment }): Observable<string> {
+  invite(input: { organisationId: string; name: string; email: string; title?: string; assignment: NewAssignment; personId?: string }): Observable<string> {
     const email = input.email.trim().toLowerCase();
     const existing = this.store.identities().find((i) => i.email.toLowerCase() === email);
     const a = input.assignment;
+    const humo = isHumoRole(this.auth.assignment().role);
+    const resident = RESIDENT_INVITES.includes(a.role);
+    const personId = input.personId ?? existing?.personId;
+    const person = personId ? this.db.persons.get(personId) : undefined;
     return this.gateway.command(
       {
         action: existing ? `Gave ${existing.name} access: ${ROLE_LABELS[a.role]} · ${a.label}` : `Invited ${input.name.trim()} (${email}) as ${ROLE_LABELS[a.role]} · ${a.label}`,
         resource: 'Identity',
         category: 'security',
-        // Humo staff onboarding a customer invite its first administrator; inside an agency, its own administrators do.
-        permission: isHumoRole(this.auth.assignment().role) ? 'Platform.Customers.Manage' : a.role === 'agency-admin' ? 'Users.ManageAdmins' : 'Users.Manage',
+        // Humo staff onboarding a customer invite its first administrator; inside an agency, its own administrators
+        // invite staff, and Portfolio Managers may invite residents and trustees of their schemes (D3).
+        permission: humo ? 'Platform.Customers.Manage' : a.role === 'agency-admin' ? 'Users.ManageAdmins' : resident ? 'Residents.Invite' : 'Users.Manage',
+        // D1: an inviter limited to some schemes can only invite into those.
+        schemeId: !humo && a.scope.schemeIds.length === 1 ? a.scope.schemeIds[0] : undefined,
         stepUp: true,
         validate: (): FieldErrors => {
           const e: FieldErrors = {};
+          // F-22: onboarding sets up the customer's own administrator, who invites everyone else.
+          if (humo && a.role !== 'agency-admin') e['role'] = 'Onboarding invites the customer’s first Agency Administrator. They invite everyone else.';
+          if (input.personId && !person) e['name'] = 'That person isn’t in the directory any more.';
+          // D2: trustee access comes from a current board seat.
+          if (a.role === 'trustee' && !a.scope.schemeIds.every((id) => this.seatHolder(personId, id))) {
+            e['role'] = `${input.name.trim() || 'They'} isn’t on that scheme’s board. Appoint them on the board (Governance › Board), then invite them from there.`;
+          }
+          // Owners and tenants are invited for a unit they're linked to.
+          if (person && (a.role === 'owner' || a.role === 'tenant') && a.scope.unitId) {
+            const linked = this.db.relationshipsIn(a.scope.schemeIds[0], a.role).some((r) => r.personId === person.id && r.unitId === a.scope.unitId && this.db.isCurrent(r));
+            if (!linked) e['role'] = `${person.displayName} isn’t a current ${a.role} of that unit.`;
+          }
           if (input.name.trim().split(/\s+/).length < 2) e['name'] = 'Enter their first name and surname.';
           if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) e['email'] = 'Enter the email address the invitation goes to.';
           // Humo addresses are reserved for Humo staff, who are managed on the platform, never in an agency.
@@ -66,6 +85,7 @@ export class InMemoryAccessDataSource extends AccessDataSource {
             memberships: [...i.memberships.filter((m) => m.organisationId !== input.organisationId), { organisationId: input.organisationId, status: 'active', since: now }],
           }));
           this.store.assign(existing.id, a, by);
+          this.linkPerson(existing.id, personId);
           return existing.id;
         }
         const name = input.name.trim().replace(/\s+/g, ' ');
@@ -80,10 +100,12 @@ export class InMemoryAccessDataSource extends AccessDataSource {
           kind: 'customer',
           status: 'invited',
           title: input.title?.trim() || undefined,
+          personId,
           memberships: [{ organisationId: input.organisationId, status: 'active', since: now }],
           assignments: [],
         });
         this.store.assign(id, a, by);
+        this.linkPerson(id, personId);
         return id;
       },
     );
@@ -201,7 +223,19 @@ export class InMemoryAccessDataSource extends AccessDataSource {
 
   /** Is the identity's person a current trustee of the scheme (the board register, D2)? */
   private onBoard(identity: Identity, schemeId: string): boolean {
-    return !!identity.personId && this.db.relationshipsIn(schemeId, 'trustee').some((r) => r.personId === identity.personId && this.db.isCurrent(r));
+    return this.seatHolder(identity.personId, schemeId);
+  }
+
+  /** A current trustee of the scheme's board (D2). */
+  private seatHolder(personId: string | undefined, schemeId: string): boolean {
+    return !!personId && this.db.relationshipsIn(schemeId, 'trustee').some((r) => r.personId === personId && this.db.isCurrent(r));
+  }
+
+  /** Links a sign-in and its People record both ways, so the record shows they've been invited. */
+  private linkPerson(identityId: string, personId: string | undefined): void {
+    if (!personId || !this.db.persons.get(personId)) return;
+    this.store.changeIdentity(identityId, (i) => (i.personId ? i : { ...i, personId }));
+    if (!this.db.persons.get(personId)!.personaId) this.db.changePerson(personId, (p) => ({ ...p, personaId: identityId }));
   }
 
   setBrowseAgency(identityId: string, assignmentId: string, allowed: boolean, expectedVersion?: number): Observable<void> {

@@ -44,7 +44,8 @@ Backend slice 1 can now start (doc 24). Running all of this is Humo's job: [26-o
   - rate-limit sign-in and code requests;
   - give the same answer for "no account" and "no passkey" (R-8);
   - keep .NET patched every month (doc 26).
-- **The passkey domain is permanent.** Passkeys are bound to the domain they were registered on (the relying-party ID). **Choose the production sign-in domain once** (e.g. `pm.humo.co.za`, or `humo.co.za` to share across products). Changing it later forces everyone to register new passkeys.
+- **The passkey domain is permanent.** Passkeys are bound to the domain they were registered on (the relying-party ID). **Decided 18 Oct 2026: `pm.humo.co.za`.** Changing it later forces everyone to register new passkeys.
+  - If Humo Contractor or another product later needs the same passkeys, it signs in through `pm.humo.co.za` (or an OpenID Connect layer there); it doesn't register its own.
 
 ### Hosting: Webway VPS (South Africa)
 
@@ -92,6 +93,44 @@ Backend slice 1 can now start (doc 24). Running all of this is Humo's job: [26-o
 5. **Keep a fallback relay configured but switched off.** If inbox placement fails, the mail server forwards through a relay with a free or near-free tier. Turning it on is a configuration change, not a code change.
 6. **Passkeys keep email off the daily path:** codes are only needed to join, or to recover.
 
+### Mail settings are configuration, not code
+
+The API sends through whatever SMTP server its settings name. Changing ports, encryption or a relay is a settings change and a restart, never a code change. The settings live in the server's `.env` (doc 26 §2):
+
+| Setting | Example | Notes |
+|---|---|---|
+| `Mail__Host` | `mail.notify.humo.co.za` | Our mail server, or the fallback relay |
+| `Mail__Port` | `587` | 587 with STARTTLS (recommended); 465 with implicit TLS; 25 only server to server |
+| `Mail__Security` | `StartTls` | `StartTls`, `SslOnConnect` or `None` (never `None` outside the server itself) |
+| `Mail__Username` / `Mail__Password` | | The API's own sending account on the mail server |
+| `Mail__From` | `Humo Property Management <no-reply@notify.humo.co.za>` | |
+| `Mail__ReplyTo` | `support@humo.co.za` | Replies reach people, not the sending server |
+| `Mail__Relay__Enabled` | `false` | The fallback relay (§2, step 5) |
+
+**Ports at a glance:**
+- **25:** our mail server delivering to Gmail, Outlook and others (outbound). Webway must allow it.
+- **587:** the API handing mail to our mail server (submission, STARTTLS).
+- **465:** the same as 587, with implicit TLS, if a relay prefers it.
+- **993:** only if someone reads a mailbox on the server (bounces). Otherwise keep it closed.
+
+### Ask Webway before buying (best case to request)
+
+Send these questions before buying, and keep the answers with doc 26. The "best case" column is what we want to hear.
+
+| # | Ask | Best case | If not |
+|---|---|---|---|
+| 1 | **Where is the VPS physically hosted?** | A named South African data centre (e.g. Teraco Johannesburg or Cape Town), in writing | Ask for the city and operator at least; don't buy if the server is outside South Africa |
+| 2 | **Outbound port 25 for email** | Open, or opened on request for a mail server | Use the fallback relay from day one (§2, step 5) |
+| 3 | **Reverse DNS (PTR) for our IP** | They set `mail.notify.humo.co.za` for our IPv4 (and IPv6) address | Without it, Gmail and Outlook reject or spam our mail: use the relay |
+| 4 | **IP reputation** | A clean, dedicated IPv4 that isn't on blocklists (check it with MXToolbox before go-live) | Ask for a different IP |
+| 5 | **Backups** | Daily VM snapshots kept 7+ days, restorable by us, stored in South Africa | We rely on our own nightly backups (doc 26 §6) |
+| 6 | **Object storage** | S3-compatible, in South Africa, with versioning | Use another South African provider for the off-server copy |
+| 7 | **Firewall and DDoS** | A provider firewall in front of the VPS, plus basic DDoS protection | We use `ufw` only |
+| 8 | **Console access** | An out-of-band console (to fix a server we've locked ourselves out of) | Be extra careful with SSH and firewall changes |
+| 9 | **Resizing** | Upgrade CPU, RAM and disk without reinstalling | Size up front for a year's growth |
+| 10 | **POPIA** | An operator agreement (s21) covering security measures and breach notice | Required before customer data goes on the server |
+| 11 | **Support and SLA** | 24/7 support for outages, 99.9% uptime or better, local phone support | Plan our own monitoring and escalation (doc 26 §5) |
+
 ## 3. Options considered (kept for the record)
 
 Several options were compared on 18 October 2026, assuming a cloud host:
@@ -114,10 +153,10 @@ Several options were compared on 18 October 2026, assuming a cloud host:
 ## 4. What happens next
 
 1. **Server:**
-   - order the Webway VPS;
-   - confirm its location and outbound port 25;
+   - send Webway the pre-purchase questions (§2, *Ask Webway before buying*);
+   - order the VPS;
    - set up the PTR record;
-   - set up the DNS for `notify.humo.co.za`.
+   - set up DNS for `pm.humo.co.za` (the app) and `notify.humo.co.za` (email).
 2. **Repository:** add `backend/`:
    - .NET 10 solution: API, domain, EF Core with PostgreSQL;
    - Docker Compose for Caddy, the API, PostgreSQL and the mail server;

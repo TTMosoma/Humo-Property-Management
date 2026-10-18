@@ -1,4 +1,4 @@
-import { Identity, StaffRef, activeAssignments } from '../../domain';
+import { AGENCY_QUEUE, Identity, StaffRef, activeAssignments } from '../../domain';
 import { PERSONAS } from './personas';
 
 /**
@@ -23,7 +23,7 @@ export function portfolioManagerOf(schemeId: string, identities: Identity[] = PE
 
 /** Assignee id (staff id or identity id) → name, for read models and activity logs. */
 export function personName(id: string | null | undefined, identities: Identity[] = PERSONAS): string {
-  if (!id) return 'Unassigned';
+  if (!id) return AGENCY_QUEUE;
   const i = identities.find((p) => p.staffId === id || p.id === id);
   if (!i) return id;
   return i.staffId ? i.name : `${i.name} (${activeAssignments(i).some((a) => a.role === 'trustee') ? 'trustee' : 'resident'})`;

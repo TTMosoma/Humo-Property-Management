@@ -38,7 +38,7 @@ export interface StatementLine {
 
 /** A tiny RFC 4180 reader: commas or semicolons, quoted fields, "" escapes, CRLF or LF. */
 export function parseCsv(text: string): string[][] {
-  const clean = text.replace(/^﻿/, '');
+  const clean = text.replace(/^\uFEFF/, '');
   const firstLine = clean.split(/\r?\n/, 1)[0] ?? '';
   const delimiter = (firstLine.match(/;/g)?.length ?? 0) > (firstLine.match(/,/g)?.length ?? 0) ? ';' : ',';
   const rows: string[][] = [];

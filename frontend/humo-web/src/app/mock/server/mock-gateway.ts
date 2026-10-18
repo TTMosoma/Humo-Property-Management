@@ -47,6 +47,7 @@ const DENIAL_REASON: Record<PolicyDenial, string> = {
   'step-up-required': 'Step-up verification was not fresh',
   'not-entitled': 'Not included in the agency’s plan',
   'out-of-scope': 'Outside the assignment’s schemes (D1)',
+  'conflict-of-interest': 'Trustee works for the managing agency; can’t approve its work (D6)',
 };
 
 /**

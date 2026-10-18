@@ -37,7 +37,8 @@ export class BoardStore {
       .map((o) => this.db.unitById.get(o.unitId!)?.accountNo ?? '')
       .filter(Boolean);
     const hasSignIn = this.access.identities().some((i) => i.status === 'active' && i.personId === r.personId);
-    return { relationship: r, person, units, hasSignIn };
+    const invited = !hasSignIn && this.access.identities().some((i) => i.status === 'invited' && i.personId === r.personId);
+    return { relationship: r, person, units, hasSignIn, invited };
   }
 
   board(schemeId: string): BoardView | undefined {

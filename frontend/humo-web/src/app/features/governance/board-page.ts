@@ -3,7 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { forkJoin, map, take } from 'rxjs';
-import { BoardDataSource, BoardView, ResolutionDataSource, TrusteeView } from '../../domain';
+import { AccessDataSource, BoardDataSource, BoardView, ResolutionDataSource, TrusteeView } from '../../domain';
 import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
 import { DrawerService } from '../../ui/drawer/drawer.service';
@@ -16,6 +16,8 @@ import { Skeleton } from '../../ui/states/skeleton';
 import { StatusPill } from '../../ui/status-pill/status-pill';
 import { links } from '../accounts/account-view';
 import { appointForm, endTermForm, minimumForm, portfolioForm } from './board-forms';
+import { ScopeService } from '../../core/scope/scope.service';
+import { inviteResidentForm } from '../access/user-forms';
 
 /** One scheme's trustee board: who's on it, how they got there, and who has left. */
 @Component({
@@ -67,8 +69,14 @@ import { appointForm, endTermForm, minimumForm, portfolioForm } from './board-fo
                 </div>
                 <div class="tags">
                   <ui-status-pill [label]="t.relationship.portfolio ?? 'Trustee'" [tone]="t.relationship.portfolio === 'Chairperson' ? 'info' : 'neutral'" />
-                  @if (!t.hasSignIn) {
-                    <span class="muted" title="They can’t approve or read meeting packs in Humo Property Management until they’re invited">No Humo sign-in</span>
+                  @if (t.invited) {
+                    <span class="muted">Invited</span>
+                  } @else if (!t.hasSignIn) {
+                    @if (canInvite()) {
+                      <button type="button" class="btn btn-ghost btn-sm" (click)="invite(b, t)" title="They can’t approve or read meeting packs in Humo Property Management until they’re invited"><ion-icon name="mail-outline" aria-hidden="true" /> Invite to Humo PM</button>
+                    } @else {
+                      <span class="muted" title="They can’t approve or read meeting packs in Humo Property Management until they’re invited">No Humo sign-in</span>
+                    }
                   }
                 </div>
                 @if (canManage()) {
@@ -128,6 +136,8 @@ export class BoardPage {
   private readonly resolutions = inject(ResolutionDataSource);
   private readonly drawer = inject(DrawerService);
   private readonly session = inject(SessionService);
+  private readonly scope = inject(ScopeService);
+  private readonly access = inject(AccessDataSource);
 
   private readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('schemeId')!)), { initialValue: this.route.snapshot.paramMap.get('schemeId')! });
   /** undefined = loading; false = not found. */
@@ -136,6 +146,16 @@ export class BoardPage {
 
   protected readonly formatDate = formatDate;
   protected readonly canManage = computed(() => this.session.can('Meetings.Manage') && this.session.hasFeature('governance') && !this.session.readOnly());
+
+  /** D3: trustees without a Humo sign-in are invited from the board, for schemes the inviter covers. */
+  protected readonly canInvite = computed(
+    () => this.session.can('Residents.Invite') && !this.session.readOnly() && this.scope.accessible().some((s) => s.id === this.id()),
+  );
+
+  protected invite(b: BoardView, t: TrusteeView): void {
+    const org = this.session.organisation();
+    if (org) inviteResidentForm(this.drawer, this.access, org.id, org.shortName, t.person, [{ role: 'trustee', scheme: b.scheme }]);
+  }
 
   protected readonly status = computed(() => {
     const b = this.view();

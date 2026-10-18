@@ -98,7 +98,7 @@
 
 <ng-template #assignMenu>
   <div class="menu-panel" cdkMenu>
-    <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="assignSelected(null)">Unassigned (team)</button>
+    <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="assignSelected(null)">Agency queue (unassigned)</button>
     <div class="menu-divider"></div>
     @for (s of staff(); track s.id) {
       <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="assignSelected(s.id)">

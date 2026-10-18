@@ -25,8 +25,17 @@ export abstract class AccessDataSource {
    * Invites someone into the organisation with their first role. They're
    * `invited` until they accept (and set up a passkey); returns their identity id.
    * Inviting an email Humo already knows adds the role to that existing identity.
+   *
+   * Who may invite (the API decides):
+   * - Humo staff onboarding a customer: its first Agency Administrator only (F-22);
+   * - an Agency Administrator role: `Users.ManageAdmins`; other staff roles: `Users.Manage`;
+   * - owners, tenants and trustees: `Residents.Invite`, for schemes in the inviter's scope (D3, D1).
+   *
+   * `personId` links the sign-in to their People record (invites from the person,
+   * unit or board page). A trustee needs a current board seat (D2); an owner or
+   * tenant needs a current relationship with the unit.
    */
-  abstract invite(input: { organisationId: string; name: string; email: string; title?: string; assignment: NewAssignment }): Observable<string>;
+  abstract invite(input: { organisationId: string; name: string; email: string; title?: string; assignment: NewAssignment; personId?: string }): Observable<string>;
   /** Name, email, job title. Credentials are the identity provider's, never edited here. */
   abstract updateIdentity(identityId: string, details: { name: string; email: string; title?: string }, expectedVersion?: number): Observable<void>;
   /**

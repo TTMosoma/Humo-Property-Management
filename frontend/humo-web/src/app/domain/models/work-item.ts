@@ -63,6 +63,21 @@ export interface WorkItem {
   route: string;
 }
 
+/**
+ * Where work with nobody assigned waits (P2-7): the agency's shared queue. Agency
+ * Administrators see all of it; the right staff pick it up. A scheme without a
+ * portfolio manager sends its new work here.
+ */
+export const AGENCY_QUEUE = 'Agency queue';
+
+/**
+ * Approvals of work the managing agency arranged (D6): quotes, supplier
+ * invoices, payment batches, billing runs and letters of demand. Board matters
+ * (minutes, written resolutions) aren't included: how a staff trustee votes on
+ * them is still open (D6).
+ */
+export const AGENCY_WORK: readonly WorkItemType[] = ['quote-approval', 'invoice-approval', 'payment-batch-approval', 'billing-run-approval', 'demand-approval'];
+
 export const WORK_TYPE_LABELS: Record<WorkItemType, string> = {
   'receipt-allocation': 'Receipt allocation',
   'debtor-follow-up': 'Debtor follow-up',

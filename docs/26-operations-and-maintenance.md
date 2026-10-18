@@ -25,7 +25,7 @@ Status: **started 18 October 2026**, before the server exists. Fill in the blank
 | **PostgreSQL** | 18.x (recommended at setup) | About November 2030 | Database container; data volume `____` |
 | **Mail server:** Stalwart (or Postal) | ____ | Rolling releases | `backend/deploy/mail/` |
 | **Frontend:** Angular SPA | Angular 22, built with Node 24 LTS | Node 24 until about April 2028. Each Angular major is supported for about 18 months. | `frontend/humo-web`; built in CI, served by Caddy |
-| **Domain and DNS** | `humo.co.za`, `notify.humo.co.za` | Domain renewal: ____ | Registrar or DNS host: ____ |
+| **Domain and DNS** | `humo.co.za`; the app at `pm.humo.co.za`; email from `notify.humo.co.za` | Domain renewal: ____ | Registrar or DNS host: ____ |
 | **Object storage** (backups, files) | Webway S3-compatible storage | | Bucket names: ____ |
 | **Uptime monitor** (off-server) | ____ | | ____ |
 
@@ -42,6 +42,7 @@ Status: **started 18 October 2026**, before the server exists. Fill in the blank
 | Backup encryption key | Password manager **and** a sealed offline copy | ____ |
 | ASP.NET Core Data Protection keys (§3) | Database or a persisted volume; included in backups | |
 | Mail DKIM private key | Mail server data volume; included in backups | |
+| Mail settings (`Mail__*`: host, port, security, account) | `.env` on the server; see doc 25 §2 *Mail settings* | |
 | Sealed recovery envelope (§8) | ____ (a safe or a trusted person) | |
 
 **Rules:**
@@ -57,7 +58,7 @@ Status: **started 18 October 2026**, before the server exists. Fill in the blank
 - ASP.NET Core uses these to encrypt sign-in cookies and one-time codes.
 - **They must be persisted and backed up.** If they're lost, everyone is signed out and outstanding codes stop working. Nothing is leaked, but it's disruptive.
 
-**Passkey domain (relying-party ID): `____`.**
+**Passkey domain (relying-party ID): `pm.humo.co.za`.**
 - **Never change it.** Every passkey is bound to it; changing it forces every user to register again.
 
 **Rate limits** on sign-in, code requests and step-up: check them monthly in the logs (§5).
@@ -138,7 +139,7 @@ Status: **started 18 October 2026**, before the server exists. Fill in the blank
 
 | What | How | Alert when |
 |---|---|---|
-| Site and API up | An off-server uptime monitor (a free external service, or a small second VPS running Uptime Kuma) checking `https://____/` and `https://____/api/health` | Down for more than 2 minutes |
+| Site and API up | An off-server uptime monitor (a free external service, or a small second VPS running Uptime Kuma) checking `https://pm.humo.co.za/` and `https://pm.humo.co.za/api/health` | Down for more than 2 minutes |
 | HTTPS certificate | The same monitor | Fewer than 14 days left |
 | Disk space | A script or the monitor's agent | Above 80% |
 | Backups | The backup job emails or pings on success; the monitor alerts when no ping arrives | No success in 26 hours |

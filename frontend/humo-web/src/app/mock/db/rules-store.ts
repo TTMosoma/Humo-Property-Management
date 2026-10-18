@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import {
+  AGENCY_QUEUE,
   BREACH_STATUS_LABELS,
   Breach,
   BreachAction,
@@ -288,7 +289,7 @@ export class RulesStore {
       unit,
       person,
       personRole: isTenant ? 'tenant' : 'owner',
-      assigneeName: assignee?.name ?? 'Unassigned',
+      assigneeName: assignee?.name ?? AGENCY_QUEUE,
       repeats: this.breaches.filter((x) => x.id !== b.id && x.ruleId === b.ruleId && x.unitId === b.unitId && x.occurredAt < b.occurredAt).length,
     };
   }
