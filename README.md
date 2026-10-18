@@ -22,7 +22,7 @@ Humo — property technology platform
 |---|---|
 | Product family | Humo |
 | Application | Humo Property Management |
-| Organisation | Tshikrand |
+| Organisation | Marula Property |
 | User | Sarah Jacobs |
 | Role | Portfolio Manager |
 | Scope | Oakwood Estate |
@@ -153,7 +153,7 @@ The model is described in `docs/03-identity-access.md`.
 The model is described in `docs/04-platform-commercial.md`.
 
 1. Sign in as **Nomsa Khoza** (Humo Executive). **Business overview** shows MRR, ARR, customers, schemes, units, active users and retention, plus the revenue, growth, health, adoption and expansion panels. It is read-only.
-2. Sign in as **Dumisani Ngcobo** (Humo Account Manager). **My accounts** lists customer requests and slipping accounts, then conversations worth having. Open **Tshikrand**:
+2. Sign in as **Dumisani Ngcobo** (Humo Account Manager). **My accounts** lists customer requests and slipping accounts, then conversations worth having. Open **Marula Property**:
    - health 87, with each signal explained
    - adoption by module
    - Governance **HIGH** (8 trustees, 14 meetings a year) and Advanced Reporting **MEDIUM**

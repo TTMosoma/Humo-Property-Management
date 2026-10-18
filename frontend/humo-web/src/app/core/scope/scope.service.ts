@@ -58,6 +58,21 @@ export class ScopeService {
     return inAgency.filter((s) => m.scope.schemeIds.includes(s.id));
   });
 
+  /**
+   * D1: the rest of the agency's schemes, for someone granted Portfolio.BrowseAgency.
+   * Read-only: the API refuses changes outside the assignment. Not part of `accessible`,
+   * so portfolio-wide lists and counts stay those of the assignment.
+   */
+  readonly browsable = computed<Scheme[]>(() => {
+    const m = this.session.assignment();
+    if (isHumoRole(m.role) || coversAllSchemes(m) || !this.session.can('Portfolio.BrowseAgency')) return [];
+    const mine = new Set(this.inScope().map((s) => s.id));
+    return this.allSchemes().filter((s) => s.organisationId === m.scope.organisationId && !mine.has(s.id) && s.status !== 'archived');
+  });
+
+  /** Is this scheme only being browsed (read-only)? */
+  readonly isBrowsing = (schemeId: string): boolean => this.browsable().some((s) => s.id === schemeId);
+
   /** Whether this membership can change scope (staff) or is fixed to its scheme(s). */
   readonly canChangeScope = computed(() => this.session.isStaff());
 

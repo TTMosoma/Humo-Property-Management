@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { BUDGET_STATUS_LABELS, BudgetDataSource, BudgetView } from '../../../domain';
+import { BUDGET_STATUS_LABELS, BudgetDataSource, BudgetView, todaySA } from '../../../domain';
 import { loadable } from '../../../core/data/loadable';
 import { ScopeNotice } from '../../../core/scope/scope-notice';
 import { ScopeService } from '../../../core/scope/scope.service';
@@ -86,7 +86,7 @@ export class BudgetsPage {
   protected readonly state = urlState({ view: 'current' });
   protected readonly result = loadable(() => this.data.list(this.scope.effectiveIds()));
   private readonly all = computed(() => this.result.value() ?? []);
-  private readonly today = new Date().toISOString().slice(0, 10);
+  private readonly today = todaySA();
   protected readonly tabs = computed(() => [
     { id: 'current', label: 'This year', count: this.all().filter((v) => this.isCurrent(v)).length },
     { id: 'next', label: 'Next year', count: this.all().filter((v) => v.budget.from > this.today).length },

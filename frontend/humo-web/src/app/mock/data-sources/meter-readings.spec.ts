@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Observable, firstValueFrom } from 'rxjs';
-import { ApiError, BillingDataSource, MeterDataSource, parseReadingsCsv } from '../../domain';
+import { ApiError, BillingDataSource, MeterDataSource, parseReadingsCsv, todaySA } from '../../domain';
 import { AccessStore } from '../db/access-store';
 import { BillingStore } from '../db/billing-store';
 import { DEFAULT_RATE_PER_KL, MeterStore } from '../db/meter-store';
@@ -17,7 +17,7 @@ describe('Meter readings (docs/22 §2)', () => {
   let access: AccessStore;
   const run = <T>(o: Observable<T>) => firstValueFrom(o);
   const KC = 'kingfisher-court';
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todaySA();
   let period: string;
 
   beforeEach(async () => {

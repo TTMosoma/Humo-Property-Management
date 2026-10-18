@@ -72,7 +72,13 @@
                   "maximumError": "32kB"
                 }
               ],
-              "outputHashing": "all"
+              "outputHashing": "all",
+              "fileReplacements": [
+                {
+                  "replace": "src/app/data/provide-data.ts",
+                  "with": "src/app/data/provide-data.production.ts"
+                }
+              ]
             },
             "development": {
               "optimization": false,
@@ -80,6 +86,7 @@
               "sourceMap": true
             },
             "demo": {
+              "fileReplacements": [],
               "assets": [
                 {
                   "glob": "**/*",

@@ -1,4 +1,4 @@
-import { ReceiptDataSource, ReceiptView, Scheme } from '../../domain';
+import { ReceiptDataSource, ReceiptView, Scheme, todaySA } from '../../domain';
 import { DrawerService } from '../../ui/drawer/drawer.service';
 import { formatRand } from '../../ui/format/money';
 import { REASON_FIELD, openForm } from '../shared/form-drawer';
@@ -16,7 +16,7 @@ export function captureReceiptForm(drawer: DrawerService, data: ReceiptDataSourc
       { key: 'reference', label: 'Reference', type: 'text', required: true, placeholder: 'e.g. KC042 LEVY', help: 'Exactly as it appears on the bank statement: it’s what matches the receipt to an account.' },
       { key: 'payer', label: 'Depositor', type: 'text', placeholder: 'e.g. A MTHEMBU' },
     ],
-    initial: { schemeId: schemeId ?? schemes[0]?.id ?? '', date: new Date().toISOString().slice(0, 10) },
+    initial: { schemeId: schemeId ?? schemes[0]?.id ?? '', date: todaySA() },
     submitLabel: 'Capture receipt',
     submit: (v) => data.capture({ schemeId: v['schemeId'], date: v['date'], amount: Number(v['amount']), reference: v['reference'], payer: v['payer'] }),
     success: (_id, v) => `Captured ${formatRand(Number(v['amount']))}. It’s waiting to be allocated.`,

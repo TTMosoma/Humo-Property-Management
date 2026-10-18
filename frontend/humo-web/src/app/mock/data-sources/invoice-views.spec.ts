@@ -25,7 +25,7 @@ describe('Invoice views', () => {
     auth.signIn('am-mashoto');
     const rows = await run(humo.invoices());
     expect(rows.length).toBe(8);
-    expect(new Set(rows.map((r) => r.customerName))).toEqual(new Set(['Tshikrand', 'Acacia Managing Agents', 'Umgeni BC Services', 'Fynbos Property Admin']));
+    expect(new Set(rows.map((r) => r.customerName))).toEqual(new Set(['Marula Property', 'Acacia Managing Agents', 'Umgeni BC Services', 'Fynbos Property Admin']));
     expect(rows[0].issuedOn >= rows.at(-1)!.issuedOn).toBe(true);
     const fynbos = rows.find((r) => r.id === 'inv-fynbos-202610')!;
     expect(fynbos).toMatchObject({ billingPreference: 'manual-eft', accountManager: 'Mashoto Moropane' });

@@ -71,7 +71,7 @@ export class Reputation {
   readonly compact = input(false);
 }
 
-/** "Recommended by Tshikrand, Oakridge Managing Agents and 10 others." */
+/** "Recommended by Marula Property, Oakridge Managing Agents and 10 others." */
 @Component({
   selector: 'ct-endorsed-by',
   imports: [IonIcon],

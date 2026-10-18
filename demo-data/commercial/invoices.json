@@ -2,9 +2,9 @@
   "$comment": "Humo’s invoices to the named demo customers. Snapshots: lines carry the price that applied. Simulated: no real invoice was issued.",
   "invoices": [
     {
-      "id": "inv-tshikrand-202609",
-      "reference": "HPM-TSH-202609",
-      "organisationId": "tshikrand",
+      "id": "inv-marula-202609",
+      "reference": "HPM-MAR-202609",
+      "organisationId": "marula",
       "periodStart": "2026-09-01",
       "periodEnd": "2026-10-01",
       "issuedOn": "2026-09-01",
@@ -30,9 +30,9 @@
       "simulated": true
     },
     {
-      "id": "inv-tshikrand-202610",
-      "reference": "HPM-TSH-202610",
-      "organisationId": "tshikrand",
+      "id": "inv-marula-202610",
+      "reference": "HPM-MAR-202610",
+      "organisationId": "marula",
       "periodStart": "2026-10-01",
       "periodEnd": "2026-11-01",
       "issuedOn": "2026-10-01",

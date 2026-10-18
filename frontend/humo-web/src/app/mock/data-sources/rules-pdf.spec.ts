@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Observable, firstValueFrom } from 'rxjs';
-import { ApiError, LibraryDataSource, PolicyError, RuleAction, RulesDataSource } from '../../domain';
+import { ApiError, LibraryDataSource, PolicyError, RuleAction, RulesDataSource, todaySA } from '../../domain';
 import { AccessStore } from '../db/access-store';
 import { LibraryStore } from '../db/library-store';
 import { RulesStore } from '../db/rules-store';
@@ -16,7 +16,7 @@ describe('Scheme rules: registered rules PDF', () => {
   let access: AccessStore;
   const run = <T>(o: Observable<T>) => firstValueFrom(o);
   const KC = 'kingfisher-court';
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todaySA();
   const pdf = (name = 'kc-conduct-rules.pdf') => new File(['%PDF-1.7 rules'], name, { type: 'application/pdf' });
   const upload = (over: Partial<Extract<RuleAction, { type: 'upload' }>> = {}, file = pdf()) =>
     run(rules.actRules(KC, { type: 'upload', fileName: file.name, mimeType: file.type, sizeBytes: file.size, adoptedOn: '2024-03-01', resolutionRef: 'Registered with the CSOS', shareWithOwners: true, ...over }, file));

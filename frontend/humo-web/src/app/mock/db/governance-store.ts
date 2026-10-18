@@ -30,7 +30,7 @@ import {
 } from '../../domain';
 import { formatDate } from '../../ui/format/money';
 import { simulationStorage } from '../simulation/simulation-storage';
-import { personName } from '../fixtures/staff';
+import { StaffDirectory } from './staff-directory';
 import { AccessStore } from './access-store';
 import { DocumentStore } from './document-store';
 import { MockDb } from './mock-db';
@@ -56,6 +56,7 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
  */
 @Injectable({ providedIn: 'root' })
 export class GovernanceStore {
+  private readonly directory = inject(StaffDirectory);
   private readonly db = inject(MockDb);
   private readonly access = inject(AccessStore);
   private readonly orgs = inject(OrganisationStore);
@@ -113,7 +114,7 @@ export class GovernanceStore {
     const actions: ActionView[] = r.actions.map((a) => {
       const w = this.work(a.workItemId);
       const done = w?.status === 'done';
-      return { action: a, assigneeName: personName(a.assigneeId), status: done ? 'done' : 'open', completedAt: done ? w?.decidedAt : undefined, overdue: !done && new Date(a.dueAt).getTime() < now };
+      return { action: a, assigneeName: this.directory.name(a.assigneeId), status: done ? 'done' : 'open', completedAt: done ? w?.decidedAt : undefined, overdue: !done && new Date(a.dueAt).getTime() < now };
     });
     return {
       resolution: r,

@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { Router, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { map, of, take } from 'rxjs';
-import { BREACH_STATUS_LABELS, BreachStatus, BreachView, RULE_CATEGORY_LABELS, ResolutionDataSource, RulesDataSource, SchemeRule, UnitDataSource, formatBytes, RulesView } from '../../domain';
+import { BREACH_STATUS_LABELS, BreachStatus, BreachView, RULE_CATEGORY_LABELS, ResolutionDataSource, RulesDataSource, SchemeRule, UnitDataSource, formatBytes, RulesView, todaySA } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { loadable } from '../../core/data/loadable';
 import { ScopeNotice } from '../../core/scope/scope-notice';
@@ -236,7 +236,7 @@ export class RulesPage {
 
   protected readonly state = urlState({ tab: 'rules', scheme: null, view: 'open' });
   protected readonly formatDate = formatDate;
-  protected readonly today = new Date().toISOString().slice(0, 10);
+  protected readonly today = todaySA();
   protected readonly open = signal(new Set<string>());
   protected readonly sharing = signal(false);
 

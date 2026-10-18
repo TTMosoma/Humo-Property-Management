@@ -76,6 +76,8 @@ const SEED: SeedIdentity[] = [
     kind: 'customer',
     title: 'Operations Director',
     staffId: 'staff-sarah',
+    // D2/D6: she owns unit 27 at Kingfisher Court and sits on its board.
+    personId: 'per-sarah',
     demo: true,
     assignments: [
       {
@@ -84,6 +86,8 @@ const SEED: SeedIdentity[] = [
         organisationId: 'acacia',
         schemeIds: ['protea-gardens', 'parkhurst-lofts', 'greenstone-commons'],
         label: 'Protea Gardens, Parkhurst Lofts, Greenstone Commons',
+        // D1: as Operations Director she may browse every scheme, read-only.
+        grants: ['Portfolio.BrowseAgency'],
         grantedBy: 'Thandeka Mokoena',
         grantedAt: '2025-08-01T09:00:00+02:00',
       },
@@ -246,6 +250,7 @@ const SEED: SeedIdentity[] = [
     initials: 'MS',
     email: 'mpho.sebe@mail.example',
     kind: 'customer',
+    personId: 'per-mpho',
     assignments: [
       { id: 'm-mpho', role: 'trustee', organisationId: 'acacia', schemeIds: ['the-willows'], label: 'Trustee · The Willows', grantedBy: 'Johan van der Merwe', grantedAt: '2026-03-18T18:00:00+02:00' },
     ],

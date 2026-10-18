@@ -1,23 +1,4 @@
-import {
-  DOCUMENT_FONTS,
-  DOCUMENT_TYPE_META,
-  DocumentFont,
-  DocumentTemplate,
-  DocumentTemplateDataSource,
-  DocumentType,
-  MAX_TEMPLATE_TEXT,
-  OrganisationDocumentSettings,
-  PlatformTemplateDataSource,
-  STATEMENT_SECTIONS,
-  StatementSection,
-  TEMPLATE_STATUS_LABELS,
-  TEMPLATE_STATUS_MOVES,
-  TEMPLATE_TIERS,
-  TemplateAvailability,
-  TemplateDesign,
-  TemplateStatus,
-  templateVersion,
-} from '../../domain';
+import { DOCUMENT_FONTS, DOCUMENT_TYPE_META, DocumentFont, DocumentTemplate, DocumentTemplateDataSource, DocumentType, MAX_TEMPLATE_TEXT, OrganisationDocumentSettings, PlatformTemplateDataSource, STATEMENT_SECTIONS, StatementSection, TEMPLATE_STATUS_LABELS, TEMPLATE_STATUS_MOVES, TEMPLATE_TIERS, TemplateAvailability, TemplateDesign, TemplateStatus, templateVersion, todaySA } from '../../domain';
 import { DrawerService } from '../../ui/drawer/drawer.service';
 import { FormField, FormValues, REASON_FIELD, openForm } from '../shared/form-drawer';
 
@@ -135,7 +116,7 @@ export function customTemplateForm(drawer: DrawerService, data: PlatformTemplate
       footerText: d?.footerText ?? '',
       legalText: d?.legalText ?? '',
       ...Object.fromEntries(sections.map((s) => [`s-${s}`, !d || d.sections.includes(s) ? 'show' : 'hide'])),
-      approvedOn: new Date().toISOString().slice(0, 10),
+      approvedOn: todaySA(),
     },
     submitLabel: `Publish version ${t.currentVersion + 1}`,
     submit: (v) => data.publishCustomVersion(t.id, designFrom(v, sections), v['notes'], { approvedBy: v['approvedBy'], approvedOn: v['approvedOn'] }, t.version),

@@ -3,7 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { map } from 'rxjs';
-import { BREACH_STATUS_LABELS, BreachView, RulesDataSource, TimelineEvent, TimelineKind } from '../../domain';
+import { BREACH_STATUS_LABELS, BreachView, RulesDataSource, TimelineEvent, TimelineKind, todaySA } from '../../domain';
 import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
 import { DrawerService } from '../../ui/drawer/drawer.service';
@@ -135,7 +135,7 @@ export class BreachPage {
     const v = this.view();
     if (!v) return [];
     const b = v.breach;
-    const late = !!b.remedyBy && b.remedyBy < new Date().toISOString().slice(0, 10) && (b.status === 'warned' || b.status === 'final-warning');
+    const late = !!b.remedyBy && b.remedyBy < todaySA() && (b.status === 'warned' || b.status === 'final-warning');
     return [
       { label: v.personRole === 'tenant' ? 'Tenant' : 'Owner', value: v.person.displayName },
       { label: 'Warnings', value: String(b.events.filter((e) => e.kind === 'warning' || e.kind === 'final-warning').length) },

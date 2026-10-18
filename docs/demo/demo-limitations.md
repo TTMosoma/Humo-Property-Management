@@ -28,11 +28,6 @@
 
 ## Data to check before showing externally
 
-- **Tshikrand.**
-  - The generated book of business includes a customer named *Tshikrand*. The organisation fixture notes it as a real customer.
-  - Its figures (health score, usage, contract value, invoices) are invented, but the **name is real**.
-  - **Product owner decision:** rename it to a fictional agency in the shared demo, or confirm the customer agrees to appear. No real Tshikrand records, people, documents or financial data are in the demo data.
-  - The canonical commercial fixtures use the name only to keep the existing seed coherent.
 - **Acardia PDFs in `docs/`.** Client design files, untracked, not part of the demo data.
 
 ## Not built

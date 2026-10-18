@@ -40,7 +40,7 @@ export const NAV: NavSection[] = [
       // Account Manager: customer success.
       { id: 'am-accounts', label: 'My accounts', icon: 'heart-outline', route: '/platform/accounts', permission: 'Platform.Accounts.Own', keywords: 'customer portfolio' },
       { id: 'platform-account-requests', label: 'New accounts', icon: 'person-add-outline', route: '/platform/account-requests', permission: 'Platform.Customers.Manage', keywords: 'onboard new customer account approval approve reject delegated activation' },
-      { id: 'platform-customers', label: 'Customers', icon: 'business-outline', route: '/platform/customers', permission: 'Platform.Customers.View', audience: ['system-admin', 'humo-support', 'humo-executive'], keywords: 'agencies organisations subscriptions tshikrand' },
+      { id: 'platform-customers', label: 'Customers', icon: 'business-outline', route: '/platform/customers', permission: 'Platform.Customers.View', audience: ['system-admin', 'humo-support', 'humo-executive'], keywords: 'agencies organisations subscriptions marula' },
       { id: 'exec-revenue', label: 'Revenue', icon: 'trending-up-outline', route: '/platform/executive/revenue', permission: 'Platform.Insights.View', audience: ['humo-executive'], keywords: 'mrr arr package' },
       { id: 'exec-growth', label: 'Growth', icon: 'people-outline', route: '/platform/executive/growth', permission: 'Platform.Insights.View', audience: ['humo-executive'], keywords: 'new customers churn retention adoption' },
       { id: 'exec-health', label: 'Account health', icon: 'pulse-outline', route: '/platform/executive/health', permission: 'Platform.Insights.View', audience: ['humo-executive'], keywords: 'at risk critical' },

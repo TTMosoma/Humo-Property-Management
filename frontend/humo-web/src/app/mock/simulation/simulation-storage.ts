@@ -11,7 +11,7 @@
  * snapshots are ignored (the store re-seeds). "Reset simulation" in the
  * prototype toolbar clears everything and reloads from the seed data.
  */
-const SCHEMA = 5;
+const SCHEMA = 7;
 const PREFIX = 'humo.sim.';
 
 interface Envelope<T> {

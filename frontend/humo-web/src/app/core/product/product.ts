@@ -9,7 +9,7 @@
  *
  * Keep the layers apart in copy and code:
  *   product family (Humo) ≠ application (Humo Property Management) ≠ organisation
- *   (Tshikrand) ≠ user (Sarah Jacobs) ≠ role (Portfolio Manager) ≠ scope (Oakwood Estate)
+ *   (Marula Property) ≠ user (Sarah Jacobs) ≠ role (Portfolio Manager) ≠ scope (Oakwood Estate)
  *   ≠ package (Humo Professional) ≠ feature entitlement (Governance).
  */
 export type HumoProductId = 'property-management' | 'valuations' | 'contractor';

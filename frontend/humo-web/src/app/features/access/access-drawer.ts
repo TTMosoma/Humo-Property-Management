@@ -18,6 +18,7 @@ import {
   UnitDataSource,
   describeFailure,
   fieldErrorsOf,
+  AGENCY_STAFF,
 } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { ScopeService } from '../../core/scope/scope.service';
@@ -124,6 +125,28 @@ export class AccessDrawer {
         return true;
     }
   });
+
+  /** D1: a staff role limited to some schemes may be allowed to browse the rest, read-only. */
+  protected readonly canBrowseGrant = (m: RoleAssignment) => m.scope.type === 'schemes' && AGENCY_STAFF.includes(m.role);
+  protected readonly browses = (m: RoleAssignment) => !!m.grants?.includes('Portfolio.BrowseAgency');
+
+  protected setBrowse(m: RoleAssignment, allowed: boolean): void {
+    const name = this.identity()?.name ?? 'them';
+    this.busy.set(true);
+    this.stepUp
+      .guard({ action: 'change-roles', detail: `${allowed ? 'Allow' : 'Withdraw'} browsing every scheme for ${name}` }, () => this.access.setBrowseAgency(this.input.identityId, m.id, allowed, m.version))
+      .subscribe({
+        next: () => {
+          this.busy.set(false);
+          this.feedback.success(allowed ? `${name} can browse every scheme, read-only. Changes stay limited to their assigned schemes.` : `${name} sees only their assigned schemes again.`);
+        },
+        error: (e) => {
+          this.busy.set(false);
+          this.feedback.error(describeFailure(e, 'Their access wasn’t changed'));
+        },
+        complete: () => this.busy.set(false),
+      });
+  }
 
   protected readonly roleLabels = ROLE_LABELS;
   protected readonly roleMeta = ROLE_META;

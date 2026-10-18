@@ -42,6 +42,27 @@ export interface CurrentSession {
   impersonation: ImpersonationSession | null;
 }
 
+/** The session before anyone signs in, or when the API can't say who you are. */
+export const SIGNED_OUT_SESSION: CurrentSession = (() => {
+  const nobody: Identity = { id: 'anonymous', version: 0, name: '', initials: '', email: '', kind: 'customer', status: 'active', memberships: [], assignments: [] };
+  const none: RoleAssignment = { id: 'none', role: 'tenant', scope: { type: 'organisation', organisationId: null, schemeIds: [] }, label: '', status: 'active', version: 0 };
+  return {
+    signedIn: false,
+    blocked: null,
+    actor: nobody,
+    identity: nobody,
+    assignments: [none],
+    activeAssignmentId: none.id,
+    permissions: [],
+    pagePermissions: [],
+    actorPermissions: [],
+    organisation: null,
+    subscription: null,
+    entitlements: null,
+    impersonation: null,
+  };
+})();
+
 export abstract class SessionDataSource {
   /** Live: emits the current session, and again whenever it changes. */
   abstract current(): Observable<CurrentSession>;
@@ -75,8 +96,9 @@ export abstract class SessionDataSource {
  * - cancelled: the person dismissed the passkey prompt
  * - paused: the account is suspended or closed
  * - link-expired: the sign-in link was used already or is too old
+ * - unavailable: sign-in can't be reached (e.g. the identity provider isn't connected yet)
  */
-export type SignInFailure = 'no-passkey' | 'cancelled' | 'paused' | 'link-expired';
+export type SignInFailure = 'no-passkey' | 'cancelled' | 'paused' | 'link-expired' | 'unavailable';
 
 export class SignInError extends ApiError {
   constructor(

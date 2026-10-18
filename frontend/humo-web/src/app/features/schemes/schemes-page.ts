@@ -57,7 +57,11 @@ export class SchemesPage {
   }
 
   /** Archived schemes only appear in their own view. */
-  protected readonly allRows = computed(() => toRows(this.state().view === 'archived' ? this.scope.inScope().filter((s) => s.status === 'archived') : this.scope.accessible(), this.health()));
+  protected readonly allRows = computed(() => {
+    const view = this.state().view;
+    const schemes = view === 'archived' ? this.scope.inScope().filter((s) => s.status === 'archived') : view === 'browse' ? this.scope.browsable() : this.scope.accessible();
+    return toRows(schemes, this.health());
+  });
   private readonly archivedCount = computed(() => this.scope.inScope().filter((s) => s.status === 'archived').length);
   private readonly router = inject(Router);
 
@@ -75,6 +79,7 @@ export class SchemesPage {
         return rows.filter((r) => mine.includes(r.scheme.id));
       case 'attention':
         return rows.filter((r) => r.health.rating !== 'good');
+      case 'browse':
       default:
         return rows;
     }
@@ -119,6 +124,8 @@ export class SchemesPage {
       tabs.splice(1, 0, { id: 'mine', label: 'My schemes', count: this.session.assignment().scope.schemeIds.length });
     }
     if (this.archivedCount() || this.state().view === 'archived') tabs.push({ id: 'archived', label: 'Archived', count: this.archivedCount() });
+    // D1: the rest of the agency, read-only, for someone granted Portfolio.BrowseAgency.
+    if (this.scope.browsable().length) tabs.push({ id: 'browse', label: 'Rest of the agency (read-only)', count: this.scope.browsable().length });
     return tabs;
   });
 

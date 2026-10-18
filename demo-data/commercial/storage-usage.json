@@ -2,7 +2,7 @@
   "$comment": "Simulated storage measurements (source: demo). Real figures come from the storage service. Generated customers get a deterministic simulated figure.",
   "measurements": [
     {
-      "organisationId": "tshikrand",
+      "organisationId": "marula",
       "measuredAt": "2026-10-12T02:00:00+02:00",
       "source": "demo",
       "documentsBytes": 6657199309,

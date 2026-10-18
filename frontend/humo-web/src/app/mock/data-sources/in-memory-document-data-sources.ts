@@ -1,27 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Observable, combineLatest, map, switchMap } from 'rxjs';
-import {
-  DOCUMENT_TYPE_META,
-  DocumentBrandingDetails,
-  DocumentTemplate,
-  DocumentTemplateDataSource,
-  DocumentType,
-  FieldErrors,
-  OrganisationDocumentSettings,
-  PlatformTemplateDataSource,
-  TEMPLATE_STATUS_LABELS,
-  TEMPLATE_STATUS_MOVES,
-  TEMPLATE_TIERS,
-  TemplateAdoption,
-  TemplateDesign,
-  TemplateStatus,
-  entitlementSet,
-  isHexColour,
-  templateAvailability,
-  validateDesign,
-  ClientApproval,
-} from '../../domain';
+import { DOCUMENT_TYPE_META, DocumentBrandingDetails, DocumentTemplate, DocumentTemplateDataSource, DocumentType, FieldErrors, OrganisationDocumentSettings, PlatformTemplateDataSource, TEMPLATE_STATUS_LABELS, TEMPLATE_STATUS_MOVES, TEMPLATE_TIERS, TemplateAdoption, TemplateDesign, TemplateStatus, entitlementSet, isHexColour, templateAvailability, validateDesign, ClientApproval, todaySA } from '../../domain';
 import { DocumentStore } from '../db/document-store';
 import { PlatformStore } from '../db/platform-store';
 import { OrganisationStore } from '../db/organisation-store';
@@ -222,7 +202,7 @@ export class InMemoryPlatformTemplateDataSource extends PlatformTemplateDataSour
   publishCustomVersion(templateId: string, design: TemplateDesign, notes: string, approval: ClientApproval, expectedVersion: number): Observable<number> {
     const t = this.store.template(templateId);
     const customer = t?.organisationId ? this.platform.customers().find((c) => c.organisationId === t.organisationId) : undefined;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todaySA();
     return this.gateway.command(
       {
         action: `Published version ${t ? Math.max(...t.versions.map((v) => v.version)) + 1 : '?'} of ${t?.name ?? templateId} — client approval: ${approval.approvedBy.trim()} on ${approval.approvedOn}`,

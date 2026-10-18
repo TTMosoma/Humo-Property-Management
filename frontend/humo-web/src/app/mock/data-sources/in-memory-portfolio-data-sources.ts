@@ -1,40 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, defer, map, switchMap, throwError } from 'rxjs';
-import {
-  AccountDataSource,
-  ApiError,
-  NewReceipt,
-  StatementImportBatch,
-  StatementImportResult,
-  StatementLine,
-  StatementMapping,
-  StatementPreview,
-  mappingProblems,
-  parseCsv,
-  readStatement,
-  AccountDetail,
-  FieldErrors,
-  ListQuery,
-  MatchView,
-  NewRelationship,
-  Note,
-  Page,
-  Person,
-  PersonDataSource,
-  PersonDetails,
-  PersonSummary,
-  ReceiptDataSource,
-  ReceiptView,
-  StatementView,
-  TimelineDataSource,
-  TimelineEvent,
-  Unit,
-  UnitDataSource,
-  UnitDetails,
-  UnitSummary,
-  periodLabel,
-  roundRands,
-} from '../../domain';
+import { AccountDataSource, ApiError, NewReceipt, StatementImportBatch, StatementImportResult, StatementLine, StatementMapping, StatementPreview, mappingProblems, parseCsv, readStatement, AccountDetail, FieldErrors, ListQuery, MatchView, NewRelationship, Note, Page, Person, PersonDataSource, PersonDetails, PersonSummary, ReceiptDataSource, ReceiptView, StatementView, TimelineDataSource, TimelineEvent, Unit, UnitDataSource, UnitDetails, UnitSummary, periodLabel, roundRands, todaySA, saDate } from '../../domain';
 import { CommsStore } from '../db/comms-store';
 import { ReceiptImportStore } from '../db/receipt-import-store';
 import { LevyStore } from '../db/levy-store';
@@ -49,8 +15,8 @@ import { CommandSpec, MockGateway } from '../server/mock-gateway';
 /** docs/22 §1: a receipt's date can't be in the future or more than 12 months old. */
 function receiptDateProblem(date: string): string | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return 'Enter the date the money arrived.';
-  const today = new Date().toISOString().slice(0, 10);
-  const yearAgo = new Date(Date.now() - 365 * 86_400_000).toISOString().slice(0, 10);
+  const today = todaySA();
+  const yearAgo = saDate(new Date(Date.now() - 365 * 86_400_000));
   if (date > today) return 'The date can’t be in the future.';
   if (date < yearAgo) return 'That’s more than 12 months ago. Older receipts need a journal on the account instead.';
   return null;
@@ -275,7 +241,8 @@ export class InMemoryPersonDataSource extends PersonDataSource {
     if (!scheme) return { schemeId: 'Choose the scheme.' };
     if (scheme.status === 'archived') e['schemeId'] = `${scheme.name} is archived.`;
     if (l.type === 'trustee') {
-      if (!l.portfolio) e['portfolio'] = 'Choose their position on the board.';
+      // D2: trustees are appointed on the board (BoardDataSource), never linked as a relationship here.
+      e['type'] = 'Trustees are appointed on the scheme’s board, from a resolution or by co-option.';
     } else {
       const unit = l.unitId ? this.db.unitById.get(l.unitId) : undefined;
       if (!unit || unit.schemeId !== l.schemeId) e['unitId'] = 'Choose the unit.';

@@ -1,25 +1,4 @@
-import {
-  ADJUSTMENT_LABELS,
-  AddOnKind,
-  AdjustmentKind,
-  BILLING_PREFERENCE_HELP,
-  BILLING_PREFERENCE_LABELS,
-  BillingPreference,
-  CommercialAddOn,
-  CommercialDataSource,
-  CommercialPackage,
-  CommercialSettings,
-  CustomerCommercialView,
-  CustomerInvoice,
-  FEATURES,
-  Feature,
-  PRICE_STATUS_LABELS,
-  PRORATION_LABELS,
-  PaymentRecord,
-  PriceStatus,
-  ProrationPolicy,
-  termsOn,
-} from '../../../domain';
+import { ADJUSTMENT_LABELS, AddOnKind, AdjustmentKind, BILLING_PREFERENCE_HELP, BILLING_PREFERENCE_LABELS, BillingPreference, CommercialAddOn, CommercialDataSource, CommercialPackage, CommercialSettings, CustomerCommercialView, CustomerInvoice, FEATURES, Feature, PRICE_STATUS_LABELS, PRORATION_LABELS, PaymentRecord, PriceStatus, ProrationPolicy, termsOn, saDate } from '../../../domain';
 import { DrawerService } from '../../../ui/drawer/drawer.service';
 import { formatRand } from '../../../ui/format/money';
 import { FormValues, REASON_FIELD, openForm, today } from '../../shared/form-drawer';
@@ -113,7 +92,7 @@ export function renewalForm(drawer: DrawerService, data: CommercialDataSource, v
 }
 
 export function storageExceptionForm(drawer: DrawerService, data: CommercialDataSource, v: CustomerCommercialView): void {
-  const inTwoWeeks = new Date(Date.now() + 14 * 86_400_000).toISOString().slice(0, 10);
+  const inTwoWeeks = saDate(new Date(Date.now() + 14 * 86_400_000));
   openForm(drawer, {
     eyebrow: `${v.name} · Storage`,
     title: 'Temporary storage exception',

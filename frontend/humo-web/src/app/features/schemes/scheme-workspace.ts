@@ -27,6 +27,9 @@ import { RATING, collectionTone } from './scheme-view';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (scheme(); as s) {
+      @if (scope.isBrowsing(s.id)) {
+        <p class="browse-banner" role="note">You’re browsing a scheme outside your assignment: read-only. Changes are refused, and need someone assigned to {{ s.name }}.</p>
+      }
       @if (!childIsRecord()) {
       <ui-record-header
         [eyebrow]="s.type + ' · ' + s.suburb + ', ' + s.city"
@@ -75,6 +78,7 @@ import { RATING, collectionTone } from './scheme-view';
     }
   `,
   styles: `
+    .browse-banner { margin: 0 0 var(--s-3); padding: var(--s-2) var(--s-3); font-size: var(--fs-sm); border-left: 3px solid var(--c-warning); background: var(--c-warning-soft); border-radius: var(--r); }
     :host { display: block; }
     .btn-scoped { color: var(--c-accent-strong); background: var(--c-accent-soft); border-color: var(--c-accent); }
   `,

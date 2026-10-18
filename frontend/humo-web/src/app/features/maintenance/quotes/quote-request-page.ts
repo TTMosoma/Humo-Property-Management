@@ -4,7 +4,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, concatMap, map, of, switchMap } from 'rxjs';
 import { ContractorNetwork, ContractorProfile } from '../../../domain/contractor';
-import { JobDataSource, JobDetail } from '../../../domain';
+import { JobDataSource, JobDetail, saDate } from '../../../domain';
 import { FeedbackService } from '../../../core/feedback/feedback.service';
 import { loadable } from '../../../core/data/loadable';
 import { SessionService } from '../../../core/session/session.service';
@@ -59,7 +59,7 @@ export class QuoteRequestPage {
   protected readonly title = signal('');
   protected readonly description = signal('');
   protected readonly requirements = signal('');
-  protected readonly deadline = signal(new Date(Date.now() + 14 * 86_400_000).toISOString().slice(0, 10));
+  protected readonly deadline = signal(saDate(new Date(Date.now() + 14 * 86_400_000)));
   protected readonly chosen = signal<string[]>([]);
   protected readonly inviteEmail = signal('');
   /** Businesses not on Humo Contractor yet; each gets an email invitation when the request is sent. */

@@ -31,7 +31,6 @@
 - No real customer records, personal information, documents, credentials or financial data.
 - `.example` email domains.
 - Simulated bank references (`SIM-…`).
-- See [demo-limitations.md](demo-limitations.md) about the Tshikrand name.
 
 ## 2. Identifiers
 

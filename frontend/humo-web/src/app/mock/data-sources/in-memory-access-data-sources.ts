@@ -1,36 +1,10 @@
 import { Injectable, Injector, inject } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Observable, delay, map, of, switchMap, throwError, timer } from 'rxjs';
-import {
-  AccessDataSource,
-  AuditDataSource,
-  AuditEvent,
-  AuditQuery,
-  CurrentSession,
-  FieldErrors,
-  HUMO_EMAIL_DOMAIN,
-  IMPERSONATION_REASONS,
-  Identity,
-  ImpersonationSession,
-  ListQuery,
-  NewAssignment,
-  Page,
-  PolicyError,
-  ROLE_LABELS,
-  SENSITIVE_ACTION_LABELS,
-  SecurityDataSource,
-  SecurityProfile,
-  SessionDataSource,
-  SignInError,
-  StepUpAuthenticator,
-  StepUpMethod,
-  StepUpRequest,
-  StepUpResult,
-  activeAssignments,
-  isHumoRole,
-} from '../../domain';
+import { AccessDataSource, AuditDataSource, AuditEvent, AuditQuery, CurrentSession, FieldErrors, HUMO_EMAIL_DOMAIN, IMPERSONATION_REASONS, Identity, ImpersonationSession, ListQuery, NewAssignment, Page, PolicyError, ROLE_LABELS, SENSITIVE_ACTION_LABELS, SecurityDataSource, SecurityProfile, SessionDataSource, SignInError, StepUpAuthenticator, StepUpMethod, StepUpRequest, StepUpResult, activeAssignments, isHumoRole, AGENCY_STAFF, todaySA } from '../../domain';
 import { PrototypeStateService } from '../../core/prototype/prototype-state.service';
 import { AccessStore } from '../db/access-store';
+import { MockDb } from '../db/mock-db';
 import { mockResponder } from '../mock-latency';
 import { toPage } from '../mock-page';
 import { MockAuthSession } from '../server/mock-auth-session';
@@ -41,6 +15,7 @@ export class InMemoryAccessDataSource extends AccessDataSource {
   private readonly store = inject(AccessStore);
   private readonly auth = inject(MockAuthSession);
   private readonly gateway = inject(MockGateway);
+  private readonly db = inject(MockDb);
   private readonly respond = mockResponder();
   private readonly identities$ = toObservable(this.store.identities);
 
@@ -207,13 +182,58 @@ export class InMemoryAccessDataSource extends AccessDataSource {
             const duplicate = target && activeAssignments(target).some(
               (x) => x.role === a.role && x.scope.type === a.scope.type && x.scope.organisationId === a.scope.organisationId && x.scope.schemeIds.join() === a.scope.schemeIds.join() && x.scope.unitId === a.scope.unitId,
             );
-            return duplicate ? { role: `${target!.name} already has this role here.` } : null;
+            if (duplicate) return { role: `${target!.name} already has this role here.` };
+            // D2: trustee access is derived from the board register. It can't be given here without a seat on the board.
+            if (a.role === 'trustee' && !a.scope.schemeIds.every((id) => this.onBoard(target!, id))) {
+              return { role: `${target!.name} isn’t on that scheme’s board. Appoint them on the board (Governance › Board) and trustee access follows.` };
+            }
+            return null;
           },
         },
         () => {
           // The API also refuses self-escalation, whatever the caller's role.
           if (identityId === this.auth.actor().id) throw new PolicyError('forbidden', 'You can’t change your own roles');
           this.store.assign(identityId, a, this.auth.actor().name);
+        },
+      )
+      .pipe(map(() => undefined));
+  }
+
+  /** Is the identity's person a current trustee of the scheme (the board register, D2)? */
+  private onBoard(identity: Identity, schemeId: string): boolean {
+    return !!identity.personId && this.db.relationshipsIn(schemeId, 'trustee').some((r) => r.personId === identity.personId && this.db.isCurrent(r));
+  }
+
+  setBrowseAgency(identityId: string, assignmentId: string, allowed: boolean, expectedVersion?: number): Observable<void> {
+    const target = this.store.identity(identityId);
+    const a = target?.assignments.find((m) => m.id === assignmentId);
+    return this.gateway
+      .command(
+        {
+          action: `${allowed ? 'Allowed' : 'Withdrew'} browsing every scheme (read-only) for ${target?.name} · ${a ? ROLE_LABELS[a.role] : 'a role'}`,
+          resource: 'Role assignment',
+          resourceId: assignmentId,
+          category: 'security',
+          permission: 'Users.Manage',
+          stepUp: true,
+          version: { expected: expectedVersion, current: a?.version },
+          validate: (): FieldErrors | null =>
+            !a || a.status !== 'active'
+              ? { assignmentId: 'That role isn’t active.' }
+              : a.scope.type !== 'schemes' || !AGENCY_STAFF.includes(a.role)
+                ? { assignmentId: 'Only staff roles limited to some schemes can be allowed to browse the rest.' }
+                : null,
+        },
+        () => {
+          if (identityId === this.auth.actor().id) throw new PolicyError('forbidden', 'You can’t change your own access');
+          this.store.changeIdentity(identityId, (i) => ({
+            ...i,
+            assignments: i.assignments.map((x) =>
+              x.id === assignmentId
+                ? { ...x, version: x.version + 1, grants: allowed ? [...new Set([...(x.grants ?? []), 'Portfolio.BrowseAgency' as const])] : (x.grants ?? []).filter((g) => g !== 'Portfolio.BrowseAgency') }
+                : x,
+            ),
+          }));
         },
       )
       .pipe(map(() => undefined));
@@ -359,7 +379,7 @@ export class InMemoryAuditDataSource extends AuditDataSource {
   }
 
   export(q: AuditQuery): Observable<string> {
-    const file = `humo-audit-${q.organisationId ?? 'platform'}-${new Date().toISOString().slice(0, 10)}.csv`;
+    const file = `humo-audit-${q.organisationId ?? 'platform'}-${todaySA()}.csv`;
     return this.gateway.command(
       { action: `Exported the audit log (${q.category ?? 'all events'})`, resource: 'Export', resourceId: file, category: 'security', permission: q.organisationId === null ? 'Platform.Audit' : 'Audit.View', stepUp: true },
       () => file,

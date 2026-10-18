@@ -46,6 +46,7 @@ const DENIAL_REASON: Record<PolicyDenial, string> = {
   forbidden: 'Role does not have this permission',
   'step-up-required': 'Step-up verification was not fresh',
   'not-entitled': 'Not included in the agency’s plan',
+  'out-of-scope': 'Outside the assignment’s schemes (D1)',
 };
 
 /**
@@ -136,7 +137,15 @@ export class MockGateway {
     // Permission is checked against the token's role, not the observe-filtered list (observe is reported above).
     if (spec.permission && !this.roleGrants(spec.permission)) return 'forbidden';
     if (spec.feature && !this.auth.hasFeature(spec.feature)) return 'not-entitled';
+    // D1: changes are limited to the assignment's schemes, whatever the person may browse.
+    if (spec.schemeId && this.outsideAssignment(spec.schemeId)) return 'out-of-scope';
     return null;
+  }
+
+  /** A scheme-scoped assignment acting on a scheme it doesn't cover. Organisation-wide and Humo roles aren't limited here. */
+  private outsideAssignment(schemeId: string): boolean {
+    const a = this.auth.assignment();
+    return a.scope.type === 'schemes' && !a.scope.schemeIds.includes(schemeId);
   }
 
   /** Sensitive commands need a fresh step-up proof: forced or waived per command, otherwise the permission's default. */

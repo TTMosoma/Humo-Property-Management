@@ -133,11 +133,11 @@ export function seedDocumentSettings(): OrganisationDocumentSettings[] {
       branding: { logo: { kind: 'wordmark', text: 'Acacia' }, palette: { primary: '#0b3d2e', accent: '#b45309' }, font: 'outfit' },
     },
     {
-      organisationId: 'tshikrand',
+      organisationId: 'marula',
       version: 1,
       defaults: { 'levy-statement': 'levy-statement.professional' },
-      contact: { email: 'levies@tshikrand.example', phone: '012 430 7710' },
-      branding: { logo: { kind: 'wordmark', text: 'Tshikrand' }, palette: { primary: '#5b1a32', accent: '#c2410c' }, font: 'dm-sans' },
+      contact: { email: 'levies@marula-pm.example', phone: '012 430 7710' },
+      branding: { logo: { kind: 'wordmark', text: 'Marula Property' }, palette: { primary: '#5b1a32', accent: '#c2410c' }, font: 'dm-sans' },
     },
   ];
 }

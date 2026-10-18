@@ -227,7 +227,7 @@ frontend/humo-web/src/app/
 Agencies, all fictional:
 - **Acacia Managing Agents** (Johannesburg) is the main demo agency. It has 24 schemes, ~1 284 units and 9 staff.
 - Two smaller agencies (Cape Town, Durban) exist so the System Admin view and agency switching can be shown.
-- Tshikrand is **not** hard-coded anywhere. It would be onboarded as just another agency record.
+- No customer is hard-coded anywhere. Each is onboarded as just another agency record.
 
 Schemes are a mix of sectional title body corporates, HOAs and one share block, across Gauteng, Western Cape and KZN.
 They come with realistic levies (R 1 450 – R 6 900 pm), SA phone numbers and addresses, mock CSOS references, and suppliers such as plumbers, electricians, security, garden services, pest control and lift maintenance.

@@ -1,7 +1,7 @@
 {
   "$comment": "The canonical Humo Property Management demo dataset. See docs/demo/demo-data-strategy.md. All data is synthetic.",
   "dataset": "humo-pm-demo",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "schemaVersion": 1,
   "baselineDate": "2026-10-12",
   "datesAre": "Fixture dates are absolute. Generated seeds in the frontend (mock/db/seed-*.ts) are relative to today, so the demo always looks current.",

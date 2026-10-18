@@ -45,6 +45,9 @@ const DEMO_OWNERS: Record<string, DemoPerson> = {
   'KC-042': { id: 'per-anele', first: 'Anele', last: 'Mthembu', personaId: 'p-anele', email: 'anele.m@mail.example', phone: '082 418 2290' },
   'DE-007': { id: 'per-anele', first: 'Anele', last: 'Mthembu' },
   'KC-012': { id: 'per-sipho', first: 'Sipho', last: 'Khumalo', personaId: 'p-sipho', email: 'sipho.khumalo@mail.example', phone: '083 551 0274' },
+  // D2/D6: staff who sit on a board are owners with a seat on it, like any trustee.
+  'KC-027': { id: 'per-sarah', first: 'Sarah', last: 'Jacobs', personaId: 'p-sarah', email: 'sarah.jacobs@acacia-ma.example', phone: '082 660 1934' },
+  'TW-014': { id: 'per-mpho', first: 'Mpho', last: 'Sebe', personaId: 'p-mpho', email: 'mpho.sebe@mail.example', phone: '071 284 5530' },
   'KC-031': { id: 'per-lindiwe', first: 'Lindiwe', last: 'Ndlovu', phone: '072 903 1148' },
   'KC-005': { id: 'per-fatima', first: 'Fatima', last: 'Essop' },
   'KC-050': { id: 'per-daniel', first: 'Daniel', last: 'Naidoo' },
@@ -85,7 +88,13 @@ const DEMO_TRUSTEES: Record<string, { accountNo: string; portfolio: string }[]> 
     { accountNo: 'KC-012', portfolio: 'Chairperson' },
     { accountNo: 'KC-005', portfolio: 'Treasurer' },
     { accountNo: 'KC-050', portfolio: 'Trustee' },
+    { accountNo: 'KC-027', portfolio: 'Trustee' },
   ],
+};
+
+/** Seats added to a generated board, for personas who sign in as trustees (D2). */
+const EXTRA_TRUSTEES: Record<string, { accountNo: string; portfolio: string }[]> = {
+  'the-willows': [{ accountNo: 'TW-014', portfolio: 'Trustee' }],
 };
 
 const OCCUPANCY_OVERRIDE: Record<string, Unit['occupancy']> = {
@@ -213,6 +222,10 @@ export function seedPortfolio(): PortfolioSeed {
           owner: ownersInScheme[Math.floor((i + 1) * (ownersInScheme.length / (trusteeCount + 1)))],
           portfolio: portfolios[i],
         }));
+    for (const t of EXTRA_TRUSTEES[scheme.id] ?? []) {
+      const owner = ownersInScheme.find((o) => o.unit.accountNo === t.accountNo);
+      if (owner && !chosen.some((c) => c.owner.person.id === owner.person.id)) chosen.push({ owner, portfolio: t.portfolio });
+    }
     for (const t of chosen) {
       if (t.owner.person.kind !== 'individual') continue;
       relationships.push({

@@ -12,7 +12,7 @@ HUMO — property technology platform (the product family)
 |---|---|---|
 | Product family / platform | Humo | `HUMO_FAMILY` (`core/product/product.ts`) |
 | Application | Humo Property Management | `PRODUCT`, `HUMO_PRODUCTS` |
-| Organisation (customer) | Tshikrand | `Organisation` (the UI says "Agency") |
+| Organisation (customer) | Marula Property | `Organisation` (the UI says "Agency") |
 | User | Sarah Jacobs | `Identity` |
 | Role | Portfolio Manager | `RoleAssignment.role` |
 | Scope / context | Oakwood Estate | `RoleAssignment.schemeIds`, `ScopeService` |

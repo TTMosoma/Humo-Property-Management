@@ -54,7 +54,7 @@ export class NewAccountLauncher {
             { key: 'province', label: 'Province', type: 'select', required: true, half: true, options: PROVINCE_OPTIONS },
             { key: 'packageId', label: 'Package for the trial', type: 'select', required: true, half: true, options: this.catalogue.packages().map((x) => ({ value: x.id, label: x.name })) },
             { key: 'accountManagerId', label: 'Account manager', type: 'select', required: true, half: true, options: managers.map((m) => ({ value: m.id, label: m.name })) },
-            { key: 'notes', label: 'Notes for the approver', type: 'textarea', placeholder: 'e.g. Referred by Tshikrand. 14 schemes, moving from spreadsheets.' },
+            { key: 'notes', label: 'Notes for the approver', type: 'textarea', placeholder: 'e.g. Referred by Marula Property. 14 schemes, moving from spreadsheets.' },
           ],
           initial: { province: 'Gauteng', packageId: 'professional', accountManagerId: managers.some((m) => m.id === me) ? me : managers.some((m) => m.id === this.designated()) ? this.designated() : (managers[0]?.id ?? '') },
           submitLabel: delegated ? 'Activate account' : 'Submit for approval',

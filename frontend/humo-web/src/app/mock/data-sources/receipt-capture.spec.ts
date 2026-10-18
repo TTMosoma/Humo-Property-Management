@@ -1,13 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Observable, firstValueFrom } from 'rxjs';
-import { ApiError, PolicyError, ReceiptDataSource, StatementMapping, parseAmount, parseCsv, parseStatementDate, readStatement } from '../../domain';
+import { ApiError, PolicyError, ReceiptDataSource, StatementMapping, parseAmount, parseCsv, parseStatementDate, readStatement, saDate } from '../../domain';
 import { AccessStore } from '../db/access-store';
 import { MockDb } from '../db/mock-db';
 import { provideMockData } from '../provide-mock-data';
 import { MockAuthSession } from '../server/mock-auth-session';
 
-const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
+const day = (offset: number) => saDate(new Date(Date.now() + offset * 86_400_000));
 const dmy = (iso: string) => iso.split('-').reverse().join('/');
 
 describe('Bank statement reading (docs/22 §1)', () => {

@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Observable, combineLatest, map, switchMap } from 'rxjs';
-import { FieldErrors, MeterDataSource, MeterEntry, MeterSheet, MeterSheetRow } from '../../domain';
+import { FieldErrors, MeterDataSource, MeterEntry, MeterSheet, MeterSheetRow, todaySA } from '../../domain';
 import { formatRand } from '../../ui/format/money';
 import { BillingStore } from '../db/billing-store';
 import { MeterStore } from '../db/meter-store';
@@ -46,7 +46,7 @@ export class InMemoryMeterDataSource extends MeterDataSource {
         validate: (): FieldErrors | null => {
           if (!scheme || !this.meters.recovers(schemeId)) return { schemeId: 'This scheme doesn’t recover water from owners.' };
           if (!/^\d{4}-\d{2}$/.test(period)) return { period: 'Choose the month.' };
-          const today = new Date().toISOString().slice(0, 10);
+          const today = todaySA();
           if (!/^\d{4}-\d{2}-\d{2}$/.test(readOn) || readOn > today) return { readOn: 'When were the meters read? Not in the future.' };
           const stage = this.runStage(schemeId, period);
           if (stage && stage !== 'preview') return { period: `The ${period} billing run is ${stage === 'awaiting-approval' ? 'with the approvers' : 'already approved or posted'}. Correct water with a journal, or send the run back to Preparing first.` };

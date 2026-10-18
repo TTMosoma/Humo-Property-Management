@@ -2,7 +2,7 @@
   "$comment": "Which Humo staff identity looks after each named demo customer. Ids must be Humo identities with an active Account Manager role (mock/fixtures/personas.ts). Generated customers rotate through rotation[].",
   "assignments": [
     {
-      "organisationId": "tshikrand",
+      "organisationId": "marula",
       "accountManagerId": "p-dumisani"
     },
     {

@@ -1,6 +1,6 @@
 import { Organisation } from '../../domain';
 
-/** Customer organisations (all managing agencies today). Real customers (e.g. Tshikrand) are simply more records here. */
+/** Customer organisations (all managing agencies today). All fictional demo data; a real customer is simply another record here. */
 export const ORGANISATIONS: Organisation[] = [
   {
     id: 'acacia',
@@ -40,12 +40,12 @@ export const ORGANISATIONS: Organisation[] = [
   },
   {
     // The launch customer — just another agency record, never special-cased in code.
-    id: 'tshikrand',
+    id: 'marula',
     version: 1,
     kind: 'managing-agency',
     status: 'active',
-    name: 'Tshikrand Property Management (Pty) Ltd',
-    shortName: 'Tshikrand',
+    name: 'Marula Property Management (Pty) Ltd',
+    shortName: 'Marula Property',
     city: 'Pretoria',
     province: 'Gauteng',
     schemeCount: 38,

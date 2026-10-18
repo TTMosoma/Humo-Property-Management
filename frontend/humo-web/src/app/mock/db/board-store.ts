@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { BoardAction, BoardCandidate, BoardSummary, BoardView, DEFAULT_MIN_TRUSTEES, FieldErrors, Relationship, TRUSTEE_PORTFOLIOS, TrusteeView } from '../../domain';
+import { BoardAction, BoardCandidate, BoardSummary, BoardView, DEFAULT_MIN_TRUSTEES, FieldErrors, Relationship, TRUSTEE_PORTFOLIOS, TrusteeView, todaySA } from '../../domain';
 import { simulationStorage } from '../simulation/simulation-storage';
 import { AccessStore } from './access-store';
 import { GovernanceStore } from './governance-store';
@@ -115,7 +115,7 @@ export class BoardStore {
         if (!a.portfolio) e['portfolio'] = 'Choose a portfolio.';
         if (a.portfolio === 'Chairperson' && current.some((r) => r.portfolio === 'Chairperson')) e['portfolio'] = 'The board already has a chairperson: change their portfolio first.';
         if (!a.since) e['since'] = 'When did their term start?';
-        else if (a.since > new Date().toISOString().slice(0, 10)) e['since'] = 'Record the appointment once it has happened.';
+        else if (a.since > todaySA()) e['since'] = 'Record the appointment once it has happened.';
         if (a.how === 'elected') {
           const r = this.governance.resolutions.find((x) => x.id === a.resolutionId);
           if (!r || r.schemeId !== schemeId || r.outcome !== 'passed') e['resolutionId'] = 'Elections are by resolution of the owners: choose the passed resolution.';
@@ -153,6 +153,7 @@ export class BoardStore {
           since: new Date(`${a.since}T12:00:00`).toISOString(),
           appointment: { how: a.how, resolutionRef: r?.ref, meetingId: r?.meetingId },
         });
+        this.grantAccess(schemeId, a.personId, a.portfolio, by);
         return;
       }
       case 'end': {
@@ -177,6 +178,16 @@ export class BoardStore {
         simulationStorage.save('boards', (): BoardSnapshot => ({ minimums: [...this.minimums] }));
         this.db.touch();
         return;
+    }
+  }
+
+  /** D2: a trustee appointed to the board who has a Humo sign-in gets trustee access to the scheme. */
+  private grantAccess(schemeId: string, personId: string, portfolio: string, by: string): void {
+    const scheme = this.db.schemes.get(schemeId);
+    if (!scheme) return;
+    for (const i of this.access.identities().filter((x) => x.personId === personId && x.kind === 'customer' && x.status !== 'deactivated')) {
+      const has = i.assignments.some((x) => x.role === 'trustee' && x.status === 'active' && x.scope.schemeIds.includes(schemeId));
+      if (!has) this.access.assign(i.id, { role: 'trustee', scope: { type: 'schemes', organisationId: scheme.organisationId, schemeIds: [schemeId] }, label: `${scheme.name} · ${portfolio}` }, `${by} (board appointment)`);
     }
   }
 

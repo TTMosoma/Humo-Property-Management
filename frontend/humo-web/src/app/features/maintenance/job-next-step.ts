@@ -4,21 +4,7 @@ import { catchError, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 import { ContractorNetwork } from '../../domain/contractor';
 import { RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import {
-  DELEGATED_LIMIT,
-  DocStatus,
-  JobAction,
-  JobDataSource,
-  JobDetail,
-  PRIORITY_LABEL,
-  Priority,
-  Quote,
-  Supplier,
-  Trade,
-  describeFailure,
-  docStatus,
-  supplierCompliance,
-} from '../../domain';
+import { DELEGATED_LIMIT, DocStatus, JobAction, JobDataSource, JobDetail, PRIORITY_LABEL, Priority, Quote, Supplier, Trade, describeFailure, docStatus, supplierCompliance, saDate } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { SessionService } from '../../core/session/session.service';
 import { organisationTeam } from '../../core/session/team';
@@ -112,7 +98,7 @@ export class JobNextStep {
     this.quoteDrafts.set({});
     this.recommended.set(d.job.quotes.find((q) => q.recommended)?.id ?? this.cheapest(d)?.id ?? null);
     const tomorrow = new Date(Date.now() + 86_400_000);
-    this.scheduleDate.set(tomorrow.toISOString().slice(0, 10));
+    this.scheduleDate.set(saDate(tomorrow));
     this.accessNotes.set(d.unit ? 'Owner/occupant will provide access. Call 30 minutes before.' : 'Collect keys from the guardhouse.');
     this.overrideCompliance.set(false);
     this.completionNotes.set('');

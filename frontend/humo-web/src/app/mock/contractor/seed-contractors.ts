@@ -45,7 +45,7 @@ const PARTIES: PartySeed[] = [
   {
     id: 'party-secureaccess', name: 'SecureAccess Systems', categories: ['Gate automation', 'Security'], contact: 'Themba Khoza', province: 'Gauteng', areas: GP,
     level: 'verified', established: 2014, endorsements: 12,
-    endorsedBy: ['tshikrand', 'cust-oakridge', 'cust-greenfields', 'umgeni', 'cust-011', 'cust-012', 'cust-014', 'cust-031', 'cust-032', 'cust-034', 'cust-035', 'cust-019'],
+    endorsedBy: ['marula', 'cust-oakridge', 'cust-greenfields', 'umgeni', 'cust-011', 'cust-012', 'cust-014', 'cust-031', 'cust-032', 'cust-034', 'cust-035', 'cust-019'],
     rep: { rating: 4.8, ratingsCount: 31, completedJobs: 28, completionRate: 100, onTimeRate: 93, quoteResponseRate: 96, medianResponseHours: 19, humoRelationships: 9 },
   },
   {
@@ -87,7 +87,7 @@ const PARTIES: PartySeed[] = [
 
 /** Humo customers who endorse contractors (organisations, never anonymous people). */
 const ENDORSERS = [
-  { id: 'tshikrand', name: 'Tshikrand', person: 'Operations Manager' },
+  { id: 'marula', name: 'Marula Property', person: 'Operations Manager' },
   { id: 'acacia', name: 'Acacia Managing Agents', person: 'Thandeka Mokoena' },
   { id: 'umgeni', name: 'Umgeni BC Services', person: 'Sbu Mkhize' },
   { id: 'cust-oakridge', name: 'Oakridge Managing Agents', person: 'Portfolio Manager' },

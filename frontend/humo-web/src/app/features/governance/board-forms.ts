@@ -1,8 +1,8 @@
-import { BoardCandidate, BoardDataSource, BoardView, ResolutionView, TRUSTEE_PORTFOLIOS, TrusteeView } from '../../domain';
+import { BoardCandidate, BoardDataSource, BoardView, ResolutionView, TRUSTEE_PORTFOLIOS, TrusteeView, todaySA } from '../../domain';
 import { DrawerService } from '../../ui/drawer/drawer.service';
 import { openForm } from '../shared/form-drawer';
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => todaySA();
 const PORTFOLIO_OPTIONS = TRUSTEE_PORTFOLIOS.map((p) => ({ value: p, label: p }));
 
 export const resolutionOptions = (rs: ResolutionView[]) =>
