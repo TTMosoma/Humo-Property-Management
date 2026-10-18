@@ -230,7 +230,7 @@ export class InMemoryNudgeDataSource extends NudgeDataSource {
   }
 
   record(nudgeId: string, event: 'dismissed' | 'not-interested' | 'learn-more' | 'snoozed'): Observable<void> {
-    if (!!!this.session.current.impersonation) {
+    if (!this.session.current.impersonation) {
       this.store.recordNudge(nudgeId, this.session.current.identity.id, this.session.current.organisation?.id ?? '', event);
     }
     if (event !== 'learn-more') this.store.sessionNudge = null;

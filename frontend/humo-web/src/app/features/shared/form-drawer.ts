@@ -100,6 +100,8 @@ export function openForm<R>(drawer: DrawerService, spec: FormSpec<R>): void {
               <ui-field-error [errors]="errors()" [field]="f.key" />
             </div>
           } @else {
+          <!-- The control is inside the @switch below. -->
+          <!-- eslint-disable-next-line @angular-eslint/template/label-has-associated-control -->
           <label class="field" [class.half]="f.half">
             <span class="f-label">{{ f.label }}@if (!f.required) { <span class="opt">(optional)</span> }</span>
             @switch (f.type) {

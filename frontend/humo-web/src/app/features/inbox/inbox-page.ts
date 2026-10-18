@@ -102,7 +102,7 @@ export class InboxPage {
   constructor() {
     // A fresh draft for each conversation.
     effect(() => {
-      this.state().c;
+      this.state();
       this.reply.set('');
       this.replyError.set('');
       this.closeAfter.set(false);
