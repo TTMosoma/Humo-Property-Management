@@ -1,6 +1,6 @@
 import { Injectable, computed, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { Role, WorkItem, WorkItemDataSource, WorkItemType, isOpen } from '../../domain';
+import { AGENCY_WORK, Role, WorkItem, WorkItemDataSource, WorkItemType, agencyConflict, isOpen } from '../../domain';
 import { ScopeService } from '../scope/scope.service';
 import { loadable } from '../data/loadable';
 import { SessionService } from '../session/session.service';
@@ -88,7 +88,9 @@ export class AttentionService {
 
   readonly pendingApprovals = computed(() => {
     const role = this.session.role();
-    return this.open().filter((w) => w.kind === 'approval' && this.canDecide(w, role));
+    // D6: a staff trustee's own agency's work waits for another trustee, so it isn't "waiting for me".
+    const conflicted = agencyConflict(this.session.identity(), this.session.assignment());
+    return this.open().filter((w) => w.kind === 'approval' && this.canDecide(w, role) && !(conflicted && AGENCY_WORK.includes(w.type)));
   });
 
   readonly inbox = computed(() => {
