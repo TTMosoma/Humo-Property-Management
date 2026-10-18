@@ -3,3 +3,11 @@ dist/
 .angular/
 .claude/settings.local.json
 .claude
+
+# .NET
+bin/
+obj/
+*.user
+TestResults/
+# Server secrets: never commit (doc 26 §2)
+.env

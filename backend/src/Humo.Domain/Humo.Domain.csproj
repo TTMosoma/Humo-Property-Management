@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The fixed roles and permissions (D4): the same table the frontend uses. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\..\contracts\role-permissions.json" LogicalName="Humo.Domain.role-permissions.json" Link="Access\role-permissions.json" />
+  </ItemGroup>
+
+</Project>
