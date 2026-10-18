@@ -84,7 +84,7 @@
               </div>
               <div class="more">
                 <select (change)="assign($any($event.target).value)" aria-label="Assign to">
-                  <option value="" [selected]="!v.conversation.assigneeId">Unassigned</option>
+                  <option value="" [selected]="!v.conversation.assigneeId">Agency queue (unassigned)</option>
                   @for (s of staff(); track s.id) { <option [value]="s.id" [selected]="s.id === v.conversation.assigneeId">{{ s.name }}</option> }
                 </select>
                 @if (session.can('Maintenance.Log')) { <button type="button" class="btn btn-ghost btn-sm" (click)="toJob()"><ion-icon name="construct-outline" aria-hidden="true" /> Make a job</button> }

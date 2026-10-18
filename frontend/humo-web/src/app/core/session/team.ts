@@ -1,5 +1,5 @@
 import { Signal, computed, inject } from '@angular/core';
-import { AccessDataSource, Identity, Role, activeAssignments } from '../../domain';
+import { AGENCY_QUEUE, AccessDataSource, Identity, Role, activeAssignments } from '../../domain';
 import { loadable } from '../data/loadable';
 import { SessionService } from './session.service';
 
@@ -16,7 +16,7 @@ export interface TeamMember {
 export interface Team {
   /** Agency staff: everyone with a staff id. */
   staff: Signal<TeamMember[]>;
-  /** Display name for an assignee id ("Unassigned" for none). */
+  /** Display name for an assignee id (the agency queue for none, P2-7). */
   nameOf(id: string | null | undefined): string;
   initialsOf(id: string | null | undefined): string;
 }
@@ -46,7 +46,7 @@ export function organisationTeam(): Team {
 
   return {
     staff: computed(() => everyone().filter((m) => (directory.value() ?? []).some((i) => i.id === m.identityId && !!i.staffId))),
-    nameOf: (id) => (id ? (byId().get(id)?.name ?? id) : 'Unassigned'),
+    nameOf: (id) => (id ? (byId().get(id)?.name ?? id) : AGENCY_QUEUE),
     initialsOf: (id) => (id ? (byId().get(id)?.initials ?? '•') : '—'),
   };
 }

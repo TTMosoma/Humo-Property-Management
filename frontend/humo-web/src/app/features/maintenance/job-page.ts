@@ -3,7 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { map } from 'rxjs';
-import { JobDataSource, JobEvent, PRIORITY_LABEL, TimelineEvent, TimelineKind, supplierCompliance } from '../../domain';
+import { AGENCY_QUEUE, JobDataSource, JobEvent, PRIORITY_LABEL, TimelineEvent, TimelineKind, supplierCompliance } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
@@ -90,7 +90,9 @@ export class JobPage {
     return [
       { label: 'Reported', value: formatDate(j.reportedAt, true), hint: `by ${j.reportedBy.name}` },
       { label: 'Open for', value: `${daysOpen(j)} days`, tone: this.overdue() ? 'danger' : 'default' },
-      { label: 'Assigned to', value: d.assigneeName },
+      j.assigneeId
+        ? { label: 'Assigned to', value: d.assigneeName }
+        : { label: 'Assigned to', value: AGENCY_QUEUE, hint: d.scheme.portfolioManager ? 'waiting to be picked up' : 'this scheme has no portfolio manager', tone: 'warning' },
       { label: 'Supplier', value: d.supplier?.name ?? '—' },
       { label: 'Approved', value: this.approved() ? formatRand(this.approved()!.amount) : '—' },
     ];

@@ -27,6 +27,6 @@ describe('Staff directory', () => {
     const access = TestBed.inject(AccessStore);
     access.changeIdentity('p-johan', (i) => ({ ...i, name: 'Johan van der Merwe-Botha' }));
     expect(directory.name('p-johan')).toBe('Johan van der Merwe-Botha');
-    expect(directory.name(null)).toBe('Unassigned');
+    expect(directory.name(null)).toBe('Agency queue');
   });
 });

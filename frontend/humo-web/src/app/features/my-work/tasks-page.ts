@@ -117,7 +117,7 @@ export class TasksPage {
       defs.push({
         key: 'assignee',
         label: 'Assignee',
-        options: [{ value: 'none', label: 'Unassigned' }, ...this.staff().map((s) => ({ value: s.id, label: s.name }))],
+        options: [{ value: 'none', label: 'Agency queue (unassigned)' }, ...this.staff().map((s) => ({ value: s.id, label: s.name }))],
       });
     }
     return defs;
