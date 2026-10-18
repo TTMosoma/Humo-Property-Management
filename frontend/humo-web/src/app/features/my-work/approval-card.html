@@ -89,10 +89,18 @@
       </div>
     </div>
   } @else {
+    @if (conflicted()) {
+      <p class="waiting conflict">
+        <ion-icon name="information-circle-outline" aria-hidden="true" />
+        You also work for the managing agency, which arranged this, so another trustee must approve it. You can still reject it.
+      </p>
+    }
     <div class="actions">
+      @if (!conflicted()) {
       <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="approve()">
         <ion-icon [name]="needsStepUp() ? 'finger-print-outline' : 'checkmark-outline'" aria-hidden="true" /> {{ needsStepUp() ? 'Verify and approve' : 'Approve' }}@if (w.amount !== undefined) { {{ w.amount | rand }} }
       </button>
+      }
       <button type="button" class="btn btn-secondary" [disabled]="busy()" (click)="rejecting.set(true)">Reject…</button>
       @if (!compact()) {
         <button type="button" class="btn btn-ghost details" (click)="details.emit(w)">Details</button>

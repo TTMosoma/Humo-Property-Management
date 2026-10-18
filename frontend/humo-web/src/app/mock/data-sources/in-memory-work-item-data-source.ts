@@ -1,7 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
-import { LARGE_APPROVAL_AMOUNT, WORK_TYPE_LABELS, WorkItem, WorkItemDataSource } from '../../domain';
+import { AGENCY_WORK, LARGE_APPROVAL_AMOUNT, PolicyError, WORK_TYPE_LABELS, WorkItem, WorkItemDataSource, agencyConflict } from '../../domain';
 import { MockDb } from '../db/mock-db';
+import { MockAuthSession } from '../server/mock-auth-session';
 import { CommandSpec, MockGateway } from '../server/mock-gateway';
 
 const NOUN: Partial<Record<WorkItem['type'], string>> = {
@@ -16,6 +17,7 @@ const NOUN: Partial<Record<WorkItem['type'], string>> = {
 export class InMemoryWorkItemDataSource extends WorkItemDataSource {
   private readonly db = inject(MockDb);
   private readonly gateway = inject(MockGateway);
+  private readonly auth = inject(MockAuthSession);
 
   watch(): Observable<WorkItem[]> {
     return this.db.changes$.pipe(map(() => this.db.workItems));
@@ -41,6 +43,12 @@ export class InMemoryWorkItemDataSource extends WorkItemDataSource {
       // Approving a large amount needs a fresh step-up proof; rejecting never does.
       stepUp: decision === 'approved' && (w?.amount ?? 0) >= LARGE_APPROVAL_AMOUNT,
     };
+    // D6: a trustee who works for the managing agency can't approve its work. Refused and audited; another trustee decides.
+    if (decision === 'approved' && w && AGENCY_WORK.includes(w.type) && agencyConflict(this.auth.current.identity, this.auth.assignment())) {
+      return this.gateway.command(spec, () => {
+        throw new PolicyError('conflict-of-interest', 'Trustee works for the managing agency; can’t approve its work (D6)');
+      });
+    }
     return this.mutate([id], spec, (w) => ({ ...w, status: decision, decidedBy: by, decidedAt: new Date().toISOString(), comment }));
   }
 

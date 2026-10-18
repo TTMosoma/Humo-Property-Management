@@ -63,6 +63,14 @@ export interface WorkItem {
   route: string;
 }
 
+/**
+ * Approvals of work the managing agency arranged (D6): quotes, supplier
+ * invoices, payment batches, billing runs and letters of demand. Board matters
+ * (minutes, written resolutions) aren't included: how a staff trustee votes on
+ * them is still open (D6).
+ */
+export const AGENCY_WORK: readonly WorkItemType[] = ['quote-approval', 'invoice-approval', 'payment-batch-approval', 'billing-run-approval', 'demand-approval'];
+
 export const WORK_TYPE_LABELS: Record<WorkItemType, string> = {
   'receipt-allocation': 'Receipt allocation',
   'debtor-follow-up': 'Debtor follow-up',

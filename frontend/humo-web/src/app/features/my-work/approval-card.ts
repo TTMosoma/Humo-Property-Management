@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { LARGE_APPROVAL_AMOUNT, WorkItem } from '../../domain';
+import { AGENCY_WORK, LARGE_APPROVAL_AMOUNT, WorkItem, agencyConflict } from '../../domain';
 import { AttentionService } from '../../core/attention/attention.service';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { ScopeService } from '../../core/scope/scope.service';
@@ -40,6 +40,8 @@ export class ApprovalCard {
   protected readonly view = computed(() => workItemView(this.item()));
   protected readonly scheme = computed(() => this.scope.findScheme(this.item().schemeId));
   protected readonly canDecide = computed(() => this.attention.canDecide(this.item()) && this.session.can('Approvals.Decide'));
+  /** D6: acting as trustee while working for the managing agency. They may reject, but another trustee approves. */
+  protected readonly conflicted = computed(() => AGENCY_WORK.includes(this.item().type) && agencyConflict(this.session.identity(), this.session.assignment()));
   /** Large amounts need a fresh proof of identity to approve (never to reject). */
   protected readonly needsStepUp = computed(() => (this.item().amount ?? 0) >= LARGE_APPROVAL_AMOUNT);
 
@@ -94,7 +96,7 @@ export class ApprovalCard {
       },
       error: () => {
         this.busy.set(false);
-        this.feedback.error('The decision could not be saved. Nothing was changed — try again.');
+        if (!this.conflicted()) this.feedback.error('The decision could not be saved. Nothing was changed — try again.');
       },
     });
   }
