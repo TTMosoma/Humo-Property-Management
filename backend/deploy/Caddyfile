@@ -1,0 +1,24 @@
+# pm.humo.co.za: the app (Angular build) and the API on one origin, so the session cookie and passkeys just work.
+# Caddy fetches and renews the HTTPS certificate itself (doc 26 §4).
+pm.humo.co.za {
+	encode zstd gzip
+
+	handle /api/* {
+		reverse_proxy api:8080
+	}
+
+	handle {
+		root * /srv/app
+		try_files {path} /index.html
+		file_server
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "DENY"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+}

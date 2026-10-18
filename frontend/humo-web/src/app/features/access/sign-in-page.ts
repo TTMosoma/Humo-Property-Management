@@ -9,7 +9,7 @@ import { PrototypeControls } from '../../core/prototype/prototype-controls';
 import { SessionService } from '../../core/session/session.service';
 import { Logo } from '../../ui/brand/logo';
 
-type Step = 'start' | 'passkey' | 'no-passkey' | 'paused' | 'link-sent' | 'redeeming' | 'link-failed' | 'unavailable';
+type Step = 'start' | 'passkey' | 'no-passkey' | 'paused' | 'link-sent' | 'redeeming' | 'link-failed' | 'unavailable' | 'add-passkey' | 'creating-passkey';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const RESEND_AFTER_S = 30;
@@ -65,6 +65,8 @@ export class SignInPage {
   protected readonly year = new Date().getFullYear();
 
   protected readonly step = signal<Step>(this.mode === 'link' ? 'redeeming' : 'start');
+  /** Why creating a passkey after an email-link sign-in failed (not shown when they just closed the prompt). */
+  protected readonly passkeyError = signal('');
   protected readonly email = signal('');
   protected readonly emailError = signal('');
   /** The email the passkey prompt was for ('' when the browser chose). */
@@ -205,8 +207,24 @@ export class SignInPage {
       return;
     }
     this.pending = this.sessions.completeSignInLink(token).subscribe({
-      next: () => this.done(),
+      // Signed in by email: offer a passkey, so next time is one touch (newcomers get their first one here).
+      next: () => this.step.set('add-passkey'),
       error: () => this.step.set('link-failed'),
+    });
+  }
+
+  protected createPasskey(): void {
+    this.pending?.unsubscribe();
+    this.passkeyError.set('');
+    this.step.set('creating-passkey');
+    this.pending = this.sessions.registerPasskey().subscribe({
+      next: () => this.done(),
+      error: (e: unknown) => {
+        this.step.set('add-passkey');
+        if (!(e instanceof SignInError && e.code === 'cancelled')) {
+          this.passkeyError.set('The passkey wasn’t created. You can carry on and add one later in Settings › Security.');
+        }
+      },
     });
   }
 
@@ -220,7 +238,7 @@ export class SignInPage {
   }
 
   /** Back to where they were going, if it's a page in this app; otherwise their home. */
-  private done(): void {
+  protected done(): void {
     this.session.signedInAgain();
     const back = this.params().returnUrl;
     const safe = back && back.startsWith('/') && !back.startsWith('//') && !back.startsWith('/sign');

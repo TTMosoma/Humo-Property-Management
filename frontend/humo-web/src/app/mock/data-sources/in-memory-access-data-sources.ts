@@ -587,6 +587,20 @@ export class InMemorySessionDataSource extends SessionDataSource {
     );
   }
 
+  /** SIMULATED (docs/18 R-8): a moment at the sensor, then a passkey for this device. */
+  registerPasskey(): Observable<void> {
+    const id = this.auth.actor().id;
+    return timer(1200).pipe(
+      map(() => {
+        this.store.updateSecurity(id, (p) => ({
+          ...p,
+          passkeys: [...p.passkeys, { id: `pk-${Date.now()}`, name: 'This device', provider: 'Windows Hello', createdAt: new Date().toISOString(), lastUsedAt: null }],
+        }));
+        this.audit('Added a passkey');
+      }),
+    );
+  }
+
   /** After sign-in, so the event is the signed-in person's. */
   private audit(action: string): void {
     this.injector.get(MockGateway).audit({ action, resource: 'Session', resourceId: 's-current', category: 'security' }, 'success');

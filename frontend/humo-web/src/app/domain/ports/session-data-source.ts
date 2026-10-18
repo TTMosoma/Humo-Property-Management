@@ -86,6 +86,13 @@ export abstract class SessionDataSource {
   abstract sendSignInLink(email: string): Observable<void>;
   /** Signs in with the token from a sign-in link. Fails with SignInError('link-expired'). */
   abstract completeSignInLink(token: string): Observable<void>;
+  /**
+   * Creates a passkey on this device for the signed-in person (offered right
+   * after an email-link sign-in, so newcomers get their first passkey).
+   * Fails with SignInError('cancelled') if they close the prompt.
+   * PRODUCTION: WebAuthn navigator.credentials.create() with the API's options (D14).
+   */
+  abstract registerPasskey(): Observable<void>;
   /** Prototype only: identities offered in "Sign in as". */
   abstract demoIdentities(): Observable<Identity[]>;
 }

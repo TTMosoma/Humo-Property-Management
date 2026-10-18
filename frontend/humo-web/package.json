@@ -4,6 +4,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve humo-web",
+    "start:api": "ng serve humo-web --configuration api --port 4310",
     "build": "ng build humo-web",
     "build:demo": "ng build humo-web --configuration production,demo",
     "watch": "ng build humo-web --watch --configuration development",
