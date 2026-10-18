@@ -150,6 +150,7 @@ Each entry records:
 - **Approvals:** need to know the requesting agency and the approver's employer.
 - **Quorum:** the board still counts the person.
 - **Domain check:** to be confirmed with a sectional-title governance expert, in particular how such a trustee votes on agency matters at meetings.
+- **Built 18 Oct 2026 (frontend, step 1b):** quotes, supplier invoices, payment batches, billing runs and letters of demand. Minutes and written resolutions aren't covered until the voting question is settled.
 
 ## D7 — Issued statements are fixed
 
@@ -333,9 +334,10 @@ Approved on 18 October 2026 by Terry Mosoma (product owner). Options and reasons
 - **One Humo sign-in for every product (D5 criterion 2):** the API is the sign-in authority. An OpenID Connect layer (e.g. OpenIddict) is added only if another product needs it.
 - **Humo Mobile push approval** stays a later addition (D5).
 
+**Sign-in domain (decided 18 Oct 2026):** `pm.humo.co.za`. It's the passkey relying-party ID and must never change.
+
 **Open:**
-- the production sign-in domain;
-- the VPS size and data-centre confirmation (doc 25 §4);
+- the VPS size and data-centre confirmation (doc 25 §2, *Ask Webway before buying*);
 - the mail server's final choice after a trial.
 
 ---

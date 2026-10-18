@@ -28,7 +28,7 @@ The order matters: nobody verifies a passkey for a request that was going to fai
 | C5 | **Optimistic concurrency.** If the client sends the version it saw and the record has changed since | 409 `conflict` ("Someone else changed this first") |
 | C6 | **Validation** runs after authorisation | 422 with `fieldErrors` (field → message, as listed below) |
 | C7 | **Step-up.** Sensitive commands need a fresh proof, within 5 minutes (`STEP_UP_FRESH_MS`). The default comes from the permission's `stepUp` flag; a command may force or waive it. Step-up is checked **after** validation. | 403 `step-up-required` (a challenge: the client verifies and retries; not audited) |
-| C8 | **Domain refusals** inside the command, e.g. self-escalation | 403 with a reason, audited as denied |
+| C8 | **Domain refusals** inside the command, e.g. self-escalation, or a staff trustee approving their agency's work (D6: `conflict-of-interest`) | 403 with a reason, audited as denied |
 | C9 | **Audit.** Every success and refusal is appended. Each record holds the actor and the impersonated user, role, organisation, action, resource, result, reason, step-up method and session. Nothing is ever deleted. | |
 
 **Tests:** `subscription-changes.spec`, `scheme-scope.spec`, `account-approval.spec`.
@@ -113,7 +113,8 @@ The order matters: nobody verifies a passkey for a request that was going to fai
 
 | Action | Rule | Message / outcome |
 |---|---|---|
-| Invite | Permission depends on the inviter:<br>• Humo staff: `Platform.Customers.Manage`;<br>• for an Agency Administrator role: `Users.ManageAdmins`;<br>• otherwise: `Users.Manage`.<br>**Step-up.** | |
+| Invite | Permission depends on the inviter:<br>• Humo staff: `Platform.Customers.Manage`, **Agency Administrator role only (F-22)**;<br>• for an Agency Administrator role: `Users.ManageAdmins`;<br>• owners, tenants and trustees: `Residents.Invite`, scope C4 (D3);<br>• other staff roles: `Users.Manage`.<br>**Step-up.** | Onboarding invites the customer’s first Agency Administrator. They invite everyone else. |
+| Invite from a record (D3) | `personId` links the sign-in to the People record. Trustee: a current board seat. Owner or tenant: a current link to that unit. | {Name} isn’t on that scheme’s board… / {Name} isn’t a current {role} of that unit. |
 | Invite `name` | First name and surname | Enter their first name and surname. |
 | Invite `email` | Valid | Enter the email address the invitation goes to. |
 | Invite `email` | Not a Humo staff address (`@humo.co.za`), and not an existing Humo identity | That's a Humo staff address… |
@@ -128,7 +129,7 @@ The order matters: nobody verifies a passkey for a request that was going to fai
 | Self | **Nobody changes their own roles, grants or membership** | 403 `forbidden`, audited |
 | Switch role | Only to one of your own active assignments. The API issues a token scoped to it. | 403 Not one of your roles |
 
-**First administrator:** onboarding invites the customer's first Agency Administrator. Restricting that invite to the Agency Administrator role is still open (D3 / F-22).
+**First administrator:** onboarding invites the customer's first Agency Administrator, and only that role (F-22). **Tests:** `resident-invites.spec`.
 
 ## 8. Humo team, impersonation and audit
 

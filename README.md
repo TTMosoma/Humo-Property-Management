@@ -158,7 +158,7 @@ The model is described in `docs/04-platform-commercial.md`.
    - adoption by module
    - Governance **HIGH** (8 trustees, 14 meetings a year) and Advanced Reporting **MEDIUM**
 3. As **Sarah** (Portfolio Manager, Acacia), open **Tasks**. A Smart Nudge suggests Governance, based on Acacia's own usage. Choose **Explore Governance**, switch role to **Agency Administrator**, and choose **Ask Humo about Governance**.
-4. Back as Dumisani, open **Customers › Acacia › Subscription & features › Manage features**. Give a reason, add the **Governance** add-on, and verify.
+4. Sign in as **Mashoto Moropane**, Acacia's Account Manager, and open **Customers › Acacia › Subscription & features › Manage features**. Give a reason, add the **Governance** add-on, and verify. (Dumisani can't: Account Managers change only the customers they look after, D11.)
 5. As Sarah again: **Governance** now appears in the navigation, and the nudge has retired.
 6. Sign in as **Lerato** (Humo Support): no MRR, no subscription controls, no executive view.
 
@@ -204,6 +204,9 @@ Build order follows workflow slices (see `docs/02-ux-review.md` §4.2).
 - [x] Fix — Humo team management: invite, roles (System Administrator needs a second approver), impersonation grants, account managers' customers, suspend and offboard, all verified and audited (`docs/16-humo-team.md`)
 - [x] Current-state audit and backend readiness assessment (`docs/audit/`)
 - [x] Decisions D1–D10: scope by assignment, the board as the trustee source of truth, resident invites, fixed roles, identity provider with passkeys, staff conflict rule, immutable issued statements, Chrome PDF rendering, link delivery, statement numbering (`docs/17-decisions.md`)
+- [x] Commercial management (doc 23): catalogue, agreements, storage quotas, Humo invoices and simulated payments; invoice views for Humo and for customers; the sole System Administrator safeguard
+- [x] Launch foundation (step 1): production builds call the API only (no demo data), scope by assignment (D1), the board as the trustee source of truth (D2), live staff routing, South African dates, CI, slice 1 acceptance criteria (`docs/24-slice-1-acceptance-criteria.md`)
+- [x] Step 1b: staff trustees can't approve their agency's work (D6); invite residents and trustees from the person, unit and board pages (D3), with onboarding inviting only the first Agency Administrator (F-22); the agency queue for unassigned work; D11 by permission; ESLint in CI
 - [x] D14 sign-in and hosting: ASP.NET Core Identity with passkeys on a Webway VPS in South Africa, self-hosted email; maintenance handover in `docs/26-operations-and-maintenance.md` (`docs/25-identity-and-hosting-options.md`)
 - [x] Demo ready: statement emails and re-sends recorded in Sent, contractor messages and email invites on quote requests, statements labelled as previews, placeholder and dead code removed; simulated actions tracked for production (`docs/18-production-readiness-register.md`); demo build and hosting at pm-demo.humo.co.za (`docs/19-demo-deployment.md`)
 - [x] Humo sign-in page: passkey first, emailed one-time link as the fallback, no account enumeration, return to the page you wanted, signed-out and paused states, per-product branding (Property Management, Contractor), demo accounts in the prototype (`docs/18` R-8)
