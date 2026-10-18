@@ -55,7 +55,7 @@ Humo staff work across every Humo product, so the team belongs to the Humo platf
 
 **Recommended at launch:**
 - Make a second trusted person a System Administrator straight away; the safeguard then switches off.
-- Until then, keep a sealed recovery path with the identity provider (D5) in case the only administrator loses their passkeys.
+- Until then, keep a sealed recovery envelope in case the only administrator loses their passkeys (doc 26 §8).
 
 **In the demo** Terry and Nomsa are both System Administrators, so the safeguard is off. To see it, end Nomsa's System Administrator role as Terry; the tests do the same (`sole-admin.spec.ts`).
 

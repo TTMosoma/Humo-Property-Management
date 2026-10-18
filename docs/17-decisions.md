@@ -1,4 +1,4 @@
-# 17 — Product and architecture decisions (D1–D13)
+# 17 — Product and architecture decisions (D1–D14)
 
 Status: **approved** on 10 October 2026 by Terry Mosoma (product owner).
 
@@ -29,6 +29,7 @@ Each entry records:
 | D11 | Account Managers change their customers' subscriptions without approval; every change is audited with its reason | Platform |
 | D12 | Custom document templates: a Humo-owned, paid Enterprise service built from the client's designs (hybrid: expanded design settings, plus bespoke layouts where needed) | Documents, Slice 2 |
 | D13 | Each scheme chooses how levies are set: entered per unit (default) or derived from the approved budget and participation quotas | Slice 2, billing |
+| D14 | Sign-in with ASP.NET Core Identity and passkeys inside Humo's API; hosted on a Webway VPS in South Africa; self-hosted email (supersedes D5's "not built in-house") | Slice 1 |
 
 ---
 
@@ -133,6 +134,8 @@ Each entry records:
 - Humo Mobile push approval is a later addition; passkeys alone cover step-up.
 
 **Open:** which provider (the evaluation's outcome).
+
+**Superseded in part by D14 (18 Oct 2026):** sign-in uses ASP.NET Core Identity inside Humo's API. The selection criteria above still apply.
 
 ## D6 — Staff holding owner or trustee roles
 
@@ -300,6 +303,40 @@ Approved on 12 October 2026 by Terry Mosoma (product owner). Scope: [22-billing-
 - whether quotas must be normalised or used as registered;
 - the legal effective date of a new levy after the AGM;
 - whether a rounding difference must be absorbed.
+
+## D14 — Sign-in, hosting and email: self-hosted in South Africa
+
+Approved on 18 October 2026 by Terry Mosoma (product owner). Options and reasons: [25-identity-and-hosting-options.md](25-identity-and-hosting-options.md).
+
+**Decision:**
+- **Sign-in:** ASP.NET Core Identity (.NET 10) inside Humo's API.
+  - Passkeys first.
+  - One-time email codes to join or recover.
+  - No passwords.
+  - It's an established framework, not home-made authentication, but it runs in our API rather than as a separate identity product. **This supersedes D5's "not built in-house".**
+- **Hosting:** a dedicated Webway VPS in South Africa running Caddy, the API and PostgreSQL in Docker Compose.
+- **Email:** an open-source mail server run by Humo (Stalwart recommended), sending from `notify.humo.co.za`, with a fallback relay configured but switched off.
+
+**Why:**
+- **Cost:** no per-user charges at any scale, and no licences.
+- **POPIA:** every piece of personal data stays in South Africa.
+- **Fit:** passkeys are built into .NET 10; the existing `/sign-in` page stays.
+
+**Consequences:**
+- **Humo carries the security and maintenance.** Everything to look after is in [26-operations-and-maintenance.md](26-operations-and-maintenance.md):
+  - monthly .NET patching;
+  - OS and container updates;
+  - backups and restore tests;
+  - email deliverability.
+- **The passkey domain (relying-party ID) is chosen once and never changed.**
+- **Session:** a secure, same-site cookie carrying the identity and the active assignment; step-up is a fresh passkey assertion recorded in the session.
+- **One Humo sign-in for every product (D5 criterion 2):** the API is the sign-in authority. An OpenID Connect layer (e.g. OpenIddict) is added only if another product needs it.
+- **Humo Mobile push approval** stays a later addition (D5).
+
+**Open:**
+- the production sign-in domain;
+- the VPS size and data-centre confirmation (doc 25 §4);
+- the mail server's final choice after a trial.
 
 ---
 
