@@ -52,6 +52,7 @@ export type Permission =
   // Residents
   | 'Resident.Portal'
   | 'Resident.Requests'
+  | 'Residents.Invite'
   // Agency administration
   | 'Organisation.Manage'
   | 'Documents.Configure'
@@ -144,6 +145,7 @@ export const PERMISSIONS: PermissionMeta[] = [
   { id: 'Documents.Configure', area: 'Administration', label: 'Choose default document templates, branding and the agency’s custom template', mutates: true },
   { id: 'Notifications.Configure', area: 'Administration', label: 'Set agency-wide notification rules', mutates: true },
   { id: 'Users.Manage', area: 'Administration', label: 'Assign customer roles and scope', mutates: true, stepUp: true },
+  { id: 'Residents.Invite', area: 'Residents', label: 'Invite owners, tenants and trustees of schemes in scope (D3)', mutates: true, stepUp: true },
   { id: 'Users.ManageAdmins', area: 'Administration', label: 'Add or remove Agency Administrators', mutates: true, stepUp: true },
   { id: 'Audit.View', area: 'Administration', label: 'View the agency’s audit log', mutates: false },
   { id: 'Security.ManageOwn', area: 'Administration', label: 'Manage own passkeys, devices and sessions', mutates: true, stepUp: true },
@@ -201,11 +203,11 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   'agency-admin': [
     ...STAFF_BASE, 'Approvals.Decide', 'Schemes.Manage', 'Units.Manage', 'People.Manage', 'Accounts.View', 'Finance.View', 'Billing.View', 'Billing.Run', 'Receipts.Allocate', 'Collections.Manage', 'Budgets.Manage', 'Rules.Enforce',
     'Payables.Prepare', 'Payables.Release', 'Finance.Export', 'Maintenance.Manage', 'Suppliers.Manage', 'Suppliers.ChangeBankDetails',
-    'Meetings.Manage', 'Documents.Manage', 'Compliance.Manage', 'Organisation.Manage', 'Documents.Configure', 'Notifications.Configure', 'Users.Manage', 'Users.ManageAdmins', 'Audit.View', 'Subscription.Request',
+    'Meetings.Manage', 'Documents.Manage', 'Compliance.Manage', 'Organisation.Manage', 'Documents.Configure', 'Notifications.Configure', 'Users.Manage', 'Users.ManageAdmins', 'Residents.Invite', 'Audit.View', 'Subscription.Request',
   ],
   'portfolio-manager': [
     ...STAFF_BASE, 'Approvals.Decide', 'Units.Manage', 'People.Manage', 'Accounts.View', 'Finance.View', 'Billing.View', 'Collections.Manage', 'Budgets.Manage', 'Rules.Enforce', 'Maintenance.Manage', 'Suppliers.Manage',
-    'Meetings.Manage', 'Documents.Manage', 'Compliance.Manage', 'Notifications.Configure',
+    'Meetings.Manage', 'Documents.Manage', 'Compliance.Manage', 'Notifications.Configure', 'Residents.Invite',
   ],
   finance: [
     ...STAFF_BASE, 'Approvals.Decide', 'Accounts.View', 'Finance.View', 'Billing.View', 'Billing.Run', 'Receipts.Allocate', 'Collections.Manage', 'Budgets.Manage', 'Payables.Prepare',

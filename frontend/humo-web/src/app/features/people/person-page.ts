@@ -2,12 +2,13 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { map } from 'rxjs';
-import { Person, PersonDataSource, RelationshipView, TimelineDataSource, TimelineEvent, UnitDataSource } from '../../domain';
+import { AccessDataSource, Person, PersonDataSource, RelationshipView, TimelineDataSource, TimelineEvent, UnitDataSource, todaySA } from '../../domain';
 import { IonIcon } from '@ionic/angular/standalone';
 import { ScopeService } from '../../core/scope/scope.service';
 import { SessionService } from '../../core/session/session.service';
 import { DrawerService } from '../../ui/drawer/drawer.service';
 import { editPersonForm, endRelationshipForm, linkPersonForm } from './person-forms';
+import { ResidentInvite, inviteResidentForm } from '../access/user-forms';
 import { loadable } from '../../core/data/loadable';
 import { formatRand } from '../../ui/format/money';
 import { KeyFact, RecordHeader } from '../../ui/record/record-header';
@@ -42,10 +43,15 @@ import { AttachmentsPanel } from '../library/attachments-panel';
         [subtitle]="p.person.phone + ' · ' + p.person.email"
         [facts]="facts()"
       >
-        @if (canManage()) {
+        @if (canManage() || invites().length) {
           <ng-container recordActions>
-            <button type="button" class="btn btn-secondary" (click)="edit(p.person)"><ion-icon name="create-outline" aria-hidden="true" /> Edit details</button>
-            <button type="button" class="btn btn-secondary" (click)="link(p.person)"><ion-icon name="link-outline" aria-hidden="true" /> Add a role</button>
+            @if (canManage()) {
+              <button type="button" class="btn btn-secondary" (click)="edit(p.person)"><ion-icon name="create-outline" aria-hidden="true" /> Edit details</button>
+              <button type="button" class="btn btn-secondary" (click)="link(p.person)"><ion-icon name="link-outline" aria-hidden="true" /> Add a role</button>
+            }
+            @if (invites().length) {
+              <button type="button" class="btn btn-secondary" (click)="invite(p.person)"><ion-icon name="mail-outline" aria-hidden="true" /> Invite</button>
+            }
           </ng-container>
         }
       </ui-record-header>
@@ -61,7 +67,7 @@ import { AttachmentsPanel } from '../library/attachments-panel';
               <dt>Mobile</dt><dd>{{ p.person.phone }}</dd>
               <dt>Email</dt><dd>{{ p.person.email }}</dd>
               <dt>Prefers</dt><dd>{{ channel() }}</dd>
-              <dt>Portal access</dt><dd>{{ p.person.personaId ? 'Active' : 'Not invited yet' }}</dd>
+              <dt>Humo sign-in</dt><dd>{{ p.person.personaId ? 'Invited' : 'Not invited yet' }}</dd>
             </dl>
           </section>
           <section class="surface panel">
@@ -104,8 +110,25 @@ export class PersonPage {
   private readonly drawer = inject(DrawerService);
   private readonly session = inject(SessionService);
   private readonly scope = inject(ScopeService);
+  private readonly access = inject(AccessDataSource);
 
   protected readonly canManage = computed(() => this.session.can('People.Manage') && !this.session.readOnly());
+
+  /** D3: their current roles in schemes the inviter covers, while they have no Humo sign-in. */
+  protected readonly invites = computed<ResidentInvite[]>(() => {
+    const p = this.person();
+    if (!p || p.person.personaId || !this.session.can('Residents.Invite') || this.session.readOnly()) return [];
+    const mine = new Set(this.scope.accessible().map((s) => s.id));
+    const today = todaySA();
+    return p.relationships
+      .filter((r) => mine.has(r.scheme.id) && (!r.relationship.until || r.relationship.until >= today))
+      .map((r) => ({ role: r.relationship.type, scheme: r.scheme, unit: r.relationship.type === 'trustee' ? undefined : r.unit }));
+  });
+
+  protected invite(p: Person): void {
+    const org = this.session.organisation();
+    if (org) inviteResidentForm(this.drawer, this.access, org.id, org.shortName, p, this.invites());
+  }
 
   protected edit(p: Person): void {
     editPersonForm(this.drawer, this.people, p);

@@ -20,6 +20,8 @@ export interface TrusteeView {
   units: string[];
   /** Can sign in to Humo (approvals, meeting packs). */
   hasSignIn: boolean;
+  /** Invited to Humo but hasn't accepted yet. */
+  invited?: boolean;
 }
 
 export interface BoardView {

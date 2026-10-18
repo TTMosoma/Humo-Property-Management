@@ -120,4 +120,6 @@ export const AGENCY_STAFF: readonly Role[] = ['agency-admin', 'portfolio-manager
 export const FINANCE_STAFF: readonly Role[] = ['agency-admin', 'portfolio-manager', 'finance'];
 export const STAFF_AND_TRUSTEE: readonly Role[] = [...AGENCY_STAFF, 'trustee'];
 export const RESIDENTS: readonly Role[] = ['owner', 'tenant'];
+/** Roles a Portfolio Manager may invite for schemes in scope (D3). Staff roles are invited by the Agency Administrator. */
+export const RESIDENT_INVITES: readonly Role[] = ['owner', 'tenant', 'trustee'];
 export const EVERYONE: readonly Role[] = [...CUSTOMER_ROLES, ...HUMO_ROLES];

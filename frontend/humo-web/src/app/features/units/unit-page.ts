@@ -4,7 +4,9 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { EMPTY, catchError, combineLatest, map, of, switchMap } from 'rxjs';
 import {
+  AccessDataSource,
   AccountDataSource,
+  Person,
   PersonDataSource,
   PersonSummary,
   TimelineDataSource,
@@ -32,6 +34,8 @@ import { workItemView } from '../my-work/work-item-view';
 import { OCCUPANCY_LABEL, accountStatus, balanceTone, links, unitChain } from '../accounts/account-view';
 import { LogNote } from '../shared/log-note';
 import { AttachmentsPanel } from '../library/attachments-panel';
+import { ScopeService } from '../../core/scope/scope.service';
+import { inviteResidentForm } from '../access/user-forms';
 
 /**
  * Unit record (Record page pattern P1). The middle of the most common journey:
@@ -54,9 +58,26 @@ export class UnitPage {
   private readonly attention = inject(AttentionService);
   private readonly drawer = inject(DrawerService);
   private readonly sessionService = inject(SessionService);
+  private readonly scope = inject(ScopeService);
+  private readonly access = inject(AccessDataSource);
 
   protected canEdit(s: UnitSummary): boolean {
     return this.sessionService.can('Units.Manage') && !this.sessionService.readOnly() && s.scheme.status !== 'closed' && s.scheme.status !== 'archived';
+  }
+
+  /** D3: owners and tenants without a Humo sign-in can be invited from here, for schemes the inviter covers. */
+  protected canInvite(s: UnitSummary, p: Person): boolean {
+    return (
+      !p.personaId &&
+      this.sessionService.can('Residents.Invite') &&
+      !this.sessionService.readOnly() &&
+      this.scope.accessible().some((x) => x.id === s.scheme.id)
+    );
+  }
+
+  protected invite(s: UnitSummary, p: Person, role: 'owner' | 'tenant'): void {
+    const org = this.sessionService.organisation();
+    if (org) inviteResidentForm(this.drawer, this.access, org.id, org.shortName, p, [{ role, scheme: s.scheme, unit: s.unit }]);
   }
 
   protected editUnit(s: UnitSummary): void {
