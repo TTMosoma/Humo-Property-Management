@@ -45,6 +45,8 @@ npm run build:demo
 
 **Output:** `frontend/humo-web/dist/humo-web/browser/`. Upload the **contents** of that folder.
 
+**Use `build:demo` for the demo.** Since 14 October 2026, a plain `npm run build` is the **production** app: it talks to the Humo API only, with no demo data or prototype controls. Until the backend exists it shows the sign-in page with *Sign-in isn’t available yet*.
+
 `build:demo` is the production build plus the files in `deploy/demo/`:
 
 | File | For | Does |
