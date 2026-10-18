@@ -17,7 +17,7 @@
 
 | # | Item | Why first | Effort | Owner |
 |---|---|---|---|---|
-| R1 | ~~Decide D1, D2, D5, D6~~ **Decided 10 Oct 2026** ([docs/17](../17-decisions.md)). Remaining: the identity provider evaluation under D5. | They define the authorisation model every endpoint enforces | Evaluation for D5 | Product + you |
+| R1 | ~~Decide D1, D2, D5, D6~~ **Decided 10 Oct 2026** ([docs/17](../17-decisions.md)). D5 settled by **D14** (18 Oct 2026): ASP.NET Core Identity with passkeys on a Webway VPS ([docs/25](../25-identity-and-hosting-options.md)). | They define the authorisation model every endpoint enforces | Evaluation for D5 | Product + you |
 | R2 | **Write the scope rule into the port contract:** reads derive scope from the session, and `schemeIds` is only a filter; commands check the target record's organisation and scheme. Document it in `docs/08`. | Prevents building endpoints that trust the client (F-02, F-08) | Small (docs + contract) | Architect |
 | R3 | **Extract business rules from the mock stores into acceptance criteria**, per module: validation messages, lifecycle transitions, invariants and side effects (e.g. "posting a billing run locks it and updates balances"; "ending a trustee term ends trustee access"). | Mock stores are the spec (F-11). Without this, rules are silently lost | Medium (one module at a time; slice 1's modules first) | Dev + product |
 | R4 | **Restore a test harness:** add a test target (the existing `tsconfig.spec.json` expects Vitest), a lint configuration, and a Prettier check. Then add **contract tests per port** that run against the in-memory adapter now and the HTTP adapter later. | No safety net today; contract tests make the mock → HTTP swap verifiable | Small–medium | Dev |
