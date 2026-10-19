@@ -91,6 +91,10 @@ export class HttpPlanDataSource extends HttpPort implements PlanDataSource {
     return orUndefined(this.live<InvoiceDocument>(`/organisations/${organisationId}/invoices/${invoiceId}`, ['subscriptions']));
   }
 
+  payInvoice(organisationId: string, invoiceId: string): Observable<CheckoutSession> {
+    return this.command<CheckoutSession>('POST', `/organisations/${organisationId}/invoices/${invoiceId}/checkout`, null, ['subscriptions']);
+  }
+
   requestUpgrade(input: { organisationId: string; addOn?: AddOnId; package?: PackageId; feature?: Feature; note?: string; source: UpgradeRequest['source'] }): Observable<void> {
     const { organisationId, ...body } = input;
     return this.command('POST', `/organisations/${organisationId}/upgrade-requests`, body, ['subscriptions', 'notifications']);
@@ -151,7 +155,7 @@ export class HttpCommercialDataSource extends HttpPort implements CommercialData
     return this.createId(`/platform/customers/${organisationId}/invoices`, null, ['subscriptions']);
   }
 
-  /** The API refuses it until Humo chooses a payment provider (docs/23 §8). */
+  /** A Payfast checkout started by Humo Finance (Platform.Billing.Manage). */
   startCheckout(invoiceId: string): Observable<CheckoutSession> {
     return this.command<CheckoutSession>('POST', `/platform/invoices/${invoiceId}/checkout`, null, ['subscriptions']);
   }

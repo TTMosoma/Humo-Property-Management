@@ -6,6 +6,7 @@ import { NudgeDefinition, NudgePlacement } from '../models/nudge';
 import { UpgradeRequest } from '../models/opportunity';
 import { BusinessOverview, CustomerPlan, PlatformCustomer, SubscriptionChange } from '../models/platform';
 import { InvoiceDocument } from '../models/commercial';
+import type { CheckoutSession } from './commercial-data-sources';
 import { AccountApprovalPolicy, AccountDecision, AccountPolicySetting, AccountRequestView, AccountSubmission, NewAccountDetails } from '../models/account-request';
 
 /** The product catalogue: what can be sold, and what each package and add-on contains. */
@@ -40,6 +41,8 @@ export abstract class PlanDataSource {
   /** Their own Humo invoices (Agency Administrator, own organisation only), newest first. */
   abstract invoices(organisationId: string): Observable<InvoiceDocument[]>;
   abstract invoice(organisationId: string, invoiceId: string): Observable<InvoiceDocument | undefined>;
+  /** "Pay now": a Payfast checkout for their own invoice. Starting it isn't a payment; Payfast's confirmation is. */
+  abstract payInvoice(organisationId: string, invoiceId: string): Observable<CheckoutSession>;
   abstract requestUpgrade(input: { organisationId: string; addOn?: AddOnId; package?: PackageId; feature?: Feature; note?: string; source: UpgradeRequest['source'] }): Observable<void>;
 }
 

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Humo.Api.Tests;
 
-/// <summary>Humo's invoices and manual EFT payments on the API (docs/23 §6, register R-14). No payment provider yet.</summary>
+/// <summary>Humo's invoices and manual EFT payments on the API (docs/23 §6, register R-14). Payfast: PayfastTests.</summary>
 public sealed class BillingApiTests : IDisposable
 {
     private readonly HumoApiFactory api = new();
@@ -97,7 +97,6 @@ public sealed class BillingApiTests : IDisposable
     {
         var (org, admin, _) = await Priced();
         var id = (await (await admin.PostAsync($"/api/platform/customers/{org}/invoices", null)).Json()).GetProperty("id").GetString();
-        Assert.Contains("payment provider", (await (await admin.PostAsync($"/api/platform/invoices/{id}/checkout", null)).FieldErrors()).GetProperty("invoiceId").GetString());
 
         var am = await api.SignedIn("mashoto@humo.co.za");
         await Expect(HttpStatusCode.NoContent, await am.PostAsJsonAsync($"/api/platform/invoices/{id}/eft-proof", new { note = "Proof of payment emailed by their bookkeeper" }));
