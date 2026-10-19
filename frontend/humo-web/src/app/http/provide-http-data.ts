@@ -48,6 +48,7 @@ import {
   WorkItemDataSource,
 } from '../domain';
 import { ContractorNetwork } from '../domain/contractor';
+import { httpAccessDataSource } from './http-access';
 import { HttpSessionDataSource } from './http-session-data-source';
 import { notConnected } from './not-connected';
 
@@ -65,7 +66,6 @@ const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
   [JobDataSource, 'JobDataSource'],
   [SupplierDataSource, 'SupplierDataSource'],
   [PayablesDataSource, 'PayablesDataSource'],
-  [AccessDataSource, 'AccessDataSource'],
   [HumoTeamDataSource, 'HumoTeamDataSource'],
   [AuditDataSource, 'AuditDataSource'],
   [SecurityDataSource, 'SecurityDataSource'],
@@ -106,10 +106,11 @@ const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
  * controls are in a production bundle: `PrototypeControls` isn't provided, so
  * every prototype control disappears.
  *
- * Today only the session bootstrap (GET /me) is real; the other ports answer
- * "not connected yet" until their backend slice lands.
+ * Connected so far (slice 1, step 1): the session (GET /me, passkey and
+ * email-link sign-in, passkey registration) and, on Users & access, sign out
+ * and switch role. The other ports answer "not connected yet" until their slice lands.
  */
 export function provideHttpData(): EnvironmentProviders {
   const pending: Provider[] = NOT_YET.map(([port, name]) => ({ provide: port, useFactory: () => notConnected(name) }));
-  return makeEnvironmentProviders([provideHttpClient(withFetch()), { provide: SessionDataSource, useClass: HttpSessionDataSource }, ...pending]);
+  return makeEnvironmentProviders([provideHttpClient(withFetch()), { provide: SessionDataSource, useClass: HttpSessionDataSource }, { provide: AccessDataSource, useFactory: httpAccessDataSource }, ...pending]);
 }

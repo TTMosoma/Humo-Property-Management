@@ -56,7 +56,9 @@
                 "input": "deploy/spa"
               }
             ],
-            "styles": ["src/styles.scss"]
+            "styles": [
+              "src/styles.scss"
+            ]
           },
           "configurations": {
             "production": {
@@ -101,6 +103,14 @@
                   "input": "deploy/demo"
                 }
               ]
+            },
+            "api": {
+              "fileReplacements": [
+                {
+                  "replace": "src/app/data/provide-data.ts",
+                  "with": "src/app/data/provide-data.production.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -113,6 +123,10 @@
             },
             "development": {
               "buildTarget": "humo-web:build:development"
+            },
+            "api": {
+              "buildTarget": "humo-web:build:development,api",
+              "proxyConfig": "proxy.api.json"
             }
           },
           "defaultConfiguration": "development"
@@ -176,7 +190,9 @@
                 "input": "deploy/spa"
               }
             ],
-            "styles": ["projects/humo-contractor/src/styles.scss"]
+            "styles": [
+              "projects/humo-contractor/src/styles.scss"
+            ]
           },
           "configurations": {
             "production": {

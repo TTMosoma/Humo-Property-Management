@@ -131,6 +131,12 @@ Send these questions before buying, and keep the answers with doc 26. The "best 
 | 10 | **POPIA** | An operator agreement (s21) covering security measures and breach notice | Required before customer data goes on the server |
 | 11 | **Support and SLA** | 24/7 support for outages, 99.9% uptime or better, local phone support | Plan our own monitoring and escalation (doc 26 §5) |
 
+### SMS: SMSSouthAfrica, behind a configurable provider
+
+- **Chosen provider:** SMSSouthAfrica (smssouthafrica.co.za).
+- **Configurable:** the API sends through whichever provider `Sms__Provider` names. Each provider is one class (`ISmsSender`), so switching providers or adding a second one is a configuration change plus that class.
+- **Built 19 Oct 2026** from their API documentation (MyMobileAPI v3, https://mymobileapi.readme.io): Basic-authenticated sends, South African numbers in international form, a test mode, and signed delivery-report webhooks (refused if unsigned or stale). Set-up steps are in `backend/README.md` (*SMS providers*). Until it's configured, `Log` writes messages to the log and sends nothing.
+
 ## 3. Options considered (kept for the record)
 
 Several options were compared on 18 October 2026, assuming a cloud host:
@@ -157,11 +163,11 @@ Several options were compared on 18 October 2026, assuming a cloud host:
    - order the VPS;
    - set up the PTR record;
    - set up DNS for `pm.humo.co.za` (the app) and `notify.humo.co.za` (email).
-2. **Repository:** add `backend/`:
+2. **Repository:** ✅ **done 19 Oct 2026** (`backend/`, see its README). It added:
    - .NET 10 solution: API, domain, EF Core with PostgreSQL;
    - Docker Compose for Caddy, the API, PostgreSQL and the mail server;
    - CI that builds and tests the API.
-3. **Slice 1, step 1:**
+3. **Slice 1, step 1:** ✅ **done 19 Oct 2026** (CI for the backend still to add):
    - Identity with passkeys and email codes;
    - `GET /me` built from the session and the database;
    - the frontend sign-in calls the real endpoints instead of answering "unavailable".

@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Humo.Api/Humo.Api.csproj" />
+    <Project Path="src/Humo.Domain/Humo.Domain.csproj" />
+    <Project Path="src/Humo.Infrastructure/Humo.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Humo.Api.Tests/Humo.Api.Tests.csproj" />
+  </Folder>
+</Solution>

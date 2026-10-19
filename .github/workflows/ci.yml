@@ -56,3 +56,60 @@ jobs:
 
       - name: Humo Contractor build
         run: npm run build:contractor
+
+  # The Humo API (backend/): restore with the vulnerability audit, build, tests, a start-up
+  # against real PostgreSQL (migrations, the first administrator, sign-in answers), and the image.
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: humo
+          POSTGRES_USER: humo
+          POSTGRES_PASSWORD: humo-ci-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U humo -d humo"
+          --health-interval 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: backend/global.json
+
+      # NuGet's audit runs here: a package with a known vulnerability fails the build (warnings are errors).
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build -c Release --no-restore
+
+      - name: Tests
+        run: dotnet test -c Release --no-build
+
+      - name: Start against PostgreSQL (migrations, bootstrap, sign-in answers)
+        env:
+          ASPNETCORE_ENVIRONMENT: Production
+          ASPNETCORE_URLS: http://localhost:5080
+          ConnectionStrings__Humo: Host=localhost;Port=5432;Database=humo;Username=humo;Password=humo-ci-only
+          Bootstrap__AdminEmail: ci@humo.co.za
+          Bootstrap__AdminName: CI Administrator
+          Mail__Provider: Log
+        run: |
+          dotnet run -c Release --no-build --no-launch-profile --project src/Humo.Api > api.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:5080/api/health && break; sleep 2; done
+          curl -sf http://localhost:5080/api/health || { cat api.log; exit 1; }
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:5080/api/me)" = "401"
+          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' -d '{"email":"ci@humo.co.za"}' http://localhost:5080/api/auth/link)" = "202"
+          grep -q "Sign in at https://pm.humo.co.za/sign-in" api.log || { cat api.log; exit 1; }
+
+      - name: Docker image
+        working-directory: .
+        run: docker build -f backend/Dockerfile -t humo-api:ci .

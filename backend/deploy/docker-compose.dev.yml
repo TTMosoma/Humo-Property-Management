@@ -1,0 +1,29 @@
+# Local development services: PostgreSQL and Mailpit (catches every email; nothing leaves your machine).
+#   docker compose -f backend/deploy/docker-compose.dev.yml up -d
+# Then run the API (dotnet run --project backend/src/Humo.Api) and open Mailpit at http://localhost:8025.
+name: humo-dev
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: humo
+      POSTGRES_USER: humo
+      POSTGRES_PASSWORD: humo-dev-only
+    ports:
+      - "55432:5432" # 55432: this machine already runs PostgreSQL on 5432 and 5433
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U humo -d humo"]
+      interval: 5s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025" # SMTP the API sends to (Mail__Port=1025, Mail__Security=None)
+      - "8025:8025" # Inbox in the browser
+
+volumes:
+  pgdata:

@@ -1,0 +1,89 @@
+# Production on the Webway VPS (D14, doc 25): Caddy (HTTPS) → the API → PostgreSQL, plus the mail server.
+# Run from this folder with a filled-in .env (copy .env.example; never commit .env):
+#   docker compose up -d --build
+# Every task to keep this running is in docs/26-operations-and-maintenance.md.
+name: humo
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../../frontend/humo-web/dist/humo-web/browser:/srv/app:ro # npm run build (production) output
+      - caddy-data:/data # certificates: back up (doc 26 §6)
+      - caddy-config:/config
+    depends_on:
+      - api
+
+  api:
+    build:
+      context: ../..
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Humo: Host=postgres;Database=humo;Username=humo;Password=${POSTGRES_PASSWORD}
+      App__PublicUrl: https://pm.humo.co.za
+      App__PasskeyDomain: pm.humo.co.za
+      App__AllowedOrigins__0: https://pm.humo.co.za
+      Bootstrap__AdminEmail: ${BOOTSTRAP_ADMIN_EMAIL}
+      Bootstrap__AdminName: ${BOOTSTRAP_ADMIN_NAME}
+      Mail__Host: ${MAIL_HOST}
+      Mail__Port: ${MAIL_PORT}
+      Mail__Security: ${MAIL_SECURITY}
+      Mail__Username: ${MAIL_USERNAME}
+      Mail__Password: ${MAIL_PASSWORD}
+      Mail__From: ${MAIL_FROM}
+      Mail__Relay__Enabled: ${MAIL_RELAY_ENABLED}
+      Mail__Relay__Host: ${MAIL_RELAY_HOST}
+      Mail__Relay__Port: ${MAIL_RELAY_PORT}
+      Mail__Relay__Username: ${MAIL_RELAY_USERNAME}
+      Mail__Relay__Password: ${MAIL_RELAY_PASSWORD}
+      Sms__Provider: ${SMS_PROVIDER}
+      Sms__SenderId: ${SMS_SENDER_ID}
+      Sms__SmsSouthAfrica__ClientId: ${SMS_SOUTHAFRICA_CLIENT_ID}
+      Sms__SmsSouthAfrica__ApiSecret: ${SMS_SOUTHAFRICA_API_SECRET}
+      Sms__SmsSouthAfrica__TestMode: ${SMS_SOUTHAFRICA_TEST_MODE}
+      Sms__SmsSouthAfrica__WebhookSecret: ${SMS_SOUTHAFRICA_WEBHOOK_SECRET}
+    expose:
+      - "8080" # only Caddy reaches the API
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: humo
+      POSTGRES_USER: humo
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql # the database: nightly backups (doc 26 §6)
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U humo -d humo"]
+      interval: 10s
+      retries: 10
+
+  # Stalwart: outbound email from notify.humo.co.za (doc 25 §2). Configure it through its web admin
+  # on first start (DKIM, the API's sending account), then keep its admin port closed to the internet.
+  # Pin the image to the version you set up with, and update it monthly (doc 26 §4).
+  mail:
+    image: stalwartlabs/stalwart:latest
+    restart: unless-stopped
+    ports:
+      - "25:25" # delivery to and from other mail servers
+      - "465:465"
+      - "587:587"
+    volumes:
+      - mail-data:/opt/stalwart # DKIM keys and configuration: back up (doc 26 §6). ⚠ Check the data path in Stalwart’s Docker docs at setup.
+
+volumes:
+  pgdata:
+  caddy-data:
+  caddy-config:
+  mail-data:
