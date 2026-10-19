@@ -2,6 +2,7 @@ using System.Threading.RateLimiting;
 using Humo.Api;
 using Humo.Api.Audit;
 using Humo.Api.Auth;
+using Humo.Api.Messaging;
 using Humo.Api.Session;
 using Humo.Api.Startup;
 using Humo.Infrastructure;
@@ -93,6 +94,7 @@ var api = app.MapGroup("/api");
 api.MapGet("/health", async (HumoDbContext db, CancellationToken ct) =>
     await db.Database.CanConnectAsync(ct) ? Results.Ok(new { status = "ok" }) : Results.Problem("Database unavailable", statusCode: 503));
 api.MapHumoAuth();
+api.MapSmsWebhooks();
 
 await app.InitialiseDatabaseAsync();
 app.Run();

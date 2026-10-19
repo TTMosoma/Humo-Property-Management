@@ -43,7 +43,7 @@ Status: **started 18 October 2026**, before the server exists. Fill in the blank
 | ASP.NET Core Data Protection keys (§3) | Database or a persisted volume; included in backups | |
 | Mail DKIM private key | Mail server data volume; included in backups | |
 | Mail settings (`Mail__*`: host, port, security, account) | `.env` on the server; see doc 25 §2 *Mail settings* | |
-| SMS provider settings (`Sms__Provider`, `Sms__Providers__<Name>__*`) | `.env` on the server; see `backend/README.md` | |
+| SMSSouthAfrica API key and webhook signature secret (`Sms__SmsSouthAfrica__*`) | `.env` on the server; password manager. Rotate yearly, and at once if exposed (their control panel). | |
 | Sealed recovery envelope (§8) | ____ (a safe or a trusted person) | |
 
 **Rules:**

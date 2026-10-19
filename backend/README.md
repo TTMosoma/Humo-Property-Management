@@ -89,23 +89,44 @@ Settings come from `appsettings.json`, then environment variables. In an environ
 | `Mail__Host` / `__Port` / `__Security` / `__Username` / `__Password` / `__From` / `__ReplyTo` | The mail server. `Security`: `StartTls` (587), `SslOnConnect` (465), `None` (local only) |
 | `Mail__Relay__*` | The fallback relay; `Mail__Relay__Enabled=true` switches to it (doc 26 §8) |
 | `Sms__Provider` | `Log` (nothing is sent), or a provider name such as `SmsSouthAfrica` |
-| `Sms__Providers__<Name>__<Key>` | That provider's settings (e.g. an API key) |
+| `Sms__SenderId` | The sender name recipients see, where the networks allow it (at most 11 characters) |
+| `Sms__SmsSouthAfrica__ClientId` / `__ApiSecret` | SMSSouthAfrica API key (their control panel: Settings › API Keys) |
+| `Sms__SmsSouthAfrica__TestMode` | `true`: the API answers but nothing reaches a phone or is charged |
+| `Sms__SmsSouthAfrica__WebhookSecret` | The signature secret for delivery reports (Settings › Webhooks › Activate Signatures) |
 
 ## SMS providers
 
 **How it works:**
-- Every provider implements `ISmsSender` (`src/Humo.Infrastructure/Messaging/Sms.cs`).
-- `Sms__Provider` chooses one by name.
-- An unknown name fails loudly.
+- Every provider implements `ISmsSender` (`src/Humo.Infrastructure/Messaging/`).
+- `Sms__Provider` chooses one by name, and an unknown name fails loudly.
+- Adding a provider means:
+  1. one class;
+  2. registering it in `InfrastructureServices`;
+  3. its own settings section, `Sms__<Name>__*`.
 
-**Adding a provider:**
-1. Write one class.
-2. Register it in `InfrastructureServices`.
-3. Add its settings under `Sms__Providers__<Name>`.
+**SMSSouthAfrica** (`SmsSouthAfrica.cs`) uses their REST API, MyMobileAPI v3: https://mymobileapi.readme.io.
 
-The code that sends messages never changes.
+**Sending:**
+- `POST https://rest.mymobileapi.com/v3/BulkMessages` with Basic authentication (Client ID and API secret).
+- Numbers are sent as `27…` ("082 123 4567" becomes `27821234567`), and landlines are refused.
+- Humo's own reference goes in `customerId`, so delivery reports match back.
+- The receipt's provider id is their `eventId`.
 
-**SMSSouthAfrica** is the chosen provider. Its class exists but refuses to send until it's built from their API documentation.
+**Delivery reports and replies:**
+- They arrive at `POST /api/webhooks/sms/smssouthafrica`.
+- Each must carry a valid `SmsWebhookEngine-Signature`: HMAC-SHA256 over `v1:{timestamp}|{METHOD}|{url}|{body}`, using the base64 secret.
+- Reports older than 5 minutes are refused.
+- For now they're logged. Storing them in Sent comes with the communications slice (docs/18 R-5).
+
+**Setting it up:**
+1. In their control panel, create an API key (Settings › API Keys) and enable the REST API channel.
+2. Put the Client ID and secret in `.env`, with `SMS_SOUTHAFRICA_TEST_MODE=true`.
+3. Add the webhook (Settings › Webhooks):
+   - URL: `https://pm.humo.co.za/api/webhooks/sms/smssouthafrica`;
+   - choose delivery receipts and replies;
+   - activate signatures;
+   - paste the secret into `.env`.
+4. Send a test message in test mode. Then set `SMS_SOUTHAFRICA_TEST_MODE=false` and `SMS_PROVIDER=SmsSouthAfrica`.
 
 ## Production
 

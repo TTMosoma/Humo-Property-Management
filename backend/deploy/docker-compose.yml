@@ -44,6 +44,11 @@ services:
       Mail__Relay__Username: ${MAIL_RELAY_USERNAME}
       Mail__Relay__Password: ${MAIL_RELAY_PASSWORD}
       Sms__Provider: ${SMS_PROVIDER}
+      Sms__SenderId: ${SMS_SENDER_ID}
+      Sms__SmsSouthAfrica__ClientId: ${SMS_SOUTHAFRICA_CLIENT_ID}
+      Sms__SmsSouthAfrica__ApiSecret: ${SMS_SOUTHAFRICA_API_SECRET}
+      Sms__SmsSouthAfrica__TestMode: ${SMS_SOUTHAFRICA_TEST_MODE}
+      Sms__SmsSouthAfrica__WebhookSecret: ${SMS_SOUTHAFRICA_WEBHOOK_SECRET}
     expose:
       - "8080" # only Caddy reaches the API
     depends_on:

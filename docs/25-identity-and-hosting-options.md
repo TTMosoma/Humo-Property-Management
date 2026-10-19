@@ -135,7 +135,7 @@ Send these questions before buying, and keep the answers with doc 26. The "best 
 
 - **Chosen provider:** SMSSouthAfrica (smssouthafrica.co.za).
 - **Configurable:** the API sends through whichever provider `Sms__Provider` names. Each provider is one class (`ISmsSender`), so switching providers or adding a second one is a configuration change plus that class.
-- **Until it's built:** `Log` writes messages to the log and sends nothing. The SMSSouthAfrica class exists but refuses to send until it's built from their API documentation.
+- **Built 19 Oct 2026** from their API documentation (MyMobileAPI v3, https://mymobileapi.readme.io): Basic-authenticated sends, South African numbers in international form, a test mode, and signed delivery-report webhooks (refused if unsigned or stale). Set-up steps are in `backend/README.md` (*SMS providers*). Until it's configured, `Log` writes messages to the log and sends nothing.
 
 ## 3. Options considered (kept for the record)
 

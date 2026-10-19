@@ -31,6 +31,9 @@ public static class InfrastructureServices
 
         services.AddOptions<SmsOptions>().Bind(config.GetSection(SmsOptions.Section));
         services.AddSingleton<ISmsSender, LogSmsSender>();
+        // SMSSouthAfrica (D14): Sms__Provider=SmsSouthAfrica plus its Sms__SmsSouthAfrica__* settings.
+        services.AddOptions<SmsSouthAfricaOptions>().Bind(config.GetSection(SmsSouthAfricaOptions.Section));
+        services.AddHttpClient(SmsSouthAfricaSender.HttpClientName, c => c.Timeout = TimeSpan.FromSeconds(20));
         services.AddSingleton<ISmsSender, SmsSouthAfricaSender>();
         services.AddSingleton<SmsGateway>();
 
