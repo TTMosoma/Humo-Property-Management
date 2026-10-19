@@ -49,6 +49,7 @@ import {
 } from '../domain';
 import { ContractorNetwork } from '../domain/contractor';
 import { httpAccessDataSource } from './http-access';
+import { HttpBoardDataSource } from './http-board';
 import { HttpOrganisationDataSource, HttpPersonDataSource, HttpSchemeDataSource, HttpStepUpAuthenticator, HttpUnitDataSource } from './http-portfolio';
 import { HttpSessionDataSource } from './http-session-data-source';
 import { notConnected } from './not-connected';
@@ -91,7 +92,6 @@ const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
   [InboxDataSource, 'InboxDataSource'],
   [StaffDataSource, 'StaffDataSource'],
   [BudgetDataSource, 'BudgetDataSource'],
-  [BoardDataSource, 'BoardDataSource'],
   [RulesDataSource, 'RulesDataSource'],
   [ContractorNetwork, 'ContractorNetwork'],
 ];
@@ -104,7 +104,7 @@ const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
  *
  * Connected so far (slice 1): the session (GET /me, passkey and email-link
  * sign-in, passkey registration), sign out and switch role, step-up,
- * organisations, schemes, units and people. The other ports answer "not connected yet" until their slice lands.
+ * organisations, schemes, units, people and the trustee board. The other ports answer "not connected yet" until their slice lands.
  */
 export function provideHttpData(): EnvironmentProviders {
   const pending: Provider[] = NOT_YET.map(([port, name]) => ({ provide: port, useFactory: () => notConnected(name) }));
@@ -116,6 +116,7 @@ export function provideHttpData(): EnvironmentProviders {
     { provide: StepUpAuthenticator, useClass: HttpStepUpAuthenticator },
     { provide: UnitDataSource, useClass: HttpUnitDataSource },
     { provide: PersonDataSource, useClass: HttpPersonDataSource },
+    { provide: BoardDataSource, useClass: HttpBoardDataSource },
     ...pending,
   ]);
 }

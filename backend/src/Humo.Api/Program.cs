@@ -104,6 +104,7 @@ api.MapOrganisations();
 api.MapSchemes();
 api.MapUnits();
 api.MapPeople();
+api.MapBoards();
 
 await app.InitialiseDatabaseAsync();
 app.Run();

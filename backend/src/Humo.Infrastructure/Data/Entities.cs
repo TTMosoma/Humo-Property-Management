@@ -53,6 +53,8 @@ public sealed class Scheme
     public string Suburb { get; set; } = "";
     public string City { get; set; } = "";
     public string Province { get; set; } = "";
+    /// <summary>The fewest trustees the board should have (the scheme's rules; 3 by default).</summary>
+    public int TrusteeMinimum { get; set; } = 3;
     public DateTimeOffset CreatedAt { get; set; }
 }
 
