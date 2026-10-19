@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { firstValueFrom } from 'rxjs';
-import { AccessDataSource, ApiError, SchemeDataSource, SessionDataSource, SignInError } from '../domain';
+import { AccessDataSource, ApiError, HumoTeamDataSource, PolicyError, SchemeDataSource, SessionDataSource, SignInError, JobDataSource } from '../domain';
 import { provideHttpData } from './provide-http-data';
 
 /**
@@ -42,7 +42,44 @@ describe('Production data layer (provideHttpData)', () => {
   });
 
   it('ports without an API yet say so', async () => {
-    await expect(firstValueFrom(TestBed.inject(SchemeDataSource).list())).rejects.toBeInstanceOf(ApiError);
-    await expect(firstValueFrom(TestBed.inject(AccessDataSource).directory(null))).rejects.toMatchObject({ kind: 'server' });
+    await expect(firstValueFrom(TestBed.inject(JobDataSource).list(['s-1']))).rejects.toBeInstanceOf(ApiError);
+    await expect(firstValueFrom(TestBed.inject(HumoTeamDataSource).list())).rejects.toMatchObject({ kind: 'server' });
+  });
+  it('reads schemes from the API', async () => {
+    const list = firstValueFrom(TestBed.inject(SchemeDataSource).list());
+    http.expectOne({ method: 'GET', url: '/api/schemes' }).flush([{ id: 's-1', code: 'KC' }]);
+    expect((await list)[0].code).toBe('KC');
+  });
+
+  it('creates a scheme and returns its id', async () => {
+    const id = firstValueFrom(TestBed.inject(SchemeDataSource).create({ name: 'Kingfisher Court', code: 'KC', type: 'Sectional Title', suburb: 'Morningside', city: 'Sandton', province: 'Gauteng' }));
+    http.expectOne({ method: 'POST', url: '/api/schemes' }).flush({ id: 's-9' }, { status: 201, statusText: 'Created' });
+    expect(await id).toBe('s-9');
+  });
+
+  it('maps the API’s refusals onto the errors screens already handle', async () => {
+    const schemes = TestBed.inject(SchemeDataSource);
+    const outOfScope = firstValueFrom(schemes.setStatus('s-1', 'active', 'Handover complete'));
+    http.expectOne('/api/schemes/s-1/status').flush({ title: 'Outside', code: 'out-of-scope' }, { status: 403, statusText: 'Forbidden' });
+    await expect(outOfScope).rejects.toBeInstanceOf(PolicyError);
+    await expect(outOfScope).rejects.toMatchObject({ code: 'out-of-scope' });
+
+    const invalid = firstValueFrom(schemes.update('s-1', { name: 'X', code: 'K1', type: 'Sectional Title', suburb: 'a', city: 'b', province: 'Gauteng' }, 1));
+    http.expectOne('/api/schemes/s-1').flush({ title: 'Some details need attention', errors: { code: 'Use 2–4 letters' } }, { status: 422, statusText: 'Unprocessable' });
+    await expect(invalid).rejects.toMatchObject({ kind: 'validation', fieldErrors: { code: 'Use 2–4 letters' } });
+
+    const stale = firstValueFrom(schemes.update('s-1', { name: 'Kingfisher', code: 'KC', type: 'Sectional Title', suburb: 'a', city: 'b', province: 'Gauteng' }, 1));
+    http.expectOne('/api/schemes/s-1').flush({ title: 'Someone else changed this first' }, { status: 409, statusText: 'Conflict' });
+    await expect(stale).rejects.toMatchObject({ kind: 'conflict' });
+  });
+  it('reads the access directory and invites over HTTP', async () => {
+    const access = TestBed.inject(AccessDataSource);
+    const dir = firstValueFrom(access.directory('org-1'));
+    http.expectOne((r) => r.url === '/api/access/directory' && r.params.get('organisationId') === 'org-1').flush([{ id: 'p-1', email: 'lerato@acacia.example' }]);
+    expect((await dir)[0].email).toBe('lerato@acacia.example');
+
+    const invited = firstValueFrom(access.invite({ organisationId: 'org-1', name: 'Lerato Mokoena', email: 'lerato@acacia.example', assignment: { role: 'finance', scope: { type: 'organisation', organisationId: 'org-1', schemeIds: [] }, label: 'Acacia' } }));
+    http.expectOne({ method: 'POST', url: '/api/access/invitations' }).flush({ id: 'p-2' }, { status: 201, statusText: 'Created' });
+    expect(await invited).toBe('p-2');
   });
 });

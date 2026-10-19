@@ -39,6 +39,103 @@ public sealed class Organisation
     public DateTimeOffset CreatedAt { get; set; }
 }
 
+/// <summary>A sectional-title scheme, HOA or share block that an organisation manages (doc 24 §4).</summary>
+public sealed class Scheme
+{
+    public Guid Id { get; set; }
+    public int Version { get; set; } = 1;
+    public Guid OrganisationId { get; set; }
+    public string Name { get; set; } = "";
+    /// <summary>2–4 capital letters; starts every account number (KC → KC-042). Unique in the organisation.</summary>
+    public string Code { get; set; } = "";
+    public string Type { get; set; } = "Sectional Title";
+    public string Status { get; set; } = "onboarding";
+    public string Suburb { get; set; } = "";
+    public string City { get; set; } = "";
+    public string Province { get; set; } = "";
+    /// <summary>The fewest trustees the board should have (the scheme's rules; 3 by default).</summary>
+    public int TrusteeMinimum { get; set; } = 3;
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
+/// <summary>A section (sectional title), erf (HOA) or share block in a scheme (doc 24 §5).</summary>
+public sealed class Unit
+{
+    public Guid Id { get; set; }
+    public int Version { get; set; } = 1;
+    public Guid SchemeId { get; set; }
+    /// <summary>As people say it: "42", "12B". Part of the account number, so it never changes.</summary>
+    public string Number { get; set; } = "";
+    /// <summary>The levy account number and payment reference, e.g. KC-042.</summary>
+    public string AccountNo { get; set; } = "";
+    public string? Block { get; set; }
+    public int? Floor { get; set; }
+    public string Description { get; set; } = "";
+    public decimal SizeM2 { get; set; }
+    /// <summary>Participation quota (%), which determines the share of levies.</summary>
+    public decimal ParticipationQuota { get; set; }
+    public decimal MonthlyLevy { get; set; }
+    public string Occupancy { get; set; } = "owner-occupied";
+    public List<string> ParkingBays { get; set; } = [];
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
+/// <summary>
+/// Each unit's levy account. Opened with the unit; the current owner holds it. Balances,
+/// charges and payments arrive with the billing slice; until then a new account owes nothing.
+/// </summary>
+public sealed class LevyAccount
+{
+    public Guid Id { get; set; }
+    public Guid UnitId { get; set; }
+    public Guid SchemeId { get; set; }
+    public string AccountNo { get; set; } = "";
+    public Guid? HolderPersonId { get; set; }
+    public decimal Balance { get; set; }
+    public string Status { get; set; } = "up-to-date";
+    public bool DebitOrder { get; set; }
+    public string StatementBy { get; set; } = "email";
+}
+
+/// <summary>A person in an organisation's directory. Owner, tenant and trustee are relationships, not kinds of person (D1).</summary>
+public sealed class Person
+{
+    public Guid Id { get; set; }
+    public int Version { get; set; } = 1;
+    public Guid OrganisationId { get; set; }
+    public string FirstName { get; set; } = "";
+    public string LastName { get; set; } = "";
+    /// <summary>individual, company or trust.</summary>
+    public string Kind { get; set; } = "individual";
+    public string DisplayName { get; set; } = "";
+    public string Initials { get; set; } = "";
+    public string Email { get; set; } = "";
+    public string Phone { get; set; } = "";
+    public string PreferredChannel { get; set; } = "email";
+    public string? PostalAddress { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
+/// <summary>Owner or tenant of a unit, or trustee of a scheme. Ended on a date; the history stays.</summary>
+public sealed class Relationship
+{
+    public Guid Id { get; set; }
+    public Guid PersonId { get; set; }
+    /// <summary>owner, tenant or trustee.</summary>
+    public string Type { get; set; } = "owner";
+    public Guid SchemeId { get; set; }
+    public Guid? UnitId { get; set; }
+    /// <summary>Trustees: Chairperson, Treasurer, Trustee.</summary>
+    public string? Portfolio { get; set; }
+    public DateOnly Since { get; set; }
+    /// <summary>Tenants: lease end. Trustees: the day they left the board.</summary>
+    public DateOnly? Until { get; set; }
+    /// <summary>Trustees: elected, co-opted or before-humo.</summary>
+    public string? AppointmentHow { get; set; }
+    public string? ResolutionRef { get; set; }
+    public string? EndReason { get; set; }
+}
+
 /// <summary>Belonging to an organisation, with a status. Ended, never deleted.</summary>
 public sealed class Membership
 {

@@ -19,6 +19,23 @@ public static class Roles
     public static readonly IReadOnlySet<string> Humo = new HashSet<string> { SystemAdmin, AccountManager, Support, Executive };
 
     public static bool IsHumo(string role) => Humo.Contains(role);
+
+    /// <summary>How people read the role (the frontend's ROLE_LABELS), for the audit log.</summary>
+    public static string Label(string role) => role switch
+    {
+        AgencyAdmin => "Agency Administrator",
+        PortfolioManager => "Portfolio Manager",
+        Finance => "Finance User",
+        Operations => "Operations / Maintenance",
+        Trustee => "Trustee",
+        Owner => "Owner",
+        Tenant => "Tenant",
+        SystemAdmin => "Humo System Administrator",
+        AccountManager => "Humo Account Manager",
+        Support => "Humo Support",
+        Executive => "Humo Executive",
+        _ => role,
+    };
 }
 
 /// <summary>Customer identities belong to organisations; Humo identities to Humo.</summary>

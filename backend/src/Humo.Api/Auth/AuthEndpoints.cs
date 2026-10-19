@@ -44,6 +44,8 @@ public static class AuthEndpoints
         me.MapPost("/passkeys/options", PasskeyCreationOptions);
         me.MapPost("/passkeys", AddPasskey);
         me.MapPut("/assignment", SwitchAssignment);
+        me.MapPost("/step-up/options", StepUpOptions);
+        me.MapPost("/step-up", StepUp);
     }
 
     // ---- Email links ----
@@ -190,6 +192,35 @@ public static class AuthEndpoints
             return Results.Problem(title: "Not one of your roles", statusCode: StatusCodes.Status403Forbidden);
         await signIn.SignInWithClaimsAsync(user, isPersistent: false, [new Claim(AssignmentClaim, body.AssignmentId)]);
         return Results.Ok(await sessions.BuildAsync(user, body.AssignmentId, ct));
+    }
+
+    // ---- Step-up: a fresh passkey proof for sensitive commands (doc 24 C7) ----
+
+    /// <summary>Options for navigator.credentials.get(), limited to the signed-in person's own passkeys.</summary>
+    private static async Task<IResult> StepUpOptions(ClaimsPrincipal principal, UserManager<HumoUser> users, SignInManager<HumoUser> signIn)
+    {
+        var user = await users.GetUserAsync(principal);
+        if (user is null) return Results.Unauthorized();
+        return Results.Content(await signIn.MakePasskeyRequestOptionsAsync(user), "application/json");
+    }
+
+    /// <summary>Verifies the passkey and records the proof's time in the session; commands check it is under 5 minutes old.</summary>
+    private static async Task<IResult> StepUp(PasskeyCredentialRequest body, ClaimsPrincipal principal, UserManager<HumoUser> users, SignInManager<HumoUser> signIn,
+        IStepUpVerifier verifier, HumoDbContext db, AuditLog audit, TimeProvider clock, CancellationToken ct)
+    {
+        var user = await users.GetUserAsync(principal);
+        if (user is null) return Results.Unauthorized();
+        if (await verifier.VerifyAsync(user, body.Credential.GetRawText()) is { } failure)
+        {
+            audit.Record("Step-up verification failed", "denied", user, reason: failure);
+            await db.SaveChangesAsync(ct);
+            return Failure("no-passkey", "That passkey didn't verify you.");
+        }
+        var at = clock.GetUtcNow();
+        List<Claim> claims = [new(Commands.CurrentActor.StepUpClaim, at.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture))];
+        if (principal.FindFirstValue(AssignmentClaim) is { } assignment) claims.Add(new Claim(AssignmentClaim, assignment));
+        await signIn.SignInWithClaimsAsync(user, isPersistent: false, claims);
+        return Results.Ok(new { verified = true, method = "passkey", device = "Passkey", at });
     }
 
     private static async Task<IResult> SignOut(SignInManager<HumoUser> signIn)

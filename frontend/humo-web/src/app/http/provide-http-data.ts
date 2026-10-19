@@ -48,18 +48,16 @@ import {
   WorkItemDataSource,
 } from '../domain';
 import { ContractorNetwork } from '../domain/contractor';
-import { httpAccessDataSource } from './http-access';
+import { HttpAccessDataSource } from './http-access';
+import { HttpBoardDataSource } from './http-board';
+import { HttpOrganisationDataSource, HttpPersonDataSource, HttpSchemeDataSource, HttpStepUpAuthenticator, HttpUnitDataSource } from './http-portfolio';
 import { HttpSessionDataSource } from './http-session-data-source';
 import { notConnected } from './not-connected';
 
 /** Ports whose HTTP adapters come with later backend slices. Remove each from this list as its adapter lands. */
 const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
-  [OrganisationDataSource, 'OrganisationDataSource'],
   [NotificationDataSource, 'NotificationDataSource'],
-  [SchemeDataSource, 'SchemeDataSource'],
   [WorkItemDataSource, 'WorkItemDataSource'],
-  [UnitDataSource, 'UnitDataSource'],
-  [PersonDataSource, 'PersonDataSource'],
   [AccountDataSource, 'AccountDataSource'],
   [ReceiptDataSource, 'ReceiptDataSource'],
   [TimelineDataSource, 'TimelineDataSource'],
@@ -69,7 +67,6 @@ const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
   [HumoTeamDataSource, 'HumoTeamDataSource'],
   [AuditDataSource, 'AuditDataSource'],
   [SecurityDataSource, 'SecurityDataSource'],
-  [StepUpAuthenticator, 'StepUpAuthenticator'],
   [PlatformDataSource, 'PlatformDataSource'],
   [AccountRequestDataSource, 'AccountRequestDataSource'],
   [PlanDataSource, 'PlanDataSource'],
@@ -95,7 +92,6 @@ const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
   [InboxDataSource, 'InboxDataSource'],
   [StaffDataSource, 'StaffDataSource'],
   [BudgetDataSource, 'BudgetDataSource'],
-  [BoardDataSource, 'BoardDataSource'],
   [RulesDataSource, 'RulesDataSource'],
   [ContractorNetwork, 'ContractorNetwork'],
 ];
@@ -106,11 +102,21 @@ const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
  * controls are in a production bundle: `PrototypeControls` isn't provided, so
  * every prototype control disappears.
  *
- * Connected so far (slice 1, step 1): the session (GET /me, passkey and
- * email-link sign-in, passkey registration) and, on Users & access, sign out
- * and switch role. The other ports answer "not connected yet" until their slice lands.
+ * Connected so far (slice 1): the session (GET /me, passkey and email-link
+ * sign-in, passkey registration), sign out and switch role, step-up,
+ * organisations, schemes, units, people, the trustee board and users & access. The other ports answer "not connected yet" until their slice lands.
  */
 export function provideHttpData(): EnvironmentProviders {
   const pending: Provider[] = NOT_YET.map(([port, name]) => ({ provide: port, useFactory: () => notConnected(name) }));
-  return makeEnvironmentProviders([provideHttpClient(withFetch()), { provide: SessionDataSource, useClass: HttpSessionDataSource }, { provide: AccessDataSource, useFactory: httpAccessDataSource }, ...pending]);
+  return makeEnvironmentProviders([
+    provideHttpClient(withFetch()),
+    { provide: SessionDataSource, useClass: HttpSessionDataSource }, { provide: AccessDataSource, useClass: HttpAccessDataSource },
+    { provide: OrganisationDataSource, useClass: HttpOrganisationDataSource },
+    { provide: SchemeDataSource, useClass: HttpSchemeDataSource },
+    { provide: StepUpAuthenticator, useClass: HttpStepUpAuthenticator },
+    { provide: UnitDataSource, useClass: HttpUnitDataSource },
+    { provide: PersonDataSource, useClass: HttpPersonDataSource },
+    { provide: BoardDataSource, useClass: HttpBoardDataSource },
+    ...pending,
+  ]);
 }

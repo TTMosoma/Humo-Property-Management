@@ -1,8 +1,11 @@
 using System.Threading.RateLimiting;
 using Humo.Api;
+using Humo.Api.Access;
 using Humo.Api.Audit;
 using Humo.Api.Auth;
+using Humo.Api.Commands;
 using Humo.Api.Messaging;
+using Humo.Api.Portfolio;
 using Humo.Api.Session;
 using Humo.Api.Startup;
 using Humo.Infrastructure;
@@ -25,6 +28,10 @@ builder.Services.AddProblemDetails();
 builder.Services.AddHumoInfrastructure(config);
 builder.Services.AddScoped<SessionBuilder>();
 builder.Services.AddScoped<AuditLog>();
+builder.Services.AddScoped<CurrentActor>();
+builder.Services.AddScoped<CommandRunner>();
+builder.Services.AddScoped<PortfolioReads>();
+builder.Services.AddScoped<IStepUpVerifier, PasskeyStepUpVerifier>();
 
 // ---- Sign-in: ASP.NET Core Identity with passkeys; no passwords (D14) ----
 builder.Services
@@ -95,6 +102,12 @@ api.MapGet("/health", async (HumoDbContext db, CancellationToken ct) =>
     await db.Database.CanConnectAsync(ct) ? Results.Ok(new { status = "ok" }) : Results.Problem("Database unavailable", statusCode: 503));
 api.MapHumoAuth();
 api.MapSmsWebhooks();
+api.MapOrganisations();
+api.MapSchemes();
+api.MapUnits();
+api.MapPeople();
+api.MapBoards();
+api.MapAccess();
 
 await app.InitialiseDatabaseAsync();
 app.Run();
