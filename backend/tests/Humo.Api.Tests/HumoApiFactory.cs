@@ -98,8 +98,12 @@ public sealed class CapturedEmail : IEmailSender
 {
     public ConcurrentQueue<EmailMessage> Sent { get; } = new();
 
+    /// <summary>Stands in for a mail server that's down.</summary>
+    public bool Failing { get; set; }
+
     public Task SendAsync(EmailMessage message, CancellationToken ct = default)
     {
+        if (Failing) throw new InvalidOperationException("The mail server is down");
         Sent.Enqueue(message);
         return Task.CompletedTask;
     }

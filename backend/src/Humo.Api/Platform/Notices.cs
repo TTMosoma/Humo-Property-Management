@@ -1,6 +1,9 @@
 using Humo.Api.Commands;
+using Humo.Domain.Access;
 using Humo.Infrastructure.Data;
+using Humo.Infrastructure.Messaging;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Humo.Api.Platform;
 
@@ -8,18 +11,69 @@ public sealed record AppNotificationDto(string Id, string Kind, string Title, st
 public sealed record MarkReadRequest(List<string> Ids);
 
 /// <summary>
-/// In-app notifications (the topbar bell): to one person or to a role. The person who acted
-/// never gets their own notice. Email for the same events is a later integration (docs/18 R-9).
+/// Notifications: in the app (the topbar bell) and by email, to one person or to a role. The person
+/// who acted never gets their own notice. Emails go only after the change is saved (the command runner
+/// calls <see cref="SendEmailsAsync"/>), to people who are active and still hold the role (docs/18 R-9).
 /// </summary>
-public sealed class Notices(HumoDbContext db, TimeProvider clock)
+public sealed class Notices(HumoDbContext db, TimeProvider clock, IEmailSender email, IOptions<AppOptions> app, ILogger<Notices> logger)
 {
+    private readonly List<(Notice Notice, Guid? ActorId)> queued = [];
+
     public void ToRole(string role, Guid? actorId, string title, string detail, string link, Guid? organisationId = null) =>
-        db.Notices.Add(new Notice { Id = Guid.CreateVersion7(), ToRole = role, ActorId = actorId, Title = title, Detail = detail, Link = link, OrganisationId = organisationId, At = clock.GetUtcNow() });
+        Add(new Notice { Id = Guid.CreateVersion7(), ToRole = role, ActorId = actorId, Title = title, Detail = detail, Link = link, OrganisationId = organisationId, At = clock.GetUtcNow() });
 
     public void ToPerson(Guid identityId, Guid? actorId, string title, string detail, string link)
     {
         if (identityId == actorId) return;
-        db.Notices.Add(new Notice { Id = Guid.CreateVersion7(), ToIdentityId = identityId, ActorId = actorId, Title = title, Detail = detail, Link = link, At = clock.GetUtcNow() });
+        Add(new Notice { Id = Guid.CreateVersion7(), ToIdentityId = identityId, ActorId = actorId, Title = title, Detail = detail, Link = link, At = clock.GetUtcNow() });
+    }
+
+    private void Add(Notice notice)
+    {
+        db.Notices.Add(notice);
+        queued.Add((notice, notice.ActorId));
+    }
+
+    /// <summary>The command didn't go through: nothing to email.</summary>
+    public void Discard() => queued.Clear();
+
+    /// <summary>
+    /// Emails the notices of a saved command. A failed email never undoes the change: the notice is in
+    /// the app either way, and the failure is logged for the IT Technician (doc 26 §8).
+    /// </summary>
+    public async Task SendEmailsAsync(CancellationToken ct)
+    {
+        if (queued.Count == 0) return;
+        var batch = queued.ToList();
+        queued.Clear();
+        var site = app.Value.PublicUrl.TrimEnd('/');
+        foreach (var (notice, actorId) in batch)
+        {
+            foreach (var (address, name) in await Recipients(notice, actorId, ct))
+            {
+                try
+                {
+                    await email.SendAsync(new EmailMessage(address, notice.Title,
+                        $"Hello {name},\n\n{notice.Detail}\n\nOpen it in Humo Property Management:\n\n{site}{notice.Link}\n\nYou get this email because it’s also in your notifications in Humo Property Management.\n\nHumo Property Management"), ct);
+                }
+                catch (Exception e)
+                {
+                    logger.LogError(e, "Couldn't email a notification to {To}: {Title}", SmtpEmailSender.Mask(address), notice.Title);
+                }
+            }
+        }
+    }
+
+    /// <summary>The same people who see it in the app, as long as they're active: invited, suspended and deactivated people get nothing.</summary>
+    private async Task<List<(string Email, string Name)>> Recipients(Notice notice, Guid? actorId, CancellationToken ct)
+    {
+        var people = db.Users.Where(u => u.Status == IdentityStatuses.Active && u.Email != null && u.Id != actorId);
+        if (notice.ToIdentityId is { } person) people = people.Where(u => u.Id == person);
+        else if (notice.ToRole is { } role)
+            people = people.Where(u => db.RoleAssignments.Any(a => a.UserId == u.Id && a.Role == role && a.Status == AssignmentStatuses.Active
+                && (notice.OrganisationId == null || a.OrganisationId == notice.OrganisationId)));
+        else return [];
+        return (await people.Select(u => new { u.Email, u.Name }).ToListAsync(ct)).Select(u => (u.Email!, u.Name)).ToList();
     }
 
     public static void MapNotifications(IEndpointRouteBuilder api)
