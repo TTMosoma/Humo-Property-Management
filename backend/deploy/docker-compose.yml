@@ -49,6 +49,10 @@ services:
       Sms__SmsSouthAfrica__ApiSecret: ${SMS_SOUTHAFRICA_API_SECRET}
       Sms__SmsSouthAfrica__TestMode: ${SMS_SOUTHAFRICA_TEST_MODE}
       Sms__SmsSouthAfrica__WebhookSecret: ${SMS_SOUTHAFRICA_WEBHOOK_SECRET}
+      Payments__Payfast__Sandbox: ${PAYFAST_SANDBOX}
+      Payments__Payfast__MerchantId: ${PAYFAST_MERCHANT_ID}
+      Payments__Payfast__MerchantKey: ${PAYFAST_MERCHANT_KEY}
+      Payments__Payfast__Passphrase: ${PAYFAST_PASSPHRASE}
     expose:
       - "8080" # only Caddy reaches the API
     depends_on:

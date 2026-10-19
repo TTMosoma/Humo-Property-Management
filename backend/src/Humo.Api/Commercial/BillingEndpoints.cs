@@ -25,7 +25,7 @@ public sealed record InvoiceDocumentDto(HumoInvoiceSnapshot Invoice, TaxConfig F
 /// <summary>
 /// Humo's invoices and payments (docs/23 §6, register R-14), without a payment provider yet:
 /// invoices are issued from the agreement as it stands, and manual EFT counts only once it's
-/// reconciled with Humo's bank statement. Online payment waits for the provider decision.
+/// reconciled with Humo's bank statement. Online payment is Payfast (<see cref="PayfastEndpoints"/>).
 /// </summary>
 public static partial class BillingEndpoints
 {
@@ -35,7 +35,7 @@ public static partial class BillingEndpoints
         g.MapGet("/invoices", List);
         g.MapGet("/invoices/{id:guid}", Get);
         g.MapPost("/customers/{id:guid}/invoices", Issue);
-        g.MapPost("/invoices/{id:guid}/checkout", Checkout);
+
         g.MapPost("/invoices/{id:guid}/eft-proof", EftProof);
         g.MapPost("/payments/{id:guid}/reconcile", Reconcile);
         var o = api.MapGroup("/organisations/{id:guid}/invoices").RequireAuthorization();
@@ -135,12 +135,6 @@ public static partial class BillingEndpoints
         }, ct);
     }
 
-    /// <summary>Online payment needs a payment provider, which hasn't been chosen (docs/23 §8).</summary>
-    private static async Task<IResult> Checkout(Guid id, CurrentActor current, CancellationToken ct)
-    {
-        if (await current.GetAsync(ct) is null) return Results.Unauthorized();
-        return Problems.Validation(new() { ["invoiceId"] = "Online payment isn’t available yet: Humo hasn’t chosen its payment provider. The customer can pay by EFT." });
-    }
 
     /// <summary>The customer's proof of an EFT: recorded, but the invoice stays unpaid until it's reconciled.</summary>
     private static async Task<IResult> EftProof(Guid id, EftProofRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, TimeProvider clock, CancellationToken ct)

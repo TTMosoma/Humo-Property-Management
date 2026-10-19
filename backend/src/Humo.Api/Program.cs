@@ -130,6 +130,7 @@ api.MapSecurity();
 Humo.Api.Commercial.CustomerEndpoints.MapCustomers(api);
 Humo.Api.Commercial.CommercialEndpoints.MapCommercial(api);
 Humo.Api.Commercial.BillingEndpoints.MapBilling(api);
+Humo.Api.Commercial.PayfastEndpoints.MapPayfast(api);
 Notices.MapNotifications(api);
 
 // Operator check (doc 26): `send-test-sms <mobile number>` sends one SMS through the configured provider, then exits.

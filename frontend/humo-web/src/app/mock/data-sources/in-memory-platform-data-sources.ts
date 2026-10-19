@@ -5,6 +5,7 @@ import {
   ADD_ONS,
   AddOnId,
   BusinessOverview,
+  CheckoutSession,
   Catalogue,
   CatalogueDataSource,
   CustomerPlan,
@@ -169,6 +170,30 @@ export class InMemoryPlanDataSource extends PlanDataSource {
         return this.respond(doc?.invoice.organisationId === organisationId ? doc : undefined);
       }),
     );
+  }
+
+  /** DEVELOPMENT / SIMULATION ONLY: a simulated checkout. Nobody is sent anywhere and no money moves; the invoice stays unpaid. */
+  payInvoice(organisationId: string, invoiceId: string): Observable<CheckoutSession> {
+    const refused = this.ownBilling(organisationId);
+    if (refused) return throwError(() => refused);
+    const inv = this.commercial.invoices().find((i) => i.id === invoiceId && i.organisationId === organisationId);
+    const paymentId = this.commercial.nextId('pay');
+    return this.gateway
+      .command(
+        {
+          action: `Started a simulated checkout for invoice ${inv?.reference}`,
+          resource: 'Payment',
+          resourceId: invoiceId,
+          permission: 'Subscription.Request',
+          validate: (): FieldErrors | null => (!inv ? { invoiceId: 'No such invoice.' } : inv.status !== 'issued' ? { invoiceId: 'This invoice is already settled.' } : null),
+        },
+        () =>
+          this.commercial.addPayment({
+            id: paymentId, invoiceId, organisationId, method: 'instant-eft', status: 'initiated', amount: inv!.total, provider: 'Simulated provider',
+            createdAt: new Date().toISOString(), simulated: true, note: 'Simulated checkout: no money moved.',
+          }),
+      )
+      .pipe(map((): CheckoutSession => ({ paymentId, providerReference: paymentId, redirectUrl: null, simulated: true })));
   }
 
   private ownBilling(organisationId: string): PolicyError | null {

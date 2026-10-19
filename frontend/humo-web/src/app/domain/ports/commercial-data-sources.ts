@@ -142,6 +142,8 @@ export interface CheckoutSession {
   /** Where the customer completes payment. Null in the simulation: nobody is sent anywhere. */
   redirectUrl: string | null;
   simulated: boolean;
+  /** Payfast: the browser posts these fields to `action` (so personal details stay out of the URL). */
+  form?: { action: string; fields: { key: string; value: string }[] };
 }
 
 /**

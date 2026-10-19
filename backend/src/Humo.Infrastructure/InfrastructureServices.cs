@@ -1,5 +1,6 @@
 using Humo.Infrastructure.Data;
 using Humo.Infrastructure.Messaging;
+using Humo.Infrastructure.Payments;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -36,6 +37,11 @@ public static class InfrastructureServices
         services.AddHttpClient(SmsSouthAfricaSender.HttpClientName, c => c.Timeout = TimeSpan.FromSeconds(20));
         services.AddSingleton<ISmsSender, SmsSouthAfricaSender>();
         services.AddSingleton<SmsGateway>();
+
+        // Payfast (D15): Payments__Payfast__*. Sandbox by default; production sets Sandbox=false with the live merchant.
+        services.AddOptions<PayfastOptions>().Bind(config.GetSection(PayfastOptions.Section));
+        services.AddHttpClient(PayfastClient.HttpClientName, c => c.Timeout = TimeSpan.FromSeconds(20));
+        services.AddSingleton<IPayfast, PayfastClient>();
 
         return services;
     }

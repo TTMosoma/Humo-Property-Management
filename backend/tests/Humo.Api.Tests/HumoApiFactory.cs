@@ -58,6 +58,9 @@ public sealed class HumoApiFactory : WebApplicationFactory<Program>
             services.AddSingleton<TimeProvider>(Clock);
             services.RemoveAll<IEmailSender>();
             services.AddSingleton<IEmailSender>(Email);
+            // Payfast's real checks call Payfast; the tests check the signature only.
+            services.RemoveAll<Humo.Infrastructure.Payments.IPayfast>();
+            services.AddSingleton<Humo.Infrastructure.Payments.IPayfast, TestPayfast>();
             // A passkey ceremony needs a person at a device: tests prove step-up with the credential "test-passkey".
             services.RemoveAll<Humo.Api.Auth.IStepUpVerifier>();
             services.AddScoped<Humo.Api.Auth.IStepUpVerifier, TestStepUp>();
@@ -83,6 +86,25 @@ public sealed class TestStepUp : Humo.Api.Auth.IStepUpVerifier
 {
     public Task<string?> VerifyAsync(HumoUser user, string credentialJson) =>
         Task.FromResult(credentialJson == "\"test-passkey\"" ? null : "Not the test passkey");
+}
+
+/// <summary>Payfast's sandbox merchant and real signatures; a notification counts as genuine when its signature matches.</summary>
+public sealed class TestPayfast : Humo.Infrastructure.Payments.IPayfast
+{
+    private readonly Humo.Infrastructure.Payments.PayfastClient real = new(
+        Microsoft.Extensions.Options.Options.Create(new Humo.Infrastructure.Payments.PayfastOptions()), null!,
+        Microsoft.Extensions.Logging.Abstractions.NullLogger<Humo.Infrastructure.Payments.PayfastClient>.Instance);
+
+    public bool Configured => true;
+    public bool Sandbox => true;
+
+    public Humo.Infrastructure.Payments.PayfastCheckout Checkout(string paymentId, decimal amount, string itemName, string? itemDescription, string? email,
+        string returnUrl, string cancelUrl, string notifyUrl, string invoiceId) =>
+        real.Checkout(paymentId, amount, itemName, itemDescription, email, returnUrl, cancelUrl, notifyUrl, invoiceId);
+
+    public Task<string?> VerifyAsync(Humo.Infrastructure.Payments.PayfastNotification n, System.Net.IPAddress? from, CancellationToken ct) =>
+        Task.FromResult(Humo.Infrastructure.Payments.PayfastClient.Signature(n.Fields.Where(f => f.Key != "signature"), null) == n["signature"]
+            ? null : "The signature doesn't match");
 }
 
 public sealed class TestClock : TimeProvider

@@ -95,6 +95,25 @@ Settings come from `appsettings.json`, then environment variables. In an environ
 | `Sms__SmsSouthAfrica__TestMode` | `true`: the API answers but nothing reaches a phone or is charged |
 | `Sms__SmsSouthAfrica__WebhookSecret` | The signature secret for delivery reports (Settings › Webhooks › Activate Signatures) |
 
+## Payfast (online payment)
+
+Customers pay a Humo invoice with **Pay now** (Settings › Billing & invoices). The API signs a Payfast checkout and the browser posts it to Payfast; card details never reach Humo.
+
+| Setting | Meaning |
+|---|---|
+| `Payments__Payfast__Sandbox` | `true` (default): sandbox.payfast.co.za with the `Sandbox*` merchant. Production: `false`. |
+| `Payments__Payfast__MerchantId` / `__MerchantKey` | The live merchant (Payfast › Settings › Integration) |
+| `Payments__Payfast__Passphrase` | The security passphrase set in Payfast. **Required** whenever one is set there: every signature includes it. |
+| `Payments__Payfast__SandboxMerchantId` / `__SandboxMerchantKey` / `__SandboxPassphrase` | Your own sandbox account (sandbox.payfast.co.za). The public test merchant's passphrase isn't published, so it refuses signed checkouts. |
+
+**An invoice is paid only by Payfast's notification (ITN)**, `POST /api/payments/notifications/payfast`, sent to the `notify_url` in each checkout. The API checks:
+1. the signature;
+2. that it came from Payfast's servers;
+3. Payfast's own confirmation (`/eng/query/validate`);
+4. the amount.
+
+A repeated notification changes nothing. Payfast must be able to reach the API over HTTPS, so ITN can't be tested on `localhost`.
+
 ## SMS providers
 
 **How it works:**
