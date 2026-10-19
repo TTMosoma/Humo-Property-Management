@@ -43,8 +43,10 @@ export interface PackageTerms {
   storageStatus: PriceStatus;
   /** Schemes the price covers; null when the package isn't priced by portfolio size. */
   includedSchemes: number | null;
-  /** Rand per month for each scheme beyond `includedSchemes`. Applies to catalogue-priced agreements only. */
+  /** Rand per month for each block of extra schemes beyond `includedSchemes`. Applies to catalogue-priced agreements only. */
   extraSchemePrice: number | null;
+  /** Schemes per block, e.g. R150 per 10 extra schemes (a part block counts as a block). Omitted or 1: priced per scheme. */
+  extraSchemeBlock?: number | null;
   /** Charged once a year on the renewal date, on top of the recurring price. Null: no renewal fee. */
   annualRenewalFee: number | null;
   changedBy: string;
@@ -127,6 +129,8 @@ export interface CommercialSettings {
   designatedAccountManagerId: string;
   /** Days between invoice and due date. */
   paymentTermsDays: number;
+  /** A discount above this share of the recurring charges needs a second approver (Platform.Discounts.Approve). Default 20. */
+  discountApprovalPercent?: number;
 }
 
 export interface CommercialCatalogue {
@@ -255,6 +259,36 @@ export interface CommercialAgreement {
     mandate: { status: 'none' | 'pending' | 'active'; reference?: string };
   };
   history: AgreementEvent[];
+  /** Changes waiting for a second approver (a discount above the threshold). Not in force until approved. */
+  pendingApprovals?: PendingApproval[];
+}
+
+/** A change someone asked for that needs another person's approval before it applies. */
+export interface PendingApproval {
+  id: string;
+  change: AgreementChange;
+  /** How the change reads in the history and the audit log. */
+  describe: string;
+  requestedById: string;
+  requestedBy: string;
+  at: string;
+  /** Why it needs approval, e.g. "35% of the recurring charges (more than 20%)". */
+  why: string;
+}
+
+export const DEFAULT_DISCOUNT_APPROVAL_PERCENT = 20;
+
+/**
+ * Does this change need a second approver? A recurring discount above the threshold (as a percentage,
+ * or as an amount against the recurring charges before discounts on its start date) does.
+ */
+export function approvalNeeded(a: CommercialAgreement, c: AgreementChange, ctx: ChargeContext): string | null {
+  if (c.type !== 'adjustment' || c.kind !== 'discount') return null;
+  const limit = ctx.catalogue.settings.discountApprovalPercent ?? DEFAULT_DISCOUNT_APPROVAL_PERCENT;
+  if (c.percent != null) return c.percent > limit ? `${c.percent}% off (more than ${limit}%)` : null;
+  const base = chargesOn(a, c.from, ctx).recurring.filter((l) => l.kind !== 'discount').reduce((n, l) => n + (l.amount ?? 0), 0);
+  const share = base > 0 ? (c.amount / base) * 100 : 100;
+  return share > limit ? `${Math.round(share)}% of the recurring charges (more than ${limit}%)` : null;
 }
 
 /** A change an authorised Humo person makes to an agreement. */
@@ -360,14 +394,16 @@ export function chargesOn(a: CommercialAgreement, on: string, ctx: ChargeContext
     const terms = termsOn(packageDef(ctx.catalogue, pkg.packageId)?.terms ?? [], on);
     const extra = terms?.includedSchemes != null ? Math.max(0, ctx.schemes - terms.includedSchemes) : 0;
     if (pkg.priceSource === 'catalogue' && extra > 0 && terms?.extraSchemePrice != null) {
+      const block = Math.max(1, terms.extraSchemeBlock ?? 1);
+      const blocks = Math.ceil(extra / block);
       recurring.push({
         kind: 'extra-schemes',
         label: 'Additional schemes',
-        detail: `${extra} beyond the ${terms.includedSchemes} included`,
-        quantity: extra,
+        detail: block > 1 ? `${extra} beyond the ${terms.includedSchemes} included: ${blocks} × ${block}` : `${extra} beyond the ${terms.includedSchemes} included`,
+        quantity: blocks,
         unitPrice: terms.extraSchemePrice,
         frequency: 'monthly',
-        amount: round2(extra * terms.extraSchemePrice),
+        amount: round2(blocks * terms.extraSchemePrice),
         priceSource: 'catalogue',
       });
     }
@@ -574,6 +610,8 @@ export interface ChangePreview {
   firstInvoiceOn: string;
   policy: ProrationPolicy;
   errors: Record<string, string> | null;
+  /** Set when the change needs a second approver: it waits until approved. */
+  approvalNeeded?: string | null;
 }
 
 export function previewAgreementChange(a: CommercialAgreement, c: AgreementChange, ctx: ChargeContext, today: string): ChangePreview {
@@ -586,7 +624,7 @@ export function previewAgreementChange(a: CommercialAgreement, c: AgreementChang
   const afterCharges = chargesOn(after, effectiveFrom, ctx);
   const policy = ctx.catalogue.settings.proration;
   const firstInvoiceOn = policy === 'daily' || effectiveFrom <= a.billing.nextBillingDate ? a.billing.nextBillingDate : nextCycleOn(a.billing.nextBillingDate, effectiveFrom, a.cycle);
-  return { effectiveFrom, before, after: afterCharges, difference: round2(afterCharges.recurringMonthly - before.recurringMonthly), firstInvoiceOn, policy, errors };
+  return { effectiveFrom, before, after: afterCharges, difference: round2(afterCharges.recurringMonthly - before.recurringMonthly), firstInvoiceOn, policy, errors, approvalNeeded: approvalNeeded(a, c, ctx) };
 }
 
 /** The first billing date on or after `on`, stepping from a known billing date. */

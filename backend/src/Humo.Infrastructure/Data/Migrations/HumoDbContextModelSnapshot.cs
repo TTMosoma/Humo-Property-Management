@@ -564,6 +564,12 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.Property<Guid?>("AccountManagerId")
                         .HasColumnType("uuid");
 
+                    b.Property<decimal>("ApprovalStepUpAmount")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasDefaultValue(50000m);
+
                     b.Property<string>("City")
                         .IsRequired()
                         .HasColumnType("text");

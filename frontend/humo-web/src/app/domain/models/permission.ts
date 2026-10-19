@@ -77,6 +77,7 @@ export type Permission =
   | 'Platform.Subscriptions.Manage'
   | 'Platform.Packages.Manage'
   | 'Platform.Billing.Manage'
+  | 'Platform.Discounts.Approve'
   | 'Platform.Templates.Manage'
   | 'Platform.Health.View'
   | 'Platform.Revenue.View'
@@ -164,6 +165,7 @@ export const PERMISSIONS: PermissionMeta[] = [
   { id: 'Platform.Subscriptions.Manage', area: 'Platform', label: 'Change packages, add-ons and feature overrides', mutates: true, stepUp: true },
   { id: 'Platform.Packages.Manage', area: 'Platform', label: 'Define packages, add-ons and the feature catalogue', mutates: true, stepUp: true },
   { id: 'Platform.Billing.Manage', area: 'Platform', label: 'Issue Humo invoices and verify customer payments', mutates: true, stepUp: true },
+  { id: 'Platform.Discounts.Approve', area: 'Platform', label: 'Approve a customer discount above the approval threshold (a second person)', mutates: true, stepUp: true },
   { id: 'Platform.Templates.Manage', area: 'Platform', label: 'Publish, version and retire Humo document templates', mutates: true },
   { id: 'Platform.Health.View', area: 'Platform', label: 'View account health and adoption', mutates: false },
   { id: 'Platform.Revenue.View', area: 'Platform', label: 'View MRR, ARR and contract values', mutates: false },
@@ -222,7 +224,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   // Highest operational authority — but impersonation is still an individual grant.
   'system-admin': [
     'Platform.View', 'Platform.Customers.View', 'Platform.Customers.Manage', 'Platform.Customers.Approve', 'Platform.Customers.Users', 'Platform.Customers.AnyAccount', 'Platform.Subscriptions.View',
-    'Platform.Subscriptions.Manage', 'Platform.Packages.Manage', 'Platform.Billing.Manage', 'Platform.Templates.Manage', 'Platform.Health.View', 'Platform.Revenue.View', 'Platform.Insights.View',
+    'Platform.Subscriptions.Manage', 'Platform.Packages.Manage', 'Platform.Discounts.Approve', 'Platform.Templates.Manage', 'Platform.Health.View', 'Platform.Revenue.View', 'Platform.Insights.View',
     'Platform.Support.Assist', 'Platform.Config.Manage', 'Platform.Operations.View', 'Platform.Operations.Manage', 'Platform.ManageHumoRoles', 'Platform.Audit', 'Security.ManageOwn',
   ],
   // The customer relationship: onboarding, adoption, health, subscriptions where authorised. No platform config, no Humo roles.
@@ -240,5 +242,10 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   'humo-executive': [
     'Platform.View', 'Platform.Customers.View', 'Platform.Subscriptions.View', 'Platform.Health.View', 'Platform.Revenue.View', 'Platform.Insights.View',
     'Security.ManageOwn',
+  ],
+  // Humo's own billing (docs/23 §8): issues invoices, reconciles payments, approves large discounts. Changes no subscription or configuration.
+  'humo-finance': [
+    'Platform.View', 'Platform.Customers.View', 'Platform.Subscriptions.View', 'Platform.Health.View', 'Platform.Revenue.View', 'Platform.Insights.View',
+    'Platform.Billing.Manage', 'Platform.Discounts.Approve', 'Security.ManageOwn',
   ],
 };

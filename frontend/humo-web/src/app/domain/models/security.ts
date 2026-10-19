@@ -41,7 +41,7 @@ export const SENSITIVE_ACTION_LABELS: Record<SensitiveAction, string> = {
   'verify-payment': 'Issue a Humo invoice or verify a payment',
 };
 
-/** Amounts at or above this need step-up when approved (prototype assumption). */
+/** The default passkey approval threshold: each agency sets its own (`Organisation.approvalStepUpAmount`, doc 03). */
 export const LARGE_APPROVAL_AMOUNT = 50_000;
 
 /** A proof stays fresh for this long, so a run of related actions asks only once. */

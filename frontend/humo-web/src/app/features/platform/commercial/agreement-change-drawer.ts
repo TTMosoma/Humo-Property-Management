@@ -123,6 +123,9 @@ export interface AgreementChangeInput {
           }
           <p class="muted">Excluding tax{{ p.after.tax.registered ? ' (VAT ' + p.after.tax.ratePercent + '% is added on the invoice)' : ': Humo isn’t configured to charge VAT' }}. First invoiced on {{ date(p.firstInvoiceOn) }}.</p>
           <p class="muted small">{{ policy(p) }}</p>
+          @if (p.approvalNeeded) {
+            <p class="muted small">Needs a second approver ({{ p.approvalNeeded }}): it waits on the agreement until Humo Finance approves it.</p>
+          }
           @if (problems().length) {
             <ul class="errors" role="alert">
               @for (m of problems(); track m) {

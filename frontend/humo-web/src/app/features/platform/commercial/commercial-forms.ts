@@ -1,4 +1,4 @@
-import { ADJUSTMENT_LABELS, AddOnKind, AdjustmentKind, BILLING_PREFERENCE_HELP, BILLING_PREFERENCE_LABELS, BillingPreference, CommercialAddOn, CommercialDataSource, CommercialPackage, CommercialSettings, CustomerCommercialView, CustomerInvoice, FEATURES, Feature, PRICE_STATUS_LABELS, PRORATION_LABELS, PaymentRecord, PriceStatus, ProrationPolicy, termsOn, saDate } from '../../../domain';
+import { ADJUSTMENT_LABELS, AddOnKind, AdjustmentKind, BILLING_PREFERENCE_HELP, BILLING_PREFERENCE_LABELS, BillingPreference, CommercialAddOn, CommercialDataSource, CommercialPackage, CommercialSettings, CustomerCommercialView, CustomerInvoice, FEATURES, Feature, PRICE_STATUS_LABELS, PRORATION_LABELS, PaymentRecord, PendingApproval, PriceStatus, ProrationPolicy, termsOn, saDate } from '../../../domain';
 import { DrawerService } from '../../../ui/drawer/drawer.service';
 import { formatRand } from '../../../ui/format/money';
 import { FormValues, REASON_FIELD, openForm, today } from '../../shared/form-drawer';
@@ -41,7 +41,7 @@ export function adjustmentForm(drawer: DrawerService, data: CommercialDataSource
         },
         v.agreement.version,
       ),
-    success: (_r, f) => `${ADJUSTMENT_LABELS[f['kind'] as AdjustmentKind]} added.`,
+    success: (_r, f) => `${ADJUSTMENT_LABELS[f['kind'] as AdjustmentKind]} saved. A discount above 20% waits for a second approver before it applies.`,
     failure: 'The agreement wasn’t changed',
   });
 }
@@ -128,13 +128,28 @@ export function reconcileForm(drawer: DrawerService, data: CommercialDataSource,
   openForm(drawer, {
     eyebrow: `${v.name} · Payment`,
     title: 'Verify against the bank statement',
-    intro: `Only mark this verified once ${formatRand(p.amount)} is on Humo’s bank statement. In the demo there is no bank feed: this records the check, it doesn’t perform it.`,
+    intro: `Only mark this verified once ${formatRand(p.amount)} is on Humo’s bank statement. There’s no bank feed yet: this records your check, it doesn’t perform it.`,
     fields: [{ key: 'bankReference', label: 'Bank statement line reference', type: 'text', required: true, placeholder: 'e.g. FNB 2026-10-13 HPM-FYN-202610' }],
     submitLabel: 'Mark verified',
     stepUp: { action: 'verify-payment', detail: `Verify ${formatRand(p.amount)} from ${v.name}` },
     submit: (f) => data.reconcileEft(p.id, f['bankReference']),
     success: () => 'Verified. The invoice is paid.',
     failure: 'The payment wasn’t verified',
+  });
+}
+
+/** The second approver declines a change (a discount above the threshold). The person who asked sees the reason. */
+export function declineApprovalForm(drawer: DrawerService, data: CommercialDataSource, v: CustomerCommercialView, p: PendingApproval): void {
+  openForm(drawer, {
+    eyebrow: `${v.name} · Waiting for approval`,
+    title: 'Decline this change',
+    intro: `${p.describe}, asked for by ${p.requestedBy}. Declining leaves the agreement as it is.`,
+    fields: [REASON_FIELD],
+    submitLabel: 'Decline',
+    stepUp: { action: 'change-subscription', detail: `Decline “${p.describe}” for ${v.name}` },
+    submit: (f) => data.decideApproval(v.organisationId, p.id, 'decline', f['reason']),
+    success: () => 'Declined. The agreement is unchanged.',
+    failure: 'That wasn’t saved',
   });
 }
 
@@ -155,7 +170,8 @@ export function packageTermsForm(drawer: DrawerService, data: CommercialDataSour
       { key: 'includedStorageGb', label: 'Included storage (GB)', type: 'number', half: true, help: 'Empty: negotiated per customer.' },
       { key: 'storageStatus', label: 'Storage status', type: 'select', required: true, half: true, options: PRICE_STATUS_OPTIONS },
       { key: 'includedSchemes', label: 'Schemes included', type: 'number', half: true, help: 'Empty: not priced by portfolio size.' },
-      { key: 'extraSchemePrice', label: 'Per extra scheme, a month', type: 'number', half: true },
+      { key: 'extraSchemePrice', label: 'Price per block of extra schemes, a month', type: 'number', half: true },
+      { key: 'extraSchemeBlock', label: 'Schemes per block', type: 'number', half: true, help: 'E.g. 10: R150 per 10 extra schemes, a part block counts. 1: per scheme.' },
       { key: 'annualRenewalFee', label: 'Annual renewal fee', type: 'number', half: true, help: 'Charged once a year on the renewal date. Empty: no renewal fee.' },
       REASON_FIELD,
     ],
@@ -168,6 +184,7 @@ export function packageTermsForm(drawer: DrawerService, data: CommercialDataSour
       storageStatus: t.storageStatus,
       includedSchemes: s(t.includedSchemes),
       extraSchemePrice: s(t.extraSchemePrice),
+      extraSchemeBlock: s(t.extraSchemeBlock ?? 1),
       annualRenewalFee: s(t.annualRenewalFee),
     },
     submitLabel: 'Save terms',
@@ -182,6 +199,7 @@ export function packageTermsForm(drawer: DrawerService, data: CommercialDataSour
         storageStatus: f['storageStatus'] as PriceStatus,
         includedSchemes: num(f['includedSchemes']),
         extraSchemePrice: num(f['extraSchemePrice']),
+        extraSchemeBlock: num(f['extraSchemeBlock']),
         annualRenewalFee: num(f['annualRenewalFee']),
         reason: f['reason'],
       }),

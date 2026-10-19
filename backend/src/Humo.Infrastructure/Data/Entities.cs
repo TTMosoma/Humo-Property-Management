@@ -41,6 +41,8 @@ public sealed class Organisation
     /// <summary>The package chosen for the trial when the account was opened (the subscription itself arrives with the commercial slice).</summary>
     public string? TrialPackageId { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
+    /// <summary>Approving this amount or more needs a fresh passkey (doc 03). The agency's administrators set it; R50 000 by default.</summary>
+    public decimal ApprovalStepUpAmount { get; set; } = 50_000;
 }
 
 /// <summary>A request to open a new customer account (doc 21). The organisation exists only once approved or activated.</summary>

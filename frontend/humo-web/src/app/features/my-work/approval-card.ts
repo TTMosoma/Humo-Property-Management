@@ -42,8 +42,8 @@ export class ApprovalCard {
   protected readonly canDecide = computed(() => this.attention.canDecide(this.item()) && this.session.can('Approvals.Decide'));
   /** D6: acting as trustee while working for the managing agency. They may reject, but another trustee approves. */
   protected readonly conflicted = computed(() => AGENCY_WORK.includes(this.item().type) && agencyConflict(this.session.identity(), this.session.assignment()));
-  /** Large amounts need a fresh proof of identity to approve (never to reject). */
-  protected readonly needsStepUp = computed(() => (this.item().amount ?? 0) >= LARGE_APPROVAL_AMOUNT);
+  /** Large amounts need a fresh proof of identity to approve (never to reject): the agency's own threshold, R50 000 by default. */
+  protected readonly needsStepUp = computed(() => (this.item().amount ?? 0) >= (this.session.organisation()?.approvalStepUpAmount ?? LARGE_APPROVAL_AMOUNT));
 
   protected readonly rejecting = signal(false);
   protected readonly comment = signal('');

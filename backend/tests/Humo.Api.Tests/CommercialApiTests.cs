@@ -177,10 +177,63 @@ public sealed class CommercialApiTests : IDisposable
         var cat = await Ok(await admin.GetAsync("/api/platform/commercial/catalogue"));
         var pro = cat.GetProperty("packages").EnumerateArray().Single(p => p.GetProperty("packageId").GetString() == "professional").GetProperty("terms");
         Assert.Equal((9500m, 2), (pro[0].GetProperty("monthlyPrice").GetDecimal(), pro[0].GetProperty("version").GetInt32()));
-        Assert.Equal(JsonValueKind.Null, pro[1].GetProperty("monthlyPrice").ValueKind);
+        Assert.Equal(2400m, pro[1].GetProperty("monthlyPrice").GetDecimal());
 
         var addOn = new { id = "sms-bundle", name = "SMS bundle", description = "1 000 SMS a month.", kind = "communication", features = new[] { "communications" }, allowQuantity = true, status = "active", effectiveFrom = "2026-10-19", price = 250, frequency = "monthly", priceStatus = "proposed", usageAllowance = new { unit = "SMS", included = 1000 }, reason = "New bundle for SMS-heavy agencies", isNew = true };
         await NoContent(await admin.PutAsJsonAsync("/api/platform/commercial/add-ons/sms-bundle", addOn));
         Assert.Contains((await Ok(await admin.GetAsync("/api/catalogue"))).GetProperty("addOns").EnumerateArray(), a => a.GetProperty("id").GetString() == "sms-bundle");
+    }
+
+    [Fact]
+    public async Task A_discount_above_twenty_percent_waits_for_Humo_Finance_and_the_asker_can_t_approve_it()
+    {
+        var mashoto = await api.Person("mashoto@humo.co.za", Roles.AccountManager, null);
+        await api.Person("refilwe@humo.co.za", Roles.HumoFinance, null);
+        var org = await api.Customer("Acacia", "professional", mashoto);
+        var am = await api.SignedIn("mashoto@humo.co.za");
+        await am.StepUp();
+        var big = new { change = new { type = "adjustment", kind = "discount", label = "Loyalty", amount = 0, percent = 30, from = "2026-11-01", reason = "Long-standing customer, agreed at renewal" } };
+        Assert.Equal("30% off (more than 20%)", (await Ok(await am.PostAsJsonAsync($"/api/platform/customers/{org}/agreement/preview", big))).GetProperty("approvalNeeded").GetString());
+        api.Email.Sent.Clear();
+        var asked = await am.PostAsJsonAsync($"/api/platform/customers/{org}/agreement/changes", big);
+        Assert.Equal(HttpStatusCode.Accepted, asked.StatusCode);
+        // Humo Finance hears about it.
+        Assert.Equal("refilwe@humo.co.za", Assert.Single(api.Email.Sent).To);
+        var view = await Ok(await am.GetAsync($"/api/platform/customers/{org}/commercial"));
+        Assert.Empty(view.GetProperty("agreement").GetProperty("adjustments").EnumerateArray());
+        var approval = Assert.Single(view.GetProperty("agreement").GetProperty("pendingApprovals").EnumerateArray()).GetProperty("id").GetString();
+
+        Assert.Equal("forbidden", await (await am.PostAsJsonAsync($"/api/platform/customers/{org}/agreement/approvals/{approval}", new { decision = "approve" })).ProblemCode());
+        var finance = await api.SignedIn("refilwe@humo.co.za");
+        await finance.StepUp();
+        await NoContent(await finance.PostAsJsonAsync($"/api/platform/customers/{org}/agreement/approvals/{approval}", new { decision = "approve" }));
+        var agreement = (await Ok(await am.GetAsync($"/api/platform/customers/{org}/commercial"))).GetProperty("agreement");
+        Assert.Equal(30, agreement.GetProperty("adjustments")[0].GetProperty("percent").GetDecimal());
+        Assert.Empty(agreement.GetProperty("pendingApprovals").EnumerateArray());
+        Assert.StartsWith("Approved by refilwe", agreement.GetProperty("history")[0].GetProperty("approval").GetString());
+
+        // Within the threshold, it applies at once.
+        var small = new { change = new { type = "adjustment", kind = "discount", label = "Small", amount = 0, percent = 20, from = "2026-11-01", reason = "Within the Account Manager's authority" } };
+        await NoContent(await am.PostAsJsonAsync($"/api/platform/customers/{org}/agreement/changes", small));
+    }
+
+    [Fact]
+    public async Task An_agency_administrator_sets_their_own_passkey_approval_threshold()
+    {
+        var org = await api.Customer("Acacia");
+        await api.Person("thandeka@acacia.example", Roles.AgencyAdmin, org);
+        await api.Person("lerato@acacia.example", Roles.PortfolioManager, org);
+        var admin = await api.SignedIn("thandeka@acacia.example");
+        Assert.Equal(50_000, (await Ok(await admin.GetAsync("/api/me"))).GetProperty("organisation").GetProperty("approvalStepUpAmount").GetDecimal());
+        var body = new { amount = 25_000, reason = "Our board wants a passkey for smaller amounts too", expectedVersion = 1 };
+        Assert.Equal("step-up-required", await (await admin.PutAsJsonAsync($"/api/organisations/{org}/approval-policy", body)).ProblemCode());
+        await admin.StepUp();
+        Assert.True((await (await admin.PutAsJsonAsync($"/api/organisations/{org}/approval-policy", new { amount = 10, reason = "Too low", expectedVersion = 1 })).FieldErrors()).TryGetProperty("amount", out _));
+        await NoContent(await admin.PutAsJsonAsync($"/api/organisations/{org}/approval-policy", body));
+        Assert.Equal(25_000, (await Ok(await admin.GetAsync("/api/me"))).GetProperty("organisation").GetProperty("approvalStepUpAmount").GetDecimal());
+
+        var pm = await api.SignedIn("lerato@acacia.example");
+        await pm.StepUp();
+        Assert.Equal("forbidden", await (await pm.PutAsJsonAsync($"/api/organisations/{org}/approval-policy", body with { expectedVersion = 2 })).ProblemCode());
     }
 }

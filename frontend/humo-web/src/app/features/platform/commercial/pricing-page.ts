@@ -67,7 +67,7 @@ const STATUS_TONE: Record<PriceStatus, 'neutral' | 'warning' | 'success'> = { aw
               <dl>
                 <dt>Annual</dt><dd>{{ t.annualPrice === null ? '—' : rand(t.annualPrice) }}</dd>
                 <dt>Storage</dt><dd>{{ t.includedStorageGb === null ? 'Negotiated' : t.includedStorageGb + ' GB' }} <span class="muted">({{ statusLabel[t.storageStatus].toLowerCase() }})</span></dd>
-                <dt>Portfolio</dt><dd>{{ t.includedSchemes === null ? 'Not priced by portfolio size' : t.includedSchemes + ' schemes, then ' + (t.extraSchemePrice === null ? 'price to be set' : rand(t.extraSchemePrice) + ' per scheme') }}</dd>
+                <dt>Portfolio</dt><dd>{{ t.includedSchemes === null ? 'Not priced by portfolio size' : t.includedSchemes + ' schemes, then ' + (t.extraSchemePrice === null ? 'price to be set' : rand(t.extraSchemePrice) + ((t.extraSchemeBlock ?? 1) > 1 ? ' per ' + t.extraSchemeBlock + ' extra schemes' : ' per scheme')) }}</dd>
                 <dt>Renewal fee</dt><dd>{{ t.annualRenewalFee === null ? 'None' : rand(t.annualRenewalFee) + ' a year, on the renewal date' }}</dd>
                 <dt>Billing</dt><dd>{{ p.billingFrequencies.join(' or ') }}</dd>
               </dl>

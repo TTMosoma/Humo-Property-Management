@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { AGENCY_WORK, LARGE_APPROVAL_AMOUNT, PolicyError, WORK_TYPE_LABELS, WorkItem, WorkItemDataSource, agencyConflict } from '../../domain';
 import { MockDb } from '../db/mock-db';
+import { OrganisationStore } from '../db/organisation-store';
 import { MockAuthSession } from '../server/mock-auth-session';
 import { CommandSpec, MockGateway } from '../server/mock-gateway';
 
@@ -18,6 +19,7 @@ export class InMemoryWorkItemDataSource extends WorkItemDataSource {
   private readonly db = inject(MockDb);
   private readonly gateway = inject(MockGateway);
   private readonly auth = inject(MockAuthSession);
+  private readonly orgs = inject(OrganisationStore);
 
   watch(): Observable<WorkItem[]> {
     return this.db.changes$.pipe(map(() => this.db.workItems));
@@ -41,7 +43,8 @@ export class InMemoryWorkItemDataSource extends WorkItemDataSource {
       ...this.spec([id], decision === 'approved' ? 'Approved' : 'Rejected'),
       permission: 'Approvals.Decide',
       // Approving a large amount needs a fresh step-up proof; rejecting never does.
-      stepUp: decision === 'approved' && (w?.amount ?? 0) >= LARGE_APPROVAL_AMOUNT,
+      // The agency's own threshold (doc 03, configurable); R50 000 by default.
+      stepUp: decision === 'approved' && (w?.amount ?? 0) >= (this.orgs.get(this.auth.current.organisation?.id)?.approvalStepUpAmount ?? LARGE_APPROVAL_AMOUNT),
     };
     // D6: a trustee who works for the managing agency can't approve its work. Refused and audited; another trustee decides.
     if (decision === 'approved' && w && AGENCY_WORK.includes(w.type) && agencyConflict(this.auth.current.identity, this.auth.assignment())) {

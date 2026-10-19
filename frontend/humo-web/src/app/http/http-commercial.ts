@@ -131,7 +131,11 @@ export class HttpCommercialDataSource extends HttpPort implements CommercialData
   }
 
   change(organisationId: string, change: AgreementChange, expectedVersion?: number): Observable<void> {
-    return this.command('POST', `/platform/customers/${organisationId}/agreement/changes`, { change, expectedVersion }, ['subscriptions', 'session']);
+    return this.command('POST', `/platform/customers/${organisationId}/agreement/changes`, { change, expectedVersion }, ['subscriptions', 'session', 'notifications']);
+  }
+
+  decideApproval(organisationId: string, approvalId: string, decision: 'approve' | 'decline', reason: string): Observable<void> {
+    return this.command('POST', `/platform/customers/${organisationId}/agreement/approvals/${approvalId}`, { decision, reason }, ['subscriptions', 'session', 'notifications']);
   }
 
   invoices(): Observable<InvoiceListItem[]> {

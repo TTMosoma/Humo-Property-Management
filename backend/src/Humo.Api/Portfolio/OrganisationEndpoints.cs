@@ -7,6 +7,7 @@ namespace Humo.Api.Portfolio;
 
 public sealed record OrganisationDetailsRequest(string Name, string ShortName, string City, string Province, int? ExpectedVersion);
 public sealed record StatusRequest(string Status, string Reason, int? ExpectedVersion);
+public sealed record ApprovalPolicyRequest(decimal Amount, string Reason, int? ExpectedVersion);
 
 /// <summary>
 /// Customer organisations (doc 24 §3). Humo staff see every one; a customer's people see only
@@ -22,6 +23,7 @@ public static class OrganisationEndpoints
         g.MapGet("/{id:guid}", Get);
         g.MapPut("/{id:guid}", Update);
         g.MapPost("/{id:guid}/status", SetStatus);
+        g.MapPut("/{id:guid}/approval-policy", SetApprovalPolicy);
     }
 
     private static async Task<IResult> List(CurrentActor current, HumoDbContext db, CancellationToken ct)
@@ -110,5 +112,38 @@ public static class OrganisationEndpoints
         actor.IsHumo && actor.Can("Platform.Customers.View") ? db.Organisations : db.Organisations.Where(o => o.Id == actor.OrganisationId);
 
     public static OrganisationDto ToDto(Organisation o, int schemeCount = 0, int unitCount = 0) =>
-        new(o.Id.ToString(), o.Version, o.Kind, o.Status, o.Name, o.ShortName, o.City, o.Province, schemeCount, unitCount);
+        new(o.Id.ToString(), o.Version, o.Kind, o.Status, o.Name, o.ShortName, o.City, o.Province, schemeCount, unitCount, o.ApprovalStepUpAmount);
+
+    /// <summary>
+    /// The agency's own approval policy (doc 03): approving this amount or more needs a fresh passkey.
+    /// Its administrators set it (Organisation.Manage, step-up); at least R1 000, so it can't be switched off.
+    /// </summary>
+    private static async Task<IResult> SetApprovalPolicy(Guid id, ApprovalPolicyRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, CancellationToken ct)
+    {
+        if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
+        var org = await db.Organisations.FirstOrDefaultAsync(o => o.Id == id, ct);
+        if (org is null || actor.OrganisationId != id) return Problems.NotFound();
+        return await commands.RunAsync(new CommandSpec($"Set the passkey approval threshold to {Commercial.CommercialEndpoints.Rand(body.Amount)} — {body.Reason?.Trim()}", "Organisation.Manage")
+        {
+            Resource = "Organisation",
+            ResourceId = id.ToString(),
+            OrganisationId = id,
+            Category = "security",
+            StepUp = true,
+            ExpectedVersion = body.ExpectedVersion,
+            CurrentVersion = org.Version,
+            Validate = () =>
+            {
+                var e = new Dictionary<string, string>();
+                if (body.Amount is < 1_000 or > 10_000_000) e["amount"] = "Between R1 000 and R10 000 000.";
+                if ((body.Reason ?? "").Trim().Length < 5) e["reason"] = PortfolioRules.ReasonMessage;
+                return e;
+            },
+        }, _ =>
+        {
+            org.ApprovalStepUpAmount = body.Amount;
+            org.Version++;
+            return Task.FromResult(Results.NoContent());
+        }, ct);
+    }
 }

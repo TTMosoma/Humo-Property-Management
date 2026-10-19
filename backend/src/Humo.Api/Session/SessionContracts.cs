@@ -35,7 +35,8 @@ public sealed record IdentityDto(
     IReadOnlyList<MembershipDto> Memberships,
     IReadOnlyList<RoleAssignmentDto> Assignments);
 
-public sealed record OrganisationDto(string Id, int Version, string Kind, string Status, string Name, string ShortName, string City, string Province, int SchemeCount, int UnitCount);
+public sealed record OrganisationDto(string Id, int Version, string Kind, string Status, string Name, string ShortName, string City, string Province, int SchemeCount, int UnitCount,
+    decimal ApprovalStepUpAmount = 50_000);
 
 public sealed record ImpersonationDto(string Id, string ActorId, string TargetId, string TargetAssignmentId, string Mode, string Reason, string? Note, string? Ticket, string StartedAt);
 

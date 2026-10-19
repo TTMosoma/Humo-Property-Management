@@ -10,11 +10,12 @@ using Microsoft.EntityFrameworkCore;
 namespace Humo.Api.Commercial;
 
 public sealed record PackageTermsRequest(string EffectiveFrom, decimal? MonthlyPrice, decimal? AnnualPrice, string PriceStatus, decimal? IncludedStorageGb, string StorageStatus,
-    int? IncludedSchemes, decimal? ExtraSchemePrice, decimal? AnnualRenewalFee, string Reason);
+    int? IncludedSchemes, decimal? ExtraSchemePrice, decimal? AnnualRenewalFee, string Reason, int? ExtraSchemeBlock = null);
 public sealed record AddOnRequest(string Id, string Name, string? Description, string Kind, List<string>? Features, decimal? StorageGb, bool AllowQuantity, string Status, string? RetiresOn,
     string EffectiveFrom, decimal? Price, string Frequency, string PriceStatus, UsageAllowance? UsageAllowance, string Reason, bool IsNew);
 public sealed record SettingsRequest(CommercialSettings Settings, string Reason, int? ExpectedVersion);
 public sealed record AgreementChangeRequest(JsonElement Change, int? ExpectedVersion);
+public sealed record ApprovalDecisionRequest(string Decision, string? Reason);
 
 public sealed record ScheduledItemDto(string LineId, string Kind, string Label, string From, decimal? MonthlyChange);
 public sealed record AccountManagerRefDto(string Id, string Name);
@@ -38,6 +39,7 @@ public static partial class CommercialEndpoints
         g.MapGet("/customers/{id:guid}/commercial", Customer);
         g.MapPost("/customers/{id:guid}/agreement/preview", Preview);
         g.MapPost("/customers/{id:guid}/agreement/changes", Change);
+        g.MapPost("/customers/{id:guid}/agreement/approvals/{approvalId}", DecideApproval);
     }
 
     private static async Task<IResult> Catalogue(CurrentActor current, CommercialRecords commercial, CancellationToken ct)
@@ -70,6 +72,7 @@ public static partial class CommercialEndpoints
                 else if (string.CompareOrdinal(t.EffectiveFrom, today) < 0) e["effectiveFrom"] = "Terms can’t start in the past: invoices already issued keep their prices.";
                 foreach (var (key, value) in new (string, decimal?)[] { ("monthlyPrice", t.MonthlyPrice), ("annualPrice", t.AnnualPrice), ("includedStorageGb", t.IncludedStorageGb), ("includedSchemes", t.IncludedSchemes), ("extraSchemePrice", t.ExtraSchemePrice), ("annualRenewalFee", t.AnnualRenewalFee) })
                     if (value < 0) e[key] = "A number of zero or more, or leave it empty.";
+                if (t.ExtraSchemeBlock is < 1 or > 100) e["extraSchemeBlock"] = "Between 1 and 100 schemes per block.";
                 if (!PriceStatuses.All.Contains(t.PriceStatus)) e["priceStatus"] = "Awaiting, proposed or approved.";
                 else if (t.PriceStatus != PriceStatuses.Awaiting && t.MonthlyPrice is null) e["monthlyPrice"] = "A proposed or approved price needs an amount.";
                 if (!PriceStatuses.All.Contains(t.StorageStatus)) e["storageStatus"] = "Awaiting, proposed or approved.";
@@ -84,7 +87,7 @@ public static partial class CommercialEndpoints
                 .Append(new PackageTerms
                 {
                     Version = version, EffectiveFrom = t.EffectiveFrom, MonthlyPrice = t.MonthlyPrice, AnnualPrice = t.AnnualPrice, PriceStatus = t.PriceStatus,
-                    IncludedStorageGb = t.IncludedStorageGb, StorageStatus = t.StorageStatus, IncludedSchemes = t.IncludedSchemes, ExtraSchemePrice = t.ExtraSchemePrice,
+                    IncludedStorageGb = t.IncludedStorageGb, StorageStatus = t.StorageStatus, IncludedSchemes = t.IncludedSchemes, ExtraSchemePrice = t.ExtraSchemePrice, ExtraSchemeBlock = t.ExtraSchemeBlock,
                     AnnualRenewalFee = t.AnnualRenewalFee, ChangedBy = actor.Human.Name, ChangedAt = clock.GetUtcNow().ToString("O"), Reason = t.Reason!.Trim(),
                 })
                 .OrderByDescending(x => x.EffectiveFrom, StringComparer.Ordinal).ToList();
@@ -227,7 +230,7 @@ public static partial class CommercialEndpoints
         return Results.Ok(CommercialRules.Preview(rec.Agreement, change, await commercial.CatalogueAsync(ct), await Schemes(db, id, ct), clock.GetUtcNow()));
     }
 
-    private static async Task<IResult> Change(Guid id, AgreementChangeRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, CommercialRecords commercial, TimeProvider clock, CancellationToken ct)
+    private static async Task<IResult> Change(Guid id, AgreementChangeRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, CommercialRecords commercial, Platform.Notices notices, TimeProvider clock, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is null) return Results.Unauthorized();
         var org = await db.Organisations.FirstOrDefaultAsync(o => o.Id == id, ct);
@@ -250,7 +253,69 @@ public static partial class CommercialEndpoints
         {
             CustomerEndpoints.OwnAccountOnly(actor, org);
             var by = new ChangeActor(actor.Human.Id.ToString(), actor.Human.Name, CustomerEndpoints.Approval(actor));
+            if (CommercialRules.ApprovalNeeded(rec.Agreement, change, cat, schemes) is { } why)
+            {
+                // A large discount waits for a second approver (doc 17, D15): recorded, not in force.
+                var next = rec.Agreement.Clone();
+                var at = clock.GetUtcNow().ToString("O");
+                next.PendingApprovals.Add(new PendingApproval { Id = CommercialRecords.NewLineId("apv"), Change = change, Describe = describe, RequestedById = by.Id, RequestedBy = by.Name, At = at, Why = why });
+                next.History.Insert(0, new AgreementEvent { At = at, ById = by.Id, By = by.Name, Action = $"Asked for approval: {describe}", Reason = (change.Reason ?? "").Trim(), Approval = $"Waiting for a second approver: {why}" });
+                next.Version++;
+                CommercialRecords.Write(rec.Row, next);
+                notices.ToRole(Roles.HumoFinance, actor.Human.Id, $"Discount waiting for approval: {org.ShortName}", $"{by.Name} asked for {describe.ToLowerInvariant()} ({why}).", $"/platform/customers/{id}?view=commercial");
+                return Task.FromResult(Results.Accepted($"/api/platform/customers/{id}/commercial", new { status = "waiting-for-approval" }));
+            }
             CommercialRecords.Write(rec.Row, CommercialRules.ApplyChange(rec.Agreement, change, cat, by, clock.GetUtcNow(), describe, CommercialRecords.NewLineId));
+            return Task.FromResult(Results.NoContent());
+        }, ct);
+    }
+
+    /// <summary>
+    /// The second approver (Platform.Discounts.Approve, step-up), never the person who asked. Approving
+    /// re-checks the change against the agreement as it is now and applies it; declining needs a reason.
+    /// </summary>
+    private static async Task<IResult> DecideApproval(Guid id, string approvalId, ApprovalDecisionRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db,
+        CommercialRecords commercial, Platform.Notices notices, TimeProvider clock, CancellationToken ct)
+    {
+        if (await current.GetAsync(ct) is null) return Results.Unauthorized();
+        var org = await db.Organisations.FirstOrDefaultAsync(o => o.Id == id, ct);
+        if (org is null || await commercial.AgreementAsync(id, ct) is not { } rec) return Problems.NotFound();
+        var p = rec.Agreement.PendingApprovals.FirstOrDefault(x => x.Id == approvalId);
+        if (p is null) return Problems.NotFound();
+        var cat = await commercial.CatalogueAsync(ct);
+        var approve = body.Decision == "approve";
+        var reason = (body.Reason ?? "").Trim();
+
+        return await commands.RunAsync(new CommandSpec($"{(approve ? "Approved" : "Declined")}: {p.Describe} for {org.ShortName}{(reason.Length > 0 ? $" — {reason}" : "")}", "Platform.Discounts.Approve")
+        {
+            Resource = "Agreement",
+            ResourceId = id.ToString(),
+            OrganisationId = id,
+            Category = "security",
+            Validate = () =>
+            {
+                if (body.Decision is not ("approve" or "decline")) return new() { ["decision"] = "Approve or decline." };
+                if (!approve && reason.Length < 5) return new() { ["reason"] = "Say why, in a few words. The person who asked sees it." };
+                return approve ? CommercialRules.CheckChange(rec.Agreement, p.Change, cat, commercial.Today) : [];
+            },
+        }, actor =>
+        {
+            if (p.RequestedById == actor.Human.Id.ToString()) throw new CommandRefused("forbidden", "Someone else approves a change you asked for");
+            var rest = rec.Agreement.Clone();
+            rest.PendingApprovals.RemoveAll(x => x.Id == approvalId);
+            var now = clock.GetUtcNow();
+            CommercialAgreement next;
+            if (approve)
+                next = CommercialRules.ApplyChange(rest, p.Change, cat, new ChangeActor(actor.Human.Id.ToString(), actor.Human.Name, $"Approved by {actor.Human.Name} (second approver: {p.Why})"), now, p.Describe, CommercialRecords.NewLineId);
+            else
+            {
+                next = rest;
+                next.Version++;
+                next.History.Insert(0, new AgreementEvent { At = now.ToString("O"), ById = actor.Human.Id.ToString(), By = actor.Human.Name, Action = $"Declined: {p.Describe}", Reason = reason, Approval = "Second approver" });
+            }
+            CommercialRecords.Write(rec.Row, next);
+            if (Guid.TryParse(p.RequestedById, out var asker))
+                notices.ToPerson(asker, actor.Human.Id, $"{(approve ? "Approved" : "Declined")}: {p.Describe}", approve ? $"{actor.Human.Name} approved it for {org.ShortName}." : $"{actor.Human.Name} declined it for {org.ShortName}: {reason}", $"/platform/customers/{id}?view=commercial");
             return Task.FromResult(Results.NoContent());
         }, ct);
     }

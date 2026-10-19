@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { SchemeTrustAccount, SettingsDataSource } from '../../domain';
+import { LARGE_APPROVAL_AMOUNT, OrganisationDataSource, SchemeTrustAccount, SettingsDataSource } from '../../domain';
 import { loadable } from '../../core/data/loadable';
 import { ScopeService } from '../../core/scope/scope.service';
 import { SessionService } from '../../core/session/session.service';
@@ -11,6 +11,8 @@ import { PageHeader } from '../../ui/page-header/page-header';
 import { ErrorState } from '../../ui/states/error-state';
 import { Skeleton } from '../../ui/states/skeleton';
 import { StatusPill } from '../../ui/status-pill/status-pill';
+import { formatRand } from '../../ui/format/money';
+import { REASON_FIELD, openForm } from '../shared/form-drawer';
 import { agencyDetailsForm, trustAccountForm } from './settings-forms';
 
 /** Settings › Agency: the agency's registered details and each scheme's trust account. */
@@ -20,6 +22,18 @@ import { agencyDetailsForm, trustAccountForm } from './settings-forms';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-page-header eyebrow="Settings" title="Agency" subtitle="Your registered details and the trust accounts owners pay into. Branding and what prints on documents are in Documents & templates." />
+
+    @if (session.organisation(); as org) {
+      <section class="surface panel">
+        <div class="panel-head">
+          <h2 class="section-title">Approvals</h2>
+          @if (canManage()) {
+            <button type="button" class="btn btn-secondary btn-sm" (click)="editApprovalAmount()">Change</button>
+          }
+        </div>
+        <p class="muted">Approving {{ rand(org.approvalStepUpAmount ?? defaultAmount) }} or more (a quote, an invoice or a payment) needs a fresh passkey or Humo Mobile approval. Rejecting never does.</p>
+      </section>
+    }
 
     @if (agency.loading()) {
       <ui-skeleton variant="tiles" [count]="2" />
@@ -87,7 +101,10 @@ export class AgencySettingsPage {
   private readonly data = inject(SettingsDataSource);
   private readonly drawer = inject(DrawerService);
   private readonly scope = inject(ScopeService);
-  private readonly session = inject(SessionService);
+  protected readonly session = inject(SessionService);
+  private readonly organisations = inject(OrganisationDataSource);
+  protected readonly defaultAmount = LARGE_APPROVAL_AMOUNT;
+  protected readonly rand = (n: number) => formatRand(n, { cents: false });
 
   protected readonly agency = loadable(() => this.data.agency());
   protected readonly accounts = loadable(() => this.data.trustAccounts(this.scope.accessible().map((s) => s.id)));
@@ -104,6 +121,26 @@ export class AgencySettingsPage {
 
   protected editDetails(): void {
     agencyDetailsForm(this.drawer, this.data, this.agency.value()!);
+  }
+
+  /** The agency's own threshold (doc 03). Lowering it asks for a passkey more often; it can't be switched off. */
+  protected editApprovalAmount(): void {
+    const org = this.session.organisation()!;
+    openForm(this.drawer, {
+      eyebrow: 'Agency · Approvals',
+      title: 'Passkey approval threshold',
+      intro: 'Approving this amount or more needs a fresh passkey or Humo Mobile approval. Between R1 000 and R10 000 000.',
+      fields: [
+        { key: 'amount', label: 'Amount (rand)', type: 'number', required: true },
+        REASON_FIELD,
+      ],
+      initial: { amount: String(org.approvalStepUpAmount ?? LARGE_APPROVAL_AMOUNT) },
+      submitLabel: 'Save',
+      stepUp: { action: 'change-platform-config', detail: 'Change the passkey approval threshold' },
+      submit: (f) => this.organisations.setApprovalStepUpAmount(org.id, Number(f['amount']), f['reason'], org.version),
+      success: (_r, f) => `Approvals of ${this.rand(Number(f['amount']))} or more now need a passkey.`,
+      failure: 'The threshold wasn’t changed',
+    });
   }
 
   protected change(t: SchemeTrustAccount): void {

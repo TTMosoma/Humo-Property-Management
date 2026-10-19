@@ -59,7 +59,7 @@ public sealed class SessionBuilder(HumoDbContext db, TimeProvider clock, Commerc
             Permissions: permissions,
             PagePermissions: permissions,
             ActorPermissions: actorPermissions,
-            Organisation: org is null ? null : new OrganisationDto(org.Id.ToString(), org.Version, org.Kind, org.Status, org.Name, org.ShortName, org.City, org.Province, 0, 0),
+            Organisation: org is null ? null : new OrganisationDto(org.Id.ToString(), org.Version, org.Kind, org.Status, org.Name, org.ShortName, org.City, org.Province, 0, 0, org.ApprovalStepUpAmount),
             // Null for Humo staff: no customer plan applies.
             Subscription: plan?.Subscription,
             Entitlements: plan?.Entitlements,

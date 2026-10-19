@@ -18,7 +18,10 @@ public sealed class PackageTerms
     public decimal? IncludedStorageGb { get; set; }
     public string StorageStatus { get; set; } = PriceStatuses.Awaiting;
     public int? IncludedSchemes { get; set; }
+    /// <summary>Rand per month per block of extra schemes.</summary>
     public decimal? ExtraSchemePrice { get; set; }
+    /// <summary>Schemes per block (R150 per 10 extra schemes; a part block counts). Null or 1: per scheme.</summary>
+    public int? ExtraSchemeBlock { get; set; }
     /// <summary>Charged once a year on the renewal date. Null: no renewal fee.</summary>
     public decimal? AnnualRenewalFee { get; set; }
     public string ChangedBy { get; set; } = "";
@@ -84,12 +87,15 @@ public sealed class CommercialSettings
 {
     public int Version { get; set; } = 1;
     public int[] StorageThresholds { get; set; } = [80, 95];
-    public string Proration { get; set; } = ProrationPolicies.NextCycle;
-    public bool ProrationAwaitingApproval { get; set; } = true;
+    /// <summary>Daily pro-rata, approved on 19 October 2026 (doc 17, D15).</summary>
+    public string Proration { get; set; } = ProrationPolicies.Daily;
+    public bool ProrationAwaitingApproval { get; set; }
     public TaxConfig Tax { get; set; } = new();
     /// <summary>The Humo Account Manager new customers go to by default; empty until a System Administrator chooses one.</summary>
     public string DesignatedAccountManagerId { get; set; } = "";
     public int PaymentTermsDays { get; set; } = 7;
+    /// <summary>A discount above this share of the recurring charges needs a second approver (doc 17, D15).</summary>
+    public decimal DiscountApprovalPercent { get; set; } = 20;
 }
 
 public sealed class CommercialCatalogue
@@ -209,6 +215,8 @@ public sealed class CommercialAgreement
     public BillingDetails Billing { get; set; } = new();
     /// <summary>Newest first.</summary>
     public List<AgreementEvent> History { get; set; } = [];
+    /// <summary>Changes waiting for a second approver (a discount above the threshold): not in force until approved.</summary>
+    public List<PendingApproval> PendingApprovals { get; set; } = [];
 
     public CommercialAgreement Clone() => JsonSerializer.Deserialize<CommercialAgreement>(JsonSerializer.Serialize(this, Json.Options), Json.Options)!;
 }
@@ -264,7 +272,20 @@ public sealed record TaxSummary(bool Registered, decimal RatePercent, decimal Am
 public sealed record ChargeSummary(string On, string Cycle, List<ChargeLine> Recurring, decimal RecurringMonthly, int AwaitingPrice, List<ChargeLine> OnceOff,
     List<ChargeLine> Credits, List<UsageNote> Usage, Renewal Renewal, TaxSummary Tax, decimal RecurringWithTax);
 
-public sealed record ChangePreview(string EffectiveFrom, ChargeSummary Before, ChargeSummary After, decimal Difference, string FirstInvoiceOn, string Policy, Dictionary<string, string>? Errors);
+public sealed record ChangePreview(string EffectiveFrom, ChargeSummary Before, ChargeSummary After, decimal Difference, string FirstInvoiceOn, string Policy, Dictionary<string, string>? Errors,
+    string? ApprovalNeeded = null);
+
+/// <summary>A change someone asked for that another person must approve before it applies.</summary>
+public sealed class PendingApproval
+{
+    public string Id { get; set; } = "";
+    public AgreementChange Change { get; set; } = new();
+    public string Describe { get; set; } = "";
+    public string RequestedById { get; set; } = "";
+    public string RequestedBy { get; set; } = "";
+    public string At { get; set; } = "";
+    public string Why { get; set; } = "";
+}
 
 /// <summary>Who made a change and on whose authority, for the agreement's history.</summary>
 public sealed record ChangeActor(string Id, string Name, string Approval);

@@ -56,7 +56,7 @@ export interface CustomerCommercialView {
   invoices: CustomerInvoice[];
 }
 
-export interface PackageTermsInput extends Pick<PackageTerms, 'effectiveFrom' | 'monthlyPrice' | 'annualPrice' | 'priceStatus' | 'includedStorageGb' | 'storageStatus' | 'includedSchemes' | 'extraSchemePrice' | 'annualRenewalFee'> {
+export interface PackageTermsInput extends Pick<PackageTerms, 'effectiveFrom' | 'monthlyPrice' | 'annualPrice' | 'priceStatus' | 'includedStorageGb' | 'storageStatus' | 'includedSchemes' | 'extraSchemePrice' | 'extraSchemeBlock' | 'annualRenewalFee'> {
   reason: string;
 }
 
@@ -90,6 +90,7 @@ export interface AddOnInput {
  *   GET   /platform/customers/{id}/commercial           (Platform.Revenue.View)
  *   POST  /platform/customers/{id}/agreement/preview    no change is saved
  *   POST  /platform/customers/{id}/agreement/changes    (Platform.Subscriptions.Manage, own accounts, step-up, D11)
+ *   POST  /platform/customers/{id}/agreement/approvals/{approvalId}   approve or decline (Platform.Discounts.Approve, step-up)
  *   GET   /platform/invoices                            every customer's invoices (Platform.Revenue.View)
  *   GET   /platform/invoices/{id}                       one invoice as a document
  *   POST  /platform/customers/{id}/invoices             issue the next invoice (Platform.Billing.Manage)
@@ -105,7 +106,10 @@ export abstract class CommercialDataSource {
 
   abstract customer(organisationId: string): Observable<CustomerCommercialView | undefined>;
   abstract preview(organisationId: string, change: AgreementChange): Observable<ChangePreview>;
+  /** A change that needs a second approver (a discount above the threshold) waits on the agreement instead of applying. */
   abstract change(organisationId: string, change: AgreementChange, expectedVersion?: number): Observable<void>;
+  /** Platform.Discounts.Approve, step-up; never the person who asked. Approving re-checks and applies the change. */
+  abstract decideApproval(organisationId: string, approvalId: string, decision: 'approve' | 'decline', reason: string): Observable<void>;
 
   /** Every customer's invoices, newest first (Platform.Revenue.View). */
   abstract invoices(): Observable<InvoiceListItem[]>;

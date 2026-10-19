@@ -65,7 +65,12 @@ public static partial class CommercialRules
             var terms = TermsOn(PackageDef(cat, pkg.PackageId)?.Terms ?? [], on);
             var extra = terms?.IncludedSchemes is { } included ? Math.Max(0, schemes - included) : 0;
             if (pkg.PriceSource == PriceSources.Catalogue && extra > 0 && terms?.ExtraSchemePrice is { } each)
-                recurring.Add(new("extra-schemes", "Additional schemes", $"{extra} beyond the {terms.IncludedSchemes} included", extra, each, "monthly", Round2(extra * each), PriceSources.Catalogue));
+            {
+                var block = Math.Max(1, terms.ExtraSchemeBlock ?? 1);
+                var blocks = (extra + block - 1) / block;
+                var detail = block > 1 ? $"{extra} beyond the {terms.IncludedSchemes} included: {blocks} × {block}" : $"{extra} beyond the {terms.IncludedSchemes} included";
+                recurring.Add(new("extra-schemes", "Additional schemes", detail, blocks, each, "monthly", Round2(blocks * each), PriceSources.Catalogue));
+            }
         }
         var usage = new List<UsageNote>();
         foreach (var l in InForce(a.AddOns, on))
@@ -253,6 +258,22 @@ public static partial class CommercialRules
         return next;
     }
 
+    /// <summary>
+    /// Does the change need a second approver? A recurring discount above the threshold does: as a percentage,
+    /// or as an amount against the recurring charges before discounts on its start date. Null: it doesn't.
+    /// </summary>
+    public static string? ApprovalNeeded(CommercialAgreement a, AgreementChange c, CommercialCatalogue cat, int schemes)
+    {
+        if (c.Type != "adjustment" || c.Kind != "discount") return null;
+        var limit = cat.Settings.DiscountApprovalPercent;
+        var limitText = limit.ToString("0.##", CultureInfo.InvariantCulture);
+        if (c.Percent is { } pct) return pct > limit ? $"{pct.ToString("0.##", CultureInfo.InvariantCulture)}% off (more than {limitText}%)" : null;
+        var on = c.From ?? "";
+        var basis = ChargesOn(a, on, cat, schemes).Recurring.Where(l => l.Kind != "discount").Sum(l => l.Amount ?? 0);
+        var share = basis > 0 ? c.Amount / basis * 100 : 100;
+        return share > limit ? $"{Math.Round(share, MidpointRounding.AwayFromZero)}% of the recurring charges (more than {limitText}%)" : null;
+    }
+
     /// <summary>Before and after, on the date the change takes effect, for the person to confirm. Nothing is saved.</summary>
     public static ChangePreview Preview(CommercialAgreement a, AgreementChange c, CommercialCatalogue cat, int schemes, DateTimeOffset now)
     {
@@ -274,7 +295,8 @@ public static partial class CommercialRules
         var firstInvoiceOn = policy == ProrationPolicies.Daily || string.CompareOrdinal(on, a.Billing.NextBillingDate) <= 0
             ? a.Billing.NextBillingDate
             : NextCycleOn(a.Billing.NextBillingDate, on, a.Cycle);
-        return new(on, before, afterCharges, Round2(afterCharges.RecurringMonthly - before.RecurringMonthly), firstInvoiceOn, policy, errors.Count > 0 ? errors : null);
+        return new(on, before, afterCharges, Round2(afterCharges.RecurringMonthly - before.RecurringMonthly), firstInvoiceOn, policy, errors.Count > 0 ? errors : null,
+            ApprovalNeeded(a, c, cat, schemes));
     }
 
     /// <summary>The first billing date on or after <paramref name="on"/>, stepping from a known billing date.</summary>
