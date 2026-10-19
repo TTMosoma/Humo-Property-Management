@@ -19,6 +19,10 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
 {
     public DbSet<Organisation> Organisations => Set<Organisation>();
     public DbSet<Scheme> Schemes => Set<Scheme>();
+    public DbSet<Unit> Units => Set<Unit>();
+    public DbSet<LevyAccount> LevyAccounts => Set<LevyAccount>();
+    public DbSet<Person> People => Set<Person>();
+    public DbSet<Relationship> Relationships => Set<Relationship>();
     public DbSet<Membership> Memberships => Set<Membership>();
     public DbSet<RoleAssignment> RoleAssignments => Set<RoleAssignment>();
     public DbSet<AuditEntry> Audit => Set<AuditEntry>();
@@ -62,6 +66,58 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.Property(x => x.Version).IsConcurrencyToken();
             e.HasIndex(x => new { x.OrganisationId, x.Code }).IsUnique();
             e.HasOne<Organisation>().WithMany().HasForeignKey(x => x.OrganisationId);
+        });
+
+        builder.Entity<Unit>(e =>
+        {
+            e.ToTable("Units");
+            e.Property(x => x.Number).HasMaxLength(6);
+            e.Property(x => x.AccountNo).HasMaxLength(12);
+            e.Property(x => x.Description).HasMaxLength(200);
+            e.Property(x => x.Occupancy).HasMaxLength(20);
+            e.Property(x => x.SizeM2).HasPrecision(10, 2);
+            e.Property(x => x.ParticipationQuota).HasPrecision(9, 6);
+            e.Property(x => x.MonthlyLevy).HasPrecision(18, 2);
+            e.Property(x => x.ParkingBays).HasConversion(StringList.Converter, StringList.Comparer);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => new { x.SchemeId, x.Number }).IsUnique();
+            e.HasOne<Scheme>().WithMany().HasForeignKey(x => x.SchemeId);
+        });
+
+        builder.Entity<LevyAccount>(e =>
+        {
+            e.ToTable("LevyAccounts");
+            e.Property(x => x.AccountNo).HasMaxLength(12);
+            e.Property(x => x.Balance).HasPrecision(18, 2);
+            e.Property(x => x.Status).HasMaxLength(20);
+            e.Property(x => x.StatementBy).HasMaxLength(10);
+            e.HasIndex(x => x.UnitId).IsUnique();
+            e.HasOne<Unit>().WithMany().HasForeignKey(x => x.UnitId);
+            e.HasOne<Person>().WithMany().HasForeignKey(x => x.HolderPersonId);
+        });
+
+        builder.Entity<Person>(e =>
+        {
+            e.ToTable("People");
+            e.Property(x => x.FirstName).HasMaxLength(100);
+            e.Property(x => x.LastName).HasMaxLength(200);
+            e.Property(x => x.DisplayName).HasMaxLength(250);
+            e.Property(x => x.Email).HasMaxLength(320);
+            e.Property(x => x.Phone).HasMaxLength(40);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => x.OrganisationId);
+            e.HasOne<Organisation>().WithMany().HasForeignKey(x => x.OrganisationId);
+        });
+
+        builder.Entity<Relationship>(e =>
+        {
+            e.ToTable("Relationships");
+            e.Property(x => x.Type).HasMaxLength(20);
+            e.HasIndex(x => x.PersonId);
+            e.HasIndex(x => new { x.SchemeId, x.Type });
+            e.HasOne<Person>().WithMany().HasForeignKey(x => x.PersonId);
+            e.HasOne<Scheme>().WithMany().HasForeignKey(x => x.SchemeId);
+            e.HasOne<Unit>().WithMany().HasForeignKey(x => x.UnitId);
         });
 
         builder.Entity<Membership>(e =>

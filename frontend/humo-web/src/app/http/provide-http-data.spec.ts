@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { firstValueFrom } from 'rxjs';
-import { AccessDataSource, ApiError, PolicyError, SchemeDataSource, SessionDataSource, SignInError, UnitDataSource } from '../domain';
+import { AccessDataSource, ApiError, PolicyError, SchemeDataSource, SessionDataSource, SignInError, JobDataSource } from '../domain';
 import { provideHttpData } from './provide-http-data';
 
 /**
@@ -42,7 +42,7 @@ describe('Production data layer (provideHttpData)', () => {
   });
 
   it('ports without an API yet say so', async () => {
-    await expect(firstValueFrom(TestBed.inject(UnitDataSource).list(['s-1']))).rejects.toBeInstanceOf(ApiError);
+    await expect(firstValueFrom(TestBed.inject(JobDataSource).list(['s-1']))).rejects.toBeInstanceOf(ApiError);
     await expect(firstValueFrom(TestBed.inject(AccessDataSource).directory(null))).rejects.toMatchObject({ kind: 'server' });
   });
   it('reads schemes from the API', async () => {

@@ -49,7 +49,7 @@ import {
 } from '../domain';
 import { ContractorNetwork } from '../domain/contractor';
 import { httpAccessDataSource } from './http-access';
-import { HttpOrganisationDataSource, HttpSchemeDataSource, HttpStepUpAuthenticator } from './http-portfolio';
+import { HttpOrganisationDataSource, HttpPersonDataSource, HttpSchemeDataSource, HttpStepUpAuthenticator, HttpUnitDataSource } from './http-portfolio';
 import { HttpSessionDataSource } from './http-session-data-source';
 import { notConnected } from './not-connected';
 
@@ -57,8 +57,6 @@ import { notConnected } from './not-connected';
 const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
   [NotificationDataSource, 'NotificationDataSource'],
   [WorkItemDataSource, 'WorkItemDataSource'],
-  [UnitDataSource, 'UnitDataSource'],
-  [PersonDataSource, 'PersonDataSource'],
   [AccountDataSource, 'AccountDataSource'],
   [ReceiptDataSource, 'ReceiptDataSource'],
   [TimelineDataSource, 'TimelineDataSource'],
@@ -106,7 +104,7 @@ const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
  *
  * Connected so far (slice 1): the session (GET /me, passkey and email-link
  * sign-in, passkey registration), sign out and switch role, step-up,
- * organisations and schemes. The other ports answer "not connected yet" until their slice lands.
+ * organisations, schemes, units and people. The other ports answer "not connected yet" until their slice lands.
  */
 export function provideHttpData(): EnvironmentProviders {
   const pending: Provider[] = NOT_YET.map(([port, name]) => ({ provide: port, useFactory: () => notConnected(name) }));
@@ -116,6 +114,8 @@ export function provideHttpData(): EnvironmentProviders {
     { provide: OrganisationDataSource, useClass: HttpOrganisationDataSource },
     { provide: SchemeDataSource, useClass: HttpSchemeDataSource },
     { provide: StepUpAuthenticator, useClass: HttpStepUpAuthenticator },
+    { provide: UnitDataSource, useClass: HttpUnitDataSource },
+    { provide: PersonDataSource, useClass: HttpPersonDataSource },
     ...pending,
   ]);
 }

@@ -56,7 +56,8 @@ public static partial class SchemeEndpoints
         var actor = await current.GetAsync(ct);
         if (actor is null) return Results.Unauthorized();
         var ids = await Visible(actor, db).Select(s => s.Id).ToListAsync(ct);
-        return Results.Ok(ids.Select(id => new SchemeHealthDto(id.ToString(), 100, 0, 0, 0, 0, 0, "not-applicable", 0, "good")));
+        var rolls = await db.Units.Where(u => ids.Contains(u.SchemeId)).GroupBy(u => u.SchemeId).Select(g => new { g.Key, Roll = g.Sum(u => u.MonthlyLevy) }).ToDictionaryAsync(x => x.Key, x => x.Roll, ct);
+        return Results.Ok(ids.Select(id => new SchemeHealthDto(id.ToString(), 100, 0, 0, rolls.GetValueOrDefault(id), 0, 0, "not-applicable", 0, "good")));
     }
 
     private static async Task<IResult> Create(SchemeDetailsRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, TimeProvider clock, CancellationToken ct)
@@ -188,6 +189,8 @@ public static partial class SchemeEndpoints
             .Where(a => a.Role == Roles.PortfolioManager && a.Status == AssignmentStatuses.Active && a.OrganisationId != null && orgIds.Contains(a.OrganisationId.Value))
             .Join(db.Users.Where(u => u.Status == IdentityStatuses.Active), a => a.UserId, u => u.Id, (a, u) => new { a, u })
             .ToListAsync(ct);
+        var schemeIds = schemes.Select(s => s.Id).ToList();
+        var unitCounts = await db.Units.Where(u => schemeIds.Contains(u.SchemeId)).GroupBy(u => u.SchemeId).Select(g => new { g.Key, Count = g.Count() }).ToDictionaryAsync(x => x.Key, x => x.Count, ct);
         var members = await db.Memberships.Where(m => orgIds.Contains(m.OrganisationId) && m.Status == MembershipStatuses.Active).Select(m => new { m.UserId, m.OrganisationId }).ToListAsync(ct);
 
         return schemes.Select(s =>
@@ -198,7 +201,7 @@ public static partial class SchemeEndpoints
                 .OrderBy(x => x.a.GrantedAt)
                 .FirstOrDefault();
             return new SchemeDto(s.Id.ToString(), s.Version, s.OrganisationId.ToString(), s.Name, s.Code, s.Type, s.Status, s.Suburb, s.City, s.Province,
-                UnitCount: 0, pm is null ? null : new StaffRefDto(pm.u.Id.ToString(), pm.u.Id.ToString(), pm.u.Name));
+                UnitCount: unitCounts.GetValueOrDefault(s.Id), pm is null ? null : new StaffRefDto(pm.u.Id.ToString(), pm.u.Id.ToString(), pm.u.Name));
         }).ToList();
     }
 }

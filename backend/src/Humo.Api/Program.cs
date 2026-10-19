@@ -29,6 +29,7 @@ builder.Services.AddScoped<SessionBuilder>();
 builder.Services.AddScoped<AuditLog>();
 builder.Services.AddScoped<CurrentActor>();
 builder.Services.AddScoped<CommandRunner>();
+builder.Services.AddScoped<PortfolioReads>();
 
 // ---- Sign-in: ASP.NET Core Identity with passkeys; no passwords (D14) ----
 builder.Services
@@ -101,6 +102,8 @@ api.MapHumoAuth();
 api.MapSmsWebhooks();
 api.MapOrganisations();
 api.MapSchemes();
+api.MapUnits();
+api.MapPeople();
 
 await app.InitialiseDatabaseAsync();
 app.Run();
