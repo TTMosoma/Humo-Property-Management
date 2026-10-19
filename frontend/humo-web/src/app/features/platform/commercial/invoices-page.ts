@@ -3,6 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { catchError, map, of } from 'rxjs';
 import { BILLING_PREFERENCE_LABELS, CommercialDataSource, InvoiceListItem, InvoiceStatus, isoDay } from '../../../domain';
+import { PrototypeControls } from '../../../core/prototype/prototype-controls';
 import { urlState } from '../../../ui/data-table/url-state';
 import { ViewTabs } from '../../../ui/data-table/view-tabs';
 import { formatDate, formatRand } from '../../../ui/format/money';
@@ -27,7 +28,11 @@ const STATUS_TONE: Record<InvoiceStatus, 'info' | 'danger' | 'success' | 'neutra
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-page-header eyebrow="Humo platform" title="Invoices" subtitle="Humo’s invoices to its customers. Paid only once a payment is verified." />
-    <p class="demo-note">Demo data: invoices are simulated and none has been sent. Customers’ agency administrators see their own under Settings › Billing &amp; invoices.</p>
+    @if (demo) {
+      <p class="demo-note">Demo data: invoices are simulated and none has been sent. Customers’ agency administrators see their own under Settings › Billing &amp; invoices.</p>
+    } @else {
+      <p class="demo-note">Each invoice is emailed to the customer’s billing address when it’s issued. Their agency administrators see their own under Settings › Billing &amp; invoices.</p>
+    }
 
     @if (rows() === undefined) {
       <ui-skeleton [count]="6" />
@@ -96,6 +101,8 @@ const STATUS_TONE: Record<InvoiceStatus, 'info' | 'danger' | 'success' | 'neutra
   `,
 })
 export class InvoicesPage {
+  /** The simulation: its invoices are made up and never sent. */
+  protected readonly demo = !!inject(PrototypeControls, { optional: true });
   private readonly data = inject(CommercialDataSource);
   private readonly state = urlState({ view: 'all' });
 

@@ -3,6 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { catchError, map, of } from 'rxjs';
 import { BILLING_PREFERENCE_HELP, BILLING_PREFERENCE_LABELS, InvoiceDocument, InvoiceStatus, PlanDataSource } from '../../domain';
+import { PrototypeControls } from '../../core/prototype/prototype-controls';
 import { SessionService } from '../../core/session/session.service';
 import { formatDate, formatRand } from '../../ui/format/money';
 import { PageHeader } from '../../ui/page-header/page-header';
@@ -38,7 +39,9 @@ const STATUS_TONE: Record<InvoiceStatus, 'info' | 'danger' | 'success' | 'neutra
           <div><span class="label-caps">Invoices go to</span><strong>{{ l.billTo.billingEmail }}</strong><span class="muted">To change how you pay, ask your Humo account manager (Plan &amp; features).</span></div>
         </section>
       }
-      <p class="demo-note">Demo data: these invoices are simulated. In the live service, each invoice is emailed to you as a secure link.</p>
+      @if (demo) {
+        <p class="demo-note">Demo data: these invoices are simulated. In the live service, each invoice is emailed to you as a secure link.</p>
+      }
       @if (invoices()!.length) {
         <div class="surface table-wrap">
           <table class="table">
@@ -78,6 +81,8 @@ const STATUS_TONE: Record<InvoiceStatus, 'info' | 'danger' | 'success' | 'neutra
   `,
 })
 export class BillingPage {
+  /** The simulation: its invoices are made up and never sent. */
+  protected readonly demo = !!inject(PrototypeControls, { optional: true });
   protected readonly session = inject(SessionService);
   private readonly data = inject(PlanDataSource);
 

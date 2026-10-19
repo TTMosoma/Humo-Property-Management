@@ -129,6 +129,7 @@ api.MapAudit();
 api.MapSecurity();
 Humo.Api.Commercial.CustomerEndpoints.MapCustomers(api);
 Humo.Api.Commercial.CommercialEndpoints.MapCommercial(api);
+Humo.Api.Commercial.BillingEndpoints.MapBilling(api);
 Notices.MapNotifications(api);
 
 await app.InitialiseDatabaseAsync();

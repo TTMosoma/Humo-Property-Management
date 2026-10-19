@@ -323,6 +323,9 @@ public static class CustomerEndpoints
         var managers = await db.Users.Where(u => u.Kind == IdentityKinds.Humo).ToDictionaryAsync(u => u.Id, u => u.Name, ct);
         var requests = (await db.UpgradeRequests.Where(r => ids.Contains(r.OrganisationId)).ToListAsync(ct)).OrderByDescending(r => r.At).ToList();
         var revenue = actor.Can("Platform.Revenue.View");
+        var todayText = CommercialRules.Day(now);
+        var overdue = (await db.Invoices.Where(i => ids.Contains(i.OrganisationId) && i.Status == "issued").Select(i => new { i.OrganisationId, i.DueOn }).ToListAsync(ct))
+            .Where(i => string.CompareOrdinal(i.DueOn, todayText) < 0).Select(i => i.OrganisationId).ToHashSet();
 
         var result = new List<PlatformCustomerDto>();
         foreach (var org in orgs.OrderBy(o => o.ShortName, StringComparer.OrdinalIgnoreCase))
@@ -338,7 +341,7 @@ public static class CustomerEndpoints
             var active = orgSignIns.Select(e => e.ActorId).Distinct().Count();
             var seats = Math.Max(sub.Seats, people.Count);
             var snapshot = new UsageSnapshotDto(org.Id.ToString(), now.ToString("O"), seats, active, active == 0 ? 0 : Math.Round(orgSignIns.Count / (decimal)active / (30m / 7), 1),
-                [], 0, 0, 0, 0, "current", schemeCount, units.GetValueOrDefault(org.Id), trustees.GetValueOrDefault(org.Id), 0, 0, 0, 0, 0, []);
+                [], 0, 0, 0, 0, sub.Status == SubscriptionStatuses.Suspended ? "suspended" : overdue.Contains(org.Id) ? "overdue" : "current", schemeCount, units.GetValueOrDefault(org.Id), trustees.GetValueOrDefault(org.Id), 0, 0, 0, 0, 0, []);
             result.Add(new PlatformCustomerDto(org.Id.ToString(), org.ShortName, org.City, org.Province, org.CreatedAt.ToString("O"),
                 org.AccountManagerId?.ToString() ?? "", org.AccountManagerId is { } m && managers.TryGetValue(m, out var name) ? name : "Unassigned",
                 org.Status, view, entitlements, snapshot, Health(snapshot, entitlements, now), [], requests.Where(r => r.OrganisationId == org.Id).Select(ToDto).ToList(), []));

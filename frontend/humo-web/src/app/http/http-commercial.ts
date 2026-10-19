@@ -35,8 +35,6 @@ import { HttpPort, toApiErrorFromHttp } from './http-port';
 const orUndefined = <T>(source: Observable<T>): Observable<T | undefined> =>
   source.pipe(catchError((e) => (e.kind === 'not-found' ? of(undefined) : throwError(() => e))));
 
-/** Invoices and payments arrive with register R-14 (docs/23 §6): until then nothing is issued, and these say so. */
-const billingLater = (what: string) => throwError(() => new ApiError('server', `${what} isn’t connected to Humo’s API yet`));
 
 /** The published catalogue (GET /catalogue): features, packages and the add-ons on sale. */
 @Injectable()
@@ -84,13 +82,13 @@ export class HttpPlanDataSource extends HttpPort implements PlanDataSource {
     return orUndefined(this.live<CustomerPlan>(`/organisations/${organisationId}/plan`, ['subscriptions', 'session']));
   }
 
-  /** No Humo invoice is issued until billing is on the API (R-14). */
-  invoices(): Observable<InvoiceDocument[]> {
-    return of([]);
+  /** Their own Humo invoices (Agency Administrators): the API checks the organisation. */
+  invoices(organisationId: string): Observable<InvoiceDocument[]> {
+    return this.live<InvoiceDocument[]>(`/organisations/${organisationId}/invoices`, ['subscriptions']);
   }
 
-  invoice(): Observable<InvoiceDocument | undefined> {
-    return of(undefined);
+  invoice(organisationId: string, invoiceId: string): Observable<InvoiceDocument | undefined> {
+    return orUndefined(this.live<InvoiceDocument>(`/organisations/${organisationId}/invoices/${invoiceId}`, ['subscriptions']));
   }
 
   requestUpgrade(input: { organisationId: string; addOn?: AddOnId; package?: PackageId; feature?: Feature; note?: string; source: UpgradeRequest['source'] }): Observable<void> {
@@ -101,7 +99,7 @@ export class HttpPlanDataSource extends HttpPort implements PlanDataSource {
 
 /**
  * Commercial management over HTTP (docs/23): the priced catalogue, settings and each customer's
- * agreement with its live preview. Invoices and payments come with R-14.
+ * agreement with its live preview, invoices and manual EFT. Online payment waits for the provider (R-14).
  */
 @Injectable()
 export class HttpCommercialDataSource extends HttpPort implements CommercialDataSource {
@@ -137,19 +135,21 @@ export class HttpCommercialDataSource extends HttpPort implements CommercialData
   }
 
   invoices(): Observable<InvoiceListItem[]> {
-    return of([]);
+    return this.live<InvoiceListItem[]>('/platform/invoices', ['subscriptions', 'organisations']);
   }
 
-  invoice(): Observable<InvoiceDocument | undefined> {
-    return of(undefined);
+  invoice(invoiceId: string): Observable<InvoiceDocument | undefined> {
+    return orUndefined(this.live<InvoiceDocument>(`/platform/invoices/${invoiceId}`, ['subscriptions']));
   }
 
-  issueInvoice(): Observable<string> {
-    return billingLater('Issuing invoices');
+  /** Platform.Billing.Manage with step-up: the next period, from the agreement as it stands. */
+  issueInvoice(organisationId: string): Observable<string> {
+    return this.createId(`/platform/customers/${organisationId}/invoices`, null, ['subscriptions']);
   }
 
-  startCheckout(): Observable<CheckoutSession> {
-    return billingLater('Online payment');
+  /** The API refuses it until Humo chooses a payment provider (docs/23 §8). */
+  startCheckout(invoiceId: string): Observable<CheckoutSession> {
+    return this.command<CheckoutSession>('POST', `/platform/invoices/${invoiceId}/checkout`, null, ['subscriptions']);
   }
 
   /** Never on the API: only the simulation stands in for the provider. */
@@ -157,12 +157,14 @@ export class HttpCommercialDataSource extends HttpPort implements CommercialData
     return throwError(() => new ApiError('server', 'Provider notifications come from the provider, never from the browser'));
   }
 
-  recordEftProof(): Observable<void> {
-    return billingLater('Recording proof of payment');
+  /** Recorded, not paid: the invoice stays unpaid until the EFT is reconciled. */
+  recordEftProof(invoiceId: string, note: string): Observable<void> {
+    return this.command('POST', `/platform/invoices/${invoiceId}/eft-proof`, { note }, ['subscriptions']);
   }
 
-  reconcileEft(): Observable<void> {
-    return billingLater('Reconciling payments');
+  /** Platform.Billing.Manage with step-up: matched to a line on Humo's bank statement. */
+  reconcileEft(paymentId: string, bankReference: string): Observable<void> {
+    return this.command('POST', `/platform/payments/${paymentId}/reconcile`, { bankReference }, ['subscriptions']);
   }
 }
 

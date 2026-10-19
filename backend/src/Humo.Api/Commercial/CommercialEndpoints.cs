@@ -210,8 +210,11 @@ public static partial class CommercialEndpoints
             .Concat(CommercialRules.InForce(a.AddOns, today).Where(l => l.Until is not null)
                 .Select(l => new ScheduledItemDto(l.Id, "removal", $"Remove {Name(l.AddOnId)}", l.Until!, Change(l.Until!))))
             .OrderBy(x => x.From, StringComparer.Ordinal).ToList();
+        var invoices = await db.Invoices.Where(i => i.OrganisationId == id).ToListAsync(ct);
+        var payments = (await db.Payments.Where(p => p.OrganisationId == id).ToListAsync(ct)).ToLookup(p => p.InvoiceId);
         return Results.Ok(new CustomerCommercialViewDto(id.ToString(), org.ShortName, schemes, manager, a, today, CommercialRules.ChargesOn(a, today, cat, schemes), scheduled,
-            CommercialRules.Storage(a, cat, CustomerEndpoints.NotMeasured(id), today), []));
+            CommercialRules.Storage(a, cat, CustomerEndpoints.NotMeasured(id), today),
+            invoices.OrderByDescending(i => i.PeriodStart, StringComparer.Ordinal).Select(i => (object)BillingEndpoints.ToCustomerInvoice(i, payments[i.Id], today)).ToList()));
     }
 
     /// <summary>The effect of a change, before and after. Nothing is saved.</summary>

@@ -24,6 +24,8 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
     public DbSet<Agreement> Agreements => Set<Agreement>();
     public DbSet<UpgradeRequest> UpgradeRequests => Set<UpgradeRequest>();
+    public DbSet<Invoice> Invoices => Set<Invoice>();
+    public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Notice> Notices => Set<Notice>();
     public DbSet<NoticeRead> NoticeReads => Set<NoticeRead>();
     public DbSet<PendingHumoGrant> PendingHumoGrants => Set<PendingHumoGrant>();
@@ -124,6 +126,31 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.Property(x => x.Status).HasMaxLength(20);
             e.HasIndex(x => x.OrganisationId);
             e.HasOne<Organisation>().WithMany().HasForeignKey(x => x.OrganisationId);
+        });
+
+        builder.Entity<Invoice>(e =>
+        {
+            e.ToTable("Invoices");
+            e.Property(x => x.Reference).HasMaxLength(40);
+            e.Property(x => x.Status).HasMaxLength(20);
+            e.Property(x => x.PeriodStart).HasMaxLength(10);
+            e.Property(x => x.IssuedOn).HasMaxLength(10);
+            e.Property(x => x.DueOn).HasMaxLength(10);
+            e.Property(x => x.Total).HasPrecision(18, 2);
+            // Issuing is atomic: one invoice per reference, so a period can't be invoiced twice.
+            e.HasIndex(x => x.Reference).IsUnique();
+            e.HasIndex(x => x.OrganisationId);
+            e.HasOne<Organisation>().WithMany().HasForeignKey(x => x.OrganisationId);
+        });
+
+        builder.Entity<Payment>(e =>
+        {
+            e.ToTable("Payments");
+            e.Property(x => x.Method).HasMaxLength(20);
+            e.Property(x => x.Status).HasMaxLength(30);
+            e.Property(x => x.Amount).HasPrecision(18, 2);
+            e.HasIndex(x => x.InvoiceId);
+            e.HasOne<Invoice>().WithMany().HasForeignKey(x => x.InvoiceId);
         });
 
         builder.Entity<Scheme>(e =>
