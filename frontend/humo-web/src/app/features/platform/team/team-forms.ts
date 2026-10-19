@@ -8,12 +8,14 @@ const ROLE_HELP: Record<HumoRole, string> = {
   'humo-account-manager': 'Looks after customers: onboarding, adoption, subscriptions.',
   'humo-support': 'Helps customers and investigates problems. Can’t change packages, configuration or roles.',
   'humo-executive': 'Business figures: revenue, growth, account health. Read-only.',
+  'humo-finance': 'Humo’s own billing: issues invoices, reconciles EFT payments and approves discounts above 20%.',
 };
 const DEFAULT_LABEL: Record<HumoRole, string> = {
   'system-admin': 'Platform operations',
   'humo-account-manager': 'Customer accounts',
   'humo-support': 'Customer support',
   'humo-executive': 'Leadership',
+  'humo-finance': 'Finance',
 };
 const roleOptions = (except: HumoRole[] = []) => HUMO_ROLES.filter((r) => !except.includes(r)).map((r) => ({ value: r, label: ROLE_LABELS[r] }));
 const step = (detail: string) => ({ action: 'change-humo-team' as const, detail });

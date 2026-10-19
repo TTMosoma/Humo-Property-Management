@@ -1,12 +1,12 @@
 {
-  "$comment": "Commercial settings. The proration policy and the VAT position need business approval (docs/23 §3, §6).",
+  "$comment": "Commercial settings. Daily pro-rata approved on 19 October 2026 (doc 17, D15); Humo is not VAT registered.",
   "version": 1,
   "storageThresholds": [
     80,
     95
   ],
-  "proration": "next-cycle",
-  "prorationAwaitingApproval": true,
+  "proration": "daily",
+  "prorationAwaitingApproval": false,
   "tax": {
     "legalName": "Humo (legal entity to be confirmed)",
     "vatRegistered": false,

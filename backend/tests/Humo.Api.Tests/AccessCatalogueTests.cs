@@ -8,8 +8,8 @@ public sealed class AccessCatalogueTests
     [Fact]
     public void Every_role_the_frontend_knows_is_loaded()
     {
-        Assert.Equal(11, AccessCatalogue.Roles.Count);
-        foreach (var role in new[] { Roles.AgencyAdmin, Roles.PortfolioManager, Roles.Trustee, Roles.SystemAdmin, Roles.AccountManager })
+        Assert.Equal(12, AccessCatalogue.Roles.Count);
+        foreach (var role in new[] { Roles.AgencyAdmin, Roles.PortfolioManager, Roles.Trustee, Roles.SystemAdmin, Roles.AccountManager, Roles.HumoFinance })
             Assert.True(AccessCatalogue.IsRole(role), role);
     }
 

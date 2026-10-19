@@ -1,5 +1,5 @@
 {
-  "$comment": "Humo commercial catalogue (docs/23). Package names and features live in the entitlement catalogue (PACKAGES in domain/models/entitlement.ts); this file holds their commercial terms. Prices are null until the business decides them; example values are marked proposed.",
+  "$comment": "Humo commercial catalogue (docs/23). Package names and features live in the entitlement catalogue (contracts/entitlements.json); this file holds their commercial terms. Prices approved by the product owner on 19 October 2026 (doc 17, D15).",
   "packages": [
     {
       "packageId": "essentials",
@@ -12,17 +12,18 @@
         {
           "version": 1,
           "effectiveFrom": "2026-01-01",
-          "monthlyPrice": null,
-          "annualPrice": null,
-          "priceStatus": "awaiting",
+          "monthlyPrice": 600,
+          "annualPrice": 6600,
+          "priceStatus": "approved",
           "includedStorageGb": 5,
-          "storageStatus": "proposed",
-          "includedSchemes": null,
-          "extraSchemePrice": null,
-          "annualRenewalFee": null,
-          "changedBy": "Humo catalogue seed",
-          "changedAt": "2026-10-12T08:00:00+02:00",
-          "reason": "Initial catalogue. Base prices not decided; storage allowance proposed (docs/23 §4)."
+          "storageStatus": "approved",
+          "includedSchemes": 5,
+          "extraSchemePrice": 150,
+          "annualRenewalFee": 250,
+          "changedBy": "Terry Mosoma (product owner)",
+          "changedAt": "2026-10-19T18:00:00+02:00",
+          "reason": "Approved price list (doc 17, D15): includes schemes and storage; R150 per 10 extra schemes; R250 annual renewal fee.",
+          "extraSchemeBlock": 10
         }
       ]
     },
@@ -37,17 +38,18 @@
         {
           "version": 1,
           "effectiveFrom": "2026-01-01",
-          "monthlyPrice": null,
-          "annualPrice": null,
-          "priceStatus": "awaiting",
+          "monthlyPrice": 2400,
+          "annualPrice": 26400,
+          "priceStatus": "approved",
           "includedStorageGb": 25,
-          "storageStatus": "proposed",
-          "includedSchemes": null,
-          "extraSchemePrice": null,
-          "annualRenewalFee": null,
-          "changedBy": "Humo catalogue seed",
-          "changedAt": "2026-10-12T08:00:00+02:00",
-          "reason": "Initial catalogue. Base prices not decided; storage allowance proposed (docs/23 §4)."
+          "storageStatus": "approved",
+          "includedSchemes": 25,
+          "extraSchemePrice": 150,
+          "annualRenewalFee": 250,
+          "changedBy": "Terry Mosoma (product owner)",
+          "changedAt": "2026-10-19T18:00:00+02:00",
+          "reason": "Approved price list (doc 17, D15): includes schemes and storage; R150 per 10 extra schemes; R250 annual renewal fee.",
+          "extraSchemeBlock": 10
         }
       ]
     },
@@ -62,17 +64,18 @@
         {
           "version": 1,
           "effectiveFrom": "2026-01-01",
-          "monthlyPrice": null,
-          "annualPrice": null,
-          "priceStatus": "awaiting",
-          "includedStorageGb": 250,
-          "storageStatus": "proposed",
-          "includedSchemes": null,
-          "extraSchemePrice": null,
-          "annualRenewalFee": null,
-          "changedBy": "Humo catalogue seed",
-          "changedAt": "2026-10-12T08:00:00+02:00",
-          "reason": "Initial catalogue. Base prices not decided; storage allowance proposed (docs/23 §4)."
+          "monthlyPrice": 9600,
+          "annualPrice": 105600,
+          "priceStatus": "approved",
+          "includedStorageGb": 125,
+          "storageStatus": "approved",
+          "includedSchemes": 125,
+          "extraSchemePrice": 150,
+          "annualRenewalFee": 250,
+          "changedBy": "Terry Mosoma (product owner)",
+          "changedAt": "2026-10-19T18:00:00+02:00",
+          "reason": "Approved price list (doc 17, D15): includes schemes and storage; R150 per 10 extra schemes; R250 annual renewal fee.",
+          "extraSchemeBlock": 10
         }
       ]
     }
@@ -190,10 +193,10 @@
           "effectiveFrom": "2026-01-01",
           "price": 100,
           "frequency": "monthly",
-          "priceStatus": "proposed",
-          "changedBy": "Humo catalogue seed",
-          "changedAt": "2026-10-12T08:00:00+02:00",
-          "reason": "Initial catalogue. R100 a month and the 500-message allowance are proposed: not approved.",
+          "priceStatus": "approved",
+          "changedBy": "Terry Mosoma (product owner)",
+          "changedAt": "2026-10-19T18:00:00+02:00",
+          "reason": "Initial catalogue. R100 a month and the 500-message allowance are approved (doc 17, D15).",
           "usageAllowance": {
             "unit": "WhatsApp messages",
             "included": 500
@@ -312,10 +315,10 @@
           "effectiveFrom": "2026-01-01",
           "price": 150,
           "frequency": "monthly",
-          "priceStatus": "proposed",
-          "changedBy": "Humo catalogue seed",
-          "changedAt": "2026-10-12T08:00:00+02:00",
-          "reason": "Initial catalogue. Example price, proposed: not approved."
+          "priceStatus": "approved",
+          "changedBy": "Terry Mosoma (product owner)",
+          "changedAt": "2026-10-19T18:00:00+02:00",
+          "reason": "Initial catalogue. Example price, approved (doc 17, D15)."
         }
       ],
       "storageGb": 10
@@ -336,10 +339,10 @@
           "effectiveFrom": "2026-01-01",
           "price": 600,
           "frequency": "monthly",
-          "priceStatus": "proposed",
-          "changedBy": "Humo catalogue seed",
-          "changedAt": "2026-10-12T08:00:00+02:00",
-          "reason": "Initial catalogue. Example price, proposed: not approved."
+          "priceStatus": "approved",
+          "changedBy": "Terry Mosoma (product owner)",
+          "changedAt": "2026-10-19T18:00:00+02:00",
+          "reason": "Initial catalogue. Example price, approved (doc 17, D15)."
         }
       ],
       "storageGb": 50
@@ -360,13 +363,36 @@
           "effectiveFrom": "2026-01-01",
           "price": 1000,
           "frequency": "monthly",
-          "priceStatus": "proposed",
-          "changedBy": "Humo catalogue seed",
-          "changedAt": "2026-10-12T08:00:00+02:00",
-          "reason": "Initial catalogue. Example price, proposed: not approved."
+          "priceStatus": "approved",
+          "changedBy": "Terry Mosoma (product owner)",
+          "changedAt": "2026-10-19T18:00:00+02:00",
+          "reason": "Initial catalogue. Example price, approved (doc 17, D15)."
         }
       ],
       "storageGb": 100
+    },
+    {
+      "id": "custom-document-templates",
+      "name": "Custom Document Templates",
+      "description": "Your organisation’s own document templates, built by Humo from your designs. Included in Enterprise.",
+      "kind": "feature",
+      "features": [
+        "document-templates-custom"
+      ],
+      "allowQuantity": false,
+      "status": "active",
+      "terms": [
+        {
+          "version": 1,
+          "effectiveFrom": "2026-10-19",
+          "price": null,
+          "frequency": "monthly",
+          "priceStatus": "awaiting",
+          "changedBy": "Terry Mosoma (product owner)",
+          "changedAt": "2026-10-19T18:00:00+02:00",
+          "reason": "A paid add-on for Essentials and Professional (doc 17, D15). Price not decided."
+        }
+      ]
     }
   ]
 }

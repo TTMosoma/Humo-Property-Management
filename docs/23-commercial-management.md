@@ -287,6 +287,8 @@ There is no *Business* tier: the repository's packages are Essentials, Professio
 
 ## 8. Decisions for approval ⚑
 
+**Decided on 19 October 2026: see [D15](17-decisions.md#d15--commercial-terms-19-october-2026).** Payfast; no VAT; the approved prices; daily pro-rata; discounts above 20% need a second approver; billing with a Humo Finance role; the 24-hour cooling-off confirmed; custom templates included in Enterprise and paid for the others. The list below is kept as the original question.
+
 1. **Base package prices**, and whether packages are also priced by portfolio size (included schemes, price per extra scheme).
 2. **Proposed example prices:** WhatsApp, storage packs, and the storage allowances per package.
 3. **Mid-cycle proration policy:** next cycle (default) or daily pro-rata.

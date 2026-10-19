@@ -132,6 +132,18 @@ Humo.Api.Commercial.CommercialEndpoints.MapCommercial(api);
 Humo.Api.Commercial.BillingEndpoints.MapBilling(api);
 Notices.MapNotifications(api);
 
+// Operator check (doc 26): `send-test-sms <mobile number>` sends one SMS through the configured provider, then exits.
+if (args is ["send-test-sms", var to])
+{
+    using var scope = app.Services.CreateScope();
+    var receipt = await scope.ServiceProvider.GetRequiredService<Humo.Infrastructure.Messaging.SmsGateway>()
+        .SendAsync(new Humo.Infrastructure.Messaging.SmsMessage(to, "Humo Property Management: test message. If this reached you, SMS is set up.", $"test-{Guid.NewGuid():N}"[..20]));
+    Console.WriteLine(receipt.Accepted
+        ? $"Accepted by {receipt.Provider} (message {receipt.ProviderMessageId ?? "no id"})."
+        : $"Refused by {receipt.Provider}: {receipt.Error}");
+    return;
+}
+
 await app.InitialiseDatabaseAsync();
 app.Run();
 

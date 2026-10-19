@@ -65,6 +65,18 @@ const SEED: SeedIdentity[] = [
       { id: 'm-lerato', role: 'humo-support', organisationId: null, schemeIds: [], label: 'Customer support', grantedBy: 'Terry Mosoma', grantedAt: '2026-03-02T09:00:00+02:00' },
     ],
   },
+  {
+    // Humo Finance (doc 17, D15): issues invoices, reconciles payments, approves large discounts.
+    id: 'p-refilwe',
+    name: 'Refilwe Sithole',
+    initials: 'RS',
+    email: 'refilwe@humo.co.za',
+    kind: 'humo',
+    demo: true,
+    assignments: [
+      { id: 'm-refilwe', role: 'humo-finance', organisationId: null, schemeIds: [], label: 'Finance', grantedBy: 'Terry Mosoma', grantedAt: '2026-03-02T09:00:00+02:00' },
+    ],
+  },
 
   // ---------------- Acacia Managing Agents ----------------
   {

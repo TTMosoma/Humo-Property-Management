@@ -24,6 +24,7 @@ import {
   PolicyError,
   ScheduledItem,
   applyAgreementChange,
+  approvalNeeded,
   buildInvoice,
   chargesOn,
   checkAgreementChange,
@@ -171,7 +172,51 @@ export class InMemoryCommercialDataSource extends CommercialDataSource {
         () => {
           this.ownAccountOnly(customer?.accountManagerId);
           const actor = { id: this.auth.actor().id, name: this.auth.actor().name, approval: this.approval() };
+          const why = approvalNeeded(a!, change, this.ctx(organisationId));
+          if (why) {
+            // A large discount waits for a second approver (docs/23 §8, D15): recorded, not in force.
+            const at = new Date().toISOString();
+            this.store.replaceAgreement({
+              ...a!,
+              version: a!.version + 1,
+              pendingApprovals: [...(a!.pendingApprovals ?? []), { id: this.store.nextId('apv'), change, describe, requestedById: actor.id, requestedBy: actor.name, at, why }],
+              history: [{ at, byId: actor.id, by: actor.name, action: `Asked for approval: ${describe}`, reason: change.reason.trim(), approval: `Waiting for a second approver: ${why}` }, ...a!.history],
+            });
+            return;
+          }
           this.store.replaceAgreement(applyAgreementChange(a!, change, this.store.catalogue(), actor, new Date(), describe));
+        },
+      )
+      .pipe(map(() => undefined));
+  }
+
+  decideApproval(organisationId: string, approvalId: string, decision: 'approve' | 'decline', reason: string): Observable<void> {
+    const a = this.store.agreement(organisationId);
+    const p = a?.pendingApprovals?.find((x) => x.id === approvalId);
+    const customer = this.platform.customers().find((c) => c.organisationId === organisationId);
+    return this.gateway
+      .command(
+        {
+          action: `${decision === 'approve' ? 'Approved' : 'Declined'}: ${p?.describe ?? 'a change'} for ${customer?.name ?? organisationId}${reason.trim() ? ` — ${reason.trim()}` : ''}`,
+          resource: 'Agreement',
+          resourceId: organisationId,
+          category: 'security',
+          permission: 'Platform.Discounts.Approve',
+          validate: (): FieldErrors | null => {
+            if (!a || !p) return { approvalId: 'Nothing is waiting for approval here.' };
+            if (p.requestedById === this.auth.actor().id) return { approvalId: 'Someone else approves a change you asked for.' };
+            if (decision === 'decline' && reason.trim().length < 5) return { reason: 'Say why, in a few words. The person who asked sees it.' };
+            return decision === 'approve' ? checkAgreementChange(a, p.change, this.store.catalogue(), today()) : null;
+          },
+        },
+        () => {
+          const rest = { ...a!, pendingApprovals: a!.pendingApprovals!.filter((x) => x.id !== approvalId) };
+          const me = this.auth.actor();
+          if (decision === 'approve') {
+            this.store.replaceAgreement(applyAgreementChange(rest, p!.change, this.store.catalogue(), { id: me.id, name: me.name, approval: `Approved by ${me.name} (second approver: ${p!.why})` }, new Date(), p!.describe));
+          } else {
+            this.store.replaceAgreement({ ...rest, version: a!.version + 1, history: [{ at: new Date().toISOString(), byId: me.id, by: me.name, action: `Declined: ${p!.describe}`, reason: reason.trim(), approval: 'Second approver' }, ...a!.history] });
+          }
         },
       )
       .pipe(map(() => undefined));

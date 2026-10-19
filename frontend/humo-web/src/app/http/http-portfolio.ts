@@ -42,6 +42,10 @@ export class HttpOrganisationDataSource extends HttpPort implements Organisation
     return this.command('PUT', `/organisations/${id}`, { ...details, expectedVersion }, ['organisations', 'session']);
   }
 
+  setApprovalStepUpAmount(id: string, amount: number, reason: string, expectedVersion?: number): Observable<void> {
+    return this.command('PUT', `/organisations/${id}/approval-policy`, { amount, reason, expectedVersion }, ['organisations', 'session']);
+  }
+
   setStatus(id: string, status: OrganisationStatus, reason: string, expectedVersion?: number): Observable<void> {
     return this.command('POST', `/organisations/${id}/status`, { status, reason, expectedVersion }, ['organisations', 'session']);
   }

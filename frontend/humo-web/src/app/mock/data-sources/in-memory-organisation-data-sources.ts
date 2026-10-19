@@ -77,6 +77,30 @@ export class InMemoryOrganisationDataSource extends OrganisationDataSource {
       .pipe(map(() => undefined));
   }
 
+  setApprovalStepUpAmount(id: string, amount: number, reason: string, expectedVersion?: number): Observable<void> {
+    const org = this.orgs.get(id);
+    return this.gateway
+      .command(
+        {
+          action: `Set the passkey approval threshold to R${amount.toLocaleString('en-ZA')} — ${reason}`,
+          resource: 'Organisation',
+          resourceId: id,
+          category: 'security',
+          permission: 'Organisation.Manage',
+          stepUp: true,
+          version: { expected: expectedVersion, current: org?.version },
+          validate: () => {
+            const e: Record<string, string> = {};
+            if (!(amount >= 1_000 && amount <= 10_000_000)) e['amount'] = 'Between R1 000 and R10 000 000.';
+            if (reason.trim().length < 5) e['reason'] = 'Say why, in a few words. It goes in the audit log.';
+            return Object.keys(e).length ? e : null;
+          },
+        },
+        () => this.orgs.change(id, (o) => ({ ...o, approvalStepUpAmount: amount })),
+      )
+      .pipe(map(() => undefined));
+  }
+
   setStatus(id: string, status: OrganisationStatus, reason: string, expectedVersion?: number): Observable<void> {
     const org = this.orgs.get(id);
     return this.gateway

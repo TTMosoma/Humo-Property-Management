@@ -19,6 +19,8 @@ export abstract class OrganisationDataSource {
   abstract get(id: string): Observable<Organisation | undefined>;
   /** New organisations come from approved account requests (AccountRequestDataSource), never directly. */
   abstract update(id: string, details: OrganisationDetails, expectedVersion?: number): Observable<void>;
+  /** The agency's own passkey approval threshold (Organisation.Manage, step-up). */
+  abstract setApprovalStepUpAmount(id: string, amount: number, reason: string, expectedVersion?: number): Observable<void>;
   /** active ⇄ suspended, onboarding → active, any → archived, archived → active (restore). */
   abstract setStatus(id: string, status: OrganisationStatus, reason: string, expectedVersion?: number): Observable<void>;
 }

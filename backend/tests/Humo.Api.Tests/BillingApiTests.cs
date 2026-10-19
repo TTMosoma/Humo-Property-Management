@@ -21,24 +21,35 @@ public sealed class BillingApiTests : IDisposable
 
     private static async Task Expect(HttpStatusCode status, HttpResponseMessage res) => Assert.True(res.StatusCode == status, $"{res.StatusCode}: {await res.Content.ReadAsStringAsync()}");
 
-    /// <summary>A customer with an agreed price and a billing email, and a System Administrator with a fresh step-up.</summary>
+    /// <summary>
+    /// A customer with an agreed price and a billing email (set by the System Administrator), and Humo Finance
+    /// with a fresh step-up: billing sits with Humo Finance (doc 17, D15). "Admin" below is Humo Finance.
+    /// </summary>
     private async Task<(Guid Org, HttpClient Admin, Guid Mashoto)> Priced()
     {
         var mashoto = await api.Person("mashoto@humo.co.za", Roles.AccountManager, null);
+        await api.Person("refilwe@humo.co.za", Roles.HumoFinance, null);
         var org = await api.Customer("Acacia", "professional", mashoto);
         var admin = await api.SignedIn(HumoApiFactory.AdminEmail);
         await admin.StepUp();
         await Expect(HttpStatusCode.NoContent, await admin.PostAsJsonAsync($"/api/platform/customers/{org}/agreement/changes", new { change = new { type = "package", packageId = "enterprise", effectiveFrom = "2026-10-19", monthlyPrice = 15000, reason = "Agreed at onboarding: Enterprise at R15 000" } }));
         await Expect(HttpStatusCode.NoContent, await admin.PostAsJsonAsync($"/api/platform/customers/{org}/agreement/changes", new { change = new { type = "billing-preference", preference = "manual-eft", billingEmail = "accounts@acacia.example", reason = "Their accounts department pays by EFT" } }));
-        return (org, admin, mashoto);
+        // A System Administrator no longer issues invoices.
+        Assert.Equal("forbidden", await (await admin.PostAsync($"/api/platform/customers/{org}/invoices", null)).ProblemCode());
+        var finance = await api.SignedIn("refilwe@humo.co.za");
+        await finance.StepUp();
+        return (org, finance, mashoto);
     }
 
     [Fact]
     public async Task An_invoice_needs_agreed_prices_and_a_billing_email()
     {
         var org = await api.Customer("Acacia");
-        var admin = await api.SignedIn(HumoApiFactory.AdminEmail);
+        await api.Person("refilwe@humo.co.za", Roles.HumoFinance, null);
+        var admin = await api.SignedIn("refilwe@humo.co.za");
         await admin.StepUp();
+        // The approved catalogue prices Professional at R2 400 now; this customer's trial line was opened before, unpriced.
+        await api.Db(async db => { var row = await db.Agreements.SingleAsync(); row.Document = row.Document.Replace("\"monthlyPrice\":2400", "\"monthlyPrice\":null"); return await db.SaveChangesAsync(); });
         var errors = await (await admin.PostAsync($"/api/platform/customers/{org}/invoices", null)).FieldErrors();
         Assert.Equal("Some charges have no price yet. Agree the price in Billing & agreement first.", errors.GetProperty("period").GetString());
         Assert.True(errors.TryGetProperty("billingEmail", out _));
@@ -122,7 +133,7 @@ public sealed class BillingApiTests : IDisposable
 
         // Due seven days after issue (26 October); unpaid after that, it's overdue, and health says so.
         api.Clock.Advance(TimeSpan.FromDays(8));
-        admin = await api.SignedIn(HumoApiFactory.AdminEmail);
+        admin = await api.SignedIn("refilwe@humo.co.za");
         var list = await Ok(await admin.GetAsync("/api/platform/invoices"));
         Assert.Equal("overdue", list[0].GetProperty("status").GetString());
         var customer = await Ok(await admin.GetAsync($"/api/platform/customers/{org}"));

@@ -15,7 +15,7 @@ export type CustomerRole =
   | 'owner'
   | 'tenant';
 
-export type HumoRole = 'system-admin' | 'humo-account-manager' | 'humo-support' | 'humo-executive';
+export type HumoRole = 'system-admin' | 'humo-account-manager' | 'humo-support' | 'humo-executive' | 'humo-finance';
 
 export type Role = CustomerRole | HumoRole;
 
@@ -31,6 +31,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   'humo-account-manager': 'Humo Account Manager',
   'humo-support': 'Humo Support',
   'humo-executive': 'Humo Executive',
+  'humo-finance': 'Humo Finance',
 };
 
 /** Who a role belongs to. Drives grouping in pickers and the subtle role accent in the shell. */
@@ -97,6 +98,10 @@ export const ROLE_META: Record<Role, RoleMeta> = {
     role: 'humo-executive', family: 'humo', icon: 'stats-chart-outline', scopeKind: 'platform', grantedBy: 'system-admin', privileged: false,
     summary: 'Platform-level reporting. No access to customer records.',
   },
+  'humo-finance': {
+    role: 'humo-finance', family: 'humo', icon: 'cash-outline', scopeKind: 'platform', grantedBy: 'system-admin', privileged: false,
+    summary: 'Humo’s own billing: issues invoices, reconciles payments and approves large discounts.',
+  },
 };
 
 export const CUSTOMER_ROLES: readonly CustomerRole[] = [
@@ -108,7 +113,7 @@ export const CUSTOMER_ROLES: readonly CustomerRole[] = [
   'owner',
   'tenant',
 ];
-export const HUMO_ROLES: readonly HumoRole[] = ['system-admin', 'humo-account-manager', 'humo-support', 'humo-executive'];
+export const HUMO_ROLES: readonly HumoRole[] = ['system-admin', 'humo-account-manager', 'humo-support', 'humo-executive', 'humo-finance'];
 
 export function isHumoRole(role: Role): role is HumoRole {
   return (HUMO_ROLES as readonly Role[]).includes(role);

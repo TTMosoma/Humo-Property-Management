@@ -78,7 +78,7 @@ describe('Commercial management', () => {
 
     it('adds up the package, portfolio pricing, add-ons and discounts, and keeps once-off fees, credits, usage and tax apart', () => {
       const cat = structuredClone(store.catalogue());
-      cat.packages.find((p) => p.packageId === 'professional')!.terms[0] = { ...cat.packages.find((p) => p.packageId === 'professional')!.terms[0], includedSchemes: 20, extraSchemePrice: 50 };
+      cat.packages.find((p) => p.packageId === 'professional')!.terms[0] = { ...cat.packages.find((p) => p.packageId === 'professional')!.terms[0], includedSchemes: 20, extraSchemePrice: 50, extraSchemeBlock: 1 };
       const c = chargesOn(agreement(), '2026-10-12', ctx(cat, 24));
       // 9 000 + 4 × 50 schemes + 100 WhatsApp + 2 × 150 storage + 1 200 / 12 API = 9 700; 10% off = 8 730.
       expect(c.recurring.find((l) => l.kind === 'extra-schemes')?.amount).toBe(200);
@@ -94,12 +94,43 @@ describe('Commercial management', () => {
       expect(chargesOn(agreement(), '2026-10-12', ctx(cat, 24)).tax.amount).toBe(1_309.5);
     });
 
+    it('prices extra schemes in blocks: R150 per 10, and a part block counts (D15)', () => {
+      const cat = store.catalogue();
+      const pro = cat.packages.find((p) => p.packageId === 'professional')!.terms[0];
+      expect(pro).toMatchObject({ monthlyPrice: 2_400, includedSchemes: 25, extraSchemePrice: 150, extraSchemeBlock: 10, includedStorageGb: 25, annualRenewalFee: 250 });
+      const extra = (schemes: number) => chargesOn(agreement(), '2026-10-12', ctx(cat, schemes)).recurring.find((l) => l.kind === 'extra-schemes')?.amount ?? 0;
+      expect([extra(25), extra(26), extra(35), extra(36)]).toEqual([0, 150, 150, 300]);
+    });
+
+    it('holds a discount above 20% for a second approver, who can’t be the person who asked (D15)', async () => {
+      auth.signIn('am-mashoto');
+      stepUp();
+      const a = store.agreement('acacia')!;
+      await run(data.change('acacia', { type: 'adjustment', kind: 'discount', label: 'Loyalty', amount: 0, percent: 30, from: day(0), reason: 'Long-standing customer, agreed at renewal' }, a.version));
+      const pending = store.agreement('acacia')!.pendingApprovals!;
+      expect(pending).toHaveLength(1);
+      expect(store.agreement('acacia')!.adjustments.some((x) => x.label === 'Loyalty')).toBe(false);
+      await expect(run(data.decideApproval('acacia', pending[0].id, 'approve', ''))).rejects.toBeInstanceOf(PolicyError);
+
+      auth.signIn('p-refilwe');
+      stepUp();
+      await run(data.decideApproval('acacia', pending[0].id, 'approve', ''));
+      expect(store.agreement('acacia')!.pendingApprovals).toEqual([]);
+      expect(store.agreement('acacia')!.adjustments.find((x) => x.label === 'Loyalty')?.percent).toBe(30);
+
+      // 20% or less applies at once.
+      auth.signIn('am-mashoto');
+      stepUp();
+      await run(data.change('acacia', { type: 'adjustment', kind: 'discount', label: 'Small', amount: 0, percent: 20, from: day(0), reason: 'Within the Account Manager’s authority' }, store.agreement('acacia')!.version));
+      expect(store.agreement('acacia')!.pendingApprovals).toEqual([]);
+    });
+
     it('lets a System Administrator configure package and add-on prices as effective-dated versions', async () => {
       auth.signIn('p-terry');
       stepUp();
       await run(data.savePackageTerms('professional', { effectiveFrom: day(1), monthlyPrice: 9_500, annualPrice: 102_600, priceStatus: 'approved', includedStorageGb: 25, storageStatus: 'approved', includedSchemes: 20, extraSchemePrice: 45, annualRenewalFee: 2_400, reason: 'Board approved the 2027 price list' }));
       const terms = store.catalogue().packages.find((p) => p.packageId === 'professional')!.terms;
-      expect(terms.map((t) => t.monthlyPrice)).toEqual([9_500, null]);
+      expect(terms.map((t) => t.monthlyPrice)).toEqual([9_500, 2_400]);
       expect(terms[0]).toMatchObject({ version: 2, changedBy: 'Terry Mosoma' });
 
       await run(data.saveAddOn({ id: 'sms-bundle', name: 'SMS bundle', description: '1 000 SMS a month.', kind: 'communication', features: ['communications'], allowQuantity: true, status: 'active', effectiveFrom: day(0), price: 250, frequency: 'monthly', priceStatus: 'proposed', usageAllowance: { unit: 'SMS', included: 1000 }, reason: 'New bundle for SMS-heavy agencies' }, true));
@@ -122,7 +153,7 @@ describe('Commercial management', () => {
     });
 
     it('Umgeni’s next invoice carries its R3 000 renewal fee, and the renewal then moves on a year', async () => {
-      auth.signIn('p-terry');
+      auth.signIn('p-refilwe');
       stepUp();
       const id = await run(data.issueInvoice('umgeni'));
       const inv = store.invoices().find((i) => i.id === id)!;
@@ -191,10 +222,12 @@ describe('Commercial management', () => {
     });
 
     it('an issued invoice keeps the price it was issued with', async () => {
-      auth.signIn('p-terry');
+      auth.signIn('p-refilwe');
       stepUp();
       const id = await run(data.issueInvoice('acacia'));
       const total = store.invoices().find((i) => i.id === id)!.total;
+      auth.signIn('p-terry');
+      stepUp();
       await run(data.change('acacia', { type: 'package', packageId: 'enterprise', effectiveFrom: day(0), monthlyPrice: 30_000, reason: 'Upgrade agreed at the renewal meeting' }, store.agreement('acacia')!.version));
       expect(store.invoices().find((i) => i.id === id)!.total).toBe(total);
     });
@@ -259,7 +292,7 @@ describe('Commercial management', () => {
     });
 
     it('a checkout is not a payment; only a verified notification settles the invoice, once', async () => {
-      auth.signIn('p-terry');
+      auth.signIn('p-refilwe'); // Humo Finance (D15)
       stepUp();
       const invoiceId = await run(data.issueInvoice('acacia'));
       const session = await run(data.startCheckout(invoiceId));
@@ -290,10 +323,10 @@ describe('Commercial management', () => {
       await expect(run(data.reconcileEft(pending.id, 'FNB 2026-10-13 HPM-FYN'))).rejects.toBeInstanceOf(PolicyError);
       await expect(run(data.startCheckout(inv().id))).rejects.toBeInstanceOf(ApiError);
 
-      auth.signIn('p-terry');
+      auth.signIn('p-refilwe'); // Humo Finance (D15)
       stepUp();
       await run(data.reconcileEft(pending.id, 'FNB 2026-10-13 HPM-FYN-202610'));
-      expect(store.payments().find((p) => p.id === pending.id)).toMatchObject({ status: 'verified', verification: 'bank-reconciliation', verifiedBy: 'Terry Mosoma', simulated: true });
+      expect(store.payments().find((p) => p.id === pending.id)).toMatchObject({ status: 'verified', verification: 'bank-reconciliation', verifiedBy: 'Refilwe Sithole', simulated: true });
       expect(inv().status).toBe('paid');
     });
   });
@@ -363,9 +396,11 @@ describe('Commercial management', () => {
       const fresh = () => JSON.stringify({ agreements: store.agreements(), measurements: store.measurements(), invoices: store.invoices(), payments: store.payments(), catalogue: store.catalogue() });
       const baseline = fresh();
 
-      auth.signIn('p-terry');
+      auth.signIn('p-refilwe'); // Humo Finance (D15)
       stepUp();
       await run(data.issueInvoice('acacia'));
+      auth.signIn('p-terry');
+      stepUp();
       await run(data.change('acacia', { type: 'storage-exception', extraGb: 10, until: day(14), reason: 'Bridging while the pack is agreed' }, store.agreement('acacia')!.version));
       await new Promise((r) => setTimeout(r, 450));
       expect(fresh()).not.toBe(baseline);

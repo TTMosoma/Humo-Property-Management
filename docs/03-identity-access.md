@@ -85,7 +85,7 @@ Sarah Jacobs has **one** identity with four assignments:
 
 **Actions that ask:**
 - Releasing a supplier payment
-- Approving amounts of **R 50 000 or more** ⚑
+- Approving amounts of **R 50 000 or more**: the default; each agency sets its own threshold in Settings › Agency (D15)
 - Changing supplier banking details
 - Changing anyone's roles
 - Adding an administrator

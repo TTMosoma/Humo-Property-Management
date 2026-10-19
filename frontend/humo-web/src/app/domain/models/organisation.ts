@@ -32,4 +32,6 @@ export interface Organisation {
   /** Denormalised counts for display. */
   schemeCount: number;
   unitCount: number;
+  /** Approving this amount or more needs a fresh passkey (doc 03). Set by the agency's administrators; R50 000 by default. */
+  approvalStepUpAmount?: number;
 }

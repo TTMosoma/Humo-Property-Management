@@ -20,6 +20,8 @@ public sealed class CommercialRulesTests
         var pro = cat.Packages.Single(p => p.PackageId == "professional").Terms[0];
         pro.IncludedSchemes = includedSchemes;
         pro.ExtraSchemePrice = extraSchemePrice;
+        pro.ExtraSchemeBlock = 1;
+        // The agreements below carry their own prices; the catalogue's are what new lines would take.
         return cat;
     }
 
@@ -60,6 +62,36 @@ public sealed class CommercialRulesTests
 
         cat.Settings.Tax.VatRegistered = true;
         Assert.Equal(1_309.5m, CommercialRules.ChargesOn(Agreement(), "2026-10-12", cat, 24).Tax.Amount);
+    }
+
+    [Fact]
+    public void The_approved_catalogue_prices_extra_schemes_in_blocks_of_ten()
+    {
+        var cat = InitialCatalogue.Load();
+        var pro = cat.Packages.Single(p => p.PackageId == "professional").Terms[0];
+        Assert.Equal((2_400m, 26_400m, 25, 25m, 150m, 10, 250m, "approved"), (pro.MonthlyPrice!.Value, pro.AnnualPrice!.Value, pro.IncludedSchemes!.Value, pro.IncludedStorageGb!.Value, pro.ExtraSchemePrice!.Value, pro.ExtraSchemeBlock!.Value, pro.AnnualRenewalFee!.Value, pro.PriceStatus));
+        Assert.Equal(125, cat.Packages.Single(p => p.PackageId == "enterprise").Terms[0].IncludedStorageGb);
+        Assert.Equal(ProrationPolicies.Daily, cat.Settings.Proration);
+        var a = Agreement();
+        a.Adjustments.Clear();
+        a.Packages[0].PriceSource = PriceSources.Catalogue;
+        decimal Extra(int schemes) => CommercialRules.ChargesOn(a, "2026-10-12", cat, schemes).Recurring.FirstOrDefault(l => l.Kind == "extra-schemes")?.Amount ?? 0;
+        Assert.Equal([0m, 150m, 150m, 300m], new[] { Extra(25), Extra(26), Extra(35), Extra(36) });
+    }
+
+    [Fact]
+    public void A_discount_above_twenty_percent_needs_a_second_approver()
+    {
+        var cat = Catalogue();
+        var a = Agreement();
+        a.Adjustments.Clear();
+        AgreementChange Discount(decimal? percent, decimal amount = 0) => new() { Type = "adjustment", Kind = "discount", Label = "Loyalty", Percent = percent, Amount = amount, From = "2026-11-01", Reason = "Agreed at renewal" };
+        Assert.Null(CommercialRules.ApprovalNeeded(a, Discount(20), cat, 0));
+        Assert.Equal("30% off (more than 20%)", CommercialRules.ApprovalNeeded(a, Discount(30), cat, 0));
+        // As an amount: against the recurring charges before discounts (R9 500 here).
+        Assert.Null(CommercialRules.ApprovalNeeded(a, Discount(null, 1_900), cat, 0));
+        Assert.Equal("21% of the recurring charges (more than 20%)", CommercialRules.ApprovalNeeded(a, Discount(null, 2_000), cat, 0));
+        Assert.Null(CommercialRules.ApprovalNeeded(a, new AgreementChange { Type = "adjustment", Kind = "credit", Amount = 9_000, From = "2026-11-01" }, cat, 0));
     }
 
     [Fact]

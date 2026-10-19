@@ -15,8 +15,10 @@ public static class Roles
     public const string AccountManager = "humo-account-manager";
     public const string Support = "humo-support";
     public const string Executive = "humo-executive";
+    /// <summary>Humo's own billing: invoices, payments and large-discount approval (docs/23 §8).</summary>
+    public const string HumoFinance = "humo-finance";
 
-    public static readonly IReadOnlySet<string> Humo = new HashSet<string> { SystemAdmin, AccountManager, Support, Executive };
+    public static readonly IReadOnlySet<string> Humo = new HashSet<string> { SystemAdmin, AccountManager, Support, Executive, HumoFinance };
 
     public static bool IsHumo(string role) => Humo.Contains(role);
 
@@ -34,6 +36,7 @@ public static class Roles
         AccountManager => "Humo Account Manager",
         Support => "Humo Support",
         Executive => "Humo Executive",
+        HumoFinance => "Humo Finance",
         _ => role,
     };
 }

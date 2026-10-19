@@ -16,6 +16,7 @@ import {
   PaymentRecord,
   STORAGE_COUNTS,
   STORAGE_EXCLUDES,
+  PendingApproval,
   ScheduledItem,
   StorageState,
   describeFailure,
@@ -30,7 +31,7 @@ import { ErrorState } from '../../../ui/states/error-state';
 import { Skeleton } from '../../../ui/states/skeleton';
 import { StatusPill } from '../../../ui/status-pill/status-pill';
 import { AgreementChangeDrawer, AgreementChangeInput } from './agreement-change-drawer';
-import { adjustmentForm, billingPreferenceForm, eftProofForm, reconcileForm, renewalForm, storageExceptionForm } from './commercial-forms';
+import { adjustmentForm, billingPreferenceForm, declineApprovalForm, eftProofForm, reconcileForm, renewalForm, storageExceptionForm } from './commercial-forms';
 
 type Tone = 'neutral' | 'success' | 'warning' | 'danger' | 'info';
 const STORAGE_TONE: Record<StorageState, Tone> = { ok: 'success', warning: 'warning', critical: 'danger', exhausted: 'danger', unknown: 'neutral' };
@@ -235,6 +236,29 @@ const INVOICE_TONE: Record<InvoiceStatus, Tone> = { issued: 'info', overdue: 'da
         }
       </section>
 
+      @if (v.agreement.pendingApprovals?.length) {
+        <section class="surface panel">
+          <h2>Waiting for approval</h2>
+          <p class="muted">Not in force until a second person approves it (a discount above 20%).</p>
+          <ul class="scheduled">
+            @for (p of v.agreement.pendingApprovals; track p.id) {
+              <li>
+                <div>
+                  <strong>{{ p.describe }}</strong>
+                  <span class="muted small">{{ p.requestedBy }} · {{ date(p.at) }} · “{{ p.change.reason }}” · {{ p.why }}</span>
+                </div>
+                @if (canApprove() && p.requestedById !== session.actor().id) {
+                  <span class="actions">
+                    <button type="button" class="btn btn-secondary btn-sm" (click)="decide(v, p, 'approve')">Approve</button>
+                    <button type="button" class="btn btn-ghost btn-sm" (click)="decide(v, p, 'decline')">Decline</button>
+                  </span>
+                }
+              </li>
+            }
+          </ul>
+        </section>
+      }
+
       <section class="surface panel">
         <h2>Agreement history</h2>
         <ol class="history">
@@ -300,7 +324,7 @@ export class CustomerCommercial {
   private readonly drawer = inject(DrawerService);
   private readonly feedback = inject(FeedbackService);
   private readonly stepUp = inject(StepUpService);
-  private readonly session = inject(SessionService);
+  protected readonly session = inject(SessionService);
   /** The simulation (development and the demo): invoices and payments are simulated there and nowhere else. */
   protected readonly demo = !!inject(PrototypeControls, { optional: true });
 
@@ -311,6 +335,7 @@ export class CustomerCommercial {
 
   protected readonly canChange = computed(() => this.session.can('Platform.Subscriptions.Manage') && this.ownAccount() && !this.session.readOnly());
   protected readonly canBill = computed(() => this.session.can('Platform.Billing.Manage') && !this.session.readOnly());
+  protected readonly canApprove = computed(() => this.session.can('Platform.Discounts.Approve') && !this.session.readOnly());
 
   protected readonly prefLabel = BILLING_PREFERENCE_LABELS;
   protected readonly prefHelp = BILLING_PREFERENCE_HELP;
@@ -371,6 +396,14 @@ export class CustomerCommercial {
 
   protected reconcile(v: CustomerCommercialView, p: PaymentRecord): void {
     reconcileForm(this.drawer, this.data, v, p);
+  }
+
+  /** The second approver: approving re-checks and applies the change; declining asks why. */
+  protected decide(v: CustomerCommercialView, p: PendingApproval, decision: 'approve' | 'decline'): void {
+    if (decision === 'decline') return declineApprovalForm(this.drawer, this.data, v, p);
+    this.stepUp
+      .guard({ action: 'change-subscription', detail: `Approve “${p.describe}” for ${v.name}` }, () => this.data.decideApproval(v.organisationId, p.id, 'approve', ''))
+      .subscribe({ next: () => this.feedback.success('Approved: it’s on the agreement now.'), error: (e) => this.feedback.error(describeFailure(e, 'That wasn’t saved')) });
   }
 
   protected cancel(v: CustomerCommercialView, s: ScheduledItem): void {

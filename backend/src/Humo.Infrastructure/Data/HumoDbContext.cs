@@ -63,6 +63,7 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.ToTable("Organisations");
             e.Property(o => o.Name).HasMaxLength(200);
             e.Property(o => o.ShortName).HasMaxLength(100);
+            e.Property(o => o.ApprovalStepUpAmount).HasPrecision(18, 2).HasDefaultValue(50_000m);
             e.HasIndex(o => o.ShortName).IsUnique();
             e.Property(o => o.Version).IsConcurrencyToken();
         });

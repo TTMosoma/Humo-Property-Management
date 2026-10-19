@@ -100,6 +100,7 @@ export class SessionService {
     // Each Humo role has its own home: the board view, the book of accounts, or the customer list.
     if (role === 'humo-executive') return '/platform/executive';
     if (role === 'humo-account-manager') return '/platform/accounts';
+    if (role === 'humo-finance') return '/platform/invoices';
     if (isHumoRole(role)) return '/platform/customers';
     switch (role) {
       case 'owner':

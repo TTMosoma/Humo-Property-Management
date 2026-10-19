@@ -30,6 +30,7 @@ Each entry records:
 | D12 | Custom document templates: a Humo-owned, paid Enterprise service built from the client's designs (hybrid: expanded design settings, plus bespoke layouts where needed) | Documents, Slice 2 |
 | D13 | Each scheme chooses how levies are set: entered per unit (default) or derived from the approved budget and participation quotas | Slice 2, billing |
 | D14 | Sign-in with ASP.NET Core Identity and passkeys inside Humo's API; hosted on a Webway VPS in South Africa; self-hosted email (supersedes D5's "not built in-house") | Slice 1 |
+| D15 | Commercial terms: Payfast, no VAT, approved package prices, daily pro-rata, a second approver for discounts above 20%, a Humo Finance role | Commercial slice |
 
 ---
 
@@ -339,6 +340,44 @@ Approved on 18 October 2026 by Terry Mosoma (product owner). Options and reasons
 **Open:**
 - the VPS size and data-centre confirmation (doc 25 §2, *Ask Webway before buying*);
 - the mail server's final choice after a trial.
+
+---
+
+## D15 — Commercial terms (19 October 2026)
+
+**Decided by:** Terry Mosoma (product owner), answering doc 23 §8.
+
+**Decision:**
+- **Payment provider:** Payfast.
+- **VAT:** Humo is not VAT registered, so invoices charge no VAT and aren't tax invoices (no gapless numbering, D10). Humo's legal name for invoices is still to be given.
+- **Packages** (approved; annual = 11 months):
+
+  | Package | Monthly | Annual | Schemes included | Storage |
+  |---|---|---|---|---|
+  | Essentials | R600 | R6 600 | 5 | 5 GB |
+  | Professional | R2 400 | R26 400 | 25 | 25 GB |
+  | Enterprise | R9 600 | R105 600 | 125 | 125 GB |
+
+  - Extra schemes: **R150 per block of 10** (a part block counts).
+  - **Annual renewal fee: R250**, every package.
+- **Add-ons:** the proposed prices are approved (WhatsApp R100 a month with 500 messages; storage packs R150 / 10 GB, R600 / 50 GB, R1 000 / 100 GB).
+- **Custom document templates (D12):** included in Enterprise; a paid add-on for Essentials and Professional (price to be set).
+- **Mid-cycle changes:** daily pro-rata.
+- **Discounts above 20%** of the recurring charges need a **second approver**, never the person who asked (`Platform.Discounts.Approve`).
+- **Billing** (issuing invoices, verifying payments: `Platform.Billing.Manage`) sits with a new **Humo Finance** role, not the System Administrator. This adds a fixed role (D4).
+- **Sole-administrator safeguard (doc 16):** the 24-hour cooling-off period is confirmed.
+- **Passkey approval threshold (doc 03):** R50 000 by default, set by each agency's administrators.
+- **Designated account manager:** Mashoto Moropane.
+- **Levy-slice questions** (interest on arrears, special levies, VAT on levies, the trust-accounting boundary, migration): follow South African industry standards for sectional-title and HOA management.
+
+**Replaces:** the open questions in doc 23 §8 and doc 04 §9 (all approved as described).
+
+**Consequences:**
+- The initial catalogue (`demo-data/commercial/catalogue.json`) carries these prices as *approved*; the commercial settings default to daily pro-rata.
+- Pricing supports blocks of extra schemes (`extraSchemeBlock`).
+- A discount above the threshold waits on the agreement (*Waiting for approval*) until Humo Finance or a System Administrator approves it.
+
+**Open:** Humo's legal name and registration number on invoices; the custom-template add-on's price.
 
 ---
 
