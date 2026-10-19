@@ -21,6 +21,7 @@ import {
   describeFailure,
 } from '../../../domain';
 import { FeedbackService } from '../../../core/feedback/feedback.service';
+import { PrototypeControls } from '../../../core/prototype/prototype-controls';
 import { StepUpService } from '../../../core/security/step-up.service';
 import { SessionService } from '../../../core/session/session.service';
 import { DrawerService } from '../../../ui/drawer/drawer.service';
@@ -52,7 +53,11 @@ const INVOICE_TONE: Record<InvoiceStatus, Tone> = { issued: 'info', overdue: 'da
       <div class="surface"><ui-error-state title="We couldn’t load the agreement" /></div>
     } @else {
       @let v = result()!;
-      <p class="demo-note"><ion-icon name="flask-outline" aria-hidden="true" /> Demo data. Prices marked proposed are not approved. Invoices and payments are simulated: no money moves and no invoice is sent.</p>
+      @if (demo) {
+        <p class="demo-note"><ion-icon name="flask-outline" aria-hidden="true" /> Demo data. Prices marked proposed are not approved. Invoices and payments are simulated: no money moves and no invoice is sent.</p>
+      } @else {
+        <p class="demo-note"><ion-icon name="information-circle-outline" aria-hidden="true" /> Prices marked proposed are not approved. Invoicing isn’t switched on yet: no invoice is issued or sent.</p>
+      }
 
       <section class="surface panel">
         <header class="p-head">
@@ -142,7 +147,7 @@ const INVOICE_TONE: Record<InvoiceStatus, Tone> = { issued: 'info', overdue: 'da
         <header class="p-head">
           <div>
             <h2>Storage</h2>
-            <p class="muted">{{ v.storage.measurement.source === 'demo' ? 'Demo measurement' : 'Measured' }}, {{ date(v.storage.measurement.measuredAt) }}. Not yet enforced by a server: only the API can refuse an upload over quota.</p>
+            <p class="muted">{{ !v.storage.measurement.measuredAt ? 'Not measured yet: documents aren’t stored by the API yet' : (v.storage.measurement.source === 'demo' ? 'Demo measurement' : 'Measured') + ', ' + date(v.storage.measurement.measuredAt) }}. Not yet enforced by a server: only the API can refuse an upload over quota.</p>
           </div>
           <ui-status-pill [label]="storageLabel(v)" [tone]="storageTone[v.storage.state]" />
         </header>
@@ -183,7 +188,7 @@ const INVOICE_TONE: Record<InvoiceStatus, Tone> = { issued: 'info', overdue: 'da
             <h2>Invoices & payments</h2>
             <p class="muted">An invoice is paid only once a payment is verified: by the provider’s notification, or for EFT by matching Humo’s bank statement.</p>
           </div>
-          @if (canBill()) {
+          @if (canBill() && demo) {
             <button type="button" class="btn btn-secondary btn-sm" (click)="issue(v)">Issue next invoice (simulated)</button>
           }
         </header>
@@ -226,7 +231,7 @@ const INVOICE_TONE: Record<InvoiceStatus, Tone> = { issued: 'info', overdue: 'da
             </article>
           }
         } @else {
-          <p class="muted">No invoices in the demo data for this customer.</p>
+          <p class="muted">{{ demo ? 'No invoices in the demo data for this customer.' : 'No invoices yet.' }}</p>
         }
       </section>
 
@@ -296,6 +301,8 @@ export class CustomerCommercial {
   private readonly feedback = inject(FeedbackService);
   private readonly stepUp = inject(StepUpService);
   private readonly session = inject(SessionService);
+  /** The simulation (development and the demo): invoices and payments are simulated there and nowhere else. */
+  protected readonly demo = !!inject(PrototypeControls, { optional: true });
 
   /** undefined while loading, null on failure. */
   protected readonly result = toSignal(

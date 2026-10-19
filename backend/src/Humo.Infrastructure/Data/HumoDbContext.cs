@@ -21,6 +21,9 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
     public DbSet<Scheme> Schemes => Set<Scheme>();
     public DbSet<AccountRequest> AccountRequests => Set<AccountRequest>();
     public DbSet<PlatformSetting> PlatformSettings => Set<PlatformSetting>();
+    public DbSet<Subscription> Subscriptions => Set<Subscription>();
+    public DbSet<Agreement> Agreements => Set<Agreement>();
+    public DbSet<UpgradeRequest> UpgradeRequests => Set<UpgradeRequest>();
     public DbSet<Notice> Notices => Set<Notice>();
     public DbSet<NoticeRead> NoticeReads => Set<NoticeRead>();
     public DbSet<PendingHumoGrant> PendingHumoGrants => Set<PendingHumoGrant>();
@@ -95,6 +98,32 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
         {
             e.ToTable("NoticeReads");
             e.HasKey(x => new { x.NoticeId, x.IdentityId });
+        });
+
+        builder.Entity<Subscription>(e =>
+        {
+            e.ToTable("Subscriptions");
+            e.HasKey(x => x.OrganisationId);
+            e.Property(x => x.Status).HasMaxLength(20);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasOne<Organisation>().WithOne().HasForeignKey<Subscription>(x => x.OrganisationId);
+        });
+
+        builder.Entity<Agreement>(e =>
+        {
+            e.ToTable("Agreements");
+            e.HasKey(x => x.OrganisationId);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasOne<Organisation>().WithOne().HasForeignKey<Agreement>(x => x.OrganisationId);
+        });
+
+        builder.Entity<UpgradeRequest>(e =>
+        {
+            e.ToTable("UpgradeRequests");
+            e.Property(x => x.Source).HasMaxLength(20);
+            e.Property(x => x.Status).HasMaxLength(20);
+            e.HasIndex(x => x.OrganisationId);
+            e.HasOne<Organisation>().WithMany().HasForeignKey(x => x.OrganisationId);
         });
 
         builder.Entity<Scheme>(e =>

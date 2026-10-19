@@ -50,6 +50,8 @@ export interface HealthSignal {
   weight: number;
   /** Plain-language reason, e.g. "41 of 52 seats active in 30 days". */
   detail: string;
+  /** False: Humo can't measure this yet (the API sends it before the usage pipeline exists), so it isn't in the score. */
+  measured?: boolean;
 }
 
 export interface ModuleAdoption {
@@ -57,6 +59,8 @@ export interface ModuleAdoption {
   enabled: boolean;
   /** 0–100. For modules that aren't enabled, this is a demand signal (related activity elsewhere). */
   adoption: number;
+  /** False: module usage isn't measured yet. */
+  measured?: boolean;
 }
 
 export interface AccountHealth {
@@ -67,6 +71,8 @@ export interface AccountHealth {
   modules: ModuleAdoption[];
   history: number[];
   computedAt: string;
+  /** True when some signals aren't measured yet: the score covers only the measured ones. */
+  partial?: boolean;
 }
 
 /** Weights sum to 1. Configurable later; kept here so the formula is visible and testable. */

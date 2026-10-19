@@ -21,6 +21,22 @@ public static partial class TestPeople
             return org.Id;
         });
 
+    /// <summary>A customer as an approved account request leaves it: onboarding, with a trial of the package (docs/21, docs/23).</summary>
+    public static async Task<Guid> Customer(this HumoApiFactory api, string shortName, string packageId = "professional", Guid? accountManagerId = null)
+    {
+        using var scope = api.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<HumoDbContext>();
+        var org = new Organisation
+        {
+            Id = Guid.CreateVersion7(), Name = shortName + " (Pty) Ltd", ShortName = shortName, City = "Durban", Province = "KwaZulu-Natal",
+            Status = OrganisationStatuses.Active, AccountManagerId = accountManagerId, TrialPackageId = packageId, CreatedAt = api.Clock.GetUtcNow(),
+        };
+        db.Organisations.Add(org);
+        await scope.ServiceProvider.GetRequiredService<Humo.Api.Commercial.CommercialRecords>().OpenAsync(org, packageId, null, CancellationToken.None);
+        await db.SaveChangesAsync();
+        return org.Id;
+    }
+
     /// <summary>A customer with one role in the organisation: organisation-wide, or limited to some schemes.</summary>
     public static async Task<Guid> Person(this HumoApiFactory api, string email, string role, Guid? organisationId, IEnumerable<Guid>? schemes = null, params string[] grants)
     {

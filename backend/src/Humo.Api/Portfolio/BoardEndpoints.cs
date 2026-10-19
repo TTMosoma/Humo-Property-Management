@@ -84,6 +84,7 @@ public static class BoardEndpoints
             Resource = "Trustee board",
             ResourceId = schemeId.ToString(),
             SchemeId = schemeId,
+            Feature = "governance",
             Validate = () => Check(a, trustees, target, candidates, reads.Today),
         }, async actor =>
         {

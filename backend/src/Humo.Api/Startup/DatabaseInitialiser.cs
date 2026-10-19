@@ -27,6 +27,9 @@ public static class DatabaseInitialiser
             case "EnsureCreated": await db.Database.EnsureCreatedAsync(); break;
         }
 
+        // The commercial catalogue Humo starts from: no base prices decided, example prices marked proposed (docs/23 §2).
+        await Commercial.CommercialRecords.SeedAsync(db);
+
         var bootstrap = sp.GetRequiredService<IOptions<BootstrapOptions>>().Value;
         if (string.IsNullOrWhiteSpace(bootstrap.AdminEmail)) return;
 

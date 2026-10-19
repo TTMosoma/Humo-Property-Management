@@ -33,6 +33,7 @@ builder.Services.AddScoped<CurrentActor>();
 builder.Services.AddScoped<CommandRunner>();
 builder.Services.AddScoped<PortfolioReads>();
 builder.Services.AddScoped<Notices>();
+builder.Services.AddScoped<Humo.Api.Commercial.CommercialRecords>();
 builder.Services.AddScoped<IStepUpVerifier, PasskeyStepUpVerifier>();
 
 // ---- Sign-in: ASP.NET Core Identity with passkeys; no passwords (D14) ----
@@ -126,6 +127,8 @@ api.MapHumoTeam();
 api.MapImpersonation();
 api.MapAudit();
 api.MapSecurity();
+Humo.Api.Commercial.CustomerEndpoints.MapCustomers(api);
+Humo.Api.Commercial.CommercialEndpoints.MapCommercial(api);
 Notices.MapNotifications(api);
 
 await app.InitialiseDatabaseAsync();

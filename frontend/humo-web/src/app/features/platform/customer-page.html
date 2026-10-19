@@ -77,6 +77,9 @@
           <div>
             <h2>Account health</h2>
             <p class="muted">How the score is made up — each signal from their usage over the last 30 days.</p>
+            @if (cu.health.partial) {
+              <p class="hint">Some signals aren’t measured yet, so the score covers only the ones that are.</p>
+            }
           </div>
           <div class="trend">
             <ui-sparkline [values]="cu.health.history" label="Health, last 12 weeks" />
@@ -92,11 +95,16 @@
             @for (s of cu.health.signals; track s.key) {
               <tr>
                 <th scope="row">{{ s.label }}</th>
-                <td>
-                  <span class="mini-bar" [attr.data-low]="s.score < 50"><span [style.width.%]="s.score"></span></span>
-                  <span class="num">{{ s.score }}</span>
-                </td>
-                <td class="num muted">{{ (s.weight * 100).toFixed(0) }}%</td>
+                @if (s.measured === false) {
+                  <td class="muted">—</td>
+                  <td class="muted">Not in the score</td>
+                } @else {
+                  <td>
+                    <span class="mini-bar" [attr.data-low]="s.score < 50"><span [style.width.%]="s.score"></span></span>
+                    <span class="num">{{ s.score }}</span>
+                  </td>
+                  <td class="num muted">{{ (s.weight * 100).toFixed(0) }}%</td>
+                }
                 <td class="muted">{{ s.detail }}</td>
               </tr>
             }
@@ -114,7 +122,9 @@
               <span class="a-name">{{ m.label }}</span>
               <span class="a-bar"><span [style.width.%]="m.adoption"></span></span>
               <span class="a-val">
-                @if (m.enabled) {
+                @if (m.measured === false) {
+                  <span class="muted">{{ m.enabled ? 'Not measured yet' : 'Not enabled' }}</span>
+                } @else if (m.enabled) {
                   {{ m.adoption }}%
                 } @else {
                   <span class="not-on" [title]="'Related activity without the feature: ' + m.adoption + '%'">Not enabled · {{ m.adoption }}%</span>
@@ -165,7 +175,11 @@
           }
         </div>
       } @else {
-        <div class="surface"><ui-empty-state kind="done" title="Nothing to raise right now" message="They’re using what they have, and nothing suggests they need more." /></div>
+        @if (cu.health.partial) {
+          <div class="surface"><ui-empty-state title="Not measured yet" message="Opportunities come from how they use each area, which Humo doesn’t measure yet. Their own requests are below." /></div>
+        } @else {
+          <div class="surface"><ui-empty-state kind="done" title="Nothing to raise right now" message="They’re using what they have, and nothing suggests they need more." /></div>
+        }
       }
 
       <h2 class="section-title">Support & escalations</h2>

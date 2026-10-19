@@ -1,0 +1,367 @@
+{
+  "$comment": "Features and packages: the same catalogue the frontend uses (domain/models/entitlement.ts). The API reads it; the frontend contract test fails if they differ. Feature keys stay in code because the app gates on them; prices are in the commercial catalogue (docs/23).",
+  "features": [
+    {
+      "key": "agency-management",
+      "module": "portfolio",
+      "label": "Agency management",
+      "description": "Agency profile, branding and settings.",
+      "baseline": false
+    },
+    {
+      "key": "schemes",
+      "module": "portfolio",
+      "label": "Schemes",
+      "description": "Sectional title schemes, HOAs and share blocks.",
+      "baseline": false
+    },
+    {
+      "key": "units",
+      "module": "portfolio",
+      "label": "Units",
+      "description": "Units, participation quotas and occupancy.",
+      "baseline": false
+    },
+    {
+      "key": "owners-tenants",
+      "module": "portfolio",
+      "label": "Owners & tenants",
+      "description": "People, contacts and relationships to units.",
+      "baseline": false
+    },
+    {
+      "key": "resident-portal",
+      "module": "portfolio",
+      "label": "Owner & tenant portal",
+      "description": "Residents see their account, requests and notices.",
+      "baseline": false
+    },
+    {
+      "key": "team-management",
+      "module": "portfolio",
+      "label": "Team management",
+      "description": "Staff workload, scheme assignment and cover.",
+      "baseline": false
+    },
+    {
+      "key": "finance-basic",
+      "module": "finance",
+      "label": "Basic finance",
+      "description": "Owner accounts and balances.",
+      "baseline": false
+    },
+    {
+      "key": "levies",
+      "module": "finance",
+      "label": "Levy management",
+      "description": "Levy schedules, special levies and quotas.",
+      "baseline": false
+    },
+    {
+      "key": "billing",
+      "module": "finance",
+      "label": "Billing runs",
+      "description": "Monthly billing with approval and posting.",
+      "baseline": false
+    },
+    {
+      "key": "statements",
+      "module": "finance",
+      "label": "Statements",
+      "description": "Generated and sent owner statements.",
+      "baseline": false
+    },
+    {
+      "key": "payment-allocation",
+      "module": "finance",
+      "label": "Payment allocation",
+      "description": "Bank receipts matched and allocated to accounts.",
+      "baseline": false
+    },
+    {
+      "key": "debtors",
+      "module": "finance",
+      "label": "Debtors",
+      "description": "Age analysis and arrears.",
+      "baseline": false
+    },
+    {
+      "key": "credit-control",
+      "module": "finance",
+      "label": "Credit control",
+      "description": "Structured collections pipeline.",
+      "baseline": false
+    },
+    {
+      "key": "payables",
+      "module": "finance",
+      "label": "Supplier payments",
+      "description": "Invoices, payment batches and dual authorisation.",
+      "baseline": false
+    },
+    {
+      "key": "budgets",
+      "module": "finance",
+      "label": "Budgets",
+      "description": "Budget vs actual per scheme.",
+      "baseline": false
+    },
+    {
+      "key": "maintenance-basic",
+      "module": "maintenance",
+      "label": "Basic maintenance",
+      "description": "Log and track maintenance requests.",
+      "baseline": false
+    },
+    {
+      "key": "maintenance-advanced",
+      "module": "maintenance",
+      "label": "Advanced maintenance",
+      "description": "Quotes, delegated approval, work orders, verification.",
+      "baseline": false
+    },
+    {
+      "key": "suppliers",
+      "module": "maintenance",
+      "label": "Suppliers",
+      "description": "Supplier records and vetting documents.",
+      "baseline": false
+    },
+    {
+      "key": "contractors",
+      "module": "maintenance",
+      "label": "Contractors",
+      "description": "Contractor performance and scheduling.",
+      "baseline": false
+    },
+    {
+      "key": "communications",
+      "module": "communications",
+      "label": "Communication",
+      "description": "Email, SMS and portal notices.",
+      "baseline": false
+    },
+    {
+      "key": "whatsapp",
+      "module": "communications",
+      "label": "WhatsApp",
+      "description": "Send notices and reminders on WhatsApp.",
+      "baseline": false
+    },
+    {
+      "key": "documents",
+      "module": "documents",
+      "label": "Documents",
+      "description": "Document library with visibility rules.",
+      "baseline": false
+    },
+    {
+      "key": "storage-extra",
+      "module": "documents",
+      "label": "Additional storage",
+      "description": "More document storage.",
+      "baseline": false
+    },
+    {
+      "key": "document-templates-premium",
+      "module": "documents",
+      "label": "Premium document templates",
+      "description": "Professional and detailed layouts for statements and other documents.",
+      "baseline": false
+    },
+    {
+      "key": "document-branding",
+      "module": "documents",
+      "label": "Document branding",
+      "description": "Your logo, colours and font on the documents you send.",
+      "baseline": false
+    },
+    {
+      "key": "document-templates-custom",
+      "module": "documents",
+      "label": "Custom document templates",
+      "description": "Your organisation’s own template: layout, colours, wording and legal text.",
+      "baseline": false
+    },
+    {
+      "key": "governance",
+      "module": "governance",
+      "label": "Governance",
+      "description": "Trustee workflows in one place.",
+      "baseline": false
+    },
+    {
+      "key": "trustee-management",
+      "module": "governance",
+      "label": "Trustee management",
+      "description": "Boards, terms and trustee roles.",
+      "baseline": false
+    },
+    {
+      "key": "meetings",
+      "module": "governance",
+      "label": "Meetings",
+      "description": "Agendas, packs, minutes, resolutions and actions.",
+      "baseline": false
+    },
+    {
+      "key": "agm-sgm",
+      "module": "governance",
+      "label": "AGM / SGM",
+      "description": "Notices, quorum, proxies and voting.",
+      "baseline": false
+    },
+    {
+      "key": "compliance",
+      "module": "compliance",
+      "label": "Compliance",
+      "description": "Statutory deadlines and evidence across schemes.",
+      "baseline": false
+    },
+    {
+      "key": "reporting-basic",
+      "module": "reporting",
+      "label": "Basic reporting",
+      "description": "Standard operational reports.",
+      "baseline": false
+    },
+    {
+      "key": "reporting-financial",
+      "module": "reporting",
+      "label": "Financial reporting",
+      "description": "Income statement, balance sheet, levy roll.",
+      "baseline": false
+    },
+    {
+      "key": "reporting-advanced",
+      "module": "reporting",
+      "label": "Advanced reporting",
+      "description": "Custom reports, scheduling and exports.",
+      "baseline": false
+    },
+    {
+      "key": "analytics-advanced",
+      "module": "reporting",
+      "label": "Advanced analytics",
+      "description": "Portfolio trends and benchmarks.",
+      "baseline": false
+    },
+    {
+      "key": "permissions-advanced",
+      "module": "platform",
+      "label": "Advanced permissions",
+      "description": "Custom roles and fine-grained access.",
+      "baseline": false
+    },
+    {
+      "key": "integrations",
+      "module": "platform",
+      "label": "Integrations",
+      "description": "Accounting and banking connectors.",
+      "baseline": false
+    },
+    {
+      "key": "api",
+      "module": "platform",
+      "label": "API access",
+      "description": "Programmatic access to Humo Property Management data.",
+      "baseline": false
+    },
+    {
+      "key": "automation",
+      "module": "platform",
+      "label": "Automation",
+      "description": "Rules that create tasks and send reminders.",
+      "baseline": false
+    },
+    {
+      "key": "automation-advanced",
+      "module": "platform",
+      "label": "Advanced automation",
+      "description": "Multi-step automated workflows.",
+      "baseline": false
+    },
+    {
+      "key": "audit-log",
+      "module": "platform",
+      "label": "Audit log",
+      "description": "Every action, recorded and exportable.",
+      "baseline": true
+    },
+    {
+      "key": "mobile-approvals",
+      "module": "platform",
+      "label": "Passkeys & Humo Mobile",
+      "description": "Device-native sign-in and step-up.",
+      "baseline": true
+    }
+  ],
+  "packages": [
+    {
+      "id": "essentials",
+      "product": "property-management",
+      "name": "Humo Essentials",
+      "tagline": "For smaller agencies getting their portfolio in order.",
+      "extends": null,
+      "features": [
+        "agency-management",
+        "schemes",
+        "units",
+        "owners-tenants",
+        "resident-portal",
+        "documents",
+        "communications",
+        "maintenance-basic",
+        "reporting-basic",
+        "finance-basic",
+        "audit-log",
+        "mobile-approvals"
+      ]
+    },
+    {
+      "id": "professional",
+      "product": "property-management",
+      "name": "Humo Professional",
+      "tagline": "Full financial and maintenance operations.",
+      "extends": "essentials",
+      "features": [
+        "levies",
+        "billing",
+        "statements",
+        "payment-allocation",
+        "debtors",
+        "credit-control",
+        "payables",
+        "suppliers",
+        "contractors",
+        "maintenance-advanced",
+        "reporting-financial",
+        "budgets",
+        "team-management",
+        "document-templates-premium",
+        "document-branding"
+      ]
+    },
+    {
+      "id": "enterprise",
+      "product": "property-management",
+      "name": "Humo Enterprise",
+      "tagline": "Governance, compliance and scale.",
+      "extends": "professional",
+      "features": [
+        "governance",
+        "trustee-management",
+        "meetings",
+        "agm-sgm",
+        "compliance",
+        "reporting-advanced",
+        "permissions-advanced",
+        "integrations",
+        "api",
+        "automation",
+        "analytics-advanced",
+        "document-templates-custom"
+      ]
+    }
+  ]
+}

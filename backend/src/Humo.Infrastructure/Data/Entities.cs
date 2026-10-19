@@ -313,3 +313,46 @@ public sealed class SignInLink
     public DateTimeOffset ExpiresAt { get; set; }
     public DateTimeOffset? UsedAt { get; set; }
 }
+
+/// <summary>
+/// A customer's subscription (docs/04, docs/23): its commercial status, trials and feature overrides.
+/// Which package and add-ons are in force comes from the agreement's dated lines, and the contract
+/// value from its recurring charges.
+/// </summary>
+public sealed class Subscription
+{
+    public Guid OrganisationId { get; set; }
+    public int Version { get; set; } = 1;
+    /// <summary>trial, active, past-due, suspended or cancelled.</summary>
+    public string Status { get; set; } = "trial";
+    public DateTimeOffset StartedAt { get; set; }
+    public int Seats { get; set; } = 5;
+    /// <summary>Trials and goodwill grants: JSON, as the frontend's <c>FeatureOverride[]</c>.</summary>
+    public string Overrides { get; set; } = "[]";
+}
+
+/// <summary>What the customer agreed to pay (docs/23 §2): one JSON document, as the frontend's <c>CommercialAgreement</c>.</summary>
+public sealed class Agreement
+{
+    public Guid OrganisationId { get; set; }
+    public int Version { get; set; } = 1;
+    public string Document { get; set; } = "{}";
+}
+
+/// <summary>A customer asking Humo about an add-on or package (Plan &amp; features, or a nudge).</summary>
+public sealed class UpgradeRequest
+{
+    public Guid Id { get; set; }
+    public Guid OrganisationId { get; set; }
+    public string? AddOn { get; set; }
+    public string? Package { get; set; }
+    public string? Feature { get; set; }
+    public string? Note { get; set; }
+    /// <summary>nudge or plan-page.</summary>
+    public string Source { get; set; } = "plan-page";
+    public string RequestedBy { get; set; } = "";
+    public Guid RequestedById { get; set; }
+    public DateTimeOffset At { get; set; }
+    /// <summary>new, in-progress, done or declined.</summary>
+    public string Status { get; set; } = "new";
+}

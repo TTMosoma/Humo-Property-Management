@@ -5,4 +5,10 @@
     <EmbeddedResource Include="..\..\..\contracts\role-permissions.json" LogicalName="Humo.Domain.role-permissions.json" Link="Access\role-permissions.json" />
   </ItemGroup>
 
+  <!-- Features and packages (the frontend's entitlement catalogue), and the commercial catalogue Humo starts from (docs/23). -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\..\contracts\entitlements.json" LogicalName="Humo.Domain.entitlements.json" Link="Commercial\entitlements.json" />
+    <EmbeddedResource Include="..\..\..\demo-data\commercial\catalogue.json" LogicalName="Humo.Domain.commercial-catalogue.json" Link="Commercial\commercial-catalogue.json" />
+  </ItemGroup>
+
 </Project>

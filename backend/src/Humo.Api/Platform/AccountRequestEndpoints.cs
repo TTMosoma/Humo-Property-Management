@@ -59,7 +59,7 @@ public static class AccountRequestEndpoints
         return r is null ? Problems.NotFound() : Results.Ok((await Views([r], db, ct))[0]);
     }
 
-    private static async Task<IResult> Submit(NewAccountDetailsRequest d, CurrentActor current, CommandRunner commands, HumoDbContext db, Notices notices, TimeProvider clock, CancellationToken ct)
+    private static async Task<IResult> Submit(NewAccountDetailsRequest d, CurrentActor current, CommandRunner commands, HumoDbContext db, Notices notices, Commercial.CommercialRecords commercial, TimeProvider clock, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         var policy = await Policy(db, ct);
@@ -91,7 +91,7 @@ public static class AccountRequestEndpoints
             };
             if (delegated)
             {
-                request.OrganisationId = CreateOrganisation(db, request, now);
+                request.OrganisationId = await CreateOrganisation(db, commercial, request, actor, now, ct);
                 request.DecidedById = actor.User.Id;
                 request.DecidedBy = actor.User.Name;
                 request.DecidedAt = now;
@@ -106,7 +106,7 @@ public static class AccountRequestEndpoints
         }, ct);
     }
 
-    private static async Task<IResult> Decide(Guid id, AccountDecisionRequest d, CurrentActor current, CommandRunner commands, HumoDbContext db, Notices notices, TimeProvider clock, CancellationToken ct)
+    private static async Task<IResult> Decide(Guid id, AccountDecisionRequest d, CurrentActor current, CommandRunner commands, HumoDbContext db, Notices notices, Commercial.CommercialRecords commercial, TimeProvider clock, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         var r = await db.AccountRequests.FirstOrDefaultAsync(x => x.Id == id, ct);
@@ -135,7 +135,7 @@ public static class AccountRequestEndpoints
                 // Approving re-checks: the customer may have been added since, or the account manager may have left.
                 return recheck;
             },
-        }, actor =>
+        }, async actor =>
         {
             var now = clock.GetUtcNow();
             r.Status = d.Type == "approve" ? "approved" : "rejected";
@@ -143,13 +143,13 @@ public static class AccountRequestEndpoints
             r.DecidedBy = actor.User.Name;
             r.DecidedAt = now;
             r.Version++;
-            if (d.Type == "approve") r.OrganisationId = CreateOrganisation(db, r, now);
+            if (d.Type == "approve") r.OrganisationId = await CreateOrganisation(db, commercial, r, actor, now, ct);
             else r.Reason = d.Reason!.Trim();
             notices.ToPerson(r.RequestedById, actor.User.Id, d.Type == "approve" ? $"Approved: {r.ShortName}" : $"Rejected: {r.ShortName}",
                 d.Type == "approve" ? $"{actor.User.Name} approved {r.Ref}. It’s onboarding: invite their first administrator next." : $"{actor.User.Name} rejected {r.Ref}: {r.Reason}",
                 $"/platform/account-requests/{id}");
             notices.ToRole(Roles.SystemAdmin, actor.User.Id, $"{(d.Type == "approve" ? "Approved" : "Rejected")}: {r.ShortName}", $"{actor.User.Name} decided {r.Ref}.", $"/platform/account-requests/{id}");
-            return Task.FromResult(Results.NoContent());
+            return Results.NoContent();
         }, ct);
     }
 
@@ -213,8 +213,8 @@ public static class AccountRequestEndpoints
         return e;
     }
 
-    /// <summary>The organisation starts onboarding, with its account manager and trial package. No users are created.</summary>
-    private static Guid CreateOrganisation(HumoDbContext db, AccountRequest r, DateTimeOffset now)
+    /// <summary>The organisation starts onboarding, with its account manager and a trial of the chosen package (docs/23). No users are created.</summary>
+    private static async Task<Guid> CreateOrganisation(HumoDbContext db, Commercial.CommercialRecords commercial, AccountRequest r, Actor actor, DateTimeOffset now, CancellationToken ct)
     {
         var org = new Organisation
         {
@@ -222,6 +222,7 @@ public static class AccountRequestEndpoints
             AccountManagerId = r.AccountManagerId, TrialPackageId = r.PackageId, CreatedAt = now,
         };
         db.Organisations.Add(org);
+        await commercial.OpenAsync(org, r.PackageId, actor, ct);
         return org.Id;
     }
 

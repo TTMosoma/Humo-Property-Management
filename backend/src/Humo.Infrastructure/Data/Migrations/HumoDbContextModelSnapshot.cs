@@ -113,6 +113,24 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.ToTable("AccountRequests", (string)null);
                 });
 
+            modelBuilder.Entity("Humo.Infrastructure.Data.Agreement", b =>
+                {
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Document")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.HasKey("OrganisationId");
+
+                    b.ToTable("Agreements", (string)null);
+                });
+
             modelBuilder.Entity("Humo.Infrastructure.Data.AuditEntry", b =>
                 {
                     b.Property<long>("Id")
@@ -870,6 +888,35 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.ToTable("SignInLinks", (string)null);
                 });
 
+            modelBuilder.Entity("Humo.Infrastructure.Data.Subscription", b =>
+                {
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Overrides")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Seats")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.HasKey("OrganisationId");
+
+                    b.ToTable("Subscriptions", (string)null);
+                });
+
             modelBuilder.Entity("Humo.Infrastructure.Data.Unit", b =>
                 {
                     b.Property<Guid>("Id")
@@ -934,6 +981,54 @@ namespace Humo.Infrastructure.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("Units", (string)null);
+                });
+
+            modelBuilder.Entity("Humo.Infrastructure.Data.UpgradeRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AddOn")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("At")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Feature")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Package")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RequestedBy")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("RequestedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganisationId");
+
+                    b.ToTable("UpgradeRequests", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.DataProtectionKey", b =>
@@ -1105,6 +1200,15 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("Humo.Infrastructure.Data.Agreement", b =>
+                {
+                    b.HasOne("Humo.Infrastructure.Data.Organisation", null)
+                        .WithOne()
+                        .HasForeignKey("Humo.Infrastructure.Data.Agreement", "OrganisationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Humo.Infrastructure.Data.LevyAccount", b =>
                 {
                     b.HasOne("Humo.Infrastructure.Data.Person", null)
@@ -1183,11 +1287,29 @@ namespace Humo.Infrastructure.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Humo.Infrastructure.Data.Subscription", b =>
+                {
+                    b.HasOne("Humo.Infrastructure.Data.Organisation", null)
+                        .WithOne()
+                        .HasForeignKey("Humo.Infrastructure.Data.Subscription", "OrganisationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Humo.Infrastructure.Data.Unit", b =>
                 {
                     b.HasOne("Humo.Infrastructure.Data.Scheme", null)
                         .WithMany()
                         .HasForeignKey("SchemeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Humo.Infrastructure.Data.UpgradeRequest", b =>
+                {
+                    b.HasOne("Humo.Infrastructure.Data.Organisation", null)
+                        .WithMany()
+                        .HasForeignKey("OrganisationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

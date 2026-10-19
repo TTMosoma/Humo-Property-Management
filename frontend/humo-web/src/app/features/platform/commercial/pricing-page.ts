@@ -44,7 +44,7 @@ const STATUS_TONE: Record<PriceStatus, 'neutral' | 'warning' | 'success'> = { aw
       title="Pricing & add-ons"
       subtitle="What Humo charges for each package and add-on, from which date. A price change applies to new agreements from its date; customers keep the price they agreed."
     />
-    <p class="demo-note"><ion-icon name="flask-outline" aria-hidden="true" /> Base package prices haven’t been decided, so they show as awaiting configuration. Values marked proposed are examples for the demo, not approved prices.</p>
+    <p class="demo-note"><ion-icon name="flask-outline" aria-hidden="true" /> Base package prices haven’t been decided, so they show as awaiting configuration. Values marked proposed are examples, not approved prices.</p>
 
     @if (cat(); as c) {
       <h2 class="section-title">Packages</h2>

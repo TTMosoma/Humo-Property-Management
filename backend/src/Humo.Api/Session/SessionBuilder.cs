@@ -9,7 +9,7 @@ namespace Humo.Api.Session;
 /// the assignments in force, the active one, its permissions, the organisation,
 /// and whether the person may work at all (S3).
 /// </summary>
-public sealed class SessionBuilder(HumoDbContext db, TimeProvider clock)
+public sealed class SessionBuilder(HumoDbContext db, TimeProvider clock, Commercial.CommercialRecords commercial)
 {
     public async Task<HumoUser?> LoadUserAsync(Guid userId, CancellationToken ct) =>
         await db.Users.Include(u => u.Memberships).Include(u => u.Assignments).AsSplitQuery().FirstOrDefaultAsync(u => u.Id == userId, ct);
@@ -46,6 +46,8 @@ public sealed class SessionBuilder(HumoDbContext db, TimeProvider clock)
         var permissions = active is null ? [] : AccessCatalogue.PermissionsOf(active.Role, active.Grants).Order().ToList();
         var actorPermissions = available.SelectMany(a => AccessCatalogue.PermissionsOf(a.Role, a.Grants)).Distinct().Order().ToList();
         var org = active?.OrganisationId is { } id && orgs.TryGetValue(id, out var current) ? current : null;
+        // The customer's plan: the app gates on these entitlements, and the API checks them on every command.
+        var plan = org is null ? null : await commercial.PlanAsync(org.Id, ct);
 
         return new CurrentSessionDto(
             SignedIn: user.Status == IdentityStatuses.Active && blocked is null && active is not null,
@@ -58,9 +60,9 @@ public sealed class SessionBuilder(HumoDbContext db, TimeProvider clock)
             PagePermissions: permissions,
             ActorPermissions: actorPermissions,
             Organisation: org is null ? null : new OrganisationDto(org.Id.ToString(), org.Version, org.Kind, org.Status, org.Name, org.ShortName, org.City, org.Province, 0, 0),
-            // Subscriptions and entitlements arrive with the commercial slice (doc 23); null means "no customer plan applies".
-            Subscription: null,
-            Entitlements: null,
+            // Null for Humo staff: no customer plan applies.
+            Subscription: plan?.Subscription,
+            Entitlements: plan?.Entitlements,
             // Impersonation arrives later in slice 1 (doc 24 §8).
             Impersonation: null);
     }

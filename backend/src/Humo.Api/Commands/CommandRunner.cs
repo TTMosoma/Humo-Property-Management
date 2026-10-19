@@ -21,6 +21,8 @@ public sealed record CommandSpec(string Action, string Permission)
     /// <summary>Field → message, after authorisation (C6).</summary>
     public Func<Dictionary<string, string>>? Validate { get; init; }
     public string Category { get; init; } = "activity";
+    /// <summary>The feature the customer's plan must include (docs/04: the API checks entitlements, not packages).</summary>
+    public string? Feature { get; init; }
     /// <summary>Allowed in Observe impersonation (e.g. ending the impersonation itself).</summary>
     public bool AllowedWhileObserving { get; init; }
 }
@@ -33,10 +35,10 @@ public sealed class CommandRefused(string code, string message) : Exception(mess
 
 /// <summary>
 /// Every command goes through the same checks, in the same order as the prototype's
-/// gateway (doc 24 §1): permission → scope → version → validation → step-up → apply → audit.
+/// gateway (doc 24 §1): permission → entitlement → scope → version → validation → step-up → apply → audit.
 /// Nobody verifies a passkey for a request that was going to fail.
 /// </summary>
-public sealed class CommandRunner(CurrentActor current, HumoDbContext db, AuditLog audit, Notices notices, TimeProvider clock)
+public sealed class CommandRunner(CurrentActor current, HumoDbContext db, AuditLog audit, Notices notices, Commercial.CommercialRecords commercial, TimeProvider clock)
 {
     /// <summary>A fresh step-up proof lasts 5 minutes (STEP_UP_FRESH_MS in the frontend).</summary>
     public static readonly TimeSpan StepUpFresh = TimeSpan.FromMinutes(5);
@@ -48,6 +50,8 @@ public sealed class CommandRunner(CurrentActor current, HumoDbContext db, AuditL
 
         if (actor.Observing && !spec.AllowedWhileObserving) return await Deny(actor, spec, "observe-only", "Observe mode is read-only", ct);
         if (!actor.Can(spec.Permission)) return await Deny(actor, spec, "forbidden", "Role does not have this permission", ct);
+        if (spec.Feature is { } feature && (spec.OrganisationId ?? actor.OrganisationId) is { } org && !await commercial.EntitledAsync(org, feature, ct))
+            return await Deny(actor, spec, "not-entitled", "Not included in the agency’s plan", ct);
         if (spec.SchemeId is { } scheme && !actor.CoversScheme(scheme)) return await Deny(actor, spec, "out-of-scope", "Outside the assignment's schemes (D1)", ct);
 
         if (spec.ExpectedVersion is { } expected && spec.CurrentVersion is { } now && expected != now) return Problems.Conflict();

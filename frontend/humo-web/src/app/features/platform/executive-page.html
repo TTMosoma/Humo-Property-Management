@@ -179,6 +179,10 @@
       }
     </div>
 
-    <p class="note">Figures are mock data that add up across the platform (customers, subscriptions and usage). Values are contract MRR — no billing system is connected yet.</p>
+    @if (demo) {
+      <p class="note">Figures are mock data that add up across the platform (customers, subscriptions and usage). Values are contract MRR — no billing system is connected yet.</p>
+    } @else {
+      <p class="note">From Humo’s records today. Values are contract MRR from each agreement; no invoices are issued yet. Only the current month is shown: monthly history isn’t recorded yet, and module usage and upgrade signals need usage Humo doesn’t measure yet.</p>
+    }
   }
 </div>

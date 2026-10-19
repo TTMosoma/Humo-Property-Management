@@ -71,6 +71,7 @@ public static partial class SchemeEndpoints
 
         return await commands.RunAsync(new CommandSpec($"Added scheme {body.Name?.Trim()}", "Schemes.Manage")
         {
+            Feature = "schemes",
             Resource = "Scheme",
             ResourceId = id.ToString(),
             Validate = () => organisationId is null

@@ -32,7 +32,7 @@
           <strong>{{ gb(st.usedBytes) }} of {{ st.totalGb === null ? 'your agreed allowance' : st.totalGb + ' GB' }} used</strong>
           <div class="muted small">
             {{ st.includedGb === null ? 'Negotiated allowance' : st.includedGb + ' GB with your package' }}{{ st.purchasedGb ? ' + ' + st.purchasedGb + ' GB purchased' : '' }}{{ st.exceptionGb ? ' + ' + st.exceptionGb + ' GB temporary' : '' }}
-            · {{ st.measurement.source === 'demo' ? 'Demo figure' : 'Measured' }} {{ formatDate(st.measurement.measuredAt, true) }}
+            · {{ !st.measurement.measuredAt ? 'Not measured yet' : (st.measurement.source === 'demo' ? 'Demo figure' : 'Measured') + ' ' + formatDate(st.measurement.measuredAt, true) }}
           </div>
         </div>
         @if (st.state !== 'ok' && st.state !== 'unknown') {

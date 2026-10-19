@@ -7,6 +7,7 @@ import { combineLatest, map } from 'rxjs';
 import { MODULE_LABELS, FeatureModule, PlatformDataSource } from '../../domain';
 import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
+import { PrototypeControls } from '../../core/prototype/prototype-controls';
 import { AreaChart, BarChart, Sparkline } from '../../ui/charts/charts';
 import { formatRand } from '../../ui/format/money';
 import { ErrorState } from '../../ui/states/error-state';
@@ -32,6 +33,8 @@ export class ExecutivePage {
   protected readonly catalogue = inject(CatalogueService);
   private readonly data = inject(PlatformDataSource);
   protected readonly session = inject(SessionService);
+  /** The simulation: its figures are generated, not Humo's records. */
+  protected readonly demo = !!inject(PrototypeControls, { optional: true });
 
   /** Overview shows everything; /revenue, /growth, /health, /opportunities focus one theme. */
   protected readonly focus = toSignal(inject(ActivatedRoute).paramMap.pipe(map((p) => p.get('section'))), { initialValue: null });
@@ -62,13 +65,14 @@ export class ExecutivePage {
     const o = this.o();
     if (!o) return [];
     const h = o.history;
-    const prev = h.at(-2)!;
-    const mom = ((o.mrr - prev.mrr) / prev.mrr) * 100;
-    const yoy = ((o.mrr - h[0].mrr) / h[0].mrr) * 100;
+    // The API's history starts with the commercial slice: until there's a month to compare with, there's no change to show.
+    const prev = h.at(-2);
+    const mom = prev?.mrr ? ((o.mrr - prev.mrr) / prev.mrr) * 100 : null;
+    const yoy = h.length >= 12 && h[0].mrr ? ((o.mrr - h[0].mrr) / h[0].mrr) * 100 : null;
     return [
-      { label: 'MRR', value: this.rand(o.mrr), delta: `${mom >= 0 ? '+' : ''}${mom.toFixed(1)}% this month`, up: mom >= 0, spark: this.mrrSeries(), lead: true },
-      { label: 'ARR', value: this.rand(o.arr), delta: `${yoy >= 0 ? '+' : ''}${yoy.toFixed(0)}% on last year`, up: yoy >= 0 },
-      { label: 'Customers', value: num(o.customers), delta: `+${h.at(-1)!.newCustomers} this month`, up: true, spark: this.customerSeries() },
+      { label: 'MRR', value: this.rand(o.mrr), delta: mom === null ? 'First month on record' : `${mom >= 0 ? '+' : ''}${mom.toFixed(1)}% this month`, up: (mom ?? 0) >= 0, spark: this.mrrSeries(), lead: true },
+      { label: 'ARR', value: this.rand(o.arr), delta: yoy === null ? 'Less than a year on record' : `${yoy >= 0 ? '+' : ''}${yoy.toFixed(0)}% on last year`, up: (yoy ?? 0) >= 0 },
+      { label: 'Customers', value: num(o.customers), delta: `+${h.at(-1)?.newCustomers ?? 0} this month`, up: true, spark: this.customerSeries() },
       { label: 'Schemes', value: num(o.schemes), delta: 'under management' },
       { label: 'Units', value: num(o.units), delta: 'on Humo' },
       { label: 'Active users', value: num(o.activeUsers), delta: 'staff and residents, 30 days', spark: this.usersSeries() },
@@ -79,7 +83,7 @@ export class ExecutivePage {
   protected readonly packageRows = computed(() => {
     const o = this.o();
     if (!o) return [];
-    return o.byPackage.map((p) => ({ ...p, name: this.catalogue.shortPackage(p.packageId), share: (p.mrr / o.mrr) * 100, arpa: p.customers ? p.mrr / p.customers : 0 }));
+    return o.byPackage.map((p) => ({ ...p, name: this.catalogue.shortPackage(p.packageId), share: o.mrr ? (p.mrr / o.mrr) * 100 : 0, arpa: p.customers ? p.mrr / p.customers : 0 }));
   });
 
   protected readonly growth = computed(() => (this.o()?.history ?? []).map((p, i) => ({ label: this.months()[i], value: p.newCustomers, negative: p.churned })));
