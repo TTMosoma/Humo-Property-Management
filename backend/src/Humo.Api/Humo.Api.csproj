@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
     <ProjectReference Include="..\Humo.Domain\Humo.Domain.csproj" />
@@ -13,6 +13,7 @@
   </ItemGroup>
 
   <PropertyGroup>
+    <UserSecretsId>d905b14b-a3a5-44d9-b3a1-c6bd6f71d048</UserSecretsId>
   </PropertyGroup>
 
 </Project>

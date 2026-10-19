@@ -49,14 +49,13 @@ import {
 } from '../domain';
 import { ContractorNetwork } from '../domain/contractor';
 import { httpAccessDataSource } from './http-access';
+import { HttpOrganisationDataSource, HttpSchemeDataSource, HttpStepUpAuthenticator } from './http-portfolio';
 import { HttpSessionDataSource } from './http-session-data-source';
 import { notConnected } from './not-connected';
 
 /** Ports whose HTTP adapters come with later backend slices. Remove each from this list as its adapter lands. */
 const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
-  [OrganisationDataSource, 'OrganisationDataSource'],
   [NotificationDataSource, 'NotificationDataSource'],
-  [SchemeDataSource, 'SchemeDataSource'],
   [WorkItemDataSource, 'WorkItemDataSource'],
   [UnitDataSource, 'UnitDataSource'],
   [PersonDataSource, 'PersonDataSource'],
@@ -69,7 +68,6 @@ const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
   [HumoTeamDataSource, 'HumoTeamDataSource'],
   [AuditDataSource, 'AuditDataSource'],
   [SecurityDataSource, 'SecurityDataSource'],
-  [StepUpAuthenticator, 'StepUpAuthenticator'],
   [PlatformDataSource, 'PlatformDataSource'],
   [AccountRequestDataSource, 'AccountRequestDataSource'],
   [PlanDataSource, 'PlanDataSource'],
@@ -106,11 +104,18 @@ const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
  * controls are in a production bundle: `PrototypeControls` isn't provided, so
  * every prototype control disappears.
  *
- * Connected so far (slice 1, step 1): the session (GET /me, passkey and
- * email-link sign-in, passkey registration) and, on Users & access, sign out
- * and switch role. The other ports answer "not connected yet" until their slice lands.
+ * Connected so far (slice 1): the session (GET /me, passkey and email-link
+ * sign-in, passkey registration), sign out and switch role, step-up,
+ * organisations and schemes. The other ports answer "not connected yet" until their slice lands.
  */
 export function provideHttpData(): EnvironmentProviders {
   const pending: Provider[] = NOT_YET.map(([port, name]) => ({ provide: port, useFactory: () => notConnected(name) }));
-  return makeEnvironmentProviders([provideHttpClient(withFetch()), { provide: SessionDataSource, useClass: HttpSessionDataSource }, { provide: AccessDataSource, useFactory: httpAccessDataSource }, ...pending]);
+  return makeEnvironmentProviders([
+    provideHttpClient(withFetch()),
+    { provide: SessionDataSource, useClass: HttpSessionDataSource }, { provide: AccessDataSource, useFactory: httpAccessDataSource },
+    { provide: OrganisationDataSource, useClass: HttpOrganisationDataSource },
+    { provide: SchemeDataSource, useClass: HttpSchemeDataSource },
+    { provide: StepUpAuthenticator, useClass: HttpStepUpAuthenticator },
+    ...pending,
+  ]);
 }

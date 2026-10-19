@@ -18,6 +18,7 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
         IdentityRoleClaim<Guid>, IdentityUserToken<Guid>, IdentityUserPasskey<Guid>>(options), IDataProtectionKeyContext
 {
     public DbSet<Organisation> Organisations => Set<Organisation>();
+    public DbSet<Scheme> Schemes => Set<Scheme>();
     public DbSet<Membership> Memberships => Set<Membership>();
     public DbSet<RoleAssignment> RoleAssignments => Set<RoleAssignment>();
     public DbSet<AuditEntry> Audit => Set<AuditEntry>();
@@ -49,6 +50,18 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.Property(o => o.ShortName).HasMaxLength(100);
             e.HasIndex(o => o.ShortName).IsUnique();
             e.Property(o => o.Version).IsConcurrencyToken();
+        });
+
+        builder.Entity<Scheme>(e =>
+        {
+            e.ToTable("Schemes");
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.Property(x => x.Code).HasMaxLength(4);
+            e.Property(x => x.Type).HasMaxLength(40);
+            e.Property(x => x.Status).HasMaxLength(20);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => new { x.OrganisationId, x.Code }).IsUnique();
+            e.HasOne<Organisation>().WithMany().HasForeignKey(x => x.OrganisationId);
         });
 
         builder.Entity<Membership>(e =>

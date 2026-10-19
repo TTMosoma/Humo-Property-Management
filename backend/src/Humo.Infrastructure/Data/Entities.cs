@@ -39,6 +39,23 @@ public sealed class Organisation
     public DateTimeOffset CreatedAt { get; set; }
 }
 
+/// <summary>A sectional-title scheme, HOA or share block that an organisation manages (doc 24 §4).</summary>
+public sealed class Scheme
+{
+    public Guid Id { get; set; }
+    public int Version { get; set; } = 1;
+    public Guid OrganisationId { get; set; }
+    public string Name { get; set; } = "";
+    /// <summary>2–4 capital letters; starts every account number (KC → KC-042). Unique in the organisation.</summary>
+    public string Code { get; set; } = "";
+    public string Type { get; set; } = "Sectional Title";
+    public string Status { get; set; } = "onboarding";
+    public string Suburb { get; set; } = "";
+    public string City { get; set; } = "";
+    public string Province { get; set; } = "";
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
 /// <summary>Belonging to an organisation, with a status. Ended, never deleted.</summary>
 public sealed class Membership
 {
