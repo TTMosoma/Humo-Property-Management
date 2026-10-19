@@ -356,3 +356,46 @@ public sealed class UpgradeRequest
     /// <summary>new, in-progress, done or declined.</summary>
     public string Status { get; set; } = "new";
 }
+
+/// <summary>
+/// Humo's invoice to a customer (docs/23 §6): a snapshot of the lines and prices that applied,
+/// never recalculated. Paid only when verified payments cover it; overdue is worked out from the due date.
+/// </summary>
+public sealed class Invoice
+{
+    public Guid Id { get; set; }
+    public Guid OrganisationId { get; set; }
+    /// <summary>Unique, and the reference the customer pays with: HPM-{customer}-{yyyymm}.</summary>
+    public string Reference { get; set; } = "";
+    public string PeriodStart { get; set; } = "";
+    public string IssuedOn { get; set; } = "";
+    public string DueOn { get; set; } = "";
+    public decimal Total { get; set; }
+    /// <summary>issued, paid or void.</summary>
+    public string Status { get; set; } = "issued";
+    /// <summary>The invoice as issued: JSON, as the frontend's <c>HumoInvoice</c>.</summary>
+    public string Document { get; set; } = "{}";
+    public DateTimeOffset IssuedAt { get; set; }
+    public string IssuedBy { get; set; } = "";
+}
+
+/// <summary>A payment against an invoice. Separate from the billing preference: this says what happened with one payment.</summary>
+public sealed class Payment
+{
+    public Guid Id { get; set; }
+    public Guid InvoiceId { get; set; }
+    public Guid OrganisationId { get; set; }
+    public string Method { get; set; } = "manual-eft";
+    /// <summary>initiated, pending-verification, verified, failed or cancelled.</summary>
+    public string Status { get; set; } = "pending-verification";
+    public decimal Amount { get; set; }
+    public string Provider { get; set; } = "Manual EFT";
+    /// <summary>The provider's reference, or the bank statement line that verified a manual EFT.</summary>
+    public string? ProviderReference { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset? VerifiedAt { get; set; }
+    public string? VerifiedBy { get; set; }
+    /// <summary>provider-notification or bank-reconciliation.</summary>
+    public string? Verification { get; set; }
+    public string? Note { get; set; }
+}

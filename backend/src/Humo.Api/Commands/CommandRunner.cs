@@ -43,6 +43,11 @@ public sealed class CommandRunner(CurrentActor current, HumoDbContext db, AuditL
     /// <summary>A fresh step-up proof lasts 5 minutes (STEP_UP_FRESH_MS in the frontend).</summary>
     public static readonly TimeSpan StepUpFresh = TimeSpan.FromMinutes(5);
 
+    private readonly List<Func<Task>> afterCommit = [];
+
+    /// <summary>Work that must happen only once the change is saved, e.g. emailing an invoice. A failure there never undoes the change.</summary>
+    public void AfterCommit(Func<Task> work) => afterCommit.Add(work);
+
     public async Task<IResult> RunAsync(CommandSpec spec, Func<Actor, Task<IResult>> apply, CancellationToken ct)
     {
         var actor = await current.GetAsync(ct);
@@ -82,9 +87,12 @@ public sealed class CommandRunner(CurrentActor current, HumoDbContext db, AuditL
         catch (DbUpdateConcurrencyException)
         {
             notices.Discard();
+            afterCommit.Clear();
             return Problems.Conflict();
         }
         await notices.SendEmailsAsync(ct);
+        foreach (var work in afterCommit) await work();
+        afterCommit.Clear();
         return result;
     }
 
@@ -92,6 +100,7 @@ public sealed class CommandRunner(CurrentActor current, HumoDbContext db, AuditL
     {
         db.ChangeTracker.Clear();
         notices.Discard();
+        afterCommit.Clear();
         audit.Record(spec.Action, "denied", actor.Human, reason: reason, category: spec.Category, role: actor.Assignment.Role, organisationId: spec.OrganisationId ?? actor.OrganisationId,
             resource: spec.Resource, resourceId: spec.ResourceId, actingAs: actor.Impersonation is null ? null : actor.User, impersonation: actor.Impersonation, schemeId: spec.SchemeId);
         await db.SaveChangesAsync(ct);

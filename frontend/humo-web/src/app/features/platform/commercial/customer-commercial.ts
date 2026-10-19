@@ -56,7 +56,7 @@ const INVOICE_TONE: Record<InvoiceStatus, Tone> = { issued: 'info', overdue: 'da
       @if (demo) {
         <p class="demo-note"><ion-icon name="flask-outline" aria-hidden="true" /> Demo data. Prices marked proposed are not approved. Invoices and payments are simulated: no money moves and no invoice is sent.</p>
       } @else {
-        <p class="demo-note"><ion-icon name="information-circle-outline" aria-hidden="true" /> Prices marked proposed are not approved. Invoicing isn’t switched on yet: no invoice is issued or sent.</p>
+        <p class="demo-note"><ion-icon name="information-circle-outline" aria-hidden="true" /> Prices marked proposed are not approved. Customers pay by EFT for now: online payment waits for Humo’s payment provider.</p>
       }
 
       <section class="surface panel">
@@ -188,8 +188,8 @@ const INVOICE_TONE: Record<InvoiceStatus, Tone> = { issued: 'info', overdue: 'da
             <h2>Invoices & payments</h2>
             <p class="muted">An invoice is paid only once a payment is verified: by the provider’s notification, or for EFT by matching Humo’s bank statement.</p>
           </div>
-          @if (canBill() && demo) {
-            <button type="button" class="btn btn-secondary btn-sm" (click)="issue(v)">Issue next invoice (simulated)</button>
+          @if (canBill()) {
+            <button type="button" class="btn btn-secondary btn-sm" (click)="issue(v)">Issue next invoice{{ demo ? ' (simulated)' : '' }}</button>
           }
         </header>
         @if (v.invoices.length) {
@@ -220,7 +220,7 @@ const INVOICE_TONE: Record<InvoiceStatus, Tone> = { issued: 'info', overdue: 'da
               }
               @if (inv.status === 'issued' || inv.status === 'overdue') {
                 <div class="actions">
-                  @if (canBill() && v.agreement.billing.preference !== 'manual-eft' && !pending(inv)) {
+                  @if (demo && canBill() && v.agreement.billing.preference !== 'manual-eft' && !pending(inv)) {
                     <button type="button" class="btn btn-ghost btn-sm" (click)="checkout(inv)">Start checkout (simulated)</button>
                   }
                   @if (canChange() && v.agreement.billing.preference === 'manual-eft' && !pending(inv)) {
@@ -383,8 +383,11 @@ export class CustomerCommercial {
 
   protected issue(v: CustomerCommercialView): void {
     this.stepUp
-      .guard({ action: 'verify-payment', detail: `Issue ${v.name}’s next invoice (simulated)` }, () => this.data.issueInvoice(v.organisationId))
-      .subscribe({ next: () => this.feedback.success('Invoice issued (simulated: nothing was sent).'), error: (e) => this.feedback.error(describeFailure(e, 'The invoice wasn’t issued')) });
+      .guard({ action: 'verify-payment', detail: `Issue ${v.name}’s next invoice${this.demo ? ' (simulated)' : ''}` }, () => this.data.issueInvoice(v.organisationId))
+      .subscribe({
+        next: () => this.feedback.success(this.demo ? 'Invoice issued (simulated: nothing was sent).' : `Invoice issued and emailed to ${v.agreement.billing.billingEmail}.`),
+        error: (e) => this.feedback.error(describeFailure(e, 'The invoice wasn’t issued')),
+      });
   }
 
   protected checkout(inv: CustomerInvoice): void {
