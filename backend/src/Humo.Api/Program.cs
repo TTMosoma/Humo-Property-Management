@@ -111,6 +111,7 @@ api.MapPeople();
 api.MapBoards();
 api.MapAccess();
 api.MapAccountRequests();
+api.MapHumoTeam();
 Notices.MapNotifications(api);
 
 await app.InitialiseDatabaseAsync();

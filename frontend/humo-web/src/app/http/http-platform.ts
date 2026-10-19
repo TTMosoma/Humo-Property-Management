@@ -8,6 +8,11 @@ import {
   AccountRequestView,
   AccountSubmission,
   AppNotification,
+  HumoTeamAction,
+  HumoTeamDataSource,
+  HumoTeamMember,
+  NewHumoMember,
+  PendingHumoGrant,
   NewAccountDetails,
   NotificationDataSource,
 } from '../domain';
@@ -55,5 +60,35 @@ export class HttpNotificationDataSource extends HttpPort implements Notification
 
   markRead(ids: string[]): Observable<void> {
     return this.command('POST', '/notifications/read', { ids }, ['notifications']);
+  }
+}
+
+/** Humo's own team over HTTP (doc 16): System Administrators only change it, with step-up and a reason. */
+@Injectable()
+export class HttpHumoTeamDataSource extends HttpPort implements HumoTeamDataSource {
+  list(): Observable<HumoTeamMember[]> {
+    return this.query<HumoTeamMember[]>('/platform/team', ['access', 'organisations']);
+  }
+
+  get(identityId: string): Observable<HumoTeamMember | undefined> {
+    return this.query<HumoTeamMember>(`/platform/team/${identityId}`, ['access', 'organisations']).pipe(
+      catchError((e) => (e.kind === 'not-found' ? of(undefined) : throwError(() => e))),
+    );
+  }
+
+  pending(): Observable<PendingHumoGrant[]> {
+    return this.query<PendingHumoGrant[]>('/platform/team/pending-grants', ['access']);
+  }
+
+  invite(input: NewHumoMember): Observable<string> {
+    return this.createId('/platform/team', input, ['access', 'notifications']);
+  }
+
+  update(identityId: string, details: { name: string; email: string; title?: string }, expectedVersion?: number): Observable<void> {
+    return this.command('PUT', `/platform/team/${identityId}`, { ...details, expectedVersion }, ['access']);
+  }
+
+  act(identityId: string, action: HumoTeamAction, expectedVersion?: number): Observable<void> {
+    return this.command('POST', `/platform/team/${identityId}/actions`, { ...action, expectedVersion }, ['access', 'organisations', 'notifications', 'session']);
   }
 }

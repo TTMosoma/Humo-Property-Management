@@ -23,6 +23,7 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
     public DbSet<PlatformSetting> PlatformSettings => Set<PlatformSetting>();
     public DbSet<Notice> Notices => Set<Notice>();
     public DbSet<NoticeRead> NoticeReads => Set<NoticeRead>();
+    public DbSet<PendingHumoGrant> PendingHumoGrants => Set<PendingHumoGrant>();
     public DbSet<Unit> Units => Set<Unit>();
     public DbSet<LevyAccount> LevyAccounts => Set<LevyAccount>();
     public DbSet<Person> People => Set<Person>();
@@ -81,6 +82,12 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.ToTable("Notices");
             e.HasIndex(x => x.ToIdentityId);
             e.HasIndex(x => x.ToRole);
+        });
+
+        builder.Entity<PendingHumoGrant>(e =>
+        {
+            e.ToTable("PendingHumoGrants");
+            e.HasIndex(x => x.IdentityId);
         });
 
         builder.Entity<NoticeRead>(e =>

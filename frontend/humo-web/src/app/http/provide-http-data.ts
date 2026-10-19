@@ -50,7 +50,7 @@ import {
 import { ContractorNetwork } from '../domain/contractor';
 import { HttpAccessDataSource } from './http-access';
 import { HttpBoardDataSource } from './http-board';
-import { HttpAccountRequestDataSource, HttpNotificationDataSource } from './http-platform';
+import { HttpAccountRequestDataSource, HttpHumoTeamDataSource, HttpNotificationDataSource } from './http-platform';
 import { HttpOrganisationDataSource, HttpPersonDataSource, HttpSchemeDataSource, HttpStepUpAuthenticator, HttpUnitDataSource } from './http-portfolio';
 import { HttpSessionDataSource } from './http-session-data-source';
 import { notConnected } from './not-connected';
@@ -64,7 +64,6 @@ const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
   [JobDataSource, 'JobDataSource'],
   [SupplierDataSource, 'SupplierDataSource'],
   [PayablesDataSource, 'PayablesDataSource'],
-  [HumoTeamDataSource, 'HumoTeamDataSource'],
   [AuditDataSource, 'AuditDataSource'],
   [SecurityDataSource, 'SecurityDataSource'],
   [PlatformDataSource, 'PlatformDataSource'],
@@ -103,7 +102,7 @@ const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
  *
  * Connected so far (slice 1): the session (GET /me, passkey and email-link
  * sign-in, passkey registration), sign out and switch role, step-up,
- * organisations, new customer accounts, notifications, schemes, units, people,
+ * organisations, new customer accounts, notifications, the Humo team, schemes, units, people,
  * the trustee board and users & access. The other ports answer "not connected yet" until their slice lands.
  */
 export function provideHttpData(): EnvironmentProviders {
@@ -119,6 +118,7 @@ export function provideHttpData(): EnvironmentProviders {
     { provide: BoardDataSource, useClass: HttpBoardDataSource },
     { provide: AccountRequestDataSource, useClass: HttpAccountRequestDataSource },
     { provide: NotificationDataSource, useClass: HttpNotificationDataSource },
+    { provide: HumoTeamDataSource, useClass: HttpHumoTeamDataSource },
     ...pending,
   ]);
 }

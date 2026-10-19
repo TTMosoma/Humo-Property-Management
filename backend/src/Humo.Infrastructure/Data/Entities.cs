@@ -99,6 +99,20 @@ public sealed class Notice
     public DateTimeOffset At { get; set; }
 }
 
+/// <summary>A request to make someone a System Administrator, waiting for a second System Administrator (doc 16).</summary>
+public sealed class PendingHumoGrant
+{
+    public Guid Id { get; set; }
+    public Guid IdentityId { get; set; }
+    public string IdentityName { get; set; } = "";
+    public string Role { get; set; } = "";
+    public string Label { get; set; } = "";
+    public string Reason { get; set; } = "";
+    public Guid RequestedById { get; set; }
+    public string RequestedBy { get; set; } = "";
+    public DateTimeOffset RequestedAt { get; set; }
+}
+
 /// <summary>Who has read which notice.</summary>
 public sealed class NoticeRead
 {

@@ -394,7 +394,7 @@ public static partial class AccessEndpoints
     }
 
     /// <summary>An invitation is a sign-in link that lasts a week; using it accepts the invitation.</summary>
-    private static async Task SendInvitation(HumoDbContext db, IEmailSender email, AppOptions app, TimeProvider clock, HumoUser user, string organisation, ILoggerFactory logs, CancellationToken ct)
+    internal static async Task SendInvitation(HumoDbContext db, IEmailSender email, AppOptions app, TimeProvider clock, HumoUser user, string organisation, ILoggerFactory logs, CancellationToken ct)
     {
         var token = WebEncoders.Base64UrlEncode(RandomNumberGenerator.GetBytes(32));
         var now = clock.GetUtcNow();
