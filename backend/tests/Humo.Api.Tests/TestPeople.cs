@@ -57,6 +57,10 @@ public static partial class TestPeople
         return client;
     }
 
+    /// <summary>A fresh step-up proof for this client's session (the test verifier stands in for the passkey).</summary>
+    public static async Task StepUp(this HttpClient client) =>
+        Assert.Equal(HttpStatusCode.OK, (await client.PostAsJsonAsync("/api/me/step-up", new { credential = "test-passkey" })).StatusCode);
+
     public static async Task<JsonElement> Json(this HttpResponseMessage res) => await res.Content.ReadFromJsonAsync<JsonElement>();
 
     public static async Task<string> ProblemCode(this HttpResponseMessage res) => (await res.Json()).GetProperty("code").GetString()!;

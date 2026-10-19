@@ -58,6 +58,9 @@ public sealed class HumoApiFactory : WebApplicationFactory<Program>
             services.AddSingleton<TimeProvider>(Clock);
             services.RemoveAll<IEmailSender>();
             services.AddSingleton<IEmailSender>(Email);
+            // A passkey ceremony needs a person at a device: tests prove step-up with the credential "test-passkey".
+            services.RemoveAll<Humo.Api.Auth.IStepUpVerifier>();
+            services.AddScoped<Humo.Api.Auth.IStepUpVerifier, TestStepUp>();
         });
     }
 
@@ -74,6 +77,12 @@ public sealed class HumoApiFactory : WebApplicationFactory<Program>
         base.Dispose(disposing);
         if (disposing) connection.Dispose();
     }
+}
+
+public sealed class TestStepUp : Humo.Api.Auth.IStepUpVerifier
+{
+    public Task<string?> VerifyAsync(HumoUser user, string credentialJson) =>
+        Task.FromResult(credentialJson == "\"test-passkey\"" ? null : "Not the test passkey");
 }
 
 public sealed class TestClock : TimeProvider

@@ -1,5 +1,6 @@
 using System.Threading.RateLimiting;
 using Humo.Api;
+using Humo.Api.Access;
 using Humo.Api.Audit;
 using Humo.Api.Auth;
 using Humo.Api.Commands;
@@ -30,6 +31,7 @@ builder.Services.AddScoped<AuditLog>();
 builder.Services.AddScoped<CurrentActor>();
 builder.Services.AddScoped<CommandRunner>();
 builder.Services.AddScoped<PortfolioReads>();
+builder.Services.AddScoped<IStepUpVerifier, PasskeyStepUpVerifier>();
 
 // ---- Sign-in: ASP.NET Core Identity with passkeys; no passwords (D14) ----
 builder.Services
@@ -105,6 +107,7 @@ api.MapSchemes();
 api.MapUnits();
 api.MapPeople();
 api.MapBoards();
+api.MapAccess();
 
 await app.InitialiseDatabaseAsync();
 app.Run();

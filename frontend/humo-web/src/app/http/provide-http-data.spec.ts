@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { firstValueFrom } from 'rxjs';
-import { AccessDataSource, ApiError, PolicyError, SchemeDataSource, SessionDataSource, SignInError, JobDataSource } from '../domain';
+import { AccessDataSource, ApiError, HumoTeamDataSource, PolicyError, SchemeDataSource, SessionDataSource, SignInError, JobDataSource } from '../domain';
 import { provideHttpData } from './provide-http-data';
 
 /**
@@ -43,7 +43,7 @@ describe('Production data layer (provideHttpData)', () => {
 
   it('ports without an API yet say so', async () => {
     await expect(firstValueFrom(TestBed.inject(JobDataSource).list(['s-1']))).rejects.toBeInstanceOf(ApiError);
-    await expect(firstValueFrom(TestBed.inject(AccessDataSource).directory(null))).rejects.toMatchObject({ kind: 'server' });
+    await expect(firstValueFrom(TestBed.inject(HumoTeamDataSource).list())).rejects.toMatchObject({ kind: 'server' });
   });
   it('reads schemes from the API', async () => {
     const list = firstValueFrom(TestBed.inject(SchemeDataSource).list());
@@ -71,5 +71,15 @@ describe('Production data layer (provideHttpData)', () => {
     const stale = firstValueFrom(schemes.update('s-1', { name: 'Kingfisher', code: 'KC', type: 'Sectional Title', suburb: 'a', city: 'b', province: 'Gauteng' }, 1));
     http.expectOne('/api/schemes/s-1').flush({ title: 'Someone else changed this first' }, { status: 409, statusText: 'Conflict' });
     await expect(stale).rejects.toMatchObject({ kind: 'conflict' });
+  });
+  it('reads the access directory and invites over HTTP', async () => {
+    const access = TestBed.inject(AccessDataSource);
+    const dir = firstValueFrom(access.directory('org-1'));
+    http.expectOne((r) => r.url === '/api/access/directory' && r.params.get('organisationId') === 'org-1').flush([{ id: 'p-1', email: 'lerato@acacia.example' }]);
+    expect((await dir)[0].email).toBe('lerato@acacia.example');
+
+    const invited = firstValueFrom(access.invite({ organisationId: 'org-1', name: 'Lerato Mokoena', email: 'lerato@acacia.example', assignment: { role: 'finance', scope: { type: 'organisation', organisationId: 'org-1', schemeIds: [] }, label: 'Acacia' } }));
+    http.expectOne({ method: 'POST', url: '/api/access/invitations' }).flush({ id: 'p-2' }, { status: 201, statusText: 'Created' });
+    expect(await invited).toBe('p-2');
   });
 });

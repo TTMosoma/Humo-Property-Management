@@ -206,18 +206,16 @@ public static class AuthEndpoints
 
     /// <summary>Verifies the passkey and records the proof's time in the session; commands check it is under 5 minutes old.</summary>
     private static async Task<IResult> StepUp(PasskeyCredentialRequest body, ClaimsPrincipal principal, UserManager<HumoUser> users, SignInManager<HumoUser> signIn,
-        HumoDbContext db, AuditLog audit, TimeProvider clock, CancellationToken ct)
+        IStepUpVerifier verifier, HumoDbContext db, AuditLog audit, TimeProvider clock, CancellationToken ct)
     {
         var user = await users.GetUserAsync(principal);
         if (user is null) return Results.Unauthorized();
-        var result = await signIn.PerformPasskeyAssertionAsync(body.Credential.GetRawText());
-        if (!result.Succeeded || result.User.Id != user.Id)
+        if (await verifier.VerifyAsync(user, body.Credential.GetRawText()) is { } failure)
         {
-            audit.Record("Step-up verification failed", "denied", user, reason: result.Failure?.Message ?? "Another person's passkey");
+            audit.Record("Step-up verification failed", "denied", user, reason: failure);
             await db.SaveChangesAsync(ct);
             return Failure("no-passkey", "That passkey didn't verify you.");
         }
-        await users.AddOrUpdatePasskeyAsync(user, result.Passkey);
         var at = clock.GetUtcNow();
         List<Claim> claims = [new(Commands.CurrentActor.StepUpClaim, at.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture))];
         if (principal.FindFirstValue(AssignmentClaim) is { } assignment) claims.Add(new Claim(AssignmentClaim, assignment));
