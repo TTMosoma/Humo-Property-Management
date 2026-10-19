@@ -90,7 +90,7 @@ A pending or rejected request can't look like a customer, because no organisatio
 | Delegated activation granted or revoked | The other System Administrators |
 | Policy changed | The other System Administrators |
 
-**Email:** there's none. Nothing is shown as "sent". Email delivery is a backend integration (register R-9).
+**Email:** in the prototype there's none, and nothing is shown as "sent". On the API (19 October 2026), each notice is also emailed to the same people, once the change is saved: subject = the notice title, body = the detail and a link to the request. Only active people get it (not invited, suspended or deactivated), never the person who acted. A failed email doesn't undo the change; it's logged, and the notice is still in the app (register R-9).
 
 **Audit log** (Platform › Audit log, category *security*):
 - submission;

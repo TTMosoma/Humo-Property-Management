@@ -1,4 +1,5 @@
 using Humo.Api.Audit;
+using Humo.Api.Platform;
 using Humo.Domain.Access;
 using Humo.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -35,7 +36,7 @@ public sealed class CommandRefused(string code, string message) : Exception(mess
 /// gateway (doc 24 §1): permission → scope → version → validation → step-up → apply → audit.
 /// Nobody verifies a passkey for a request that was going to fail.
 /// </summary>
-public sealed class CommandRunner(CurrentActor current, HumoDbContext db, AuditLog audit, TimeProvider clock)
+public sealed class CommandRunner(CurrentActor current, HumoDbContext db, AuditLog audit, Notices notices, TimeProvider clock)
 {
     /// <summary>A fresh step-up proof lasts 5 minutes (STEP_UP_FRESH_MS in the frontend).</summary>
     public static readonly TimeSpan StepUpFresh = TimeSpan.FromMinutes(5);
@@ -76,14 +77,17 @@ public sealed class CommandRunner(CurrentActor current, HumoDbContext db, AuditL
         }
         catch (DbUpdateConcurrencyException)
         {
+            notices.Discard();
             return Problems.Conflict();
         }
+        await notices.SendEmailsAsync(ct);
         return result;
     }
 
     private async Task<IResult> Deny(Actor actor, CommandSpec spec, string code, string reason, CancellationToken ct)
     {
         db.ChangeTracker.Clear();
+        notices.Discard();
         audit.Record(spec.Action, "denied", actor.Human, reason: reason, category: spec.Category, role: actor.Assignment.Role, organisationId: spec.OrganisationId ?? actor.OrganisationId,
             resource: spec.Resource, resourceId: spec.ResourceId, actingAs: actor.Impersonation is null ? null : actor.User, impersonation: actor.Impersonation, schemeId: spec.SchemeId);
         await db.SaveChangesAsync(ct);

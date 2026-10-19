@@ -122,4 +122,50 @@ public sealed class AccountRequestTests : IDisposable
         var refused = await admin.PostAsJsonAsync($"/api/platform/account-requests/{second}/decision", new { type = "approve" });
         Assert.Equal("Another System Administrator decides on a request you submitted.", (await refused.FieldErrors()).GetProperty("status").GetString());
     }
+
+    [Fact]
+    public async Task Notices_are_emailed_to_active_System_Administrators_and_the_submitter_after_the_change_is_saved()
+    {
+        var m = await AccountManager("dumisani@humo.co.za");
+        await api.Person("nomsa@humo.co.za", Roles.SystemAdmin, null);
+        var gone = await api.Person("sipho@humo.co.za", Roles.SystemAdmin, null);
+        await api.Db(async db => { (await db.Users.FindAsync(gone))!.Status = IdentityStatuses.Deactivated; return await db.SaveChangesAsync(); });
+        // Invited people get no email: the bootstrap administrator is active once they've signed in.
+        var admin = await api.SignedIn(HumoApiFactory.AdminEmail);
+        var am = await api.SignedIn("dumisani@humo.co.za");
+
+        // A refused submission emails nobody.
+        Assert.True((await (await am.PostAsJsonAsync("/api/platform/account-requests", Details(m, "X"))).FieldErrors()).TryGetProperty("shortName", out _));
+        Assert.Empty(api.Email.Sent);
+
+        var (id, _) = await Submit(am, Details(m));
+        var waiting = api.Email.Sent.ToList();
+        Assert.Equal(["admin@humo.co.za", "nomsa@humo.co.za"], waiting.Select(e => e.To).Order());
+        Assert.All(waiting, e => Assert.Equal("New account waiting for approval: Coastline Estates", e.Subject));
+        Assert.Contains($"https://localhost/platform/account-requests/{id}", waiting[0].Text);
+
+        api.Email.Sent.Clear();
+        Assert.Equal(HttpStatusCode.NoContent, (await admin.PostAsJsonAsync($"/api/platform/account-requests/{id}/decision", new { type = "reject", reason = "Duplicate of an existing customer" })).StatusCode);
+        var decided = api.Email.Sent.ToList();
+        // The submitter hears the outcome and why; the other System Administrator hears it was decided; the decider gets nothing.
+        var toSubmitter = Assert.Single(decided, e => e.To == "dumisani@humo.co.za");
+        Assert.Equal("Rejected: Coastline Estates", toSubmitter.Subject);
+        Assert.Contains("Duplicate of an existing customer", toSubmitter.Text);
+        Assert.Single(decided, e => e.To == "nomsa@humo.co.za");
+        Assert.DoesNotContain(decided, e => e.To == HumoApiFactory.AdminEmail);
+    }
+
+    [Fact]
+    public async Task A_mail_server_that_is_down_doesn_t_undo_the_request()
+    {
+        var m = await AccountManager("dumisani@humo.co.za");
+        var am = await api.SignedIn("dumisani@humo.co.za");
+        api.Email.Failing = true;
+        var (id, outcome) = await Submit(am, Details(m));
+        Assert.Equal("pending", outcome);
+        Assert.Equal(1, await api.Db(db => db.AccountRequests.CountAsync(r => r.Id == id)));
+        api.Email.Failing = false;
+        var admin = await api.SignedIn(HumoApiFactory.AdminEmail);
+        Assert.Contains("waiting for approval", (await (await admin.GetAsync("/api/notifications")).Json())[0].GetProperty("title").GetString());
+    }
 }

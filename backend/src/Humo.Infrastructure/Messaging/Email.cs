@@ -82,7 +82,7 @@ public sealed class SmtpEmailSender(IOptions<MailOptions> options, ILogger<SmtpE
     }
 
     /// <summary>Logs never hold a full address (POPIA): t***@example.com.</summary>
-    internal static string Mask(string email) => email.IndexOf('@') is > 0 and var at ? email[0] + "***" + email[at..] : "***";
+    public static string Mask(string email) => email.IndexOf('@') is > 0 and var at ? email[0] + "***" + email[at..] : "***";
 }
 
 /// <summary>Development and tests: writes the message to the log instead of sending it.</summary>
