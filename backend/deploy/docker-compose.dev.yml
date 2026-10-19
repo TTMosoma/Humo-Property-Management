@@ -11,7 +11,7 @@ services:
       POSTGRES_USER: humo
       POSTGRES_PASSWORD: humo-dev-only
     ports:
-      - "5433:5432" # 5433: this machine may already run PostgreSQL on 5432
+      - "55432:5432" # 55432: this machine already runs PostgreSQL on 5432 and 5433
     volumes:
       - pgdata:/var/lib/postgresql
     healthcheck:

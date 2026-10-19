@@ -37,7 +37,7 @@ The rest of slice 1 follows port by port: organisations, schemes, units, people,
    ```bash
    docker compose -f backend/deploy/docker-compose.dev.yml up -d
    ```
-   PostgreSQL runs on port **5433**, because this machine may already use 5432. Mailpit's inbox is at http://localhost:8025.
+   PostgreSQL runs on port **55432**, because this machine already runs PostgreSQL on 5432 and 5433. Mailpit's inbox is at http://localhost:8025.
 2. **Run the API.** It runs on http://localhost:5080, applies migrations on start, and invites the first System Administrator from `appsettings.Development.json`.
    ```bash
    dotnet run --project backend/src/Humo.Api

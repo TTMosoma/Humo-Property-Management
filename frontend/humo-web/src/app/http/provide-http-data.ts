@@ -66,7 +66,6 @@ const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
   [JobDataSource, 'JobDataSource'],
   [SupplierDataSource, 'SupplierDataSource'],
   [PayablesDataSource, 'PayablesDataSource'],
-  [AccessDataSource, 'AccessDataSource'],
   [HumoTeamDataSource, 'HumoTeamDataSource'],
   [AuditDataSource, 'AuditDataSource'],
   [SecurityDataSource, 'SecurityDataSource'],
