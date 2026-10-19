@@ -4,7 +4,7 @@ Status: **built in the frontend prototype (12 October 2026, branch `feature/comm
 - Prices, invoices and payments are simulated. No money moves, and no invoice is sent.
 - Decisions marked ⚑ need business approval.
 
-**On the API (commercial slice, step C1, 19 October 2026):** in `backend/`, with tests in `backend/tests` (`CommercialRulesTests`, `CommercialApiTests`).
+**On the API (commercial slice, steps C1 and C2, 19 October 2026):** in `backend/`, with tests in `backend/tests` (`CommercialRulesTests`, `CommercialApiTests`, `BillingApiTests`).
 
 | Part | API | Notes |
 |---|---|---|
@@ -13,7 +13,8 @@ Status: **built in the frontend prototype (12 October 2026, branch `feature/comm
 | Subscriptions and entitlements | ✅ | A new account opens a 30-day trial of its package. `GET /me` carries the entitlements; the API refuses commands the plan doesn't include (`not-entitled`): today the trustee board (Governance) and adding schemes. Features and packages come from `contracts/entitlements.json`, shared with the frontend. |
 | Customers list, Customer 360, Plan & features, upgrade requests | ✅ | Health uses only what the API measures (active users, sign-ins, payment); the other signals say *Not measured yet* and are left out of the score. |
 | Storage quotas (§5) | Partly | Allowances are calculated; usage isn't measured until documents are stored by the API (R-13). |
-| Invoices and payments (§6) | Not yet | Next: step C2 (R-14). Until then no invoice is issued, and the screens say so. |
+| Invoices and manual EFT (§6) | ✅ | Step C2. A System Administrator issues the next period's invoice (step-up): a snapshot of the agreement, reference `HPM-{customer}-{yyyymm}`, emailed to the billing address as a link. Refused while any charge has no price. A proof of EFT is recorded, but the invoice is paid only once the payment is reconciled with Humo's bank statement (step-up). Overdue from the due date; health shows it. Customers see their own invoices only. |
+| Online payment, billing run, reminders | Not yet | Need the payment provider (§8, decision 7). Invoices are issued by hand until the billing run exists. |
 | Opportunities, nudges, monthly history | Not yet | Need usage data (step C3). The business overview shows the current month only. |
 
 **Related:**
