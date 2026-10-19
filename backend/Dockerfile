@@ -3,6 +3,8 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 COPY contracts/ contracts/
+# The commercial catalogue Humo starts from (embedded in Humo.Domain; docs/23 §2).
+COPY demo-data/commercial/catalogue.json demo-data/commercial/catalogue.json
 COPY backend/ backend/
 RUN dotnet publish backend/src/Humo.Api -c Release -o /app --no-self-contained
 
