@@ -1,5 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { Observable, map, shareReplay, take } from 'rxjs';
 import {
   AGENCY_STAFF,
   EntitlementSet,
@@ -40,10 +41,19 @@ const SIGNED_OUT = SIGNED_OUT_SESSION;
 export class SessionService {
   private readonly source = inject(SessionDataSource);
   private readonly snapshot = toSignal(this.source.current(), { initialValue: SIGNED_OUT });
+  private readonly firstAnswer$ = this.source.current().pipe(take(1), map(() => undefined), shareReplay(1));
   /** Set when the browser forgets the session even though the API didn't answer. */
   private readonly forgotten = signal(false);
 
   readonly signedIn = computed(() => this.snapshot().signedIn && !this.forgotten());
+
+  /**
+   * Completes once the server has answered /me (at once in the simulation). Guards wait for it,
+   * so a reload or a link to a page doesn't land on the sign-in page while /me is on its way.
+   */
+  loaded(): Observable<void> {
+    return this.firstAnswer$;
+  }
   /** Why access is paused, if it is (an organisation suspended, or the person suspended). */
   readonly blocked = computed(() => this.snapshot().blocked);
 
