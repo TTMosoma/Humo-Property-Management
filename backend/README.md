@@ -58,9 +58,10 @@ The rest of slice 1 follows port by port: organisations, schemes, units, people,
 dotnet test backend
 ```
 
-**Two-way contract:**
+**Two-way contracts:**
 - The frontend's `role-permissions-contract.spec.ts` fails if `contracts/role-permissions.json` drifts from the frontend's roles.
-- The API reads the same file.
+- Its `entitlements-contract.spec.ts` fails if `contracts/entitlements.json` drifts from the frontend's features and packages.
+- The API reads both files.
 
 ## Database changes
 

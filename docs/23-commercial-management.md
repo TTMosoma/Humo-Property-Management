@@ -4,6 +4,18 @@ Status: **built in the frontend prototype (12 October 2026, branch `feature/comm
 - Prices, invoices and payments are simulated. No money moves, and no invoice is sent.
 - Decisions marked ⚑ need business approval.
 
+**On the API (commercial slice, step C1, 19 October 2026):** in `backend/`, with tests in `backend/tests` (`CommercialRulesTests`, `CommercialApiTests`).
+
+| Part | API | Notes |
+|---|---|---|
+| Catalogue and settings (§2) | ✅ | Seeded once from `demo-data/commercial/catalogue.json`: no base prices, examples marked proposed. Versioned terms, step-up, audited. |
+| Agreements, charges, preview, changes (§2–§4) | ✅ | `CommercialRules` ports `chargesOn`, `checkAgreementChange`, `applyAgreementChange`, `previewAgreementChange` and `buildInvoice` rule for rule. Own customers only for Account Managers (D11). |
+| Subscriptions and entitlements | ✅ | A new account opens a 30-day trial of its package. `GET /me` carries the entitlements; the API refuses commands the plan doesn't include (`not-entitled`): today the trustee board (Governance) and adding schemes. Features and packages come from `contracts/entitlements.json`, shared with the frontend. |
+| Customers list, Customer 360, Plan & features, upgrade requests | ✅ | Health uses only what the API measures (active users, sign-ins, payment); the other signals say *Not measured yet* and are left out of the score. |
+| Storage quotas (§5) | Partly | Allowances are calculated; usage isn't measured until documents are stored by the API (R-13). |
+| Invoices and payments (§6) | Not yet | Next: step C2 (R-14). Until then no invoice is issued, and the screens say so. |
+| Opportunities, nudges, monthly history | Not yet | Need usage data (step C3). The business overview shows the current month only. |
+
 **Related:**
 - [04-platform-commercial.md](04-platform-commercial.md): entitlements, health, nudges.
 - [17-decisions.md](17-decisions.md): D4 (fixed roles), D10 (numbering), D11 (Account Managers change subscriptions).
