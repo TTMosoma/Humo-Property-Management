@@ -14,7 +14,8 @@ Status: **built in the frontend prototype (12 October 2026, branch `feature/comm
 | Customers list, Customer 360, Plan & features, upgrade requests | ✅ | Health uses only what the API measures (active users, sign-ins, payment); the other signals say *Not measured yet* and are left out of the score. |
 | Storage quotas (§5) | Partly | Allowances are calculated; usage isn't measured until documents are stored by the API (R-13). |
 | Invoices and manual EFT (§6) | ✅ | Step C2. A System Administrator issues the next period's invoice (step-up): a snapshot of the agreement, reference `HPM-{customer}-{yyyymm}`, emailed to the billing address as a link. Refused while any charge has no price. A proof of EFT is recorded, but the invoice is paid only once the payment is reconciled with Humo's bank statement (step-up). Overdue from the due date; health shows it. Customers see their own invoices only. |
-| Online payment, billing run, reminders | Not yet | Need the payment provider (§8, decision 7). Invoices are issued by hand until the billing run exists. |
+| Online payment (Payfast, D15) | ✅ | *Pay now* on the customer's invoice: a signed Payfast checkout (form POST). Paid only by Payfast's notification after its signature, source, Payfast's confirmation and the amount check out; repeats change nothing. Needs the account's security passphrase in configuration (backend README). |
+| Card mandates, billing run, reminders | Not yet | Recurring card payments (Payfast subscriptions or tokens), issuing on the billing date and overdue reminders. Invoices are issued by hand until then. |
 | Opportunities, nudges, monthly history | Not yet | Need usage data (step C3). The business overview shows the current month only. |
 
 **Related:**
