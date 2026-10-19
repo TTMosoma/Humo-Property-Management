@@ -194,6 +194,8 @@ Platform › Business overview (Humo Executive; also System Administrator):
 
 ## 9. Decisions for approval ⚑
 
+**Approved on 19 October 2026** as described below (D15).
+
 1. **Account Managers can change subscriptions, but only for their own accounts, with step-up.** The alternative is to give them requests only, leaving changes to System Administrators.
 2. **Security features are in every package** (audit log, passkeys, Humo Mobile).
 3. **Example customer:** Acacia (the demo agency) and Marula Property are both on **Professional without Governance**. That means Compliance and Governance navigation are hidden for Acacia until the Governance add-on is added. Slice C (trustee meetings) will need the add-on or Enterprise.
