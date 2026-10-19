@@ -65,6 +65,34 @@ public sealed class SessionBuilder(HumoDbContext db, TimeProvider clock)
             Impersonation: null);
     }
 
+    /// <summary>
+    /// GET /me while impersonating: the app renders the customer's role, the staff member stays the
+    /// actor. Observe mode keeps only permissions that change nothing; pages follow the full set.
+    /// Null when the impersonation can't continue (the target can no longer work in that role).
+    /// </summary>
+    public async Task<CurrentSessionDto?> BuildImpersonatedAsync(HumoUser human, string? humanAssignmentId, ImpersonationSession imp, CancellationToken ct)
+    {
+        var target = await LoadUserAsync(imp.TargetId, ct);
+        if (target is null) return null;
+        var t = await BuildAsync(target, imp.TargetAssignmentId.ToString(), ct);
+        if (!t.SignedIn || t.ActiveAssignmentId != imp.TargetAssignmentId.ToString()) return null;
+        var h = await BuildAsync(human, humanAssignmentId, ct);
+        var permissions = imp.Mode == "observe"
+            ? t.Permissions.Where(p => AccessCatalogue.Permissions.TryGetValue(p, out var info) && !info.Mutates).ToList()
+            : t.Permissions;
+        return t with
+        {
+            SignedIn = h.SignedIn,
+            Actor = h.Actor,
+            Assignments = t.Assignments.Where(a => a.Id == t.ActiveAssignmentId).ToList(),
+            Permissions = permissions,
+            PagePermissions = t.Permissions,
+            ActorPermissions = h.ActorPermissions,
+            Impersonation = new ImpersonationDto(imp.Id.ToString(), imp.ActorId.ToString(), imp.TargetId.ToString(), imp.TargetAssignmentId.ToString(), imp.Mode, imp.Reason,
+                imp.Note, imp.Ticket, imp.StartedAt.ToString("O")),
+        };
+    }
+
     public static IdentityDto ToDto(HumoUser u) => new(
         u.Id.ToString(),
         u.Version,

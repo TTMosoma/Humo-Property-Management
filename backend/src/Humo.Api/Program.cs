@@ -71,7 +71,18 @@ builder.Services.ConfigureApplicationCookie(o =>
     o.Events.OnRedirectToAccessDenied = ctx => { ctx.Response.StatusCode = StatusCodes.Status403Forbidden; return Task.CompletedTask; };
 });
 // A suspended person's cookie stops working within minutes, not hours.
-builder.Services.Configure<SecurityStampValidatorOptions>(o => o.ValidationInterval = TimeSpan.FromMinutes(5));
+builder.Services.Configure<SecurityStampValidatorOptions>(o =>
+{
+    o.ValidationInterval = TimeSpan.FromMinutes(5);
+    // The refresh rebuilds the session from the user record: keep Humo's own claims (active role,
+    // step-up time, impersonation), or they'd silently drop every 5 minutes.
+    o.OnRefreshingPrincipal = ctx =>
+    {
+        var keep = ctx.CurrentPrincipal?.Claims.Where(c => c.Type.StartsWith("humo:", StringComparison.Ordinal)).ToList() ?? [];
+        if (keep.Count > 0 && ctx.NewPrincipal?.Identity is System.Security.Claims.ClaimsIdentity identity) identity.AddClaims(keep);
+        return Task.CompletedTask;
+    };
+});
 builder.Services.AddAuthorization();
 
 builder.Services.AddRateLimiter(o =>
@@ -112,6 +123,9 @@ api.MapBoards();
 api.MapAccess();
 api.MapAccountRequests();
 api.MapHumoTeam();
+api.MapImpersonation();
+api.MapAudit();
+api.MapSecurity();
 Notices.MapNotifications(api);
 
 await app.InitialiseDatabaseAsync();

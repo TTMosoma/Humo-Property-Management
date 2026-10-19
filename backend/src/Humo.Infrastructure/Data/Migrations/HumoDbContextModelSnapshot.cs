@@ -124,6 +124,9 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.Property<Guid?>("ActingAsId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ActingAsName")
+                        .HasColumnType("text");
+
                     b.Property<string>("Action")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -141,6 +144,15 @@ namespace Humo.Infrastructure.Data.Migrations
 
                     b.Property<string>("Category")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ImpersonationMode")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ImpersonationNote")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ImpersonationReason")
                         .HasColumnType("text");
 
                     b.Property<string>("Ip")
@@ -164,6 +176,9 @@ namespace Humo.Infrastructure.Data.Migrations
 
                     b.Property<string>("Role")
                         .HasColumnType("text");
+
+                    b.Property<Guid?>("SchemeId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("StepUpMethod")
                         .HasColumnType("text");
@@ -279,6 +294,48 @@ namespace Humo.Infrastructure.Data.Migrations
                         .HasDatabaseName("UserNameIndex");
 
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("Humo.Infrastructure.Data.ImpersonationSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ActorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("EndedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Mode")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("TargetAssignmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TargetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Ticket")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActorId");
+
+                    b.ToTable("ImpersonationSessions", (string)null);
                 });
 
             modelBuilder.Entity("Humo.Infrastructure.Data.LevyAccount", b =>

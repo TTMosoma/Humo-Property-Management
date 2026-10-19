@@ -49,6 +49,7 @@ import {
 } from '../domain';
 import { ContractorNetwork } from '../domain/contractor';
 import { HttpAccessDataSource } from './http-access';
+import { HttpAuditDataSource, HttpSecurityDataSource } from './http-audit-security';
 import { HttpBoardDataSource } from './http-board';
 import { HttpAccountRequestDataSource, HttpHumoTeamDataSource, HttpNotificationDataSource } from './http-platform';
 import { HttpOrganisationDataSource, HttpPersonDataSource, HttpSchemeDataSource, HttpStepUpAuthenticator, HttpUnitDataSource } from './http-portfolio';
@@ -64,8 +65,6 @@ const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
   [JobDataSource, 'JobDataSource'],
   [SupplierDataSource, 'SupplierDataSource'],
   [PayablesDataSource, 'PayablesDataSource'],
-  [AuditDataSource, 'AuditDataSource'],
-  [SecurityDataSource, 'SecurityDataSource'],
   [PlatformDataSource, 'PlatformDataSource'],
   [PlanDataSource, 'PlanDataSource'],
   [NudgeDataSource, 'NudgeDataSource'],
@@ -103,7 +102,7 @@ const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
  * Connected so far (slice 1): the session (GET /me, passkey and email-link
  * sign-in, passkey registration), sign out and switch role, step-up,
  * organisations, new customer accounts, notifications, the Humo team, schemes, units, people,
- * the trustee board and users & access. The other ports answer "not connected yet" until their slice lands.
+ * the trustee board, users & access, impersonation, the audit log and Settings › Security. The other ports answer "not connected yet" until their slice lands.
  */
 export function provideHttpData(): EnvironmentProviders {
   const pending: Provider[] = NOT_YET.map(([port, name]) => ({ provide: port, useFactory: () => notConnected(name) }));
@@ -119,6 +118,8 @@ export function provideHttpData(): EnvironmentProviders {
     { provide: AccountRequestDataSource, useClass: HttpAccountRequestDataSource },
     { provide: NotificationDataSource, useClass: HttpNotificationDataSource },
     { provide: HumoTeamDataSource, useClass: HttpHumoTeamDataSource },
+    { provide: AuditDataSource, useClass: HttpAuditDataSource },
+    { provide: SecurityDataSource, useClass: HttpSecurityDataSource },
     ...pending,
   ]);
 }

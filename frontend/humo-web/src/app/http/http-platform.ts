@@ -25,11 +25,11 @@ import { HttpPort } from './http-port';
 @Injectable()
 export class HttpAccountRequestDataSource extends HttpPort implements AccountRequestDataSource {
   list(): Observable<AccountRequestView[]> {
-    return this.query<AccountRequestView[]>('/platform/account-requests', ['organisations', 'session']);
+    return this.live<AccountRequestView[]>('/platform/account-requests', ['organisations', 'session']);
   }
 
   get(id: string): Observable<AccountRequestView | undefined> {
-    return this.query<AccountRequestView>(`/platform/account-requests/${id}`, ['organisations', 'session']).pipe(
+    return this.live<AccountRequestView>(`/platform/account-requests/${id}`, ['organisations', 'session']).pipe(
       catchError((e) => (e.kind === 'not-found' ? of(undefined) : throwError(() => e))),
     );
   }
@@ -43,7 +43,7 @@ export class HttpAccountRequestDataSource extends HttpPort implements AccountReq
   }
 
   policy(): Observable<AccountPolicySetting> {
-    return this.query<AccountPolicySetting>('/platform/account-policy', ['organisations']);
+    return this.live<AccountPolicySetting>('/platform/account-policy', ['organisations']);
   }
 
   setPolicy(policy: AccountApprovalPolicy, reason: string, expectedVersion?: number): Observable<void> {
@@ -55,7 +55,7 @@ export class HttpAccountRequestDataSource extends HttpPort implements AccountReq
 @Injectable()
 export class HttpNotificationDataSource extends HttpPort implements NotificationDataSource {
   list(): Observable<AppNotification[]> {
-    return this.query<AppNotification[]>('/notifications', ['notifications', 'session', 'organisations']);
+    return this.live<AppNotification[]>('/notifications', ['notifications', 'session', 'organisations']);
   }
 
   markRead(ids: string[]): Observable<void> {
@@ -67,17 +67,17 @@ export class HttpNotificationDataSource extends HttpPort implements Notification
 @Injectable()
 export class HttpHumoTeamDataSource extends HttpPort implements HumoTeamDataSource {
   list(): Observable<HumoTeamMember[]> {
-    return this.query<HumoTeamMember[]>('/platform/team', ['access', 'organisations']);
+    return this.live<HumoTeamMember[]>('/platform/team', ['access', 'organisations']);
   }
 
   get(identityId: string): Observable<HumoTeamMember | undefined> {
-    return this.query<HumoTeamMember>(`/platform/team/${identityId}`, ['access', 'organisations']).pipe(
+    return this.live<HumoTeamMember>(`/platform/team/${identityId}`, ['access', 'organisations']).pipe(
       catchError((e) => (e.kind === 'not-found' ? of(undefined) : throwError(() => e))),
     );
   }
 
   pending(): Observable<PendingHumoGrant[]> {
-    return this.query<PendingHumoGrant[]>('/platform/team/pending-grants', ['access']);
+    return this.live<PendingHumoGrant[]>('/platform/team/pending-grants', ['access']);
   }
 
   invite(input: NewHumoMember): Observable<string> {

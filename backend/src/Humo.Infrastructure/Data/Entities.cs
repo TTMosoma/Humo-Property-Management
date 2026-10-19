@@ -265,6 +265,12 @@ public sealed class AuditEntry
     public string ActorName { get; set; } = "";
     /// <summary>The impersonated identity, when there is one.</summary>
     public Guid? ActingAsId { get; set; }
+    public string? ActingAsName { get; set; }
+    /// <summary>Set while impersonating: observe or act, the reason code and any note or ticket.</summary>
+    public string? ImpersonationMode { get; set; }
+    public string? ImpersonationReason { get; set; }
+    public string? ImpersonationNote { get; set; }
+    public Guid? SchemeId { get; set; }
     public string? Role { get; set; }
     public Guid? OrganisationId { get; set; }
     public string Action { get; set; } = "";
@@ -275,6 +281,26 @@ public sealed class AuditEntry
     public string? StepUpMethod { get; set; }
     public string? Ip { get; set; }
     public string? UserAgent { get; set; }
+}
+
+/// <summary>
+/// Humo staff viewing the app as a customer (doc 24 §8): only with the individual System.Impersonate
+/// grant, only of a customer identity, Observe (read-only) or Act (fresh step-up). Ended, never deleted.
+/// </summary>
+public sealed class ImpersonationSession
+{
+    public Guid Id { get; set; }
+    public Guid ActorId { get; set; }
+    public Guid TargetId { get; set; }
+    public Guid TargetAssignmentId { get; set; }
+    /// <summary>observe or act.</summary>
+    public string Mode { get; set; } = "observe";
+    /// <summary>support, bug, security, data-correction or other.</summary>
+    public string Reason { get; set; } = "support";
+    public string? Note { get; set; }
+    public string? Ticket { get; set; }
+    public DateTimeOffset StartedAt { get; set; }
+    public DateTimeOffset? EndedAt { get; set; }
 }
 
 /// <summary>A one-time sign-in link: only a hash of the token is stored. Used once, then dead.</summary>

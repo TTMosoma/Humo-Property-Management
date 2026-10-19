@@ -32,6 +32,7 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
     public DbSet<RoleAssignment> RoleAssignments => Set<RoleAssignment>();
     public DbSet<AuditEntry> Audit => Set<AuditEntry>();
     public DbSet<SignInLink> SignInLinks => Set<SignInLink>();
+    public DbSet<ImpersonationSession> ImpersonationSessions => Set<ImpersonationSession>();
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
     protected override void OnModelCreating(ModelBuilder builder)
@@ -185,6 +186,12 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.Property(a => a.Action).HasMaxLength(500);
             e.HasIndex(a => a.At);
             e.HasIndex(a => a.OrganisationId);
+        });
+
+        builder.Entity<ImpersonationSession>(e =>
+        {
+            e.ToTable("ImpersonationSessions");
+            e.HasIndex(x => x.ActorId);
         });
 
         builder.Entity<SignInLink>(e =>

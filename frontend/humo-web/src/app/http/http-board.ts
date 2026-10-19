@@ -11,17 +11,17 @@ import { HttpPort } from './http-port';
 @Injectable()
 export class HttpBoardDataSource extends HttpPort implements BoardDataSource {
   list(schemeIds: string[]): Observable<BoardSummary[]> {
-    return this.query<BoardSummary[]>('/boards', ['people', 'access', 'schemes', 'session'], { schemeIds });
+    return this.live<BoardSummary[]>('/boards', ['people', 'access', 'schemes', 'session'], { schemeIds });
   }
 
   get(schemeId: string): Observable<BoardView | undefined> {
-    return this.query<BoardView>(`/boards/${schemeId}`, ['people', 'access', 'schemes', 'session']).pipe(
+    return this.live<BoardView>(`/boards/${schemeId}`, ['people', 'access', 'schemes', 'session']).pipe(
       catchError((e) => (e.kind === 'not-found' ? of(undefined) : throwError(() => e))),
     );
   }
 
   candidates(schemeId: string): Observable<BoardCandidate[]> {
-    return this.query<BoardCandidate[]>(`/boards/${schemeId}/candidates`, ['people']);
+    return this.live<BoardCandidate[]>(`/boards/${schemeId}/candidates`, ['people']);
   }
 
   act(schemeId: string, action: BoardAction): Observable<void> {
