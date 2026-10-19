@@ -20,6 +20,8 @@ public sealed record CommandSpec(string Action, string Permission)
     /// <summary>Field → message, after authorisation (C6).</summary>
     public Func<Dictionary<string, string>>? Validate { get; init; }
     public string Category { get; init; } = "activity";
+    /// <summary>Allowed in Observe impersonation (e.g. ending the impersonation itself).</summary>
+    public bool AllowedWhileObserving { get; init; }
 }
 
 /// <summary>A refusal from inside the command (C8), e.g. a status move that isn't allowed. Audited as denied.</summary>
@@ -43,6 +45,7 @@ public sealed class CommandRunner(CurrentActor current, HumoDbContext db, AuditL
         var actor = await current.GetAsync(ct);
         if (actor is null) return Results.Unauthorized();
 
+        if (actor.Observing && !spec.AllowedWhileObserving) return await Deny(actor, spec, "observe-only", "Observe mode is read-only", ct);
         if (!actor.Can(spec.Permission)) return await Deny(actor, spec, "forbidden", "Role does not have this permission", ct);
         if (spec.SchemeId is { } scheme && !actor.CoversScheme(scheme)) return await Deny(actor, spec, "out-of-scope", "Outside the assignment's schemes (D1)", ct);
 
@@ -64,8 +67,9 @@ public sealed class CommandRunner(CurrentActor current, HumoDbContext db, AuditL
             return await Deny(actor, spec, refused.Code, refused.Message, ct);
         }
 
-        audit.Record(spec.Action, "success", actor.User, category: spec.Category, role: actor.Assignment.Role, organisationId: spec.OrganisationId ?? actor.OrganisationId,
-            resource: spec.Resource, resourceId: spec.ResourceId, stepUpMethod: needsProof ? "passkey" : null);
+        audit.Record(spec.Action, "success", actor.Human, category: spec.Category, role: actor.Assignment.Role, organisationId: spec.OrganisationId ?? actor.OrganisationId,
+            resource: spec.Resource, resourceId: spec.ResourceId, stepUpMethod: needsProof ? "passkey" : null,
+            actingAs: actor.Impersonation is null ? null : actor.User, impersonation: actor.Impersonation, schemeId: spec.SchemeId);
         try
         {
             await db.SaveChangesAsync(ct);
@@ -80,8 +84,8 @@ public sealed class CommandRunner(CurrentActor current, HumoDbContext db, AuditL
     private async Task<IResult> Deny(Actor actor, CommandSpec spec, string code, string reason, CancellationToken ct)
     {
         db.ChangeTracker.Clear();
-        audit.Record(spec.Action, "denied", actor.User, reason: reason, category: spec.Category, role: actor.Assignment.Role, organisationId: spec.OrganisationId ?? actor.OrganisationId,
-            resource: spec.Resource, resourceId: spec.ResourceId);
+        audit.Record(spec.Action, "denied", actor.Human, reason: reason, category: spec.Category, role: actor.Assignment.Role, organisationId: spec.OrganisationId ?? actor.OrganisationId,
+            resource: spec.Resource, resourceId: spec.ResourceId, actingAs: actor.Impersonation is null ? null : actor.User, impersonation: actor.Impersonation, schemeId: spec.SchemeId);
         await db.SaveChangesAsync(ct);
         return Problems.Policy(code, reason);
     }

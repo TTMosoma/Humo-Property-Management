@@ -37,6 +37,8 @@ public sealed record IdentityDto(
 
 public sealed record OrganisationDto(string Id, int Version, string Kind, string Status, string Name, string ShortName, string City, string Province, int SchemeCount, int UnitCount);
 
+public sealed record ImpersonationDto(string Id, string ActorId, string TargetId, string TargetAssignmentId, string Mode, string Reason, string? Note, string? Ticket, string StartedAt);
+
 /// <summary>GET /me: who's signed in, which role is active and what it may do. The client never computes this itself.</summary>
 public sealed record CurrentSessionDto(
     bool SignedIn,
@@ -51,4 +53,4 @@ public sealed record CurrentSessionDto(
     OrganisationDto? Organisation,
     object? Subscription,
     object? Entitlements,
-    object? Impersonation);
+    ImpersonationDto? Impersonation);

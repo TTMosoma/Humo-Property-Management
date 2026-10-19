@@ -31,11 +31,11 @@ import { HttpPort, toApiErrorFromHttp } from './http-port';
 @Injectable()
 export class HttpOrganisationDataSource extends HttpPort implements OrganisationDataSource {
   list(): Observable<Organisation[]> {
-    return this.query<Organisation[]>('/organisations', ['organisations', 'session']);
+    return this.live<Organisation[]>('/organisations', ['organisations', 'session']);
   }
 
   get(id: string): Observable<Organisation | undefined> {
-    return this.query<Organisation>(`/organisations/${id}`, ['organisations', 'session']).pipe(catchError((e) => (e.kind === 'not-found' ? of(undefined) : throwError(() => e))));
+    return this.live<Organisation>(`/organisations/${id}`, ['organisations', 'session']).pipe(catchError((e) => (e.kind === 'not-found' ? of(undefined) : throwError(() => e))));
   }
 
   update(id: string, details: OrganisationDetails, expectedVersion?: number): Observable<void> {
@@ -51,19 +51,19 @@ export class HttpOrganisationDataSource extends HttpPort implements Organisation
 @Injectable()
 export class HttpSchemeDataSource extends HttpPort implements SchemeDataSource {
   list(): Observable<Scheme[]> {
-    return this.query<Scheme[]>('/schemes', ['schemes', 'session', 'access']);
+    return this.live<Scheme[]>('/schemes', ['schemes', 'session', 'access']);
   }
 
   get(id: string): Observable<Scheme | undefined> {
-    return this.query<Scheme>(`/schemes/${id}`, ['schemes', 'session']).pipe(catchError((e) => (e.kind === 'not-found' ? of(undefined) : throwError(() => e))));
+    return this.live<Scheme>(`/schemes/${id}`, ['schemes', 'session']).pipe(catchError((e) => (e.kind === 'not-found' ? of(undefined) : throwError(() => e))));
   }
 
   health(): Observable<SchemeHealth[]> {
-    return this.query<SchemeHealth[]>('/schemes/health', ['schemes', 'session', 'units', 'accounts', 'jobs']);
+    return this.live<SchemeHealth[]>('/schemes/health', ['schemes', 'session', 'units', 'accounts', 'jobs']);
   }
 
   changes(schemeIds: string[], since: string): Observable<ChangeEvent[]> {
-    return this.query<ChangeEvent[]>('/schemes/changes', ['schemes'], { schemeIds, since });
+    return this.live<ChangeEvent[]>('/schemes/changes', ['schemes'], { schemeIds, since });
   }
 
   create(details: SchemeDetails): Observable<string> {
@@ -117,15 +117,15 @@ const notFoundIsUndefined = <T>(source: Observable<T>): Observable<T | undefined
 @Injectable()
 export class HttpUnitDataSource extends HttpPort implements UnitDataSource {
   list(schemeIds: string[], query?: ListQuery): Observable<Page<UnitSummary>> {
-    return this.query<Page<UnitSummary>>('/units', ['units', 'people', 'schemes', 'session'], paging(schemeIds, query));
+    return this.live<Page<UnitSummary>>('/units', ['units', 'people', 'schemes', 'session'], paging(schemeIds, query));
   }
 
   get(schemeId: string, unitNumber: string): Observable<UnitSummary | undefined> {
-    return notFoundIsUndefined(this.query<UnitSummary>(`/schemes/${schemeId}/units/${encodeURIComponent(unitNumber)}`, ['units', 'people', 'session']));
+    return notFoundIsUndefined(this.live<UnitSummary>(`/schemes/${schemeId}/units/${encodeURIComponent(unitNumber)}`, ['units', 'people', 'session']));
   }
 
   byId(unitId: string): Observable<UnitSummary | undefined> {
-    return notFoundIsUndefined(this.query<UnitSummary>(`/units/${unitId}`, ['units', 'people', 'session']));
+    return notFoundIsUndefined(this.live<UnitSummary>(`/units/${unitId}`, ['units', 'people', 'session']));
   }
 
   create(schemeId: string, details: UnitDetails): Observable<string> {
@@ -147,7 +147,7 @@ export class HttpUnitDataSource extends HttpPort implements UnitDataSource {
 @Injectable()
 export class HttpPersonDataSource extends HttpPort implements PersonDataSource {
   list(schemeIds: string[], query?: ListQuery): Observable<Page<PersonSummary>> {
-    return this.query<Page<PersonSummary>>('/people', ['people', 'units', 'session'], paging(schemeIds, query));
+    return this.live<Page<PersonSummary>>('/people', ['people', 'units', 'session'], paging(schemeIds, query));
   }
 
   create(details: PersonDetails, link?: NewRelationship): Observable<string> {
@@ -167,7 +167,7 @@ export class HttpPersonDataSource extends HttpPort implements PersonDataSource {
   }
 
   get(personId: string): Observable<PersonSummary | undefined> {
-    return notFoundIsUndefined(this.query<PersonSummary>(`/people/${personId}`, ['people', 'units', 'session']));
+    return notFoundIsUndefined(this.live<PersonSummary>(`/people/${personId}`, ['people', 'units', 'session']));
   }
 
   search(query: string, schemeIds: string[], limit?: number): Observable<PersonSummary[]> {

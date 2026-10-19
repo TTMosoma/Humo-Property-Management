@@ -173,12 +173,15 @@ public static class AuthEndpoints
 
     // ---- Session ----
 
-    private static async Task<IResult> GetSession(ClaimsPrincipal principal, UserManager<HumoUser> users, SessionBuilder sessions, CancellationToken ct)
+    private static async Task<IResult> GetSession(ClaimsPrincipal principal, UserManager<HumoUser> users, SessionBuilder sessions, HumoDbContext db, CancellationToken ct)
     {
         if (!Guid.TryParse(users.GetUserId(principal), out var id)) return Results.Unauthorized();
         var user = await sessions.LoadUserAsync(id, ct);
         if (user is null) return Results.Unauthorized();
-        return Results.Ok(await sessions.BuildAsync(user, principal.FindFirstValue(AssignmentClaim), ct));
+        var assignment = principal.FindFirstValue(AssignmentClaim);
+        if (await Commands.CurrentActor.ActiveImpersonation(db, principal, user.Id, ct) is { } imp && await sessions.BuildImpersonatedAsync(user, assignment, imp, ct) is { } impersonated)
+            return Results.Ok(impersonated);
+        return Results.Ok(await sessions.BuildAsync(user, assignment, ct));
     }
 
     /// <summary>Switch role: only to one of your own assignments in force. The cookie is re-issued for it.</summary>
@@ -188,6 +191,8 @@ public static class AuthEndpoints
         if (!Guid.TryParse(users.GetUserId(principal), out var id)) return Results.Unauthorized();
         var user = await sessions.LoadUserAsync(id, ct);
         if (user is null) return Results.Unauthorized();
+        if (principal.FindFirstValue(Commands.CurrentActor.ImpersonationClaim) is not null)
+            return Results.Problem(title: "End the impersonation first", statusCode: StatusCodes.Status403Forbidden, extensions: new Dictionary<string, object?> { ["code"] = "forbidden" });
         if (!sessions.InForce(user).Any(a => a.Id.ToString() == body.AssignmentId))
             return Results.Problem(title: "Not one of your roles", statusCode: StatusCodes.Status403Forbidden);
         await signIn.SignInWithClaimsAsync(user, isPersistent: false, [new Claim(AssignmentClaim, body.AssignmentId)]);
@@ -219,12 +224,21 @@ public static class AuthEndpoints
         var at = clock.GetUtcNow();
         List<Claim> claims = [new(Commands.CurrentActor.StepUpClaim, at.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture))];
         if (principal.FindFirstValue(AssignmentClaim) is { } assignment) claims.Add(new Claim(AssignmentClaim, assignment));
+        if (principal.FindFirstValue(Commands.CurrentActor.ImpersonationClaim) is { } imp) claims.Add(new Claim(Commands.CurrentActor.ImpersonationClaim, imp));
         await signIn.SignInWithClaimsAsync(user, isPersistent: false, claims);
         return Results.Ok(new { verified = true, method = "passkey", device = "Passkey", at });
     }
 
-    private static async Task<IResult> SignOut(SignInManager<HumoUser> signIn)
+    private static async Task<IResult> SignOut(ClaimsPrincipal principal, SignInManager<HumoUser> signIn, UserManager<HumoUser> users, HumoDbContext db, AuditLog audit, TimeProvider clock, CancellationToken ct)
     {
+        // Signing out ends an impersonation too (doc 08 section 2), and both are recorded.
+        if (Guid.TryParse(users.GetUserId(principal), out var id) && await Commands.CurrentActor.ActiveImpersonation(db, principal, id, ct) is { } imp)
+        {
+            imp.EndedAt = clock.GetUtcNow();
+            var user = await db.Users.FirstAsync(u => u.Id == id, ct);
+            audit.Record("Signed out (impersonation ended)", "success", user, category: "impersonation", resource: "Identity", resourceId: imp.TargetId.ToString(), impersonation: imp);
+            await db.SaveChangesAsync(ct);
+        }
         await signIn.SignOutAsync();
         return Results.NoContent();
     }

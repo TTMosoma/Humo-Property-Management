@@ -11,6 +11,21 @@ Status: **extracted 18 October 2026** from the simulated API (`frontend/humo-web
 - [21-account-creation-and-approval.md](21-account-creation-and-approval.md): new customer accounts.
 - [audit/backend-readiness-and-prioritised-roadmap.md](audit/backend-readiness-and-prioritised-roadmap.md) §4: slice 1's scope.
 
+**Built on the API (19 October 2026):** every section below, in `backend/` with tests in `backend/tests` (86 API tests):
+
+| Section | API | Notes |
+|---|---|---|
+| §1 Command pipeline | ✅ | Observe → permission → scope → version → validation → step-up → audit, as listed. |
+| §2 Reads and the session | ✅ | `GET /me`, blocked sessions, scoped reads, "not found" for others' records. |
+| §3 Organisations and new accounts | ✅ | Doc 21 in full, including delegated activation and the sole-administrator rule. |
+| §4 Schemes | ✅ | Archive-with-arrears is checked once levy accounts carry balances (billing slice). |
+| §5 Units | ✅ | The D13 budget-levy rule arrives with the levy model (billing slice). |
+| §6 People, relationships, board | ✅ | Elections cite their resolution by reference until the governance slice. |
+| §7 Users and access | ✅ | Invitations are emailed (7-day link). |
+| §8 Humo team, impersonation, audit | ✅ | Audit export downloads a CSV. |
+
+Checked on PostgreSQL 18 as well as in the tests (SQLite).
+
 **Executable specification:** each "Test" below names a spec in `frontend/humo-web/src/app/mock/**`. Those specs run against the in-memory adapter today. Run them against the HTTP adapter as each port is swapped (P1-1 contract tests).
 
 ---
@@ -129,7 +144,7 @@ The order matters: nobody verifies a passkey for a request that was going to fai
 | Self | **Nobody changes their own roles, grants or membership** | 403 `forbidden`, audited |
 | Switch role | Only to one of your own active assignments. The API issues a token scoped to it. | 403 Not one of your roles |
 
-**First administrator:** onboarding invites the customer's first Agency Administrator, and only that role (F-22). **Tests:** `resident-invites.spec`.
+**First administrator:** onboarding invites the customer's first Agency Administrator, and only that role (F-22). **Tests:** `resident-invites.spec`; API: `AccessTests`.
 
 ## 8. Humo team, impersonation and audit
 

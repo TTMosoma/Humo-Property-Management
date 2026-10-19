@@ -47,7 +47,7 @@ export abstract class HttpPort {
   private readonly notices = inject(PolicyNotices);
 
   /** A live GET: fetched now and again whenever one of the topics changes. */
-  protected query<T>(path: string, topics: DataTopic[], params?: Record<string, string | string[]>): Observable<T> {
+  protected live<T>(path: string, topics: DataTopic[], params?: Record<string, string | string[]>): Observable<T> {
     return liveQuery(this.dataChanges, topics, () => this.http.get<T>(`${this.base}${path}`, { withCredentials: true, params }).pipe(catchError((e) => this.fail(e))));
   }
 

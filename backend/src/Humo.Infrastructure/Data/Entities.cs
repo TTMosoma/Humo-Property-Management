@@ -36,7 +36,89 @@ public sealed class Organisation
     public string ShortName { get; set; } = "";
     public string City { get; set; } = "";
     public string Province { get; set; } = "";
+    /// <summary>The Humo Account Manager who looks after this customer (D11).</summary>
+    public Guid? AccountManagerId { get; set; }
+    /// <summary>The package chosen for the trial when the account was opened (the subscription itself arrives with the commercial slice).</summary>
+    public string? TrialPackageId { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
+}
+
+/// <summary>A request to open a new customer account (doc 21). The organisation exists only once approved or activated.</summary>
+public sealed class AccountRequest
+{
+    public Guid Id { get; set; }
+    /// <summary>"AR-1004".</summary>
+    public string Ref { get; set; } = "";
+    public int Version { get; set; } = 1;
+    public string Name { get; set; } = "";
+    public string ShortName { get; set; } = "";
+    public string City { get; set; } = "";
+    public string Province { get; set; } = "";
+    public string PackageId { get; set; } = "";
+    public Guid AccountManagerId { get; set; }
+    public string AccountManager { get; set; } = "";
+    public string? Notes { get; set; }
+    /// <summary>pending, approved or rejected.</summary>
+    public string Status { get; set; } = "pending";
+    /// <summary>approval or delegated: decided by the server from the submitter's grants and the policy.</summary>
+    public string Route { get; set; } = "approval";
+    /// <summary>The policy in force when it was submitted.</summary>
+    public string Policy { get; set; } = "";
+    public Guid RequestedById { get; set; }
+    public string RequestedBy { get; set; } = "";
+    public DateTimeOffset RequestedAt { get; set; }
+    public Guid? DecidedById { get; set; }
+    public string? DecidedBy { get; set; }
+    public DateTimeOffset? DecidedAt { get; set; }
+    public string? Reason { get; set; }
+    public Guid? OrganisationId { get; set; }
+}
+
+/// <summary>A platform setting with its history kept in the audit log (e.g. the account-creation policy).</summary>
+public sealed class PlatformSetting
+{
+    public string Key { get; set; } = "";
+    public string Value { get; set; } = "";
+    public int Version { get; set; } = 1;
+    public string? UpdatedBy { get; set; }
+    public DateTimeOffset? UpdatedAt { get; set; }
+}
+
+/// <summary>An in-app notification (the bell): to one person, or to everyone holding a role. The actor never gets their own.</summary>
+public sealed class Notice
+{
+    public Guid Id { get; set; }
+    public string Kind { get; set; } = "platform";
+    public string Title { get; set; } = "";
+    public string Detail { get; set; } = "";
+    public string Link { get; set; } = "";
+    public Guid? ToIdentityId { get; set; }
+    public string? ToRole { get; set; }
+    public Guid? OrganisationId { get; set; }
+    public Guid? ActorId { get; set; }
+    public DateTimeOffset At { get; set; }
+}
+
+/// <summary>A request to make someone a System Administrator, waiting for a second System Administrator (doc 16).</summary>
+public sealed class PendingHumoGrant
+{
+    public Guid Id { get; set; }
+    public Guid IdentityId { get; set; }
+    public string IdentityName { get; set; } = "";
+    public string Role { get; set; } = "";
+    public string Label { get; set; } = "";
+    public string Reason { get; set; } = "";
+    public Guid RequestedById { get; set; }
+    public string RequestedBy { get; set; } = "";
+    public DateTimeOffset RequestedAt { get; set; }
+}
+
+/// <summary>Who has read which notice.</summary>
+public sealed class NoticeRead
+{
+    public Guid NoticeId { get; set; }
+    public Guid IdentityId { get; set; }
+    public DateTimeOffset At { get; set; }
 }
 
 /// <summary>A sectional-title scheme, HOA or share block that an organisation manages (doc 24 §4).</summary>
@@ -183,6 +265,12 @@ public sealed class AuditEntry
     public string ActorName { get; set; } = "";
     /// <summary>The impersonated identity, when there is one.</summary>
     public Guid? ActingAsId { get; set; }
+    public string? ActingAsName { get; set; }
+    /// <summary>Set while impersonating: observe or act, the reason code and any note or ticket.</summary>
+    public string? ImpersonationMode { get; set; }
+    public string? ImpersonationReason { get; set; }
+    public string? ImpersonationNote { get; set; }
+    public Guid? SchemeId { get; set; }
     public string? Role { get; set; }
     public Guid? OrganisationId { get; set; }
     public string Action { get; set; } = "";
@@ -193,6 +281,26 @@ public sealed class AuditEntry
     public string? StepUpMethod { get; set; }
     public string? Ip { get; set; }
     public string? UserAgent { get; set; }
+}
+
+/// <summary>
+/// Humo staff viewing the app as a customer (doc 24 §8): only with the individual System.Impersonate
+/// grant, only of a customer identity, Observe (read-only) or Act (fresh step-up). Ended, never deleted.
+/// </summary>
+public sealed class ImpersonationSession
+{
+    public Guid Id { get; set; }
+    public Guid ActorId { get; set; }
+    public Guid TargetId { get; set; }
+    public Guid TargetAssignmentId { get; set; }
+    /// <summary>observe or act.</summary>
+    public string Mode { get; set; } = "observe";
+    /// <summary>support, bug, security, data-correction or other.</summary>
+    public string Reason { get; set; } = "support";
+    public string? Note { get; set; }
+    public string? Ticket { get; set; }
+    public DateTimeOffset StartedAt { get; set; }
+    public DateTimeOffset? EndedAt { get; set; }
 }
 
 /// <summary>A one-time sign-in link: only a hash of the token is stored. Used once, then dead.</summary>

@@ -49,14 +49,15 @@ import {
 } from '../domain';
 import { ContractorNetwork } from '../domain/contractor';
 import { HttpAccessDataSource } from './http-access';
+import { HttpAuditDataSource, HttpSecurityDataSource } from './http-audit-security';
 import { HttpBoardDataSource } from './http-board';
+import { HttpAccountRequestDataSource, HttpHumoTeamDataSource, HttpNotificationDataSource } from './http-platform';
 import { HttpOrganisationDataSource, HttpPersonDataSource, HttpSchemeDataSource, HttpStepUpAuthenticator, HttpUnitDataSource } from './http-portfolio';
 import { HttpSessionDataSource } from './http-session-data-source';
 import { notConnected } from './not-connected';
 
 /** Ports whose HTTP adapters come with later backend slices. Remove each from this list as its adapter lands. */
 const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
-  [NotificationDataSource, 'NotificationDataSource'],
   [WorkItemDataSource, 'WorkItemDataSource'],
   [AccountDataSource, 'AccountDataSource'],
   [ReceiptDataSource, 'ReceiptDataSource'],
@@ -64,11 +65,7 @@ const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
   [JobDataSource, 'JobDataSource'],
   [SupplierDataSource, 'SupplierDataSource'],
   [PayablesDataSource, 'PayablesDataSource'],
-  [HumoTeamDataSource, 'HumoTeamDataSource'],
-  [AuditDataSource, 'AuditDataSource'],
-  [SecurityDataSource, 'SecurityDataSource'],
   [PlatformDataSource, 'PlatformDataSource'],
-  [AccountRequestDataSource, 'AccountRequestDataSource'],
   [PlanDataSource, 'PlanDataSource'],
   [NudgeDataSource, 'NudgeDataSource'],
   [CatalogueDataSource, 'CatalogueDataSource'],
@@ -104,7 +101,8 @@ const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
  *
  * Connected so far (slice 1): the session (GET /me, passkey and email-link
  * sign-in, passkey registration), sign out and switch role, step-up,
- * organisations, schemes, units, people, the trustee board and users & access. The other ports answer "not connected yet" until their slice lands.
+ * organisations, new customer accounts, notifications, the Humo team, schemes, units, people,
+ * the trustee board, users & access, impersonation, the audit log and Settings › Security. The other ports answer "not connected yet" until their slice lands.
  */
 export function provideHttpData(): EnvironmentProviders {
   const pending: Provider[] = NOT_YET.map(([port, name]) => ({ provide: port, useFactory: () => notConnected(name) }));
@@ -117,6 +115,11 @@ export function provideHttpData(): EnvironmentProviders {
     { provide: UnitDataSource, useClass: HttpUnitDataSource },
     { provide: PersonDataSource, useClass: HttpPersonDataSource },
     { provide: BoardDataSource, useClass: HttpBoardDataSource },
+    { provide: AccountRequestDataSource, useClass: HttpAccountRequestDataSource },
+    { provide: NotificationDataSource, useClass: HttpNotificationDataSource },
+    { provide: HumoTeamDataSource, useClass: HttpHumoTeamDataSource },
+    { provide: AuditDataSource, useClass: HttpAuditDataSource },
+    { provide: SecurityDataSource, useClass: HttpSecurityDataSource },
     ...pending,
   ]);
 }

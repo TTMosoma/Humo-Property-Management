@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, map, switchMap, tap, throwError } from 'rxjs';
-import { AccessDataSource, ApiError, Identity, ImpersonationSession, NewAssignment, SessionDataSource } from '../domain';
+import { Observable, map, switchMap, tap } from 'rxjs';
+import { AccessDataSource, Identity, ImpersonationMode, ImpersonationReason, ImpersonationSession, NewAssignment, SessionDataSource } from '../domain';
 import { HttpPort } from './http-port';
 import { HttpSessionDataSource } from './http-session-data-source';
 
@@ -8,18 +8,18 @@ import { HttpSessionDataSource } from './http-session-data-source';
  * Users & access over HTTP (slice 1, doc 24 §7): the directory, invitations,
  * details, membership, roles, the browse grant (D1), switching role and signing
  * out. Every change needs step-up; the form drawer verifies and resends.
- * Impersonation follows with the Humo team (doc 24 §8).
+ * Impersonation: System Administrators with the individual grant (doc 24 §8).
  */
 @Injectable()
 export class HttpAccessDataSource extends HttpPort implements AccessDataSource {
   private readonly session = inject(SessionDataSource) as HttpSessionDataSource;
 
   directory(organisationId: string | null): Observable<Identity[]> {
-    return this.query<Identity[]>('/access/directory', ['access', 'session'], organisationId ? { organisationId } : undefined);
+    return this.live<Identity[]>('/access/directory', ['access', 'session'], organisationId ? { organisationId } : undefined);
   }
 
   humoTeam(): Observable<Identity[]> {
-    return this.query<Identity[]>('/access/humo-team', ['access']);
+    return this.live<Identity[]>('/access/humo-team', ['access']);
   }
 
   invite(input: { organisationId: string; name: string; email: string; title?: string; assignment: NewAssignment; personId?: string }): Observable<string> {
@@ -60,12 +60,14 @@ export class HttpAccessDataSource extends HttpPort implements AccessDataSource {
     return this.command('POST', '/auth/sign-out', null, []).pipe(switchMap(() => this.reloaded()));
   }
 
-  startImpersonation(): Observable<ImpersonationSession> {
-    return throwError(() => new ApiError('server', 'Impersonation isn’t connected to Humo’s API yet'));
+  /** System.Impersonate only; Act needs a fresh step-up. The app then renders the customer's role. */
+  startImpersonation(input: { targetId: string; targetAssignmentId: string; mode: ImpersonationMode; reason: ImpersonationReason; note?: string; ticket?: string }): Observable<ImpersonationSession> {
+    return this.command<ImpersonationSession>('POST', '/me/impersonation', input, []).pipe(switchMap((s) => this.reloaded().pipe(map(() => s))));
   }
 
+  /** Always succeeds server-side; the app is Humo's again. */
   endImpersonation(): Observable<void> {
-    return throwError(() => new ApiError('server', 'Impersonation isn’t connected to Humo’s API yet'));
+    return this.command('POST', '/me/impersonation/end', null, []).pipe(switchMap(() => this.reloaded()));
   }
 
   private reloaded(): Observable<void> {

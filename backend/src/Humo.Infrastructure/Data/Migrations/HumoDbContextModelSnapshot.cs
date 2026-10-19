@@ -22,6 +22,97 @@ namespace Humo.Infrastructure.Data.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Humo.Infrastructure.Data.AccountRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AccountManager")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("AccountManagerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DecidedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DecidedBy")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("DecidedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PackageId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Policy")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Province")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Reason")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Ref")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset>("RequestedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RequestedBy")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("RequestedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Route")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ShortName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Ref")
+                        .IsUnique();
+
+                    b.ToTable("AccountRequests", (string)null);
+                });
+
             modelBuilder.Entity("Humo.Infrastructure.Data.AuditEntry", b =>
                 {
                     b.Property<long>("Id")
@@ -32,6 +123,9 @@ namespace Humo.Infrastructure.Data.Migrations
 
                     b.Property<Guid?>("ActingAsId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("ActingAsName")
+                        .HasColumnType("text");
 
                     b.Property<string>("Action")
                         .IsRequired()
@@ -50,6 +144,15 @@ namespace Humo.Infrastructure.Data.Migrations
 
                     b.Property<string>("Category")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ImpersonationMode")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ImpersonationNote")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ImpersonationReason")
                         .HasColumnType("text");
 
                     b.Property<string>("Ip")
@@ -73,6 +176,9 @@ namespace Humo.Infrastructure.Data.Migrations
 
                     b.Property<string>("Role")
                         .HasColumnType("text");
+
+                    b.Property<Guid?>("SchemeId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("StepUpMethod")
                         .HasColumnType("text");
@@ -190,6 +296,48 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("Humo.Infrastructure.Data.ImpersonationSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ActorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("EndedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Mode")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("TargetAssignmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TargetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Ticket")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActorId");
+
+                    b.ToTable("ImpersonationSessions", (string)null);
+                });
+
             modelBuilder.Entity("Humo.Infrastructure.Data.LevyAccount", b =>
                 {
                     b.Property<Guid>("Id")
@@ -268,10 +416,75 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.ToTable("Memberships", (string)null);
                 });
 
+            modelBuilder.Entity("Humo.Infrastructure.Data.Notice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ActorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("At")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Detail")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Link")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("ToIdentityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ToRole")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ToIdentityId");
+
+                    b.HasIndex("ToRole");
+
+                    b.ToTable("Notices", (string)null);
+                });
+
+            modelBuilder.Entity("Humo.Infrastructure.Data.NoticeRead", b =>
+                {
+                    b.Property<Guid>("NoticeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("IdentityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("At")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("NoticeId", "IdentityId");
+
+                    b.ToTable("NoticeReads", (string)null);
+                });
+
             modelBuilder.Entity("Humo.Infrastructure.Data.Organisation", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AccountManagerId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("City")
@@ -303,6 +516,9 @@ namespace Humo.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("TrialPackageId")
+                        .HasColumnType("text");
+
                     b.Property<int>("Version")
                         .IsConcurrencyToken()
                         .HasColumnType("integer");
@@ -313,6 +529,48 @@ namespace Humo.Infrastructure.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("Organisations", (string)null);
+                });
+
+            modelBuilder.Entity("Humo.Infrastructure.Data.PendingHumoGrant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("IdentityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("IdentityName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("RequestedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RequestedBy")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("RequestedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdentityId");
+
+                    b.ToTable("PendingHumoGrants", (string)null);
                 });
 
             modelBuilder.Entity("Humo.Infrastructure.Data.Person", b =>
@@ -376,6 +634,30 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.HasIndex("OrganisationId");
 
                     b.ToTable("People", (string)null);
+                });
+
+            modelBuilder.Entity("Humo.Infrastructure.Data.PlatformSetting", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("PlatformSettings", (string)null);
                 });
 
             modelBuilder.Entity("Humo.Infrastructure.Data.Relationship", b =>

@@ -19,6 +19,11 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
 {
     public DbSet<Organisation> Organisations => Set<Organisation>();
     public DbSet<Scheme> Schemes => Set<Scheme>();
+    public DbSet<AccountRequest> AccountRequests => Set<AccountRequest>();
+    public DbSet<PlatformSetting> PlatformSettings => Set<PlatformSetting>();
+    public DbSet<Notice> Notices => Set<Notice>();
+    public DbSet<NoticeRead> NoticeReads => Set<NoticeRead>();
+    public DbSet<PendingHumoGrant> PendingHumoGrants => Set<PendingHumoGrant>();
     public DbSet<Unit> Units => Set<Unit>();
     public DbSet<LevyAccount> LevyAccounts => Set<LevyAccount>();
     public DbSet<Person> People => Set<Person>();
@@ -27,6 +32,7 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
     public DbSet<RoleAssignment> RoleAssignments => Set<RoleAssignment>();
     public DbSet<AuditEntry> Audit => Set<AuditEntry>();
     public DbSet<SignInLink> SignInLinks => Set<SignInLink>();
+    public DbSet<ImpersonationSession> ImpersonationSessions => Set<ImpersonationSession>();
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
     protected override void OnModelCreating(ModelBuilder builder)
@@ -54,6 +60,41 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.Property(o => o.ShortName).HasMaxLength(100);
             e.HasIndex(o => o.ShortName).IsUnique();
             e.Property(o => o.Version).IsConcurrencyToken();
+        });
+
+        builder.Entity<AccountRequest>(e =>
+        {
+            e.ToTable("AccountRequests");
+            e.Property(x => x.Ref).HasMaxLength(20);
+            e.HasIndex(x => x.Ref).IsUnique();
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.Property(x => x.Status).HasMaxLength(20);
+        });
+
+        builder.Entity<PlatformSetting>(e =>
+        {
+            e.ToTable("PlatformSettings");
+            e.HasKey(x => x.Key);
+            e.Property(x => x.Version).IsConcurrencyToken();
+        });
+
+        builder.Entity<Notice>(e =>
+        {
+            e.ToTable("Notices");
+            e.HasIndex(x => x.ToIdentityId);
+            e.HasIndex(x => x.ToRole);
+        });
+
+        builder.Entity<PendingHumoGrant>(e =>
+        {
+            e.ToTable("PendingHumoGrants");
+            e.HasIndex(x => x.IdentityId);
+        });
+
+        builder.Entity<NoticeRead>(e =>
+        {
+            e.ToTable("NoticeReads");
+            e.HasKey(x => new { x.NoticeId, x.IdentityId });
         });
 
         builder.Entity<Scheme>(e =>
@@ -145,6 +186,12 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.Property(a => a.Action).HasMaxLength(500);
             e.HasIndex(a => a.At);
             e.HasIndex(a => a.OrganisationId);
+        });
+
+        builder.Entity<ImpersonationSession>(e =>
+        {
+            e.ToTable("ImpersonationSessions");
+            e.HasIndex(x => x.ActorId);
         });
 
         builder.Entity<SignInLink>(e =>
