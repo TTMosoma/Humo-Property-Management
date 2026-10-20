@@ -27,6 +27,10 @@ public sealed class HumoApiFactory : WebApplicationFactory<Program>
         ["ConnectionStrings:Humo"] = "Host=unused-in-tests",
         ["Database:Initialise"] = "EnsureCreated",
         ["Mail:Provider"] = "Log",
+        // The tests run the billing run themselves (POST /api/platform/billing/run).
+        ["Billing:Enabled"] = "false",
+        // Tests that move the clock sign in again many times a (real) minute.
+        ["Auth:SignInRequestsPerMinute"] = "1000",
         ["Bootstrap:AdminEmail"] = AdminEmail,
         ["Bootstrap:AdminName"] = "Ayanda Admin",
         ["App:PublicUrl"] = "https://localhost",
@@ -99,8 +103,26 @@ public sealed class TestPayfast : Humo.Infrastructure.Payments.IPayfast
     public bool Sandbox => true;
 
     public Humo.Infrastructure.Payments.PayfastCheckout Checkout(string paymentId, decimal amount, string itemName, string? itemDescription, string? email,
-        string returnUrl, string cancelUrl, string notifyUrl, string invoiceId) =>
-        real.Checkout(paymentId, amount, itemName, itemDescription, email, returnUrl, cancelUrl, notifyUrl, invoiceId);
+        string returnUrl, string cancelUrl, string notifyUrl, string invoiceId, bool saveCard = false) =>
+        real.Checkout(paymentId, amount, itemName, itemDescription, email, returnUrl, cancelUrl, notifyUrl, invoiceId, saveCard);
+
+    /// <summary>Card charges and cancellations the API asked Payfast for. <see cref="Refuse"/> stands in for a declined card.</summary>
+    public System.Collections.Concurrent.ConcurrentQueue<(string Token, decimal Amount, string PaymentId)> Charges { get; } = new();
+    public System.Collections.Concurrent.ConcurrentQueue<string> Cancelled { get; } = new();
+    public bool Refuse { get; set; }
+
+    public Task<Humo.Infrastructure.Payments.PayfastApiResult> ChargeAsync(string token, decimal amount, string itemName, string paymentId, CancellationToken ct)
+    {
+        if (Refuse) return Task.FromResult(new Humo.Infrastructure.Payments.PayfastApiResult(false, "Card declined"));
+        Charges.Enqueue((token, amount, paymentId));
+        return Task.FromResult(new Humo.Infrastructure.Payments.PayfastApiResult(true, "success"));
+    }
+
+    public Task<Humo.Infrastructure.Payments.PayfastApiResult> CancelAsync(string token, CancellationToken ct)
+    {
+        Cancelled.Enqueue(token);
+        return Task.FromResult(new Humo.Infrastructure.Payments.PayfastApiResult(true, "success"));
+    }
 
     public Task<string?> VerifyAsync(Humo.Infrastructure.Payments.PayfastNotification n, System.Net.IPAddress? from, CancellationToken ct) =>
         Task.FromResult(Humo.Infrastructure.Payments.PayfastClient.Signature(n.Fields.Where(f => f.Key != "signature"), null) == n["signature"]

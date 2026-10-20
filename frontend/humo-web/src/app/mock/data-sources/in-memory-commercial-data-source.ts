@@ -1,10 +1,11 @@
 import { Injectable, computed, inject } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
-import { Observable, map, of, switchMap, throwError } from 'rxjs';
+import { Observable, catchError, forkJoin, map, of, switchMap, throwError } from 'rxjs';
 import {
   ADJUSTMENT_LABELS,
   AddOnInput,
   AgreementChange,
+  BillingRunResult,
   BILLING_PREFERENCE_LABELS,
   ChangePreview,
   ChargeContext,
@@ -424,6 +425,44 @@ export class InMemoryCommercialDataSource extends CommercialDataSource {
           }));
           this.store.settle(p!.invoiceId);
         },
+      )
+      .pipe(map(() => undefined));
+  }
+
+  /** DEVELOPMENT / SIMULATION ONLY: issues the next invoice for every agreement that's due (no card charges or reminders). */
+  runBilling(): Observable<BillingRunResult> {
+    const t = today();
+    const due = this.store.agreements().filter((a) => a.billing.nextBillingDate <= t).map((a) => a.organisationId);
+    return this.gateway
+      .command({ action: 'Ran the billing run (simulated)', resource: 'Billing run', permission: 'Platform.Billing.Manage' }, () => {
+        this.lastRun = t;
+        return due;
+      })
+      .pipe(
+        switchMap((orgs) => (orgs.length ? forkJoin(orgs.map((o) => this.issueInvoice(o).pipe(catchError(() => of(null))))) : of([]))),
+        map((ids): BillingRunResult => ({ day: t, issued: ids.filter(Boolean).length, charged: 0, reminders: 0, trialsEnded: 0, skipped: [] })),
+      );
+  }
+
+  private lastRun: string | null = null;
+
+  lastBillingRun(): Observable<string | null> {
+    return of(this.lastRun);
+  }
+
+  cancelCardMandate(organisationId: string, reason: string): Observable<void> {
+    const a = this.store.agreement(organisationId);
+    return this.gateway
+      .command(
+        {
+          action: `Cancelled the card debit order — ${reason}`,
+          resource: 'Agreement',
+          resourceId: organisationId,
+          category: 'security',
+          permission: 'Platform.Subscriptions.Manage',
+          validate: (): FieldErrors | null => (!a || a.billing.mandate.status !== 'active' ? { reason: 'There’s no saved card.' } : reason.trim().length < 5 ? { reason: 'Say why, in a few words.' } : null),
+        },
+        () => this.store.replaceAgreement({ ...a!, version: a!.version + 1, billing: { ...a!.billing, preference: 'instant-eft', mandate: { status: 'none' } } }),
       )
       .pipe(map(() => undefined));
   }

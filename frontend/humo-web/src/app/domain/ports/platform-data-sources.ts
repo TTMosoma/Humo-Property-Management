@@ -42,7 +42,9 @@ export abstract class PlanDataSource {
   abstract invoices(organisationId: string): Observable<InvoiceDocument[]>;
   abstract invoice(organisationId: string, invoiceId: string): Observable<InvoiceDocument | undefined>;
   /** "Pay now": a Payfast checkout for their own invoice. Starting it isn't a payment; Payfast's confirmation is. */
-  abstract payInvoice(organisationId: string, invoiceId: string): Observable<CheckoutSession>;
+  abstract payInvoice(organisationId: string, invoiceId: string, saveCard?: boolean): Observable<CheckoutSession>;
+  /** Stops the card debit order (cancelled at Payfast first). Later invoices are paid online or by EFT. */
+  abstract cancelCardMandate(organisationId: string, reason: string): Observable<void>;
   abstract requestUpgrade(input: { organisationId: string; addOn?: AddOnId; package?: PackageId; feature?: Feature; note?: string; source: UpgradeRequest['source'] }): Observable<void>;
 }
 

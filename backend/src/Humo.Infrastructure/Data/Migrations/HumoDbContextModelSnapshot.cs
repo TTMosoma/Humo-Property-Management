@@ -383,6 +383,9 @@ namespace Humo.Infrastructure.Data.Migrations
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)");
 
+                    b.Property<string>("LastReminderOn")
+                        .HasColumnType("text");
+
                     b.Property<Guid>("OrganisationId")
                         .HasColumnType("uuid");
 
@@ -395,6 +398,9 @@ namespace Humo.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)");
+
+                    b.Property<int>("RemindersSent")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Status")
                         .IsRequired()

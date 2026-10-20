@@ -27,6 +27,9 @@ import { InvoiceDocumentView } from './invoice-document';
           <a class="btn btn-ghost btn-sm" [routerLink]="['/platform/customers', d.billTo.organisationId]" [queryParams]="{ view: 'commercial' }">{{ d.billTo.name }}’s billing</a>
         }
         @if (!humo && d.balance > 0 && (d.invoice.status === 'issued' || d.invoice.status === 'overdue') && session.can('Subscription.Request') && !session.readOnly()) {
+          <label class="save-card" title="Payfast keeps your card; Humo never sees it. Cancel any time in Billing & invoices.">
+            <input type="checkbox" [checked]="saveCard()" (change)="saveCard.set($any($event.target).checked)" /> Save my card for monthly invoices
+          </label>
           <button type="button" class="btn btn-primary btn-sm" [disabled]="paying()" (click)="pay(d)"><ion-icon name="card-outline" aria-hidden="true" /> Pay now</button>
         }
         <button type="button" class="btn btn-secondary btn-sm" (click)="print()"><ion-icon name="print-outline" aria-hidden="true" /> Print or save PDF</button>
@@ -48,7 +51,9 @@ import { InvoiceDocumentView } from './invoice-document';
   styles: `
     :host { display: flex; flex-direction: column; gap: var(--s-4); }
     .actions { display: flex; flex-wrap: wrap; gap: var(--s-2); max-width: 820px; width: 100%; margin: 0 auto; }
+    .actions .save-card { margin-left: auto; display: inline-flex; align-items: center; gap: var(--s-1); font-size: var(--fs-sm); }
     .actions .btn-primary { margin-left: auto; }
+    .actions .save-card + .btn-primary { margin-left: 0; }
     .note { max-width: 820px; width: 100%; margin: 0 auto; padding: var(--s-2) var(--s-3); border-radius: var(--r); background: var(--c-info-soft, var(--c-neutral-soft)); font-size: var(--fs-sm); }
   `,
 })
@@ -57,6 +62,8 @@ export class InvoiceViewPage {
   protected readonly session = inject(SessionService);
   private readonly feedback = inject(FeedbackService);
   protected readonly paying = signal(false);
+  /** A card debit order: Payfast saves the card, and later invoices are charged to it. */
+  protected readonly saveCard = signal(false);
   /** Back from Payfast: `?payment=returned` or `cancelled`. Only Payfast's own notification marks the invoice paid. */
   protected readonly returned = toSignal(this.route.queryParamMap.pipe(map((q) => q.get('payment'))), { initialValue: null });
   private readonly commercial = inject(CommercialDataSource);
@@ -78,7 +85,7 @@ export class InvoiceViewPage {
   /** Pay now: the API signs a Payfast checkout; the browser posts it to Payfast. */
   protected pay(d: InvoiceDocument): void {
     this.paying.set(true);
-    this.plan.payInvoice(d.billTo.organisationId, d.invoice.id).subscribe({
+    this.plan.payInvoice(d.billTo.organisationId, d.invoice.id, this.saveCard()).subscribe({
       next: (s) => {
         if (!goToCheckout(s)) {
           this.paying.set(false);

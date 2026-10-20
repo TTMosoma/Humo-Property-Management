@@ -114,6 +114,17 @@ Customers pay a Humo invoice with **Pay now** (Settings › Billing & invoices).
 
 A repeated notification changes nothing. Payfast must be able to reach the API over HTTPS, so ITN can't be tested on `localhost`.
 
+## Billing run
+
+Every morning after `Billing__RunHour` (South African time; 06:00 by default) the API:
+- makes trials that have ended active;
+- invoices every agreement whose next billing date has come;
+- charges saved cards (Payfast tokenization);
+- emails the invoices;
+- sends overdue reminders 1, 7 and 14 days after the due date.
+
+Humo Finance can also run it from Platform › Invoices. `Billing__Enabled=false` switches the daily run off (the tests do). It never invoices a period twice.
+
 ## SMS providers
 
 **How it works:**

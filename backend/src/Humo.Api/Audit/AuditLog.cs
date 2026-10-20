@@ -7,7 +7,7 @@ public sealed class AuditLog(HumoDbContext db, IHttpContextAccessor http, TimePr
 {
     public void Record(string action, string result, HumoUser? actor = null, string? reason = null, string category = "security",
         string? role = null, Guid? organisationId = null, string? resource = null, string? resourceId = null, string? stepUpMethod = null,
-        HumoUser? actingAs = null, ImpersonationSession? impersonation = null, Guid? schemeId = null)
+        HumoUser? actingAs = null, ImpersonationSession? impersonation = null, Guid? schemeId = null, string? system = null)
     {
         var ctx = http.HttpContext;
         db.Audit.Add(new AuditEntry
@@ -15,7 +15,8 @@ public sealed class AuditLog(HumoDbContext db, IHttpContextAccessor http, TimePr
             At = clock.GetUtcNow(),
             Category = category,
             ActorId = actor?.Id,
-            ActorName = actor?.Name ?? "Unknown",
+            // No person: the system that acted, e.g. "Humo billing run" or "Payfast".
+            ActorName = actor?.Name ?? system ?? "Unknown",
             ActingAsId = actingAs?.Id,
             ActingAsName = actingAs?.Name,
             ImpersonationMode = impersonation?.Mode,

@@ -120,6 +120,23 @@ export abstract class CommercialDataSource {
   abstract simulateProviderNotification(paymentId: string, outcome: 'paid' | 'failed', eventId: string): Observable<void>;
   abstract recordEftProof(invoiceId: string, note: string): Observable<void>;
   abstract reconcileEft(paymentId: string, bankReference: string): Observable<void>;
+  /** The daily billing run, now (Platform.Billing.Manage, step-up). It also runs by itself each morning. */
+  abstract runBilling(): Observable<BillingRunResult>;
+  /** The day the billing run last ran, or null. */
+  abstract lastBillingRun(): Observable<string | null>;
+  /** Stops a customer's card debit order on their request (Platform.Subscriptions.Manage). */
+  abstract cancelCardMandate(organisationId: string, reason: string): Observable<void>;
+}
+
+/** What one billing run did. */
+export interface BillingRunResult {
+  day: string;
+  issued: number;
+  charged: number;
+  reminders: number;
+  trialsEnded: number;
+  /** Customers it couldn't invoice, and why. */
+  skipped: string[];
 }
 
 // ---------------------------------------------------------------- Payment provider boundary

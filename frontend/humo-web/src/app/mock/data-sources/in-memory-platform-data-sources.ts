@@ -196,6 +196,25 @@ export class InMemoryPlanDataSource extends PlanDataSource {
       .pipe(map((): CheckoutSession => ({ paymentId, providerReference: paymentId, redirectUrl: null, simulated: true })));
   }
 
+  /** DEVELOPMENT / SIMULATION ONLY: forgets the simulated card. */
+  cancelCardMandate(organisationId: string, reason: string): Observable<void> {
+    const refused = this.ownBilling(organisationId);
+    if (refused) return throwError(() => refused);
+    const a = this.commercial.agreement(organisationId);
+    return this.gateway
+      .command(
+        {
+          action: `Cancelled the card debit order — ${reason}`,
+          resource: 'Agreement',
+          resourceId: organisationId,
+          permission: 'Subscription.Request',
+          validate: (): FieldErrors | null => (!a || a.billing.mandate.status !== 'active' ? { reason: 'There’s no saved card.' } : reason.trim().length < 5 ? { reason: 'Say why, in a few words.' } : null),
+        },
+        () => this.commercial.replaceAgreement({ ...a!, version: a!.version + 1, billing: { ...a!.billing, preference: 'instant-eft', mandate: { status: 'none' } } }),
+      )
+      .pipe(map(() => undefined));
+  }
+
   private ownBilling(organisationId: string): PolicyError | null {
     if (this.session.current.organisation?.id !== organisationId) return new PolicyError('forbidden', 'Not your organisation');
     if (!this.session.can('Subscription.Request')) return new PolicyError('forbidden', 'Only agency administrators see Humo invoices');
