@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Humo.Infrastructure.Data;
 
@@ -49,6 +50,9 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
     public DbSet<NoticeRow> SchemeNotices => Set<NoticeRow>();
     public DbSet<ConversationRow> Conversations => Set<ConversationRow>();
     public DbSet<MessageUsageRow> MessageUsage => Set<MessageUsageRow>();
+    public DbSet<SupplierRow> Suppliers => Set<SupplierRow>();
+    public DbSet<JobRow> Jobs => Set<JobRow>();
+    public DbSet<SupplierInvoiceRow> SupplierInvoices => Set<SupplierInvoiceRow>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Notice> Notices => Set<Notice>();
     public DbSet<NoticeRead> NoticeReads => Set<NoticeRead>();
@@ -63,6 +67,18 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
     public DbSet<SignInLink> SignInLinks => Set<SignInLink>();
     public DbSet<ImpersonationSession> ImpersonationSessions => Set<ImpersonationSession>();
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
+
+    /// <summary>
+    /// Every time is stored in UTC: PostgreSQL's timestamptz takes no other offset, and code often builds
+    /// South African times (+02:00) for due dates and expiries.
+    /// </summary>
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        base.ConfigureConventions(configurationBuilder);
+        configurationBuilder.Properties<DateTimeOffset>().HaveConversion<UtcDateTimeOffset>();
+    }
+
+    private sealed class UtcDateTimeOffset() : ValueConverter<DateTimeOffset, DateTimeOffset>(v => v.ToUniversalTime(), v => v);
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -421,6 +437,50 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.Property(x => x.Period).HasMaxLength(7);
             e.Property(x => x.Channel).HasMaxLength(10);
             e.HasOne<Organisation>().WithMany().HasForeignKey(x => x.OrganisationId);
+        });
+
+        builder.Entity<SupplierRow>(e =>
+        {
+            e.ToTable("Suppliers");
+            e.Property(x => x.Name).HasMaxLength(160);
+            e.Property(x => x.ContactName).HasMaxLength(120);
+            e.Property(x => x.Phone).HasMaxLength(30);
+            e.Property(x => x.Email).HasMaxLength(254);
+            e.Property(x => x.BankAccount).HasMaxLength(60);
+            e.Property(x => x.Status).HasMaxLength(10);
+            e.Property(x => x.PartyId).HasMaxLength(60);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => x.OrganisationId);
+            e.HasOne<Organisation>().WithMany().HasForeignKey(x => x.OrganisationId);
+        });
+
+        builder.Entity<JobRow>(e =>
+        {
+            e.ToTable("Jobs");
+            e.Property(x => x.Ref).HasMaxLength(20);
+            e.Property(x => x.Stage).HasMaxLength(20);
+            e.Property(x => x.Title).HasMaxLength(120);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => new { x.OrganisationId, x.Ref }).IsUnique();
+            e.HasIndex(x => new { x.SchemeId, x.Stage });
+            e.HasIndex(x => x.SupplierId);
+            e.HasIndex(x => x.ReportedByPersonId);
+            e.HasOne<Scheme>().WithMany().HasForeignKey(x => x.SchemeId);
+        });
+
+        builder.Entity<SupplierInvoiceRow>(e =>
+        {
+            e.ToTable("SupplierInvoices");
+            e.Property(x => x.Number).HasMaxLength(40);
+            e.Property(x => x.Description).HasMaxLength(200);
+            e.Property(x => x.Amount).HasPrecision(18, 2);
+            e.Property(x => x.ApprovedAmount).HasPrecision(18, 2);
+            e.Property(x => x.Status).HasMaxLength(20);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            // One invoice number per supplier: the same invoice can't be captured twice.
+            e.HasIndex(x => new { x.SupplierId, x.Number }).IsUnique();
+            e.HasIndex(x => new { x.SchemeId, x.Status });
+            e.HasOne<SupplierRow>().WithMany().HasForeignKey(x => x.SupplierId);
         });
 
         builder.Entity<Invoice>(e =>

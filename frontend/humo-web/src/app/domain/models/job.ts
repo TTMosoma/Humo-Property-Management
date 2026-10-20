@@ -112,6 +112,8 @@ export interface Invoice {
   supplierId: string;
   schemeId: string;
   jobId?: string;
+  /** The supplier's own invoice number (on the API; in the simulation the id is the number). */
+  number?: string;
   /** Monthly contract invoices have no job. */
   contractRef?: string;
   description: string;

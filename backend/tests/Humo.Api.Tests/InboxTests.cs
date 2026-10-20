@@ -110,11 +110,15 @@ public sealed class InboxTests : IDisposable
         // The test factory names people from their email address.
         Assert.Equal("thandeka", (await Ok(await s.Admin.GetAsync($"/api/inbox/{id}"))).GetProperty("assigneeName").GetString());
 
-        Assert.True((await (await Act(s.Admin, id, new { type = "to-job", title = "Paint the bay number", location = "Parking" }, 5)).FieldErrors()).TryGetProperty("title", out _));
-        var task = await Ok(await Act(s.Admin, id, new { type = "to-task", title = "Paint the bay numbers", dueAt = "2026-10-30" }, 5));
+        Assert.True((await (await Act(s.Admin, id, new { type = "to-job", title = "Bay", location = "Parking" }, 5)).FieldErrors()).TryGetProperty("title", out _));
+        var job = await Ok(await Act(s.Admin, id, new { type = "to-job", title = "Repaint the bay number", location = "Parking" }, 5));
+        Assert.Equal("MR-1001", job.GetProperty("id").GetString());
+        Assert.Equal("maintenance-triage", await api.Db(db => db.WorkItems.Where(w => w.Ref == "MR-1001").Select(w => w.Type).SingleAsync()));
+        var task = await Ok(await Act(s.Admin, id, new { type = "to-task", title = "Paint the bay numbers", dueAt = "2026-10-30" }, 6));
         Assert.Equal("follow-up", await api.Db(db => db.WorkItems.Where(w => w.Id == Guid.Parse(task.GetProperty("id").GetString()!)).Select(w => w.Type).SingleAsync()));
-        Assert.Equal("Task: Paint the bay numbers", (await Ok(await s.Admin.GetAsync($"/api/inbox/{id}"))).GetProperty("conversation").GetProperty("links")[0].GetProperty("label").GetString());
-        Assert.Equal(HttpStatusCode.Conflict, (await Act(s.Admin, id, new { type = "close" }, 5)).StatusCode);
+        var links = (await Ok(await s.Admin.GetAsync($"/api/inbox/{id}"))).GetProperty("conversation").GetProperty("links");
+        Assert.Equal(["Job MR-1001", "Task: Paint the bay numbers"], links.EnumerateArray().Select(l => l.GetProperty("label").GetString()));
+        Assert.Equal(HttpStatusCode.Conflict, (await Act(s.Admin, id, new { type = "close" }, 6)).StatusCode);
         // Residents see only their own.
         Assert.Equal(HttpStatusCode.NotFound, (await s.Owner.GetAsync($"/api/inbox/{id}")).StatusCode);
     }
@@ -123,8 +127,11 @@ public sealed class InboxTests : IDisposable
     public async Task Opening_a_notice_in_the_portal_shows_as_read_in_Sent()
     {
         var s = await Scheme();
-        var notice = await Id(await s.Admin.PostAsJsonAsync("/api/notices", new { schemeId = s.Kc.ToString(), title = "New gate remotes", body = "Collect your new gate remote from the guardhouse, weekdays 08:00 to 17:00.", audience = "owners", category = "security", pinned = false }));
+        var notice = await Id(await s.Admin.PostAsJsonAsync("/api/notices", new { schemeId = s.Kc.ToString(), title = "New gate remotes", body = "Collect your new gate remote from the guardhouse, weekdays 08:00 to 17:00.", audience = "owners", category = "security", pinned = false, expiresAt = "2026-11-30" }));
         await HumoApiFactory.Until(() => api.Db(db => db.Deliveries.AllAsync(d => d.Status != "queued")));
+        // South African end of day, stored in UTC (PostgreSQL takes no other offset).
+        Assert.Equal(new DateTimeOffset(2026, 11, 30, 21, 59, 0, TimeSpan.Zero), await api.Db(db => db.SchemeNotices.Select(n => n.ExpiresAt).SingleAsync()));
+        Assert.Equal(TimeSpan.Zero, (await api.Db(db => db.SchemeNotices.Select(n => n.ExpiresAt).SingleAsync()))!.Value.Offset);
         Assert.Equal(HttpStatusCode.NoContent, (await s.Owner.PostAsync($"/api/me/notices/{notice}/read", null)).StatusCode);
         var sent = (await Ok(await s.Admin.GetAsync($"/api/communications/sent?schemeIds={s.Kc}")))[0];
         // Sipho prefers email; portal deliveries are the ones a portal visit can mark read.

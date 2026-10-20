@@ -218,7 +218,7 @@ export class JobNextStep {
 
   protected issueWorkOrder(): void {
     const at = new Date(this.scheduleDate() + 'T08:00:00');
-    this.run([{ type: 'issue-work-order', scheduledFor: at.toISOString(), accessNotes: this.accessNotes() }], `Work order sent to ${this.supplier()?.name} for ${formatDate(at.toISOString())}`);
+    this.run([{ type: 'issue-work-order', scheduledFor: at.toISOString(), accessNotes: this.accessNotes(), overrideVetting: this.supplierIssues().length > 0 && this.overrideCompliance() }], `Work order sent to ${this.supplier()?.name} for ${formatDate(at.toISOString())}`);
   }
 
   protected start(): void {

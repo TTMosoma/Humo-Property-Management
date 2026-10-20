@@ -855,3 +855,72 @@ public sealed class MessageUsageRow
     /// <summary>Messages sent (an SMS of three parts is one message, three units).</summary>
     public int Messages { get; set; }
 }
+
+/// <summary>The agency's relationship with a contractor: vetting, contact, bank details for payment, the schemes they serve.</summary>
+public sealed class SupplierRow
+{
+    public Guid Id { get; set; }
+    public Guid OrganisationId { get; set; }
+    public int Version { get; set; } = 1;
+    /// <summary>The Humo Contractor business, when the business is on Humo.</summary>
+    public string? PartyId { get; set; }
+    public string Name { get; set; } = "";
+    /// <summary>JSON list of trades.</summary>
+    public string Trades { get; set; } = "[]";
+    public string ContactName { get; set; } = "";
+    public string Phone { get; set; } = "";
+    public string Email { get; set; } = "";
+    /// <summary>Masked for display; changing it needs a fresh passkey and holds payments until verified.</summary>
+    public string BankAccount { get; set; } = "To be confirmed";
+    public bool BankVerified { get; set; }
+    public int? BbbeeLevel { get; set; }
+    /// <summary>JSON list of scheme ids.</summary>
+    public string SchemeIds { get; set; } = "[]";
+    /// <summary>JSON list of vetting documents.</summary>
+    public string Documents { get; set; } = "[]";
+    /// <summary>active, on-hold or archived.</summary>
+    public string Status { get; set; } = "active";
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
+/// <summary>A maintenance job: key columns for finding it, the job itself as JSON (Humo.Domain.Maintenance.Job).</summary>
+public sealed class JobRow
+{
+    public Guid Id { get; set; }
+    public Guid OrganisationId { get; set; }
+    public Guid SchemeId { get; set; }
+    /// <summary>"MR-1001", per organisation.</summary>
+    public string Ref { get; set; } = "";
+    public string Stage { get; set; } = "reported";
+    public Guid? UnitId { get; set; }
+    public Guid? SupplierId { get; set; }
+    public Guid? ReportedByPersonId { get; set; }
+    public string Title { get; set; } = "";
+    public int Version { get; set; } = 1;
+    public DateTimeOffset ReportedAt { get; set; }
+    public string Json { get; set; } = "{}";
+}
+
+/// <summary>A supplier's invoice for a job (or a contract), checked against the approved quote before it's paid.</summary>
+public sealed class SupplierInvoiceRow
+{
+    public Guid Id { get; set; }
+    public Guid OrganisationId { get; set; }
+    public Guid SchemeId { get; set; }
+    public Guid SupplierId { get; set; }
+    public Guid? JobId { get; set; }
+    /// <summary>The supplier's own invoice number.</summary>
+    public string Number { get; set; } = "";
+    public string Description { get; set; } = "";
+    public decimal Amount { get; set; }
+    /// <summary>The approved quote, for the match.</summary>
+    public decimal? ApprovedAmount { get; set; }
+    public DateTimeOffset ReceivedAt { get; set; }
+    public DateOnly DueOn { get; set; }
+    /// <summary>awaiting-approval, approved, rejected, in-batch or paid.</summary>
+    public string Status { get; set; } = "awaiting-approval";
+    public Guid? ApprovalWorkItemId { get; set; }
+    public Guid? BatchId { get; set; }
+    public DateTimeOffset? PaidAt { get; set; }
+    public int Version { get; set; } = 1;
+}
