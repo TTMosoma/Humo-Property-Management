@@ -43,6 +43,8 @@ public sealed class Organisation
     public DateTimeOffset CreatedAt { get; set; }
     /// <summary>Approving this amount or more needs a fresh passkey (doc 03). The agency's administrators set it; R50 000 by default.</summary>
     public decimal ApprovalStepUpAmount { get; set; } = 50_000;
+    /// <summary>Interest on arrears, percent per month, on what's 30 days and older (2% by default: common sectional-title practice, within the scheme's rules).</summary>
+    public decimal InterestPercentPerMonth { get; set; } = 2;
 }
 
 /// <summary>A request to open a new customer account (doc 21). The organisation exists only once approved or activated.</summary>
@@ -494,4 +496,85 @@ public sealed class StatementImport
     public int Debits { get; set; }
     public int Invalid { get; set; }
     public decimal Total { get; set; }
+}
+
+/// <summary>A billing run (docs/11 §1): key columns for queries; the run itself as JSON, as the frontend's <c>BillingRun</c>.</summary>
+public sealed class BillingRunRow
+{
+    public Guid Id { get; set; }
+    public int Version { get; set; } = 1;
+    /// <summary>"BR-KC-2611": unique, so a period is never run twice.</summary>
+    public string Ref { get; set; } = "";
+    public Guid SchemeId { get; set; }
+    public string Period { get; set; } = "";
+    public string Stage { get; set; } = "preview";
+    public string Document { get; set; } = "{}";
+}
+
+/// <summary>
+/// The Attention model on the API: an approval or task, in an organisation and usually a scheme. Approvals name
+/// the roles that decide them; the record the work is about moves on when it's decided.
+/// </summary>
+public sealed class WorkItemRow
+{
+    public Guid Id { get; set; }
+    public Guid OrganisationId { get; set; }
+    public Guid? SchemeId { get; set; }
+    public string Ref { get; set; } = "";
+    /// <summary>task, approval or message.</summary>
+    public string Kind { get; set; } = "task";
+    public string Type { get; set; } = "";
+    public string Title { get; set; } = "";
+    public string Detail { get; set; } = "";
+    public decimal? Amount { get; set; }
+    public int? Count { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset DueAt { get; set; }
+    public string? AssigneeId { get; set; }
+    /// <summary>JSON list of roles.</summary>
+    public string ApproverRoles { get; set; } = "[]";
+    /// <summary>JSON list of evidence lines.</summary>
+    public string Evidence { get; set; } = "[]";
+    /// <summary>open, done, approved or rejected.</summary>
+    public string Status { get; set; } = "open";
+    public string? DecidedBy { get; set; }
+    public Guid? DecidedById { get; set; }
+    public DateTimeOffset? DecidedAt { get; set; }
+    public string? Comment { get; set; }
+    public string Route { get; set; } = "";
+    /// <summary>The record it's about, e.g. the billing run's id.</summary>
+    public Guid? SourceId { get; set; }
+}
+
+/// <summary>A scheme that recovers water from owners, at one flat rate per kilolitre (docs/22 §2). No row: it doesn't.</summary>
+public sealed class WaterSetting
+{
+    public Guid SchemeId { get; set; }
+    public decimal RatePerKl { get; set; }
+    public int Version { get; set; } = 1;
+    public string? UpdatedBy { get; set; }
+    public DateTimeOffset? UpdatedAt { get; set; }
+}
+
+/// <summary>A water meter's running total (kl) for a billing month.</summary>
+public sealed class MeterReading
+{
+    public Guid Id { get; set; }
+    public Guid UnitId { get; set; }
+    public Guid SchemeId { get; set; }
+    public string Period { get; set; } = "";
+    public decimal Reading { get; set; }
+    public DateOnly ReadOn { get; set; }
+    public string CapturedBy { get; set; } = "";
+    public DateTimeOffset CapturedAt { get; set; }
+}
+
+/// <summary>How a scheme's levies are set (D13): manual (entered per unit) or budget (derived from the approved budget). No row: manual.</summary>
+public sealed class LevySetting
+{
+    public Guid SchemeId { get; set; }
+    public string Method { get; set; } = "manual";
+    public int Version { get; set; } = 1;
+    public string? UpdatedBy { get; set; }
+    public DateTimeOffset? UpdatedAt { get; set; }
 }

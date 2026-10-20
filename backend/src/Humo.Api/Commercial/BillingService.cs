@@ -233,6 +233,8 @@ public sealed class BillingRunHost(IServiceScopeFactory scopes, IConfiguration c
                 var billing = scope.ServiceProvider.GetRequiredService<BillingService>();
                 if (await billing.LastRunAsync(stoppingToken) == CommercialRules.Day(now)) continue;
                 await billing.RunAsync("Humo billing run", stoppingToken);
+                // Levy accounts age as days pass: current becomes 30 days and so on (slice 2a).
+                await scope.ServiceProvider.GetRequiredService<Finance.AccountLedger>().RefreshAsync(null, stoppingToken);
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {

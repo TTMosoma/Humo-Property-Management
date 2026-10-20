@@ -33,6 +33,7 @@ export type DataTopic =
   | 'suppliers'
   | 'payables'
   | 'work-items'
+  | 'billing'
   | 'notifications'
   | 'subscriptions'
   | 'quote-requests';

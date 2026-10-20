@@ -1,7 +1,22 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
 import {
   AccountDataSource,
+  BillingAction,
+  BillingDataSource,
+  BillingRun,
+  BillingRunSummary,
+  LevyDataSource,
+  LevyMethod,
+  LevyRollProposal,
+  LevySetting,
+  MeterDataSource,
+  MeterEntry,
+  MeterSheet,
+  NewBillingRun,
+  SchemeBillingStatus,
+  WorkItem,
+  WorkItemDataSource,
   AccountDetail,
   ApiError,
   ListQuery,
@@ -100,5 +115,99 @@ export class HttpReceiptDataSource extends HttpPort implements ReceiptDataSource
 
   remove(receiptId: string, reason: string, expectedVersion?: number): Observable<void> {
     return this.command('POST', `/receipts/${receiptId}/remove`, { reason, expectedVersion }, ['receipts']);
+  }
+}
+
+/** Levy billing runs over HTTP (slice 2b; docs/11 §1). The API calculates every charge; approval happens in My work. */
+@Injectable()
+export class HttpBillingDataSource extends HttpPort implements BillingDataSource {
+  private readonly accounts = inject(AccountDataSource) as HttpAccountDataSource;
+
+  status(schemeIds: string[]): Observable<SchemeBillingStatus[]> {
+    return this.live<SchemeBillingStatus[]>('/billing/status', ['billing', 'schemes', 'units'], { schemeIds });
+  }
+
+  runs(schemeIds: string[], query?: ListQuery): Observable<Page<BillingRunSummary>> {
+    const params: Record<string, string | string[]> = { schemeIds };
+    if (query?.page) params['page'] = String(query.page);
+    if (query?.pageSize) params['pageSize'] = String(query.pageSize);
+    return this.live<Page<BillingRunSummary>>('/billing/runs', ['billing'], params);
+  }
+
+  get(id: string): Observable<(BillingRunSummary & { run: BillingRun }) | undefined> {
+    return orUndefined(this.live<BillingRunSummary & { run: BillingRun }>(`/billing/runs/${id}`, ['billing', 'work-items']));
+  }
+
+  create(input: NewBillingRun): Observable<string> {
+    return this.createId('/billing/runs', input, ['billing']);
+  }
+
+  act(id: string, action: BillingAction, expectedVersion?: number): Observable<void> {
+    return this.command('POST', `/billing/runs/${id}/actions`, { action, expectedVersion }, ['billing', 'work-items', 'accounts']);
+  }
+
+  adjust(accountId: string, amount: number, reason: string): Observable<void> {
+    return this.accounts.adjust(accountId, amount, reason);
+  }
+}
+
+/** Water meter readings over HTTP (docs/22 §2). Setting a scheme's rate switches water recovery on. */
+@Injectable()
+export class HttpMeterDataSource extends HttpPort implements MeterDataSource {
+  sheet(schemeId: string, period: string): Observable<MeterSheet> {
+    return this.live<MeterSheet>(`/schemes/${schemeId}/meter-readings/${period}`, ['billing']);
+  }
+
+  saveReadings(schemeId: string, period: string, readOn: string, entries: MeterEntry[]): Observable<number> {
+    return this.command<number>('PUT', `/schemes/${schemeId}/meter-readings/${period}`, { readOn, entries }, ['billing']);
+  }
+
+  setRate(schemeId: string, ratePerKl: number, reason: string, expectedVersion?: number): Observable<void> {
+    return this.command('PUT', `/schemes/${schemeId}/water-rate`, { ratePerKl, reason, expectedVersion }, ['billing']);
+  }
+}
+
+/** How levies are set (D13). Deriving them from the budget waits for budgets on the API. */
+@Injectable()
+export class HttpLevyDataSource extends HttpPort implements LevyDataSource {
+  setting(schemeId: string): Observable<LevySetting> {
+    return this.live<LevySetting>(`/schemes/${schemeId}/levy-setting`, ['billing']);
+  }
+
+  setMethod(schemeId: string, method: LevyMethod, reason: string, expectedVersion?: number): Observable<void> {
+    return this.command('PUT', `/schemes/${schemeId}/levy-setting`, { method, reason, expectedVersion }, ['billing']);
+  }
+
+  proposal(schemeId: string): Observable<LevyRollProposal | undefined> {
+    return orUndefined(this.live<LevyRollProposal>(`/schemes/${schemeId}/levy-roll/proposal`, ['billing']));
+  }
+
+  apply(schemeId: string, budgetId: string, reason: string, expectedVersion?: number): Observable<number> {
+    return this.command<number>('POST', `/schemes/${schemeId}/levy-roll/apply`, { budgetId, reason, expectedVersion }, ['billing', 'units']);
+  }
+}
+
+/** My work over HTTP: approvals and tasks in the person's schemes, re-fetched whenever work changes. */
+@Injectable()
+export class HttpWorkItemDataSource extends HttpPort implements WorkItemDataSource {
+  watch(): Observable<WorkItem[]> {
+    return this.live<WorkItem[]>('/work-items', ['work-items', 'billing', 'receipts', 'session']);
+  }
+
+  complete(ids: string[]): Observable<void> {
+    return this.command('POST', '/work-items/complete', { ids }, ['work-items']);
+  }
+
+  reopen(ids: string[]): Observable<void> {
+    return this.command('POST', '/work-items/reopen', { ids }, ['work-items']);
+  }
+
+  assign(ids: string[], assigneeId: string | null): Observable<void> {
+    return this.command('POST', '/work-items/assign', { ids, assigneeId }, ['work-items']);
+  }
+
+  /** Approving a large amount needs a fresh passkey (the agency's threshold); the API checks who may decide. */
+  decide(id: string, decision: 'approved' | 'rejected', _by: string, comment?: string): Observable<void> {
+    return this.command('POST', `/work-items/${id}/decision`, { decision, comment }, ['work-items', 'billing']);
   }
 }

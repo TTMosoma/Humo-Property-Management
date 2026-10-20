@@ -31,6 +31,11 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
     public DbSet<PayerRule> PayerRules => Set<PayerRule>();
     public DbSet<StatementMappingSetting> StatementMappings => Set<StatementMappingSetting>();
     public DbSet<StatementImport> StatementImports => Set<StatementImport>();
+    public DbSet<BillingRunRow> BillingRuns => Set<BillingRunRow>();
+    public DbSet<WorkItemRow> WorkItems => Set<WorkItemRow>();
+    public DbSet<WaterSetting> WaterSettings => Set<WaterSetting>();
+    public DbSet<MeterReading> MeterReadings => Set<MeterReading>();
+    public DbSet<LevySetting> LevySettings => Set<LevySetting>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Notice> Notices => Set<Notice>();
     public DbSet<NoticeRead> NoticeReads => Set<NoticeRead>();
@@ -70,6 +75,7 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.Property(o => o.Name).HasMaxLength(200);
             e.Property(o => o.ShortName).HasMaxLength(100);
             e.Property(o => o.ApprovalStepUpAmount).HasPrecision(18, 2).HasDefaultValue(50_000m);
+            e.Property(o => o.InterestPercentPerMonth).HasPrecision(5, 2).HasDefaultValue(2m);
             e.HasIndex(o => o.ShortName).IsUnique();
             e.Property(o => o.Version).IsConcurrencyToken();
         });
@@ -187,6 +193,55 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.ToTable("StatementImports");
             e.Property(x => x.Total).HasPrecision(18, 2);
             e.HasIndex(x => x.SchemeId);
+        });
+
+        builder.Entity<BillingRunRow>(e =>
+        {
+            e.ToTable("BillingRuns");
+            e.Property(x => x.Ref).HasMaxLength(30);
+            e.Property(x => x.Period).HasMaxLength(7);
+            e.Property(x => x.Stage).HasMaxLength(20);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => x.Ref).IsUnique();
+            e.HasIndex(x => new { x.SchemeId, x.Period });
+            e.HasOne<Scheme>().WithMany().HasForeignKey(x => x.SchemeId);
+        });
+
+        builder.Entity<WorkItemRow>(e =>
+        {
+            e.ToTable("WorkItems");
+            e.Property(x => x.Ref).HasMaxLength(40);
+            e.Property(x => x.Kind).HasMaxLength(20);
+            e.Property(x => x.Type).HasMaxLength(40);
+            e.Property(x => x.Status).HasMaxLength(20);
+            e.Property(x => x.Amount).HasPrecision(18, 2);
+            e.HasIndex(x => new { x.OrganisationId, x.Status });
+            e.HasIndex(x => x.SourceId);
+        });
+
+        builder.Entity<WaterSetting>(e =>
+        {
+            e.ToTable("WaterSettings");
+            e.HasKey(x => x.SchemeId);
+            e.Property(x => x.RatePerKl).HasPrecision(10, 2);
+            e.Property(x => x.Version).IsConcurrencyToken();
+        });
+
+        builder.Entity<MeterReading>(e =>
+        {
+            e.ToTable("MeterReadings");
+            e.Property(x => x.Period).HasMaxLength(7);
+            e.Property(x => x.Reading).HasPrecision(12, 2);
+            e.HasIndex(x => new { x.UnitId, x.Period }).IsUnique();
+            e.HasIndex(x => new { x.SchemeId, x.Period });
+        });
+
+        builder.Entity<LevySetting>(e =>
+        {
+            e.ToTable("LevySettings");
+            e.HasKey(x => x.SchemeId);
+            e.Property(x => x.Method).HasMaxLength(10);
+            e.Property(x => x.Version).IsConcurrencyToken();
         });
 
         builder.Entity<Invoice>(e =>

@@ -1,5 +1,5 @@
 import { provideHttpClient, withFetch } from '@angular/common/http';
-import { EnvironmentProviders, Provider, inject, makeEnvironmentProviders } from '@angular/core';
+import { EnvironmentProviders, Provider, makeEnvironmentProviders } from '@angular/core';
 import {
   AccessDataSource,
   AccountDataSource,
@@ -51,16 +51,16 @@ import { ContractorNetwork } from '../domain/contractor';
 import { HttpAccessDataSource } from './http-access';
 import { HttpAuditDataSource, HttpSecurityDataSource } from './http-audit-security';
 import { HttpBoardDataSource } from './http-board';
-import { HttpAccountDataSource, HttpReceiptDataSource } from './http-finance';
+import { HttpAccountDataSource, HttpBillingDataSource, HttpLevyDataSource, HttpMeterDataSource, HttpReceiptDataSource, HttpWorkItemDataSource } from './http-finance';
 import { HttpCatalogueDataSource, HttpCommercialDataSource, HttpNudgeDataSource, HttpPlanDataSource, HttpPlatformDataSource } from './http-commercial';
 import { HttpAccountRequestDataSource, HttpHumoTeamDataSource, HttpNotificationDataSource } from './http-platform';
 import { HttpOrganisationDataSource, HttpPersonDataSource, HttpSchemeDataSource, HttpStepUpAuthenticator, HttpUnitDataSource } from './http-portfolio';
 import { HttpSessionDataSource } from './http-session-data-source';
-import { notConnected, partlyConnected } from './not-connected';
+import { notConnected } from './not-connected';
 
 /** Ports whose HTTP adapters come with later backend slices. Remove each from this list as its adapter lands. */
 const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
-  [WorkItemDataSource, 'WorkItemDataSource'],
+
 
   [TimelineDataSource, 'TimelineDataSource'],
   [JobDataSource, 'JobDataSource'],
@@ -72,8 +72,7 @@ const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
   [MeetingDataSource, 'MeetingDataSource'],
   [ResolutionDataSource, 'ResolutionDataSource'],
 
-  [MeterDataSource, 'MeterDataSource'],
-  [LevyDataSource, 'LevyDataSource'],
+
   [CollectionDataSource, 'CollectionDataSource'],
   [LibraryDataSource, 'LibraryDataSource'],
   [ComplianceDataSource, 'ComplianceDataSource'],
@@ -123,16 +122,13 @@ export function provideHttpData(): EnvironmentProviders {
     { provide: PlanDataSource, useClass: HttpPlanDataSource },
     { provide: CommercialDataSource, useClass: HttpCommercialDataSource },
     { provide: NudgeDataSource, useClass: HttpNudgeDataSource },
-    // Slice 2a: levy accounts and receipts. Billing runs follow (2b); journal adjustments are connected now.
+    // Slice 2: levy accounts and receipts (2a); billing runs, meter readings, levy settings and My work (2b).
     { provide: AccountDataSource, useClass: HttpAccountDataSource },
     { provide: ReceiptDataSource, useClass: HttpReceiptDataSource },
-    {
-      provide: BillingDataSource,
-      useFactory: () => {
-        const accounts = inject(AccountDataSource) as HttpAccountDataSource;
-        return partlyConnected<BillingDataSource>('BillingDataSource', { adjust: (id: string, amount: number, reason: string) => accounts.adjust(id, amount, reason) });
-      },
-    },
+    { provide: BillingDataSource, useClass: HttpBillingDataSource },
+    { provide: MeterDataSource, useClass: HttpMeterDataSource },
+    { provide: LevyDataSource, useClass: HttpLevyDataSource },
+    { provide: WorkItemDataSource, useClass: HttpWorkItemDataSource },
     ...pending,
   ]);
 }
