@@ -31,7 +31,7 @@ public sealed record LetterSnapshot(CollectionViewDto View, CollectionStep Step,
 /// rendered from it through the app's print route, delivered by email (PDF attached), SMS, or by post (the agency
 /// prints it). A letter of demand needs the trustees' approval in My work; every active case has one follow-up Task.
 /// </summary>
-public sealed class CreditControl(HumoDbContext db, Commercial.CommercialRecords commercial, DocumentPrinter printer, IEmailSender email, SmsGateway sms,
+public sealed class CreditControl(HumoDbContext db, Commercial.CommercialRecords commercial, DocumentPrinter printer, IEmailSender email, SmsGateway sms, Messaging.SentRecords sent,
     TimeProvider clock, ILogger<CreditControl> logger) : IApprovalHandler
 {
     public const string Feature = "credit-control";
@@ -131,6 +131,9 @@ public sealed class CreditControl(HumoDbContext db, Commercial.CommercialRecords
                 issued = await IssueAsync(a, c, kind, action.Channel!, $"{name} sent by {action.Channel}: {BillingRules.Rand(overdue)} overdue", by, ct);
                 c.Stage = kind;
                 if (kind == CollectionStages.LetterOfDemand) c.DemandApproval = null;
+                if (action.Channel != "post" && await sent.RecipientAsync(a, action.Channel!, issued.Id, ct) is { } r)
+                    await sent.RecordAsync("letter", issued.OrganisationId, a.SchemeId, $"{name}: levy account {a.AccountNo}", LetterBody(name), $"{r.Name} · {a.AccountNo}", by,
+                        new Messaging.SentSourceDto($"Collection case {a.AccountNo}", $"/finance/credit-control/{a.Id}"), [r], null, ct);
                 break;
             }
             case "request-demand-approval":
@@ -268,20 +271,43 @@ public sealed class CreditControl(HumoDbContext db, Commercial.CommercialRecords
     public async Task<List<IssuedLetter>> RemindAsync(IReadOnlyCollection<LevyAccount> accounts, string channel, Actor actor, CancellationToken ct)
     {
         var issued = new List<IssuedLetter>();
+        var to = new Dictionary<Guid, List<Messaging.Recipient>>();
+        var skipped = new Dictionary<Guid, List<Messaging.SkippedDto>>();
         foreach (var a in accounts)
         {
             var (c, row) = await CaseAsync(a, ct);
             var action = new CollectionAction("send-letter", Kind: CollectionStages.Reminder, Channel: channel);
-            if (c.Stage != CollectionStages.NotStarted || CreditControlRules.Check(c, Ageing(a), action).Count > 0 || !await CanDeliverAsync(a, channel, ct)) continue;
+            var why = c.Stage != CollectionStages.NotStarted ? $"Already at “{CollectionStages.Labels[c.Stage]}”"
+                : CreditControlRules.Check(c, Ageing(a), action).Values.FirstOrDefault() ?? await DeliveryProblemAsync(a, channel, ct);
+            if (why is not null)
+            {
+                if (await sent.RecipientAsync(a, channel, null, ct) is { } x)
+                    (skipped.TryGetValue(a.SchemeId, out var list) ? list : skipped[a.SchemeId] = []).Add(new Messaging.SkippedDto(x.PersonId.ToString(), x.Name, x.UnitLabel, why));
+                continue;
+            }
             var letter = await IssueAsync(a, c, CollectionStages.Reminder, channel, $"Reminder sent by {channel} (bulk): {BillingRules.Rand(CreditControlRules.Overdue(Ageing(a)))} overdue", actor.Human.Name, ct);
             c.Stage = CollectionStages.Reminder;
             c.Version++;
             await FollowUpAsync(a, c, actor.Human.Name, ct);
             await WriteAsync(a, c, row, ct);
             issued.Add(letter);
+            if (await sent.RecipientAsync(a, channel, letter.Id, ct) is { } r) (to.TryGetValue(a.SchemeId, out var list) ? list : to[a.SchemeId] = []).Add(r);
+        }
+        // One Sent record per scheme, listing who was reminded and who wasn't (and why).
+        foreach (var schemeId in to.Keys.Union(skipped.Keys))
+        {
+            var scheme = await db.Schemes.FirstAsync(s => s.Id == schemeId, ct);
+            var reached = to.GetValueOrDefault(schemeId) ?? [];
+            await sent.RecordAsync("reminder", scheme.OrganisationId, schemeId, "Your levy account {account.number}", LetterBody(CreditControlRules.LetterNames[CollectionStages.Reminder]),
+                $"{reached.Count} account{(reached.Count == 1 ? "" : "s")} in arrears · {scheme.Name}", actor.Human.Name, new Messaging.SentSourceDto("Credit control", "/finance/credit-control"),
+                reached, skipped.GetValueOrDefault(schemeId), ct);
         }
         return issued;
     }
+
+    /// <summary>What Sent shows as the letter's text (the letter itself is the attached PDF).</summary>
+    private static string LetterBody(string name) =>
+        $"Dear {{person.name}},\n\n{name}: {{account.overdue}} is overdue on your levy account {{account.number}} for unit {{unit.number}}, {{scheme.name}}. The letter is attached.\n\n{{agency.name}}";
 
     /// <summary>Why a letter can't go by this channel to this holder, or null. Letters tell owners where to pay, so the scheme's trust account must be on record.</summary>
     public async Task<string?> DeliveryProblemAsync(LevyAccount a, string? channel, CancellationToken ct)
@@ -337,8 +363,34 @@ public sealed class CreditControl(HumoDbContext db, Commercial.CommercialRecords
                 }
                 if (letter.Channel == "post" || letter.DeliveredAt is not null) continue;
                 var holder = await db.People.AsNoTracking().FirstAsync(p => p.Id == Guid.Parse(s.View.Holder.Id), ct);
-                if (letter.Channel == "email") await email.SendAsync(Email(s, holder.Email, pdf), ct);
-                else await sms.SendAsync(new SmsMessage(holder.Phone, Sms(s), s.View.Account.AccountNo), ct);
+                var delivery = await sent.DeliveryForAsync(letter.Id, ct);
+                if (letter.Channel == "email")
+                {
+                    try
+                    {
+                        await email.SendAsync(Email(s, holder.Email, pdf), ct);
+                        // Accepted by Humo's mail server. Bounces come back later by email and aren't matched up yet.
+                        if (delivery is not null) sent.Mark(delivery, "delivered", null);
+                    }
+                    catch (Exception e) when (e is not OperationCanceledException)
+                    {
+                        logger.LogError(e, "The mail server didn’t accept letter {Id}", id);
+                        if (delivery is not null) sent.Mark(delivery, "failed", "The mail server didn’t accept it. Retry from Sent.");
+                        await db.SaveChangesAsync(ct);
+                        continue;
+                    }
+                }
+                else
+                {
+                    // The delivery's id goes to the provider as our reference: its delivery report comes back with it.
+                    var receipt = await sms.SendAsync(new SmsMessage(holder.Phone, Sms(s), delivery?.Id.ToString("N") ?? s.View.Account.AccountNo), ct);
+                    if (delivery is not null) sent.Mark(delivery, receipt.Accepted ? "queued" : "failed", receipt.Accepted ? null : receipt.Error ?? "The SMS provider refused it.", receipt.ProviderMessageId);
+                    if (!receipt.Accepted)
+                    {
+                        await db.SaveChangesAsync(ct);
+                        continue;
+                    }
+                }
                 letter.DeliveredAt = Now;
                 await db.SaveChangesAsync(ct);
             }

@@ -349,6 +349,68 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.ToTable("CollectionCases", (string)null);
                 });
 
+            modelBuilder.Entity("Humo.Infrastructure.Data.DeliveryRow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)");
+
+                    b.Property<DateTimeOffset>("At")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<Guid?>("DocumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Error")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ProviderMessageId")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<Guid>("SentMessageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)");
+
+                    b.Property<string>("UnitLabel")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<string>("Values")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DocumentId");
+
+                    b.HasIndex("SentMessageId");
+
+                    b.ToTable("Deliveries", (string)null);
+                });
+
             modelBuilder.Entity("Humo.Infrastructure.Data.DocumentSetting", b =>
                 {
                     b.Property<Guid>("OrganisationId")
@@ -1599,6 +1661,81 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.ToTable("Schemes", (string)null);
                 });
 
+            modelBuilder.Entity("Humo.Infrastructure.Data.SentMessageRow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AudienceLabel")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Channels")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Ref")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("SchemeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("SendAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SentBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Skipped")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("SourceLabel")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SourceRoute")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganisationId", "Ref")
+                        .IsUnique();
+
+                    b.HasIndex("SchemeId", "CreatedAt");
+
+                    b.ToTable("SentMessages", (string)null);
+                });
+
             modelBuilder.Entity("Humo.Infrastructure.Data.SignInLink", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2197,6 +2334,15 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.HasOne("Humo.Infrastructure.Data.LevyAccount", null)
                         .WithOne()
                         .HasForeignKey("Humo.Infrastructure.Data.CollectionCaseRow", "AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Humo.Infrastructure.Data.DeliveryRow", b =>
+                {
+                    b.HasOne("Humo.Infrastructure.Data.SentMessageRow", null)
+                        .WithMany()
+                        .HasForeignKey("SentMessageId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

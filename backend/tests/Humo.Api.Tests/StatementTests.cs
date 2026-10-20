@@ -112,6 +112,13 @@ public sealed class StatementTests : IDisposable
         Assert.Contains(Humo.Domain.Finance.BillingRules.Rand(1850), email.Text);
         Assert.Null(email.Attachments);
 
+        // In Communications › Sent: one record for the run, its delivery as the mail server reported it (R-5).
+        await HumoApiFactory.Until(() => api.Db(db => db.Deliveries.AnyAsync(d => d.Status == "delivered")));
+        var record = Assert.Single((await Ok(await s.Finance.GetAsync($"/api/communications/sent?schemeIds={s.Kc}"))).EnumerateArray()).GetProperty("message");
+        Assert.Equal(("statement", "Owners · Kingfisher Court", "Billing run BR-KC-2611"), (record.GetProperty("kind").GetString(), record.GetProperty("audienceLabel").GetString(),
+            record.GetProperty("source").GetProperty("label").GetString()));
+        Assert.Equal(("delivered", "sipho@mail.example"), (record.GetProperty("deliveries")[0].GetProperty("status").GetString(), record.GetProperty("deliveries")[0].GetProperty("address").GetString()));
+
         // D7: the snapshot and its hash, and the PDF drawn from it, with its own hash.
         await Eventually(() => api.Db(db => db.IssuedStatements.AnyAsync(x => x.Pdf != null)));
         var issued = await api.Db(db => db.IssuedStatements.SingleAsync());

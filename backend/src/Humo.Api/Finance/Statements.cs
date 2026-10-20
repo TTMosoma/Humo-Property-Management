@@ -36,7 +36,7 @@ public sealed record StatementSnapshot(StatementViewDto View, TemplateDesign Des
 /// No statement numbers (D10): a statement is "account + period". Delivery (D9): a secure link to the
 /// resident portal by default; the PDF attached when the agency chooses that.
 /// </summary>
-public sealed class StatementService(HumoDbContext db, Commercial.CommercialRecords commercial, DocumentPrinter printer, IEmailSender email,
+public sealed class StatementService(HumoDbContext db, Commercial.CommercialRecords commercial, DocumentPrinter printer, IEmailSender email, Messaging.SentRecords sent,
     IOptions<AppOptions> app, TimeProvider clock, ILogger<StatementService> logger)
 {
     private DateOnly Today => DateOnly.FromDateTime(clock.GetUtcNow().ToOffset(TimeSpan.FromHours(2)).DateTime);
@@ -154,15 +154,54 @@ public sealed class StatementService(HumoDbContext db, Commercial.CommercialReco
                 }
                 if (issued.SentBy != "email") continue;
                 var holder = await db.People.AsNoTracking().FirstAsync(p => p.Id == Guid.Parse(snapshot.View.Holder.Id), ct);
-                if (!SettingsEndpoints.IsEmail(holder.Email)) continue;
+                if (!SettingsEndpoints.IsEmail(holder.Email))
+                {
+                    await sent.MarkAsync(id, "failed", "No email address on record", ct);
+                    continue;
+                }
                 var attach = snapshot.Settings.StatementDelivery == "attachment" && pdf is not null;
-                await email.SendAsync(Message(snapshot, holder.Email, attach ? pdf : null), ct);
+                try
+                {
+                    await email.SendAsync(Message(snapshot, holder.Email, attach ? pdf : null), ct);
+                }
+                catch (Exception e) when (e is not OperationCanceledException)
+                {
+                    logger.LogError(e, "The mail server didn’t accept statement {Id}", id);
+                    await sent.MarkAsync(id, "failed", "The mail server didn’t accept it. Retry from Sent.", ct);
+                    continue;
+                }
+                // Accepted by Humo's mail server. Bounces come back later by email and aren't matched up yet.
+                await sent.MarkAsync(id, "delivered", null, ct);
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {
                 logger.LogError(e, "Couldn’t deliver statement {Id}", id);
             }
         }
+    }
+
+    public const string SentBody = "Dear {person.name},\n\nYour levy statement for unit {unit.number} is ready in the resident portal. The balance owing is {account.balance}.\n\nKind regards,\n{agency.name}";
+
+    /// <summary>
+    /// Records sent statements in Communications › Sent: one record for the send, a delivery per owner by the account's
+    /// channel. Statements by post are listed as not sent by Humo (the agency prints and posts them).
+    /// </summary>
+    public async Task RecordSentAsync(IReadOnlyList<(IssuedStatement Issued, LevyAccount Account)> items, string? audienceLabel, Messaging.SentSourceDto source, string by,
+        CancellationToken ct)
+    {
+        if (items.Count == 0) return;
+        var scheme = await db.Schemes.FirstAsync(s => s.Id == items[0].Account.SchemeId, ct);
+        var to = new List<Messaging.Recipient>();
+        var skipped = new List<Messaging.SkippedDto>();
+        foreach (var (issued, a) in items)
+        {
+            if (await sent.RecipientAsync(a, issued.SentBy ?? "email", issued.Id, ct) is not { } r) continue;
+            if (r.Channel == "post") skipped.Add(new Messaging.SkippedDto(r.PersonId.ToString(), r.Name, r.UnitLabel, "By post: the agency prints and posts it"));
+            else to.Add(r);
+        }
+        var period = items[0].Issued.Period;
+        await sent.RecordAsync("statement", scheme.OrganisationId, scheme.Id, $"Your {scheme.Name} levy statement: {PeriodLabel(period)}", SentBody, audienceLabel ?? $"Owners · {scheme.Name}",
+            by, source, to, skipped, ct);
     }
 
     private EmailMessage Message(StatementSnapshot s, string to, byte[]? pdf)
@@ -334,6 +373,10 @@ public static class StatementEndpoints
             var issued = (await statements.IssueAsync(account, period, actor.Human.Name, null, ct))!;
             issued.SentBy = "email";
             issued.SentAt = clock.GetUtcNow();
+            var unit = await db.Units.Where(u => u.Id == account.UnitId).Select(u => u.Number).FirstAsync(ct);
+            await statements.RecordSentAsync([(issued, account)], $"{holder!.DisplayName} · {account.AccountNo}",
+                new Messaging.SentSourceDto($"Statement {StatementService.PeriodLabel(period)} · {account.AccountNo}", $"/schemes/{account.SchemeId}/units/{unit}/account/statements/{period}"),
+                actor.Human.Name, ct);
             commands.AfterCommit(() =>
             {
                 queue.Enqueue(DeliveryQueue.Statements, [issued.Id]);

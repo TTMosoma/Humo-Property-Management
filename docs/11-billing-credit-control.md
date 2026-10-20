@@ -136,4 +136,4 @@ Everything is behind `Collections.Manage` (Agency Administrator, Portfolio Manag
 - **Ageing** (done on the API, slice 2a): ages the actual transactions. Payments settle the oldest charges first; what's left of each charge is current under 30 days, then 30, 60, 90 and 120+. Balance, ageing and status are stored on the account, recalculated on every ledger write.
 - **Charge rules** (on the API, slice 2c): interest rate, due day and step days are in Settings › Billing configuration. The estimate method is still a constant.
 - **Segregation of duties** (done on the API, slice 2b): the person who prepared a run can't approve it.
-- **Delivery.** Statements are emailed for real on the API (slice 2c). Letters are still recorded, not delivered, and Communications › Sent (with delivery and opened tracking) isn't on the API yet.
+- **Delivery.** Statements and collection letters are delivered for real on the API (slices 2c and 2d) and recorded in Communications › Sent with each delivery's result. Failed ones can be retried from there (register R-5). Bounces and "opened" aren't tracked yet.

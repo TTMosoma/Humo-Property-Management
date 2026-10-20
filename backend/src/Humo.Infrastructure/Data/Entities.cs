@@ -712,3 +712,56 @@ public sealed class IssuedLetter
     /// <summary>When the email or SMS went out; null for post (the agency prints and posts it) or until delivered.</summary>
     public DateTimeOffset? DeliveredAt { get; set; }
 }
+
+/// <summary>
+/// One record in Communications › Sent (docs/18 R-5): everything Humo PM sent for an organisation (statements,
+/// collection letters, reminders; composed messages and notices when they reach the API), with a delivery per person.
+/// </summary>
+public sealed class SentMessageRow
+{
+    public Guid Id { get; set; }
+    public int Version { get; set; } = 1;
+    /// <summary>"MSG-2041": unique within the organisation.</summary>
+    public string Ref { get; set; } = "";
+    public Guid OrganisationId { get; set; }
+    public Guid SchemeId { get; set; }
+    /// <summary>message, notice, letter, statement, reminder or reply.</summary>
+    public string Kind { get; set; } = "";
+    public string Subject { get; set; } = "";
+    /// <summary>The text with merge fields; each delivery keeps its own values.</summary>
+    public string Body { get; set; } = "";
+    /// <summary>JSON list of channels.</summary>
+    public string Channels { get; set; } = "[]";
+    public string AudienceLabel { get; set; } = "";
+    public DateTimeOffset CreatedAt { get; set; }
+    public string SentBy { get; set; } = "";
+    public DateTimeOffset SendAt { get; set; }
+    public string? SourceLabel { get; set; }
+    public string? SourceRoute { get; set; }
+    /// <summary>JSON list of people the send couldn't reach, with the reason.</summary>
+    public string Skipped { get; set; } = "[]";
+}
+
+/// <summary>A sent message's delivery to one person, with its result as the email server or SMS provider reported it.</summary>
+public sealed class DeliveryRow
+{
+    public Guid Id { get; set; }
+    public Guid SentMessageId { get; set; }
+    public Guid PersonId { get; set; }
+    public string Name { get; set; } = "";
+    public string? UnitLabel { get; set; }
+    /// <summary>email, sms, whatsapp, portal or push.</summary>
+    public string Channel { get; set; } = "";
+    /// <summary>Email address, phone number or "Resident portal".</summary>
+    public string Address { get; set; } = "";
+    /// <summary>scheduled, queued, delivered, read, failed or bounced.</summary>
+    public string Status { get; set; } = "queued";
+    public DateTimeOffset At { get; set; }
+    public string? Error { get; set; }
+    /// <summary>The merge values used for this person, as JSON.</summary>
+    public string Values { get; set; } = "{}";
+    /// <summary>The issued statement or letter this delivery carries, so its result can be recorded and a failure retried.</summary>
+    public Guid? DocumentId { get; set; }
+    /// <summary>The provider's id for the message (SMSSouthAfrica's event id).</summary>
+    public string? ProviderMessageId { get; set; }
+}

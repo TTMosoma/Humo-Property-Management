@@ -326,6 +326,7 @@ public static class BillingRunEndpoints
     {
         var counts = new Dictionary<string, int> { ["email"] = 0, ["post"] = 0, ["portal"] = 0 };
         var issued = new List<IssuedStatement>();
+        var sentItems = new List<(IssuedStatement, LevyAccount)>();
         foreach (var line in run.Lines.Where(l => !l.Excluded))
         {
             var account = await db.LevyAccounts.FirstAsync(x => x.Id == Guid.Parse(line.AccountId), ct);
@@ -335,7 +336,9 @@ public static class BillingRunEndpoints
             statement.SentAt = clock.GetUtcNow();
             counts[by]++;
             issued.Add(statement);
+            sentItems.Add((statement, account));
         }
+        await statements.RecordSentAsync(sentItems, null, new Humo.Api.Messaging.SentSourceDto($"Billing run {run.Ref}", $"/finance/billing/{run.Id}"), actor.Human.Name, ct);
         var template = issued.FirstOrDefault() is { } first ? new RunTemplateRef(first.TemplateId, first.TemplateVersion) : new RunTemplateRef("levy-statement.standard", 1);
         run.Statements = new RunStatements(now, actor.Human.Name, counts["email"], counts["post"], counts["portal"], template);
         run.Stage = "sent";
