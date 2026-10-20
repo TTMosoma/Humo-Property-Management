@@ -4,6 +4,8 @@ Status: **implemented in the frontend simulation** (October 2026).
 
 **On the API (slice 2b, 20 October 2026):** the billing run in full, except sending statements (slice 2c) and special levies (no setup screen yet). The rules are ported in `backend/src/Humo.Domain/Finance/BillingRuns.cs`; tests in `LevyBillingTests`. Approval is a work item in My work › Approvals on the API, and **the person who prepared a run can't approve it** (the segregation-of-duties gap in §8 is closed). Interest on arrears is 2% a month on what's 30 days and older by default (common sectional-title practice), kept per agency (`InterestPercentPerMonth`); its settings screen arrives with Settings on the API. Posted charges are ledger lines dated the 1st of the period. Ageing is refreshed every morning.
 
+**On the API (slice 2c, 20 October 2026):** *Send statements* issues each billed account's statement and sends it by the account's channel (email, portal or post); a run can't send before the scheme's trust account is on record. An issued statement is frozen (D7): the data snapshot and its SHA-256 are stored with the template version, and the PDF is rendered from that snapshot by headless Chromium through the app's print route (D8) and stored with its own hash. Emails carry a secure link to the resident portal by default, or the PDF attached when the agency chooses that in Documents & templates (D9). No statement numbers (D10). The interest rate, billing day, due day, step days and AGM months are in Settings › Billing configuration on the API; statements take their due date from it. Code: `backend/src/Humo.Api/Finance/Statements.cs`; tests in `StatementTests`.
+
 **Two flows.**
 - **The billing run** (review finding F15): Scope & period → Charges preview → Exceptions → Approval (in Approvals) → Post (locked) → Send statements.
 - **Credit control** (review finding F13): Reminder → Final demand → Letter of demand → Handed over, with Payment arrangement and Disputed beside the pipeline.
@@ -123,6 +125,6 @@ Everything is behind `Collections.Manage` (Agency Administrator, Portfolio Manag
 ## 8. Known gaps (for the backend)
 
 - **Ageing** (done on the API, slice 2a): ages the actual transactions. Payments settle the oldest charges first; what's left of each charge is current under 30 days, then 30, 60, 90 and 120+. Balance, ageing and status are stored on the account, recalculated on every ledger write.
-- **Charge rules.** Interest rate, estimate method and step days are prototype constants. They belong in Settings › Billing configuration.
+- **Charge rules** (on the API, slice 2c): interest rate, due day and step days are in Settings › Billing configuration. The estimate method is still a constant.
 - **Segregation of duties** (done on the API, slice 2b): the person who prepared a run can't approve it.
-- **Delivery.** Sending statements and letters is recorded, not delivered; Communications › Sent will show delivery.
+- **Delivery.** Statements are emailed for real on the API (slice 2c). Letters are still recorded, not delivered, and Communications › Sent (with delivery and opened tracking) isn't on the API yet.
