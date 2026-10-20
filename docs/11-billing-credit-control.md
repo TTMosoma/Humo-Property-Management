@@ -2,6 +2,8 @@
 
 Status: **implemented in the frontend simulation** (October 2026).
 
+**On the API (slice 2b, 20 October 2026):** the billing run in full, except sending statements (slice 2c) and special levies (no setup screen yet). The rules are ported in `backend/src/Humo.Domain/Finance/BillingRuns.cs`; tests in `LevyBillingTests`. Approval is a work item in My work › Approvals on the API, and **the person who prepared a run can't approve it** (the segregation-of-duties gap in §8 is closed). Interest on arrears is 2% a month on what's 30 days and older by default (common sectional-title practice), kept per agency (`InterestPercentPerMonth`); its settings screen arrives with Settings on the API. Posted charges are ledger lines dated the 1st of the period. Ageing is refreshed every morning.
+
 **Two flows.**
 - **The billing run** (review finding F15): Scope & period → Charges preview → Exceptions → Approval (in Approvals) → Post (locked) → Send statements.
 - **Credit control** (review finding F13): Reminder → Final demand → Letter of demand → Handed over, with Payment arrangement and Disputed beside the pipeline.
@@ -122,5 +124,5 @@ Everything is behind `Collections.Manage` (Agency Administrator, Portfolio Manag
 
 - **Ageing** (done on the API, slice 2a): ages the actual transactions. Payments settle the oldest charges first; what's left of each charge is current under 30 days, then 30, 60, 90 and 120+. Balance, ageing and status are stored on the account, recalculated on every ledger write.
 - **Charge rules.** Interest rate, estimate method and step days are prototype constants. They belong in Settings › Billing configuration.
-- **Segregation of duties.** The person who prepared a run can currently approve it. The API should refuse that.
+- **Segregation of duties** (done on the API, slice 2b): the person who prepared a run can't approve it.
 - **Delivery.** Sending statements and letters is recorded, not delivered; Communications › Sent will show delivery.
