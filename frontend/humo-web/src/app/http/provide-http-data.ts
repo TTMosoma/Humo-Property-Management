@@ -49,9 +49,10 @@ import {
 } from '../domain';
 import { ContractorNetwork } from '../domain/contractor';
 import { HttpAccessDataSource } from './http-access';
+import { HttpCommunicationsDataSource } from './http-communications';
 import { HttpAuditDataSource, HttpSecurityDataSource } from './http-audit-security';
 import { HttpBoardDataSource } from './http-board';
-import { HttpAccountDataSource, HttpBillingDataSource, HttpLevyDataSource, HttpMeterDataSource, HttpReceiptDataSource, HttpWorkItemDataSource } from './http-finance';
+import { HttpAccountDataSource, HttpBillingDataSource, HttpCollectionDataSource, HttpLevyDataSource, HttpMeterDataSource, HttpReceiptDataSource, HttpWorkItemDataSource } from './http-finance';
 import { HttpCatalogueDataSource, HttpCommercialDataSource, HttpNudgeDataSource, HttpPlanDataSource, HttpPlatformDataSource } from './http-commercial';
 import { HttpAccountRequestDataSource, HttpHumoTeamDataSource, HttpNotificationDataSource } from './http-platform';
 import { HttpOrganisationDataSource, HttpPersonDataSource, HttpSchemeDataSource, HttpStepUpAuthenticator, HttpUnitDataSource } from './http-portfolio';
@@ -73,13 +74,11 @@ const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
   [ResolutionDataSource, 'ResolutionDataSource'],
 
 
-  [CollectionDataSource, 'CollectionDataSource'],
   [LibraryDataSource, 'LibraryDataSource'],
   [ComplianceDataSource, 'ComplianceDataSource'],
   [ReportDataSource, 'ReportDataSource'],
   [NoticeDataSource, 'NoticeDataSource'],
   [OpsDataSource, 'OpsDataSource'],
-  [CommunicationsDataSource, 'CommunicationsDataSource'],
   [InboxDataSource, 'InboxDataSource'],
   [StaffDataSource, 'StaffDataSource'],
   [BudgetDataSource, 'BudgetDataSource'],
@@ -98,7 +97,7 @@ const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
  * organisations, new customer accounts, notifications, the Humo team, schemes, units, people,
  * the trustee board, users & access, impersonation, the audit log and Settings › Security.
  * Commercial (docs/23): the catalogue, customers and subscriptions, Plan & features, pricing and agreements.
- * Slice 2: levy accounts, receipts, billing runs, meter readings, My work, settings, document templates and statements.
+ * Slice 2: levy accounts, receipts, billing runs, meter readings, My work, settings, document templates, statements and credit control.
  * The other ports answer "not connected yet" until their slice lands.
  */
 export function provideHttpData(): EnvironmentProviders {
@@ -132,6 +131,10 @@ export function provideHttpData(): EnvironmentProviders {
     // Slice 2c: settings, document templates and statements.
     { provide: SettingsDataSource, useClass: HttpSettingsDataSource },
     { provide: DocumentTemplateDataSource, useClass: HttpDocumentTemplateDataSource },
+    // Slice 2d: credit control.
+    { provide: CollectionDataSource, useClass: HttpCollectionDataSource },
+    // R-5: Communications › Sent (statements, letters and reminders with their delivery results). Compose and templates follow.
+    { provide: CommunicationsDataSource, useClass: HttpCommunicationsDataSource },
     ...pending,
   ]);
 }

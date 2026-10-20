@@ -41,6 +41,10 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
     public DbSet<TrustAccountRow> TrustAccounts => Set<TrustAccountRow>();
     public DbSet<IssuedStatement> IssuedStatements => Set<IssuedStatement>();
     public DbSet<PersonalPreference> PersonalPreferences => Set<PersonalPreference>();
+    public DbSet<CollectionCaseRow> CollectionCases => Set<CollectionCaseRow>();
+    public DbSet<IssuedLetter> IssuedLetters => Set<IssuedLetter>();
+    public DbSet<SentMessageRow> SentMessages => Set<SentMessageRow>();
+    public DbSet<DeliveryRow> Deliveries => Set<DeliveryRow>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Notice> Notices => Set<Notice>();
     public DbSet<NoticeRead> NoticeReads => Set<NoticeRead>();
@@ -312,6 +316,58 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.Property(x => x.QuietFrom).HasMaxLength(5);
             e.Property(x => x.QuietTo).HasMaxLength(5);
             e.Property(x => x.Version).IsConcurrencyToken();
+        });
+
+        builder.Entity<CollectionCaseRow>(e =>
+        {
+            e.ToTable("CollectionCases");
+            e.HasKey(x => x.AccountId);
+            e.Property(x => x.Stage).HasMaxLength(20);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => new { x.SchemeId, x.Stage });
+            e.HasOne<LevyAccount>().WithOne().HasForeignKey<CollectionCaseRow>(x => x.AccountId);
+        });
+
+        builder.Entity<IssuedLetter>(e =>
+        {
+            e.ToTable("IssuedLetters");
+            e.Property(x => x.StepId).HasMaxLength(40);
+            e.Property(x => x.Kind).HasMaxLength(20);
+            e.Property(x => x.Channel).HasMaxLength(10);
+            e.Property(x => x.TemplateId).HasMaxLength(80);
+            e.Property(x => x.SnapshotSha256).HasMaxLength(64);
+            e.Property(x => x.PdfSha256).HasMaxLength(64);
+            e.Property(x => x.IssuedBy).HasMaxLength(200);
+            e.HasIndex(x => x.StepId).IsUnique();
+            e.HasIndex(x => x.AccountId);
+            e.HasOne<LevyAccount>().WithMany().HasForeignKey(x => x.AccountId);
+        });
+
+        builder.Entity<SentMessageRow>(e =>
+        {
+            e.ToTable("SentMessages");
+            e.Property(x => x.Ref).HasMaxLength(20);
+            e.Property(x => x.Kind).HasMaxLength(20);
+            e.Property(x => x.Subject).HasMaxLength(300);
+            e.Property(x => x.AudienceLabel).HasMaxLength(300);
+            e.Property(x => x.SentBy).HasMaxLength(200);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => new { x.OrganisationId, x.Ref }).IsUnique();
+            e.HasIndex(x => new { x.SchemeId, x.CreatedAt });
+        });
+
+        builder.Entity<DeliveryRow>(e =>
+        {
+            e.ToTable("Deliveries");
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.Property(x => x.UnitLabel).HasMaxLength(60);
+            e.Property(x => x.Channel).HasMaxLength(10);
+            e.Property(x => x.Address).HasMaxLength(254);
+            e.Property(x => x.Status).HasMaxLength(12);
+            e.Property(x => x.ProviderMessageId).HasMaxLength(60);
+            e.HasIndex(x => x.SentMessageId);
+            e.HasIndex(x => x.DocumentId);
+            e.HasOne<SentMessageRow>().WithMany().HasForeignKey(x => x.SentMessageId);
         });
 
         builder.Entity<Invoice>(e =>

@@ -4,7 +4,6 @@ using Humo.Infrastructure.Messaging;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,7 +12,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace Humo.Api.Tests;
 
 /// <summary>
-/// The real API, with an in-memory SQLite database (no Docker needed), a clock
+/// The real API, with its own SQLite database file (no Docker needed), a clock
 /// the test controls and email captured instead of sent. One per test, so
 /// every test starts from an empty platform with only the bootstrap administrator.
 /// </summary>
@@ -21,7 +20,11 @@ public sealed class HumoApiFactory : WebApplicationFactory<Program>
 {
     public const string AdminEmail = "admin@humo.co.za";
 
-    private readonly SqliteConnection connection = new("DataSource=:memory:");
+    /// <summary>
+    /// A file, not an in-memory connection: background work (statement and letter delivery) uses the database
+    /// while a test makes requests, and SQLite only handles that safely with a connection per unit of work.
+    /// </summary>
+    private readonly string file = Path.Combine(Path.GetTempPath(), $"humo-test-{Guid.NewGuid():N}.db");
     private readonly Dictionary<string, string?> settings = new()
     {
         ["ConnectionStrings:Humo"] = "Host=unused-in-tests",
@@ -41,6 +44,7 @@ public sealed class HumoApiFactory : WebApplicationFactory<Program>
     public TestClock Clock { get; } = new();
     public CapturedEmail Email { get; } = new();
     public TestPdfRenderer Pdf { get; }
+    public CapturedSms Sms { get; } = new();
 
     public HumoApiFactory() => Pdf = new TestPdfRenderer(this);
 
@@ -52,7 +56,6 @@ public sealed class HumoApiFactory : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        connection.Open();
         builder.UseEnvironment("Testing");
         // UseSetting, not ConfigureAppConfiguration: Program reads some settings before Build().
         foreach (var (key, value) in settings) builder.UseSetting(key, value);
@@ -60,7 +63,7 @@ public sealed class HumoApiFactory : WebApplicationFactory<Program>
         {
             services.RemoveAll<DbContextOptions<HumoDbContext>>();
             services.RemoveAll<IDbContextOptionsConfiguration<HumoDbContext>>();
-            services.AddDbContext<HumoDbContext>(o => o.UseSqlite(connection));
+            services.AddDbContext<HumoDbContext>(o => o.UseSqlite($"Data Source={file};Pooling=False;Default Timeout=30"));
             services.RemoveAll<TimeProvider>();
             services.AddSingleton<TimeProvider>(Clock);
             services.RemoveAll<IEmailSender>();
@@ -74,8 +77,19 @@ public sealed class HumoApiFactory : WebApplicationFactory<Program>
             // No Chromium in tests: the renderer reads the print route's data with the print token, as Chromium would.
             services.RemoveAll<Humo.Infrastructure.Documents.IPdfRenderer>();
             services.AddSingleton<Humo.Infrastructure.Documents.IPdfRenderer>(Pdf);
+            // Sms:Provider=Captured keeps the messages for a test to read.
+            services.AddSingleton<ISmsSender>(Sms);
         });
     }
+
+    /// <summary>Waits (up to 10 s) for background work, e.g. a letter's PDF and email.</summary>
+    public static async Task Until(Func<Task<bool>> done)
+    {
+        for (var i = 0; i < 200 && !await done(); i++) await Task.Delay(50);
+        Assert.True(await done(), "Timed out waiting for background delivery");
+    }
+
+    public static Task Until(Func<bool> done) => Until(() => Task.FromResult(done()));
 
     public HttpClient Client() => CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
 
@@ -88,7 +102,18 @@ public sealed class HumoApiFactory : WebApplicationFactory<Program>
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);
-        if (disposing) connection.Dispose();
+        if (!disposing) return;
+        foreach (var f in new[] { file, file + "-journal", file + "-wal", file + "-shm" })
+        {
+            try
+            {
+                File.Delete(f);
+            }
+            catch (IOException)
+            {
+                // Still open somewhere: the OS temp folder cleans it up.
+            }
+        }
     }
 }
 
@@ -169,9 +194,22 @@ public sealed class TestPdfRenderer(HumoApiFactory api) : Humo.Infrastructure.Do
     {
         Urls.Enqueue(url);
         if (Failing) throw new InvalidOperationException("Chromium crashed");
-        var token = url[(url.LastIndexOf('/') + 1)..];
-        var res = await api.Client().GetAsync($"/api/print/statements/{token}", ct);
+        // /print/{route}/{token} → the API's /api/print/{route}s/{token}, as the app's print pages read it.
+        var parts = new Uri(url).AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var res = await api.Client().GetAsync($"/api/print/{parts[^2]}s/{parts[^1]}", ct);
         res.EnsureSuccessStatusCode();
         return System.Text.Encoding.UTF8.GetBytes("%PDF-1.7 test\n" + await res.Content.ReadAsStringAsync(ct));
+    }
+}
+
+public sealed class CapturedSms : ISmsSender
+{
+    public string Name => "Captured";
+    public ConcurrentQueue<SmsMessage> Sent { get; } = new();
+
+    public Task<SmsReceipt> SendAsync(SmsMessage message, CancellationToken ct = default)
+    {
+        Sent.Enqueue(message);
+        return Task.FromResult(new SmsReceipt(Name, Guid.NewGuid().ToString("N"), true));
     }
 }

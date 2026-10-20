@@ -33,6 +33,7 @@ export abstract class BillingDataSource {
  *   GET   /collections/{accountId}
  *   POST  /collections/{accountId}/actions   send a letter, ask for demand approval, hand over, arrangement, dispute, note
  *   POST  /collections/reminders             bulk reminders (the Compose pattern)
+ *   GET   /collections/{accountId}/letters/{stepId}/pdf   a letter as sent (D7)
  */
 export abstract class CollectionDataSource {
   abstract list(schemeIds: string[], query?: ListQuery): Observable<Page<CollectionView>>;
@@ -40,6 +41,10 @@ export abstract class CollectionDataSource {
   abstract act(accountId: string, action: CollectionAction, expectedVersion?: number): Observable<void>;
   /** Sends a reminder to each account; returns how many were sent. */
   abstract remind(accountIds: string[], channel: 'email' | 'sms'): Observable<number>;
+  /** Where a sent letter's stored PDF downloads from; undefined where there's no stored PDF (the simulation). */
+  pdfUrl(_accountId: string, _stepId: string): string | undefined {
+    return undefined;
+  }
 }
 
 /**

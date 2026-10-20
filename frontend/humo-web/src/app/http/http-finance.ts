@@ -6,6 +6,9 @@ import {
   BillingDataSource,
   BillingRun,
   BillingRunSummary,
+  CollectionAction,
+  CollectionDataSource,
+  CollectionView,
   LevyDataSource,
   LevyMethod,
   LevyRollProposal,
@@ -215,5 +218,35 @@ export class HttpWorkItemDataSource extends HttpPort implements WorkItemDataSour
   /** Approving a large amount needs a fresh passkey (the agency's threshold); the API checks who may decide. */
   decide(id: string, decision: 'approved' | 'rejected', _by: string, comment?: string): Observable<void> {
     return this.command('POST', `/work-items/${id}/decision`, { decision, comment }, ['work-items', 'billing']);
+  }
+}
+
+/**
+ * Credit control over HTTP (slice 2d; docs/11 §2). Letters are issued documents (D7): emailed with the PDF
+ * attached, sent by SMS, or printed and posted by the agency from the stored PDF.
+ */
+@Injectable()
+export class HttpCollectionDataSource extends HttpPort implements CollectionDataSource {
+  list(schemeIds: string[], query?: ListQuery): Observable<Page<CollectionView>> {
+    const params: Record<string, string | string[]> = { schemeIds };
+    if (query?.page) params['page'] = String(query.page);
+    if (query?.pageSize) params['pageSize'] = String(query.pageSize);
+    return this.live<Page<CollectionView>>('/collections', ['collections', 'accounts', 'receipts'], params);
+  }
+
+  get(accountId: string): Observable<CollectionView | undefined> {
+    return orUndefined(this.live<CollectionView>(`/collections/${accountId}`, ['collections', 'accounts', 'receipts', 'work-items']));
+  }
+
+  act(accountId: string, action: CollectionAction, expectedVersion?: number): Observable<void> {
+    return this.command('POST', `/collections/${accountId}/actions`, { action, expectedVersion }, ['collections', 'accounts', 'work-items']);
+  }
+
+  remind(accountIds: string[], channel: 'email' | 'sms'): Observable<number> {
+    return this.command<number>('POST', '/collections/reminders', { accountIds, channel }, ['collections', 'work-items']);
+  }
+
+  pdfUrl(accountId: string, stepId: string): string {
+    return `${this.base}/collections/${accountId}/letters/${stepId}/pdf`;
   }
 }

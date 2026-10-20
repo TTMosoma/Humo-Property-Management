@@ -30,7 +30,11 @@ import { LETTER_LABELS } from './collection-view';
         <a class="btn btn-ghost btn-sm" [routerLink]="['../..']"><ion-icon name="chevron-back-outline" aria-hidden="true" /> Unit {{ view()!.unit.number }} · collection</a>
         <div class="right">
           <span class="muted">{{ title() }} · sent {{ sentOn() }}@if (template(); as t) { · {{ t.template.name }} v{{ t.version.version }}, as issued }</span>
-          <button type="button" class="btn btn-primary" (click)="print()"><ion-icon name="print-outline" aria-hidden="true" /> Print or save PDF</button>
+          @if (pdf(); as href) {
+            <a class="btn btn-primary" [href]="href" download><ion-icon name="download-outline" aria-hidden="true" /> Download PDF</a>
+          } @else {
+            <button type="button" class="btn btn-primary" (click)="print()"><ion-icon name="print-outline" aria-hidden="true" /> Print or save PDF</button>
+          }
         </div>
       </div>
       @if (template(); as t) {
@@ -73,6 +77,8 @@ export class CollectionLetterPage {
     return ref ? this.registry.resolve(ref) : undefined;
   });
   protected readonly title = computed(() => (this.step()?.letter ? LETTER_LABELS[this.step()!.letter!.kind] : ''));
+  /** The stored PDF: exactly what was sent (D7). For letters by post, what the agency prints. */
+  protected readonly pdf = computed(() => (this.step() ? this.data.pdfUrl(this.params().accountId, this.params().stepId) : undefined));
   protected readonly sentOn = computed(() => (this.step() ? formatDate(this.step()!.at) : ''));
 
   protected print(): void {

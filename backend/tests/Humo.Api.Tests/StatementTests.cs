@@ -112,6 +112,13 @@ public sealed class StatementTests : IDisposable
         Assert.Contains(Humo.Domain.Finance.BillingRules.Rand(1850), email.Text);
         Assert.Null(email.Attachments);
 
+        // In Communications › Sent: one record for the run, its delivery as the mail server reported it (R-5).
+        await HumoApiFactory.Until(() => api.Db(db => db.Deliveries.AnyAsync(d => d.Status == "delivered")));
+        var record = Assert.Single((await Ok(await s.Finance.GetAsync($"/api/communications/sent?schemeIds={s.Kc}"))).EnumerateArray()).GetProperty("message");
+        Assert.Equal(("statement", "Owners · Kingfisher Court", "Billing run BR-KC-2611"), (record.GetProperty("kind").GetString(), record.GetProperty("audienceLabel").GetString(),
+            record.GetProperty("source").GetProperty("label").GetString()));
+        Assert.Equal(("delivered", "sipho@mail.example"), (record.GetProperty("deliveries")[0].GetProperty("status").GetString(), record.GetProperty("deliveries")[0].GetProperty("address").GetString()));
+
         // D7: the snapshot and its hash, and the PDF drawn from it, with its own hash.
         await Eventually(() => api.Db(db => db.IssuedStatements.AnyAsync(x => x.Pdf != null)));
         var issued = await api.Db(db => db.IssuedStatements.SingleAsync());
@@ -168,6 +175,7 @@ public sealed class StatementTests : IDisposable
         await NoContent(await s.Admin.PutAsJsonAsync("/api/documents/settings/defaults/levy-statement", new { templateId = "levy-statement.professional", expectedVersion = 1 }));
         var res = await s.Finance.PostAsync($"/api/accounts/{s.Account42}/statements/2026-11/send", null);
         Assert.True(res.StatusCode == HttpStatusCode.OK, await res.Content.ReadAsStringAsync());
+        await HumoApiFactory.Until(() => !api.Email.Sent.IsEmpty);
         var email = Assert.Single(api.Email.Sent);
         var pdf = Assert.Single(email.Attachments!);
         Assert.Equal(("application/pdf", true), (pdf.ContentType, pdf.FileName.EndsWith("-2026-11.pdf")));
@@ -186,6 +194,7 @@ public sealed class StatementTests : IDisposable
         var res = await s.Finance.PostAsync($"/api/accounts/{s.Account42}/statements/2026-11/send", null);
         Assert.Equal(HttpStatusCode.OK, res.StatusCode);
         // The email still goes (a portal link needs no PDF).
+        await HumoApiFactory.Until(() => !api.Email.Sent.IsEmpty);
         Assert.Single(api.Email.Sent);
         Assert.Null(await api.Db(db => db.IssuedStatements.Select(x => x.Pdf).SingleAsync()));
         api.Pdf.Failing = false;

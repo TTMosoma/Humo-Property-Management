@@ -38,7 +38,9 @@ export type DataTopic =
   | 'subscriptions'
   | 'quote-requests'
   | 'settings'
-  | 'documents';
+  | 'documents'
+  | 'collections'
+  | 'communications';
 
 @Injectable({ providedIn: 'root' })
 export class DataChanges {

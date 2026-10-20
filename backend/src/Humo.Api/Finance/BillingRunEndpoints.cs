@@ -246,7 +246,7 @@ public static class BillingRunEndpoints
     }
 
     private static async Task<IResult> Act(Guid id, BillingActionRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, LevyBilling billing,
-        StatementService statements, StatementQueue queue, TimeProvider clock, CancellationToken ct)
+        StatementService statements, DeliveryQueue queue, TimeProvider clock, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } me) return Results.Unauthorized();
         if (await Visible(me, db, id, ct) is not { } x) return Problems.NotFound();
@@ -321,11 +321,12 @@ public static class BillingRunEndpoints
     /// account's chosen channel. PDFs and emails follow in the background, so a big scheme doesn't hold the request.
     /// Posted statements are printed and posted by the agency; portal ones are in the resident portal.
     /// </summary>
-    private static async Task SendStatementsAsync(BillingRun run, Actor actor, HumoDbContext db, StatementService statements, StatementQueue queue, CommandRunner commands,
+    private static async Task SendStatementsAsync(BillingRun run, Actor actor, HumoDbContext db, StatementService statements, DeliveryQueue queue, CommandRunner commands,
         TimeProvider clock, string now, CancellationToken ct)
     {
         var counts = new Dictionary<string, int> { ["email"] = 0, ["post"] = 0, ["portal"] = 0 };
         var issued = new List<IssuedStatement>();
+        var sentItems = new List<(IssuedStatement, LevyAccount)>();
         foreach (var line in run.Lines.Where(l => !l.Excluded))
         {
             var account = await db.LevyAccounts.FirstAsync(x => x.Id == Guid.Parse(line.AccountId), ct);
@@ -335,7 +336,9 @@ public static class BillingRunEndpoints
             statement.SentAt = clock.GetUtcNow();
             counts[by]++;
             issued.Add(statement);
+            sentItems.Add((statement, account));
         }
+        await statements.RecordSentAsync(sentItems, null, new Humo.Api.Messaging.SentSourceDto($"Billing run {run.Ref}", $"/finance/billing/{run.Id}"), actor.Human.Name, ct);
         var template = issued.FirstOrDefault() is { } first ? new RunTemplateRef(first.TemplateId, first.TemplateVersion) : new RunTemplateRef("levy-statement.standard", 1);
         run.Statements = new RunStatements(now, actor.Human.Name, counts["email"], counts["post"], counts["portal"], template);
         run.Stage = "sent";
@@ -343,7 +346,7 @@ public static class BillingRunEndpoints
         var ids = issued.Select(s => s.Id).ToList();
         commands.AfterCommit(() =>
         {
-            queue.Enqueue(ids);
+            queue.Enqueue(DeliveryQueue.Statements, ids);
             return Task.CompletedTask;
         });
     }

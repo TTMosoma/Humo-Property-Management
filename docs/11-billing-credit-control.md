@@ -69,6 +69,15 @@ Both are in `docs/02-ux-review.md`. Letters are template-driven A4 documents (`d
 
 Everything is behind `Collections.Manage` (Agency Administrator, Portfolio Manager, Finance) and the `credit-control` entitlement.
 
+**On the API (slice 2d, 20 October 2026):** the case and every rule above, ported to `backend/src/Humo.Domain/Finance/CreditControl.cs`; tests in `CreditControlTests`.
+- **Letters are issued documents**, like statements (D7): each one stores a snapshot of what it says and its SHA-256, with the payment-notice template version. A PDF is rendered from that snapshot through the app's print route (D8).
+- **Delivery:** by email with the PDF attached (a demand is a document the owner keeps), by SMS as a short notice with the reference, or by post. For post, the agency downloads and prints the stored PDF.
+- **No letter goes out before the scheme's trust account is on record**, and a letter needs a working email address or mobile number for its channel.
+- **Letters of demand** are approved by the scheme's trustees or an agency administrator in My work › Approvals.
+- **Follow-up Tasks:** each active case has one. It goes to a Finance person whose title mentions credit control, or else stays unassigned for the team.
+- **Delivery runs in the background**, for one letter or for bulk reminders, so the screen doesn't wait for the PDF.
+- **Days between letters** come from Settings › Billing configuration.
+
 ## 3. How the pieces connect
 
 - **Billing → accounts.** Posting adds the charges to each account's ledger (reference `BR-…`) and rebalances it. The latest month billed counts as current; older amounts age by month.
@@ -127,4 +136,4 @@ Everything is behind `Collections.Manage` (Agency Administrator, Portfolio Manag
 - **Ageing** (done on the API, slice 2a): ages the actual transactions. Payments settle the oldest charges first; what's left of each charge is current under 30 days, then 30, 60, 90 and 120+. Balance, ageing and status are stored on the account, recalculated on every ledger write.
 - **Charge rules** (on the API, slice 2c): interest rate, due day and step days are in Settings › Billing configuration. The estimate method is still a constant.
 - **Segregation of duties** (done on the API, slice 2b): the person who prepared a run can't approve it.
-- **Delivery.** Statements are emailed for real on the API (slice 2c). Letters are still recorded, not delivered, and Communications › Sent (with delivery and opened tracking) isn't on the API yet.
+- **Delivery.** Statements and collection letters are delivered for real on the API (slices 2c and 2d) and recorded in Communications › Sent with each delivery's result. Failed ones can be retried from there (register R-5). Bounces and "opened" aren't tracked yet.

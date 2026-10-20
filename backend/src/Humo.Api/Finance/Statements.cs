@@ -36,8 +36,8 @@ public sealed record StatementSnapshot(StatementViewDto View, TemplateDesign Des
 /// No statement numbers (D10): a statement is "account + period". Delivery (D9): a secure link to the
 /// resident portal by default; the PDF attached when the agency chooses that.
 /// </summary>
-public sealed class StatementService(HumoDbContext db, Commercial.CommercialRecords commercial, IPdfRenderer renderer, PrintTokens tokens, IEmailSender email,
-    IOptions<AppOptions> app, IOptions<DocumentOptions> documents, TimeProvider clock, ILogger<StatementService> logger)
+public sealed class StatementService(HumoDbContext db, Commercial.CommercialRecords commercial, DocumentPrinter printer, IEmailSender email, Messaging.SentRecords sent,
+    IOptions<AppOptions> app, TimeProvider clock, ILogger<StatementService> logger)
 {
     private DateOnly Today => DateOnly.FromDateTime(clock.GetUtcNow().ToOffset(TimeSpan.FromHours(2)).DateTime);
 
@@ -124,20 +124,11 @@ public sealed class StatementService(HumoDbContext db, Commercial.CommercialReco
     public async Task<byte[]> PdfAsync(IssuedStatement issued, CancellationToken ct)
     {
         if (issued.Pdf is { } done) return done;
-        var token = tokens.Issue(issued.Id);
-        try
-        {
-            var root = (string.IsNullOrWhiteSpace(documents.Value.RenderBaseUrl) ? app.Value.PublicUrl : documents.Value.RenderBaseUrl).TrimEnd('/');
-            var pdf = await renderer.RenderAsync($"{root}/print/statement/{token}", ct);
-            issued.Pdf = pdf;
-            issued.PdfSha256 = Sha256(pdf);
-            await db.SaveChangesAsync(ct);
-            return pdf;
-        }
-        finally
-        {
-            tokens.Revoke(token);
-        }
+        var pdf = await printer.PrintAsync("statement", issued.Id, ct);
+        issued.Pdf = pdf;
+        issued.PdfSha256 = Sha256(pdf);
+        await db.SaveChangesAsync(ct);
+        return pdf;
     }
 
     /// <summary>
@@ -163,15 +154,54 @@ public sealed class StatementService(HumoDbContext db, Commercial.CommercialReco
                 }
                 if (issued.SentBy != "email") continue;
                 var holder = await db.People.AsNoTracking().FirstAsync(p => p.Id == Guid.Parse(snapshot.View.Holder.Id), ct);
-                if (!SettingsEndpoints.IsEmail(holder.Email)) continue;
+                if (!SettingsEndpoints.IsEmail(holder.Email))
+                {
+                    await sent.MarkAsync(id, "failed", "No email address on record", ct);
+                    continue;
+                }
                 var attach = snapshot.Settings.StatementDelivery == "attachment" && pdf is not null;
-                await email.SendAsync(Message(snapshot, holder.Email, attach ? pdf : null), ct);
+                try
+                {
+                    await email.SendAsync(Message(snapshot, holder.Email, attach ? pdf : null), ct);
+                }
+                catch (Exception e) when (e is not OperationCanceledException)
+                {
+                    logger.LogError(e, "The mail server didn’t accept statement {Id}", id);
+                    await sent.MarkAsync(id, "failed", "The mail server didn’t accept it. Retry from Sent.", ct);
+                    continue;
+                }
+                // Accepted by Humo's mail server. Bounces come back later by email and aren't matched up yet.
+                await sent.MarkAsync(id, "delivered", null, ct);
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {
                 logger.LogError(e, "Couldn’t deliver statement {Id}", id);
             }
         }
+    }
+
+    public const string SentBody = "Dear {person.name},\n\nYour levy statement for unit {unit.number} is ready in the resident portal. The balance owing is {account.balance}.\n\nKind regards,\n{agency.name}";
+
+    /// <summary>
+    /// Records sent statements in Communications › Sent: one record for the send, a delivery per owner by the account's
+    /// channel. Statements by post are listed as not sent by Humo (the agency prints and posts them).
+    /// </summary>
+    public async Task RecordSentAsync(IReadOnlyList<(IssuedStatement Issued, LevyAccount Account)> items, string? audienceLabel, Messaging.SentSourceDto source, string by,
+        CancellationToken ct)
+    {
+        if (items.Count == 0) return;
+        var scheme = await db.Schemes.FirstAsync(s => s.Id == items[0].Account.SchemeId, ct);
+        var to = new List<Messaging.Recipient>();
+        var skipped = new List<Messaging.SkippedDto>();
+        foreach (var (issued, a) in items)
+        {
+            if (await sent.RecipientAsync(a, issued.SentBy ?? "email", issued.Id, ct) is not { } r) continue;
+            if (r.Channel == "post") skipped.Add(new Messaging.SkippedDto(r.PersonId.ToString(), r.Name, r.UnitLabel, "By post: the agency prints and posts it"));
+            else to.Add(r);
+        }
+        var period = items[0].Issued.Period;
+        await sent.RecordAsync("statement", scheme.OrganisationId, scheme.Id, $"Your {scheme.Name} levy statement: {PeriodLabel(period)}", SentBody, audienceLabel ?? $"Owners · {scheme.Name}",
+            by, source, to, skipped, ct);
     }
 
     private EmailMessage Message(StatementSnapshot s, string to, byte[]? pdf)
@@ -207,7 +237,7 @@ public sealed class StatementService(HumoDbContext db, Commercial.CommercialReco
 }
 
 /// <summary>
-/// Short-lived, single-purpose tokens that let the print route read one issued statement's snapshot
+/// Short-lived, single-purpose tokens that let a print route read one issued document's snapshot
 /// without a session (Chromium has none). In memory: the API renders on the same machine it runs on.
 /// </summary>
 public sealed class PrintTokens(TimeProvider clock)
@@ -215,11 +245,11 @@ public sealed class PrintTokens(TimeProvider clock)
     public static readonly TimeSpan Lifetime = TimeSpan.FromMinutes(2);
     private readonly ConcurrentDictionary<string, (Guid Id, DateTimeOffset Expires)> tokens = new();
 
-    public string Issue(Guid statementId)
+    public string Issue(Guid documentId)
     {
         foreach (var old in tokens.Where(t => t.Value.Expires < clock.GetUtcNow())) tokens.TryRemove(old.Key, out _);
         var token = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(32));
-        tokens[token] = (statementId, clock.GetUtcNow() + Lifetime);
+        tokens[token] = (documentId, clock.GetUtcNow() + Lifetime);
         return token;
     }
 
@@ -228,30 +258,52 @@ public sealed class PrintTokens(TimeProvider clock)
     public void Revoke(string token) => tokens.TryRemove(token, out _);
 }
 
-/// <summary>Statements a billing run issued, waiting for their PDFs and emails (so posting a big scheme's statements doesn't hold the request).</summary>
-public sealed class StatementQueue
+/// <summary>Prints an issued document (D8): Chromium opens the app's print route for it (<c>/print/{route}/{token}</c>) with a one-off token.</summary>
+public sealed class DocumentPrinter(IPdfRenderer renderer, PrintTokens tokens, IOptions<AppOptions> app, IOptions<DocumentOptions> documents)
 {
-    private readonly Channel<Guid[]> channel = Channel.CreateUnbounded<Guid[]>();
-
-    public void Enqueue(IEnumerable<Guid> ids) => channel.Writer.TryWrite([.. ids]);
-
-    public IAsyncEnumerable<Guid[]> ReadAllAsync(CancellationToken ct) => channel.Reader.ReadAllAsync(ct);
+    public async Task<byte[]> PrintAsync(string route, Guid documentId, CancellationToken ct)
+    {
+        var token = tokens.Issue(documentId);
+        try
+        {
+            var root = (string.IsNullOrWhiteSpace(documents.Value.RenderBaseUrl) ? app.Value.PublicUrl : documents.Value.RenderBaseUrl).TrimEnd('/');
+            return await renderer.RenderAsync($"{root}/print/{route}/{token}", ct);
+        }
+        finally
+        {
+            tokens.Revoke(token);
+        }
+    }
 }
 
-public sealed class StatementDeliveryHost(StatementQueue queue, IServiceScopeFactory scopes, ILogger<StatementDeliveryHost> logger) : BackgroundService
+/// <summary>Documents issued in bulk (a billing run's statements, bulk reminders), waiting for their PDFs and delivery, so the request doesn't wait.</summary>
+public sealed class DeliveryQueue
+{
+    public const string Statements = "statements";
+    public const string Letters = "letters";
+
+    private readonly Channel<(string Kind, Guid[] Ids)> channel = Channel.CreateUnbounded<(string Kind, Guid[] Ids)>();
+
+    public void Enqueue(string kind, IEnumerable<Guid> ids) => channel.Writer.TryWrite((kind, [.. ids]));
+
+    public IAsyncEnumerable<(string Kind, Guid[] Ids)> ReadAllAsync(CancellationToken ct) => channel.Reader.ReadAllAsync(ct);
+}
+
+public sealed class DeliveryHost(DeliveryQueue queue, IServiceScopeFactory scopes, ILogger<DeliveryHost> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await foreach (var batch in queue.ReadAllAsync(stoppingToken))
+        await foreach (var (kind, batch) in queue.ReadAllAsync(stoppingToken))
         {
             try
             {
                 await using var scope = scopes.CreateAsyncScope();
-                await scope.ServiceProvider.GetRequiredService<StatementService>().DeliverAsync(batch, stoppingToken);
+                if (kind == DeliveryQueue.Letters) await scope.ServiceProvider.GetRequiredService<CreditControl>().DeliverAsync(batch, stoppingToken);
+                else await scope.ServiceProvider.GetRequiredService<StatementService>().DeliverAsync(batch, stoppingToken);
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {
-                logger.LogError(e, "A batch of {Count} statements failed", batch.Length);
+                logger.LogError(e, "A batch of {Count} {Kind} failed", batch.Length, kind);
             }
         }
     }
@@ -296,8 +348,8 @@ public static class StatementEndpoints
         return Results.File(pdf, "application/pdf", $"{account.AccountNo}-{period}.pdf");
     }
 
-    /// <summary>Issues the statement if it isn't yet, and emails it to the holder (D9). Returns the issued statement's id.</summary>
-    private static async Task<IResult> Send(Guid id, string period, CurrentActor current, CommandRunner commands, HumoDbContext db, StatementService statements, TimeProvider clock,
+    /// <summary>Issues the statement if it isn't yet, and emails it to the holder (D9) in the background. Returns the issued statement's id.</summary>
+    private static async Task<IResult> Send(Guid id, string period, CurrentActor current, CommandRunner commands, HumoDbContext db, StatementService statements, DeliveryQueue queue, TimeProvider clock,
         CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } me) return Results.Unauthorized();
@@ -321,7 +373,15 @@ public static class StatementEndpoints
             var issued = (await statements.IssueAsync(account, period, actor.Human.Name, null, ct))!;
             issued.SentBy = "email";
             issued.SentAt = clock.GetUtcNow();
-            commands.AfterCommit(() => statements.DeliverAsync([issued.Id], CancellationToken.None));
+            var unit = await db.Units.Where(u => u.Id == account.UnitId).Select(u => u.Number).FirstAsync(ct);
+            await statements.RecordSentAsync([(issued, account)], $"{holder!.DisplayName} · {account.AccountNo}",
+                new Messaging.SentSourceDto($"Statement {StatementService.PeriodLabel(period)} · {account.AccountNo}", $"/schemes/{account.SchemeId}/units/{unit}/account/statements/{period}"),
+                actor.Human.Name, ct);
+            commands.AfterCommit(() =>
+            {
+                queue.Enqueue(DeliveryQueue.Statements, [issued.Id]);
+                return Task.CompletedTask;
+            });
             return Results.Ok(new { id = issued.Id.ToString() });
         }, ct);
     }
