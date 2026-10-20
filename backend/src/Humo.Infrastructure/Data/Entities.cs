@@ -740,6 +740,57 @@ public sealed class SentMessageRow
     public string? SourceRoute { get; set; }
     /// <summary>JSON list of people the send couldn't reach, with the reason.</summary>
     public string Skipped { get; set; } = "[]";
+    /// <summary>The message template it was written from, if any.</summary>
+    public Guid? TemplateId { get; set; }
+    /// <summary>A scheduled send that was cancelled before it went out.</summary>
+    public DateTimeOffset? CancelledAt { get; set; }
+    public string? CancelledBy { get; set; }
+}
+
+/// <summary>An agency's message template (Communications › Templates): Humo's starter templates, editable, and the agency's own.</summary>
+public sealed class MessageTemplateRow
+{
+    public Guid Id { get; set; }
+    public Guid OrganisationId { get; set; }
+    public int Version { get; set; } = 1;
+    /// <summary>For Humo's starter templates: which one ("reminder", "statement", …).</summary>
+    public string? BuiltInKey { get; set; }
+    public string Name { get; set; } = "";
+    /// <summary>levies, collections, maintenance, meetings or general.</summary>
+    public string Category { get; set; } = "general";
+    public string Subject { get; set; } = "";
+    public string Body { get; set; } = "";
+    /// <summary>JSON list of the channels it's written for.</summary>
+    public string Channels { get; set; } = "[]";
+    public DateTimeOffset UpdatedAt { get; set; }
+    public string UpdatedBy { get; set; } = "";
+    public bool Archived { get; set; }
+}
+
+/// <summary>A notice to a scheme's people ("Water off on Thursday"): in the resident portal, and sent by the agency's notification rule for new notices.</summary>
+public sealed class NoticeRow
+{
+    public Guid Id { get; set; }
+    public int Version { get; set; } = 1;
+    /// <summary>"NTC-KC-12".</summary>
+    public string Ref { get; set; } = "";
+    public Guid OrganisationId { get; set; }
+    public Guid SchemeId { get; set; }
+    public string Title { get; set; } = "";
+    public string Body { get; set; } = "";
+    /// <summary>residents, owners or trustees.</summary>
+    public string Audience { get; set; } = "residents";
+    public string Category { get; set; } = "general";
+    public DateTimeOffset PublishedAt { get; set; }
+    public string PublishedBy { get; set; } = "";
+    public bool Pinned { get; set; }
+    public DateTimeOffset? ExpiresAt { get; set; }
+    /// <summary>JSON list of the channels it went out by.</summary>
+    public string SentBy { get; set; } = "[]";
+    public int Recipients { get; set; }
+    public DateTimeOffset? WithdrawnAt { get; set; }
+    public string? WithdrawnBy { get; set; }
+    public string? WithdrawnReason { get; set; }
 }
 
 /// <summary>A sent message's delivery to one person, with its result as the email server or SMS provider reported it.</summary>

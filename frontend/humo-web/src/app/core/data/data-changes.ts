@@ -40,7 +40,8 @@ export type DataTopic =
   | 'settings'
   | 'documents'
   | 'collections'
-  | 'communications';
+  | 'communications'
+  | 'notices';
 
 @Injectable({ providedIn: 'root' })
 export class DataChanges {

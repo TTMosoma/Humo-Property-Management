@@ -281,6 +281,8 @@ public sealed class DeliveryQueue
 {
     public const string Statements = "statements";
     public const string Letters = "letters";
+    /// <summary>Composed messages and notices, by delivery id.</summary>
+    public const string Messages = "messages";
 
     private readonly Channel<(string Kind, Guid[] Ids)> channel = Channel.CreateUnbounded<(string Kind, Guid[] Ids)>();
 
@@ -289,16 +291,35 @@ public sealed class DeliveryQueue
     public IAsyncEnumerable<(string Kind, Guid[] Ids)> ReadAllAsync(CancellationToken ct) => channel.Reader.ReadAllAsync(ct);
 }
 
-public sealed class DeliveryHost(DeliveryQueue queue, IServiceScopeFactory scopes, ILogger<DeliveryHost> logger) : BackgroundService
+public sealed class DeliveryHost(DeliveryQueue queue, IServiceScopeFactory scopes, TimeProvider clock, ILogger<DeliveryHost> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Scheduled messages go out when their time comes: checked every minute.
+        _ = Task.Run(async () =>
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromMinutes(1), clock);
+            while (await timer.WaitForNextTickAsync(stoppingToken))
+            {
+                try
+                {
+                    await using var scope = scopes.CreateAsyncScope();
+                    await scope.ServiceProvider.GetRequiredService<Messaging.Communications>().SendDueAsync(stoppingToken);
+                }
+                catch (Exception e) when (e is not OperationCanceledException)
+                {
+                    logger.LogError(e, "Scheduled messages couldn’t be sent; trying again in a minute");
+                }
+            }
+        }, stoppingToken);
+
         await foreach (var (kind, batch) in queue.ReadAllAsync(stoppingToken))
         {
             try
             {
                 await using var scope = scopes.CreateAsyncScope();
                 if (kind == DeliveryQueue.Letters) await scope.ServiceProvider.GetRequiredService<CreditControl>().DeliverAsync(batch, stoppingToken);
+                else if (kind == DeliveryQueue.Messages) await scope.ServiceProvider.GetRequiredService<Messaging.Communications>().DeliverAsync(batch, stoppingToken);
                 else await scope.ServiceProvider.GetRequiredService<StatementService>().DeliverAsync(batch, stoppingToken);
             }
             catch (Exception e) when (e is not OperationCanceledException)
