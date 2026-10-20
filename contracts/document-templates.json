@@ -1,0 +1,313 @@
+{
+  "templates": [
+    {
+      "id": "levy-statement.standard",
+      "documentType": "levy-statement",
+      "name": "Standard",
+      "description": "Clean Humo layout: summary, transactions and how to pay on one A4 page.",
+      "purpose": "Every customer gets a clear, correct statement without setting anything up.",
+      "tier": "standard",
+      "status": "active",
+      "isDefault": true,
+      "currentVersion": 1,
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "design": {
+            "layout": "levy-statement/classic",
+            "brandingMode": "humo",
+            "sections": [
+              "summary",
+              "transactions",
+              "payment",
+              "queries"
+            ]
+          },
+          "notes": "First release.",
+          "publishedAt": "2026-06-01T09:00:00+02:00",
+          "publishedBy": "Humo"
+        }
+      ],
+      "version": 1
+    },
+    {
+      "id": "levy-statement.professional",
+      "documentType": "levy-statement",
+      "name": "Professional",
+      "description": "The same statement in your agency’s colours, font and logo.",
+      "purpose": "Agencies want owners to recognise their statements as theirs, not Humo’s.",
+      "tier": "premium",
+      "status": "active",
+      "isDefault": false,
+      "currentVersion": 1,
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "design": {
+            "layout": "levy-statement/branded",
+            "brandingMode": "agency",
+            "sections": [
+              "summary",
+              "transactions",
+              "payment",
+              "queries"
+            ]
+          },
+          "notes": "First release.",
+          "publishedAt": "2026-06-01T09:00:00+02:00",
+          "publishedBy": "Humo"
+        }
+      ],
+      "version": 1
+    },
+    {
+      "id": "levy-statement.executive",
+      "documentType": "levy-statement",
+      "name": "Executive",
+      "description": "Adds an account-at-a-glance panel: 12-month balance trend and arrears ageing.",
+      "purpose": "Larger schemes and trustees ask for the trend, not just this month’s lines.",
+      "tier": "premium",
+      "status": "planned",
+      "isDefault": false,
+      "currentVersion": 0,
+      "versions": [],
+      "version": 1
+    },
+    {
+      "id": "invoice.standard",
+      "documentType": "invoice",
+      "name": "Standard",
+      "description": "Clean Humo invoice.",
+      "purpose": "Ad-hoc charges need a proper tax-compliant document.",
+      "tier": "standard",
+      "status": "planned",
+      "isDefault": true,
+      "currentVersion": 0,
+      "versions": [],
+      "version": 1
+    },
+    {
+      "id": "invoice.professional",
+      "documentType": "invoice",
+      "name": "Professional",
+      "description": "Invoice in your agency’s branding.",
+      "purpose": "Matches branded statements.",
+      "tier": "premium",
+      "status": "planned",
+      "isDefault": false,
+      "currentVersion": 0,
+      "versions": [],
+      "version": 1
+    },
+    {
+      "id": "receipt.standard",
+      "documentType": "receipt",
+      "name": "Standard",
+      "description": "Payment receipt with allocation.",
+      "purpose": "Owners ask for proof of payment.",
+      "tier": "standard",
+      "status": "planned",
+      "isDefault": true,
+      "currentVersion": 0,
+      "versions": [],
+      "version": 1
+    },
+    {
+      "id": "receipt.professional",
+      "documentType": "receipt",
+      "name": "Professional",
+      "description": "Receipt in your agency’s branding.",
+      "purpose": "Matches branded statements.",
+      "tier": "premium",
+      "status": "planned",
+      "isDefault": false,
+      "currentVersion": 0,
+      "versions": [],
+      "version": 1
+    },
+    {
+      "id": "work-order.standard",
+      "documentType": "work-order",
+      "name": "Standard",
+      "description": "Scope, site access and approval for a supplier.",
+      "purpose": "Suppliers need one clear instruction to work to.",
+      "tier": "standard",
+      "status": "planned",
+      "isDefault": true,
+      "currentVersion": 0,
+      "versions": [],
+      "version": 1
+    },
+    {
+      "id": "work-order.professional",
+      "documentType": "work-order",
+      "name": "Professional",
+      "description": "Work order in your agency’s branding, with terms.",
+      "purpose": "Agencies attach their own conditions of appointment.",
+      "tier": "premium",
+      "status": "planned",
+      "isDefault": false,
+      "currentVersion": 0,
+      "versions": [],
+      "version": 1
+    },
+    {
+      "id": "meeting-notice.standard",
+      "documentType": "meeting-notice",
+      "name": "Standard",
+      "description": "Date, venue, notice period and the numbered agenda on one A4 page.",
+      "purpose": "Trustees and owners must receive written notice; this is a correct one with no setting up.",
+      "tier": "standard",
+      "status": "active",
+      "isDefault": true,
+      "currentVersion": 1,
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "design": {
+            "layout": "meeting-notice/classic",
+            "brandingMode": "humo",
+            "sections": []
+          },
+          "notes": "First release.",
+          "publishedAt": "2026-06-01T09:00:00+02:00",
+          "publishedBy": "Humo"
+        }
+      ],
+      "version": 1
+    },
+    {
+      "id": "meeting-notice.professional",
+      "documentType": "meeting-notice",
+      "name": "Professional",
+      "description": "The notice in your agency’s colours, font and wordmark.",
+      "purpose": "Matches branded statements, so owners recognise post from their agent.",
+      "tier": "premium",
+      "status": "active",
+      "isDefault": false,
+      "currentVersion": 1,
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "design": {
+            "layout": "meeting-notice/branded",
+            "brandingMode": "agency",
+            "sections": []
+          },
+          "notes": "First release.",
+          "publishedAt": "2026-06-01T09:00:00+02:00",
+          "publishedBy": "Humo"
+        }
+      ],
+      "version": 1
+    },
+    {
+      "id": "payment-notice.standard",
+      "documentType": "payment-notice",
+      "name": "Standard",
+      "description": "Reminder, final demand and letter of demand: the amount overdue, its ageing, how to pay and what happens next.",
+      "purpose": "Owners must be told clearly and fairly before collection escalates; every customer needs that.",
+      "tier": "standard",
+      "status": "active",
+      "isDefault": true,
+      "currentVersion": 1,
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "design": {
+            "layout": "payment-notice/classic",
+            "brandingMode": "humo",
+            "sections": []
+          },
+          "notes": "First release.",
+          "publishedAt": "2026-06-01T09:00:00+02:00",
+          "publishedBy": "Humo"
+        }
+      ],
+      "version": 1
+    },
+    {
+      "id": "payment-notice.professional",
+      "documentType": "payment-notice",
+      "name": "Professional",
+      "description": "Collection letters in your agency’s colours, font and wordmark.",
+      "purpose": "Matches the agency’s statements, so the letter is recognisably from them.",
+      "tier": "premium",
+      "status": "active",
+      "isDefault": false,
+      "currentVersion": 1,
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "design": {
+            "layout": "payment-notice/branded",
+            "brandingMode": "agency",
+            "sections": []
+          },
+          "notes": "First release.",
+          "publishedAt": "2026-06-01T09:00:00+02:00",
+          "publishedBy": "Humo"
+        }
+      ],
+      "version": 1
+    },
+    {
+      "id": "meeting-minutes.standard",
+      "documentType": "meeting-minutes",
+      "name": "Standard",
+      "description": "Attendance, quorum, the minute of each agenda item, resolutions with votes, and actions.",
+      "purpose": "The scheme’s formal record of decisions; every customer needs a correct one.",
+      "tier": "standard",
+      "status": "active",
+      "isDefault": true,
+      "currentVersion": 1,
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "design": {
+            "layout": "meeting-minutes/classic",
+            "brandingMode": "humo",
+            "sections": []
+          },
+          "notes": "First release.",
+          "publishedAt": "2026-06-01T09:00:00+02:00",
+          "publishedBy": "Humo"
+        }
+      ],
+      "version": 1
+    },
+    {
+      "id": "meeting-minutes.professional",
+      "documentType": "meeting-minutes",
+      "name": "Professional",
+      "description": "The minutes in your agency’s branding.",
+      "purpose": "Matches the agency’s other documents.",
+      "tier": "premium",
+      "status": "active",
+      "isDefault": false,
+      "currentVersion": 1,
+      "versions": [
+        {
+          "version": 1,
+          "status": "published",
+          "design": {
+            "layout": "meeting-minutes/branded",
+            "brandingMode": "agency",
+            "sections": []
+          },
+          "notes": "First release.",
+          "publishedAt": "2026-06-01T09:00:00+02:00",
+          "publishedBy": "Humo"
+        }
+      ],
+      "version": 1
+    }
+  ]
+}

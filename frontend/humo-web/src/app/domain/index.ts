@@ -41,6 +41,7 @@ export * from './ports/list-query';
 export * from './models/money';
 export * from './models/dates';
 export * from './models/document';
+export * from './models/document-catalogue';
 export * from './ports/document-data-sources';
 export * from './models/meeting';
 export * from './models/board';

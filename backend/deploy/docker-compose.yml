@@ -53,6 +53,7 @@ services:
       Payments__Payfast__MerchantId: ${PAYFAST_MERCHANT_ID}
       Payments__Payfast__MerchantKey: ${PAYFAST_MERCHANT_KEY}
       Payments__Payfast__Passphrase: ${PAYFAST_PASSPHRASE}
+      Documents__RenderBaseUrl: http://caddy:8081 # the print route, inside the Docker network (D8)
     expose:
       - "8080" # only Caddy reaches the API
     depends_on:

@@ -89,6 +89,7 @@ export class InMemoryDocumentTemplateDataSource extends DocumentTemplateDataSour
           contact: { email: details.contact.email.trim(), phone: details.contact.phone.trim() },
           footerText: details.footerText?.trim() || undefined,
           branding: branded && details.branding ? details.branding : s.branding,
+          statementDelivery: details.statementDelivery ?? s.statementDelivery,
         })),
     );
   }

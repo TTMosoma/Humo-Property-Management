@@ -28,6 +28,12 @@ export const routes: Routes = [
     data: { mode: 'link' },
     loadComponent: () => import('./features/access/sign-in-page').then((m) => m.SignInPage),
   },
+  // The print route (D8): the server's headless Chromium prints an issued statement here. No session; a short-lived token.
+  {
+    path: 'print/statement/:token',
+    title: 'Statement',
+    loadComponent: () => import('./features/documents/print-statement-page').then((m) => m.PrintStatementPage),
+  },
   {
     path: 'signed-out',
     title: 'Signed out',

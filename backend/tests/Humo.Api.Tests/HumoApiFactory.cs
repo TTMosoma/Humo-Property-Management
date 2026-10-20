@@ -40,6 +40,9 @@ public sealed class HumoApiFactory : WebApplicationFactory<Program>
 
     public TestClock Clock { get; } = new();
     public CapturedEmail Email { get; } = new();
+    public TestPdfRenderer Pdf { get; }
+
+    public HumoApiFactory() => Pdf = new TestPdfRenderer(this);
 
     public HumoApiFactory With(string key, string? value)
     {
@@ -68,6 +71,9 @@ public sealed class HumoApiFactory : WebApplicationFactory<Program>
             // A passkey ceremony needs a person at a device: tests prove step-up with the credential "test-passkey".
             services.RemoveAll<Humo.Api.Auth.IStepUpVerifier>();
             services.AddScoped<Humo.Api.Auth.IStepUpVerifier, TestStepUp>();
+            // No Chromium in tests: the renderer reads the print route's data with the print token, as Chromium would.
+            services.RemoveAll<Humo.Infrastructure.Documents.IPdfRenderer>();
+            services.AddSingleton<Humo.Infrastructure.Documents.IPdfRenderer>(Pdf);
         });
     }
 
@@ -150,5 +156,22 @@ public sealed class CapturedEmail : IEmailSender
         if (Failing) throw new InvalidOperationException("The mail server is down");
         Sent.Enqueue(message);
         return Task.CompletedTask;
+    }
+}
+
+/// <summary>Stands in for Chromium: fetches the print route's snapshot with the token in the URL and "prints" it.</summary>
+public sealed class TestPdfRenderer(HumoApiFactory api) : Humo.Infrastructure.Documents.IPdfRenderer
+{
+    public ConcurrentQueue<string> Urls { get; } = new();
+    public bool Failing { get; set; }
+
+    public async Task<byte[]> RenderAsync(string url, CancellationToken ct = default)
+    {
+        Urls.Enqueue(url);
+        if (Failing) throw new InvalidOperationException("Chromium crashed");
+        var token = url[(url.LastIndexOf('/') + 1)..];
+        var res = await api.Client().GetAsync($"/api/print/statements/{token}", ct);
+        res.EnsureSuccessStatusCode();
+        return System.Text.Encoding.UTF8.GetBytes("%PDF-1.7 test\n" + await res.Content.ReadAsStringAsync(ct));
     }
 }
