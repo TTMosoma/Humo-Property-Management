@@ -421,6 +421,55 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.ToTable("Invoices", (string)null);
                 });
 
+            modelBuilder.Entity("Humo.Infrastructure.Data.LedgerEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<Guid?>("ReceiptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reference")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReceiptId");
+
+                    b.HasIndex("AccountId", "Date");
+
+                    b.ToTable("Ledger", (string)null);
+                });
+
             modelBuilder.Entity("Humo.Infrastructure.Data.LevyAccount", b =>
                 {
                     b.Property<Guid>("Id")
@@ -431,6 +480,26 @@ namespace Humo.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(12)
                         .HasColumnType("character varying(12)");
+
+                    b.Property<decimal>("AgeingCurrent")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal>("AgeingD120")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal>("AgeingD30")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal>("AgeingD60")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal>("AgeingD90")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<decimal>("Balance")
                         .HasPrecision(18, 2)
@@ -620,6 +689,37 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.ToTable("Organisations", (string)null);
                 });
 
+            modelBuilder.Entity("Humo.Infrastructure.Data.PayerRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Pattern")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("SchemeId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SchemeId");
+
+                    b.ToTable("PayerRules", (string)null);
+                });
+
             modelBuilder.Entity("Humo.Infrastructure.Data.Payment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -802,6 +902,92 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.HasKey("Key");
 
                     b.ToTable("PlatformSettings", (string)null);
+                });
+
+            modelBuilder.Entity("Humo.Infrastructure.Data.Receipt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AllocatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<bool>("AutoMatched")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("BankAccount")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CapturedBy")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<Guid?>("ImportBatchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Payer")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("SchemeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SchemeId", "Status");
+
+                    b.ToTable("Receipts", (string)null);
+                });
+
+            modelBuilder.Entity("Humo.Infrastructure.Data.ReceiptAllocation", b =>
+                {
+                    b.Property<Guid>("ReceiptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.HasKey("ReceiptId", "AccountId");
+
+                    b.HasIndex("AccountId");
+
+                    b.ToTable("ReceiptAllocations", (string)null);
                 });
 
             modelBuilder.Entity("Humo.Infrastructure.Data.Relationship", b =>
@@ -1012,6 +1198,68 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("SignInLinks", (string)null);
+                });
+
+            modelBuilder.Entity("Humo.Infrastructure.Data.StatementImport", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("At")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("BankAccount")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("By")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Debits")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Duplicates")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Imported")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Invalid")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("SchemeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SchemeId");
+
+                    b.ToTable("StatementImports", (string)null);
+                });
+
+            modelBuilder.Entity("Humo.Infrastructure.Data.StatementMappingSetting", b =>
+                {
+                    b.Property<Guid>("SchemeId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Mapping")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("SchemeId");
+
+                    b.ToTable("StatementMappings", (string)null);
                 });
 
             modelBuilder.Entity("Humo.Infrastructure.Data.Subscription", b =>
@@ -1344,6 +1592,15 @@ namespace Humo.Infrastructure.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Humo.Infrastructure.Data.LedgerEntry", b =>
+                {
+                    b.HasOne("Humo.Infrastructure.Data.LevyAccount", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Humo.Infrastructure.Data.LevyAccount", b =>
                 {
                     b.HasOne("Humo.Infrastructure.Data.Person", null)
@@ -1386,6 +1643,30 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.HasOne("Humo.Infrastructure.Data.Organisation", null)
                         .WithMany()
                         .HasForeignKey("OrganisationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Humo.Infrastructure.Data.Receipt", b =>
+                {
+                    b.HasOne("Humo.Infrastructure.Data.Scheme", null)
+                        .WithMany()
+                        .HasForeignKey("SchemeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Humo.Infrastructure.Data.ReceiptAllocation", b =>
+                {
+                    b.HasOne("Humo.Infrastructure.Data.LevyAccount", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Humo.Infrastructure.Data.Receipt", null)
+                        .WithMany("Allocations")
+                        .HasForeignKey("ReceiptId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -1565,6 +1846,11 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.Navigation("Assignments");
 
                     b.Navigation("Memberships");
+                });
+
+            modelBuilder.Entity("Humo.Infrastructure.Data.Receipt", b =>
+                {
+                    b.Navigation("Allocations");
                 });
 #pragma warning restore 612, 618
         }

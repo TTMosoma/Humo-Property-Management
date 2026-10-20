@@ -36,6 +36,7 @@ builder.Services.AddScoped<Notices>();
 builder.Services.AddScoped<Humo.Api.Commercial.CommercialRecords>();
 builder.Services.AddScoped<Humo.Api.Commercial.BillingService>();
 builder.Services.AddScoped<Humo.Api.Commercial.CardPayments>();
+builder.Services.AddScoped<Humo.Api.Finance.AccountLedger>();
 // The daily billing run (Billing:Enabled, Billing:RunHour): invoices, card charges, reminders.
 builder.Services.AddHostedService<Humo.Api.Commercial.BillingRunHost>();
 builder.Services.AddScoped<IStepUpVerifier, PasskeyStepUpVerifier>();
@@ -135,6 +136,8 @@ Humo.Api.Commercial.CustomerEndpoints.MapCustomers(api);
 Humo.Api.Commercial.CommercialEndpoints.MapCommercial(api);
 Humo.Api.Commercial.BillingEndpoints.MapBilling(api);
 Humo.Api.Commercial.PayfastEndpoints.MapPayfast(api);
+Humo.Api.Finance.AccountEndpoints.MapAccounts(api);
+Humo.Api.Finance.ReceiptEndpoints.MapReceipts(api);
 Notices.MapNotifications(api);
 
 // Operator check (doc 26): `send-test-sms <mobile number>` sends one SMS through the configured provider, then exits.
