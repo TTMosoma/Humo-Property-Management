@@ -379,6 +379,9 @@ public sealed class Invoice
     public string Document { get; set; } = "{}";
     public DateTimeOffset IssuedAt { get; set; }
     public string IssuedBy { get; set; } = "";
+    /// <summary>Overdue reminders sent (1, 7 and 14 days after the due date), and the last one's date.</summary>
+    public int RemindersSent { get; set; }
+    public string? LastReminderOn { get; set; }
 }
 
 /// <summary>A payment against an invoice. Separate from the billing preference: this says what happened with one payment.</summary>

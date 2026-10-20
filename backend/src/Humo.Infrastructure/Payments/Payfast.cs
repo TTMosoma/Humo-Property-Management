@@ -47,11 +47,20 @@ public sealed record PayfastNotification(IReadOnlyList<KeyValuePair<string, stri
     public string? this[string key] => Fields.FirstOrDefault(f => f.Key == key).Value;
 }
 
+/// <summary>Payfast's answer to an API call (charging or cancelling a saved card).</summary>
+public sealed record PayfastApiResult(bool Ok, string? Message);
+
 public interface IPayfast
 {
     bool Configured { get; }
     bool Sandbox { get; }
-    PayfastCheckout Checkout(string paymentId, decimal amount, string itemName, string? itemDescription, string? email, string returnUrl, string cancelUrl, string notifyUrl, string invoiceId);
+    /// <summary><paramref name="saveCard"/>: tokenization, so later invoices can be charged to the card (a debit order the customer agreed to on Payfast's page).</summary>
+    PayfastCheckout Checkout(string paymentId, decimal amount, string itemName, string? itemDescription, string? email, string returnUrl, string cancelUrl, string notifyUrl, string invoiceId,
+        bool saveCard = false);
+    /// <summary>Charges a saved card (an ad hoc charge on the token). The outcome still arrives as a notification.</summary>
+    Task<PayfastApiResult> ChargeAsync(string token, decimal amount, string itemName, string paymentId, CancellationToken ct);
+    /// <summary>Cancels the saved card at Payfast: no further charges.</summary>
+    Task<PayfastApiResult> CancelAsync(string token, CancellationToken ct);
     /// <summary>
     /// Is the notification genuine? Its signature, where it came from, and Payfast's own confirmation
     /// (<c>/eng/query/validate</c>). The caller still checks the amount against the invoice.
@@ -69,7 +78,8 @@ public sealed class PayfastClient(IOptions<PayfastOptions> options, IHttpClientF
     public bool Configured => !string.IsNullOrWhiteSpace(options.Value.EffectiveMerchantId) && !string.IsNullOrWhiteSpace(options.Value.EffectiveMerchantKey);
     public bool Sandbox => options.Value.Sandbox;
 
-    public PayfastCheckout Checkout(string paymentId, decimal amount, string itemName, string? itemDescription, string? email, string returnUrl, string cancelUrl, string notifyUrl, string invoiceId)
+    public PayfastCheckout Checkout(string paymentId, decimal amount, string itemName, string? itemDescription, string? email, string returnUrl, string cancelUrl, string notifyUrl, string invoiceId,
+        bool saveCard = false)
     {
         var o = options.Value;
         // Payfast's field order matters for the signature.
@@ -87,8 +97,63 @@ public sealed class PayfastClient(IOptions<PayfastOptions> options, IHttpClientF
         fields.Add(new("item_name", Truncate(itemName, 100)));
         if (!string.IsNullOrWhiteSpace(itemDescription)) fields.Add(new("item_description", Truncate(itemDescription, 255)));
         fields.Add(new("custom_str1", invoiceId));
+        if (saveCard)
+        {
+            fields.Add(new("custom_str2", SaveCardMarker));
+            // Tokenization: Payfast keeps the card; Humo gets only a token to charge later invoices with.
+            fields.Add(new("subscription_type", "2"));
+        }
         fields.Add(new("signature", Signature(fields, o.EffectivePassphrase)));
         return new PayfastCheckout($"{o.Host}/eng/process", fields);
+    }
+
+    /// <summary>Echoed back in the notification, so the API knows the customer asked to save the card.</summary>
+    public const string SaveCardMarker = "save-card";
+
+    public Task<PayfastApiResult> ChargeAsync(string token, decimal amount, string itemName, string paymentId, CancellationToken ct) =>
+        CallApiAsync(HttpMethod.Post, $"subscriptions/{Uri.EscapeDataString(token)}/adhoc", new Dictionary<string, string>
+        {
+            // Payfast's API takes cents.
+            ["amount"] = ((long)Math.Round(amount * 100, MidpointRounding.AwayFromZero)).ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ["item_name"] = Truncate(itemName, 100),
+            ["m_payment_id"] = paymentId,
+        }, ct);
+
+    public Task<PayfastApiResult> CancelAsync(string token, CancellationToken ct) =>
+        CallApiAsync(HttpMethod.Put, $"subscriptions/{Uri.EscapeDataString(token)}/cancel", [], ct);
+
+    /// <summary>
+    /// Payfast's REST API (api.payfast.co.za): the merchant-id, version and timestamp headers, and a signature over
+    /// those and the body with the passphrase, sorted by name. Sandbox calls add <c>?testing=true</c>.
+    /// </summary>
+    private async Task<PayfastApiResult> CallApiAsync(HttpMethod method, string path, Dictionary<string, string> body, CancellationToken ct)
+    {
+        var o = options.Value;
+        var headers = new Dictionary<string, string>
+        {
+            ["merchant-id"] = o.EffectiveMerchantId!,
+            ["version"] = "v1",
+            ["timestamp"] = DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromHours(2)).ToString("yyyy-MM-ddTHH:mm:sszzz", System.Globalization.CultureInfo.InvariantCulture),
+        };
+        var signed = headers.Concat(body).ToList();
+        if (!string.IsNullOrWhiteSpace(o.EffectivePassphrase)) signed.Add(new("passphrase", o.EffectivePassphrase.Trim()));
+        var signature = Convert.ToHexStringLower(MD5.HashData(Encoding.UTF8.GetBytes(ParamString(signed.OrderBy(kv => kv.Key, StringComparer.Ordinal)))));
+        using var request = new HttpRequestMessage(method, $"https://api.payfast.co.za/{path}{(o.Sandbox ? "?testing=true" : "")}");
+        foreach (var (k, v) in headers) request.Headers.TryAddWithoutValidation(k, v);
+        request.Headers.TryAddWithoutValidation("signature", signature);
+        if (body.Count > 0) request.Content = new StringContent(System.Text.Json.JsonSerializer.Serialize(body.ToDictionary(kv => kv.Key, kv => kv.Key == "amount" ? (object)long.Parse(kv.Value, System.Globalization.CultureInfo.InvariantCulture) : kv.Value)), Encoding.UTF8, "application/json");
+        try
+        {
+            using var res = await http.CreateClient(HttpClientName).SendAsync(request, ct);
+            var text = await res.Content.ReadAsStringAsync(ct);
+            if (!res.IsSuccessStatusCode) logger.LogWarning("Payfast {Method} {Path}: {Status} {Body}", method, path.Split('/')[0], (int)res.StatusCode, text);
+            return new PayfastApiResult(res.IsSuccessStatusCode && text.Contains("success", StringComparison.OrdinalIgnoreCase), text.Length > 300 ? text[..300] : text);
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
+        {
+            logger.LogWarning(e, "Couldn't reach Payfast's API");
+            return new PayfastApiResult(false, "Couldn't reach Payfast");
+        }
     }
 
     public async Task<string?> VerifyAsync(PayfastNotification n, IPAddress? from, CancellationToken ct)

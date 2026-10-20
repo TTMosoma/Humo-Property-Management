@@ -5,6 +5,8 @@ import { catchError, map, of } from 'rxjs';
 import { BILLING_PREFERENCE_HELP, BILLING_PREFERENCE_LABELS, InvoiceDocument, InvoiceStatus, PlanDataSource } from '../../domain';
 import { PrototypeControls } from '../../core/prototype/prototype-controls';
 import { SessionService } from '../../core/session/session.service';
+import { DrawerService } from '../../ui/drawer/drawer.service';
+import { REASON_FIELD, openForm } from '../shared/form-drawer';
 import { formatDate, formatRand } from '../../ui/format/money';
 import { PageHeader } from '../../ui/page-header/page-header';
 import { EmptyState } from '../../ui/states/empty-state';
@@ -34,7 +36,17 @@ const STATUS_TONE: Record<InvoiceStatus, 'info' | 'danger' | 'success' | 'neutra
     } @else {
       @if (latest(); as l) {
         <section class="surface how">
-          <div><span class="label-caps">You pay by</span><strong>{{ prefLabel[l.billingPreference] }}</strong><span class="muted">{{ prefHelp[l.billingPreference] }}</span></div>
+          <div>
+            <span class="label-caps">You pay by</span><strong>{{ prefLabel[l.billingPreference] }}</strong>
+            @if (l.billingPreference === 'card-recurring') {
+              <span class="muted">Each invoice is charged to the card you saved with Payfast (a debit order). Humo never sees your card.</span>
+              @if (session.can('Subscription.Request') && !session.readOnly()) {
+                <button type="button" class="btn btn-ghost btn-sm" (click)="cancelDebitOrder()">Cancel the debit order</button>
+              }
+            } @else {
+              <span class="muted">{{ prefHelp[l.billingPreference] }} To pay by card each month, tick “Save my card” when you pay an invoice.</span>
+            }
+          </div>
           <div><span class="label-caps">Outstanding</span><strong [class.bad]="overdue() > 0">{{ rand(outstanding()) }}</strong><span class="muted">{{ overdue() ? overdue() + ' overdue' : 'Nothing overdue' }}</span></div>
           <div><span class="label-caps">Invoices go to</span><strong>{{ l.billTo.billingEmail }}</strong><span class="muted">To change how you pay, ask your Humo account manager (Plan &amp; features).</span></div>
         </section>
@@ -85,6 +97,22 @@ export class BillingPage {
   protected readonly demo = !!inject(PrototypeControls, { optional: true });
   protected readonly session = inject(SessionService);
   private readonly data = inject(PlanDataSource);
+  private readonly drawer = inject(DrawerService);
+
+  /** Stops the card debit order (cancelled at Payfast). Later invoices are paid with Pay now or by EFT. */
+  protected cancelDebitOrder(): void {
+    const org = this.session.organisation()?.id ?? '';
+    openForm(this.drawer, {
+      eyebrow: 'Billing & invoices',
+      title: 'Cancel the card debit order',
+      intro: 'Payfast stops charging your card. You’ll pay each invoice yourself, online with Pay now or by EFT.',
+      fields: [REASON_FIELD],
+      submitLabel: 'Cancel the debit order',
+      submit: (f) => this.data.cancelCardMandate(org, f['reason']),
+      success: () => 'Cancelled. Your card won’t be charged again.',
+      failure: 'The debit order wasn’t cancelled',
+    });
+  }
 
   /** undefined while loading, null on failure. */
   protected readonly invoices = toSignal(

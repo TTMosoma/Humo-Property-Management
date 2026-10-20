@@ -2,8 +2,11 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { catchError, map, of } from 'rxjs';
-import { BILLING_PREFERENCE_LABELS, CommercialDataSource, InvoiceListItem, InvoiceStatus, isoDay } from '../../../domain';
+import { BILLING_PREFERENCE_LABELS, CommercialDataSource, InvoiceListItem, InvoiceStatus, describeFailure, isoDay } from '../../../domain';
+import { FeedbackService } from '../../../core/feedback/feedback.service';
 import { PrototypeControls } from '../../../core/prototype/prototype-controls';
+import { StepUpService } from '../../../core/security/step-up.service';
+import { SessionService } from '../../../core/session/session.service';
 import { urlState } from '../../../ui/data-table/url-state';
 import { ViewTabs } from '../../../ui/data-table/view-tabs';
 import { formatDate, formatRand } from '../../../ui/format/money';
@@ -28,6 +31,12 @@ const STATUS_TONE: Record<InvoiceStatus, 'info' | 'danger' | 'success' | 'neutra
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-page-header eyebrow="Humo platform" title="Invoices" subtitle="Humo’s invoices to its customers. Paid only once a payment is verified." />
+    @if (canBill()) {
+      <div class="run">
+        <span class="muted">The billing run issues due invoices, charges saved cards and sends overdue reminders every morning. Last run: {{ lastRun() ?? 'not yet' }}.</span>
+        <button type="button" class="btn btn-secondary btn-sm" [disabled]="running()" (click)="runNow()">Run billing now</button>
+      </div>
+    }
     @if (demo) {
       <p class="demo-note">Demo data: invoices are simulated and none has been sent. Customers’ agency administrators see their own under Settings › Billing &amp; invoices.</p>
     } @else {
@@ -84,6 +93,7 @@ const STATUS_TONE: Record<InvoiceStatus, 'info' | 'danger' | 'success' | 'neutra
   `,
   styles: `
     :host { display: flex; flex-direction: column; gap: var(--s-4); }
+    .run { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2); font-size: var(--fs-sm); }
     .demo-note { margin: 0; padding: var(--s-2) var(--s-3); font-size: var(--fs-sm); border-radius: var(--r); background: var(--c-info-soft, var(--c-neutral-soft)); }
     .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--s-3); }
     .tile { display: flex; flex-direction: column; gap: 2px; padding: var(--s-3) var(--s-4); }
@@ -105,6 +115,28 @@ export class InvoicesPage {
   protected readonly demo = !!inject(PrototypeControls, { optional: true });
   private readonly data = inject(CommercialDataSource);
   private readonly state = urlState({ view: 'all' });
+  private readonly session = inject(SessionService);
+  private readonly stepUp = inject(StepUpService);
+  private readonly feedback = inject(FeedbackService);
+  protected readonly canBill = computed(() => this.session.can('Platform.Billing.Manage') && !this.session.readOnly());
+  protected readonly lastRun = toSignal(this.data.lastBillingRun().pipe(catchError(() => of(null))), { initialValue: null });
+  protected readonly running = signal(false);
+
+  /** Humo Finance runs the billing run now (it also runs by itself each morning). */
+  protected runNow(): void {
+    this.running.set(true);
+    this.stepUp.guard({ action: 'verify-payment', detail: 'Run the billing run now' }, () => this.data.runBilling()).subscribe({
+      next: (r) => {
+        this.running.set(false);
+        const what = `${r.issued} invoice${r.issued === 1 ? '' : 's'} issued, ${r.charged} charged to saved cards, ${r.reminders} reminder${r.reminders === 1 ? '' : 's'} sent`;
+        this.feedback.success(r.skipped.length ? `${what}. Not invoiced: ${r.skipped.join('; ')}` : `${what}.`);
+      },
+      error: (e) => {
+        this.running.set(false);
+        this.feedback.error(describeFailure(e, 'The billing run didn’t finish'));
+      },
+    });
+  }
 
   /** undefined while loading, null on failure. */
   protected readonly rows = toSignal(this.data.invoices().pipe(map((r): InvoiceListItem[] | null => r), catchError(() => of(null))));

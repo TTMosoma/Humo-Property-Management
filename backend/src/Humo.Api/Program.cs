@@ -34,6 +34,10 @@ builder.Services.AddScoped<CommandRunner>();
 builder.Services.AddScoped<PortfolioReads>();
 builder.Services.AddScoped<Notices>();
 builder.Services.AddScoped<Humo.Api.Commercial.CommercialRecords>();
+builder.Services.AddScoped<Humo.Api.Commercial.BillingService>();
+builder.Services.AddScoped<Humo.Api.Commercial.CardPayments>();
+// The daily billing run (Billing:Enabled, Billing:RunHour): invoices, card charges, reminders.
+builder.Services.AddHostedService<Humo.Api.Commercial.BillingRunHost>();
 builder.Services.AddScoped<IStepUpVerifier, PasskeyStepUpVerifier>();
 
 // ---- Sign-in: ASP.NET Core Identity with passkeys; no passwords (D14) ----
@@ -91,7 +95,7 @@ builder.Services.AddRateLimiter(o =>
     o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     o.AddPolicy(RateLimits.SignIn, ctx => RateLimitPartition.GetFixedWindowLimiter(
         ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-        _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1) }));
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = config.GetValue("Auth:SignInRequestsPerMinute", 10), Window = TimeSpan.FromMinutes(1) }));
 });
 
 // Behind Caddy on the VPS: trust its X-Forwarded-For/Proto. The API's port is only reachable from Caddy (docker network).

@@ -75,7 +75,8 @@ public sealed class CommercialAddOn
 
 public sealed class TaxConfig
 {
-    public string LegalName { get; set; } = "Humo (legal entity to be confirmed)";
+    /// <summary>Humo Property Management is a brand of WeDesign Solutions (D15); invoices are from WeDesign Solutions.</summary>
+    public string LegalName { get; set; } = "WeDesign Solutions (Humo Property Management)";
     public string? RegistrationNumber { get; set; }
     /// <summary>Humo charges VAT only when this is on (docs/23 §6, a decision for approval).</summary>
     public bool VatRegistered { get; set; }

@@ -26,6 +26,7 @@ import { PrototypeControls } from '../../../core/prototype/prototype-controls';
 import { StepUpService } from '../../../core/security/step-up.service';
 import { SessionService } from '../../../core/session/session.service';
 import { DrawerService } from '../../../ui/drawer/drawer.service';
+import { REASON_FIELD, openForm } from '../../shared/form-drawer';
 import { formatDate, formatRand } from '../../../ui/format/money';
 import { ErrorState } from '../../../ui/states/error-state';
 import { Skeleton } from '../../../ui/states/skeleton';
@@ -79,7 +80,7 @@ const INVOICE_TONE: Record<InvoiceStatus, Tone> = { issued: 'info', overdue: 'da
         </header>
         <div class="facts">
           <div><span class="label-caps">Recurring, per month</span><strong class="big">{{ rand(v.current.recurringMonthly) }}</strong><span class="muted small">excl. tax{{ v.current.awaitingPrice ? ' · ' + v.current.awaitingPrice + ' item(s) awaiting a price' : '' }}</span></div>
-          <div><span class="label-caps">Billing</span><strong>{{ prefLabel[v.agreement.billing.preference] }}</strong><span class="muted small">{{ v.agreement.billing.billingEmail }}{{ v.agreement.billing.mandate.status === 'active' ? ' · mandate on file (simulated)' : '' }}</span></div>
+          <div><span class="label-caps">Billing</span><strong>{{ prefLabel[v.agreement.billing.preference] }}</strong><span class="muted small">{{ v.agreement.billing.billingEmail }}{{ v.agreement.billing.mandate.status === 'active' ? (demo ? ' · mandate on file (simulated)' : ' · card saved with Payfast (debit order)') : '' }}</span>@if (v.agreement.billing.mandate.status === 'active' && canChange()) {<button type="button" class="btn btn-ghost btn-sm" (click)="cancelDebitOrder(v)">Cancel debit order</button>}</div>
           <div><span class="label-caps">Next billing date</span><strong>{{ date(v.agreement.billing.nextBillingDate) }}</strong><span class="muted small">{{ v.agreement.cycle === 'annual' ? 'Billed annually' : 'Billed monthly' }}</span></div>
           <div>
             <span class="label-caps">Annual renewal</span><strong>{{ date(v.agreement.renewal.on) }}</strong>
@@ -404,6 +405,20 @@ export class CustomerCommercial {
     this.stepUp
       .guard({ action: 'change-subscription', detail: `Approve “${p.describe}” for ${v.name}` }, () => this.data.decideApproval(v.organisationId, p.id, 'approve', ''))
       .subscribe({ next: () => this.feedback.success('Approved: it’s on the agreement now.'), error: (e) => this.feedback.error(describeFailure(e, 'That wasn’t saved')) });
+  }
+
+  /** On the customer's request: Payfast stops charging their card. */
+  protected cancelDebitOrder(v: CustomerCommercialView): void {
+    openForm(this.drawer, {
+      eyebrow: `${v.name} · Billing`,
+      title: 'Cancel the card debit order',
+      intro: 'Payfast stops charging their saved card. They’ll pay each invoice with Pay now or by EFT.',
+      fields: [REASON_FIELD],
+      submitLabel: 'Cancel the debit order',
+      submit: (f) => this.data.cancelCardMandate(v.organisationId, f['reason']),
+      success: () => 'Cancelled at Payfast.',
+      failure: 'The debit order wasn’t cancelled',
+    });
   }
 
   protected cancel(v: CustomerCommercialView, s: ScheduledItem): void {

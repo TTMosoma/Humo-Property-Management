@@ -28,6 +28,39 @@ public static class PayfastEndpoints
         api.MapPost("/platform/invoices/{id:guid}/checkout", StaffCheckout).RequireAuthorization();
         api.MapPost("/organisations/{orgId:guid}/invoices/{id:guid}/checkout", CustomerCheckout).RequireAuthorization();
         api.MapPost(NotificationPath, Notify).AllowAnonymous().DisableAntiforgery();
+        api.MapPost("/organisations/{orgId:guid}/card-mandate/cancel", CustomerCancelMandate).RequireAuthorization();
+        api.MapPost("/platform/customers/{orgId:guid}/card-mandate/cancel", StaffCancelMandate).RequireAuthorization();
+    }
+
+    public sealed record CancelMandateRequest(string Reason);
+
+    /// <summary>The customer's administrator stops the card debit order. Later invoices are paid online or by EFT.</summary>
+    private static Task<IResult> CustomerCancelMandate(Guid orgId, CancelMandateRequest body, CurrentActor current, CommandRunner commands, CardPayments cards, CancellationToken ct) =>
+        CancelMandate(orgId, body, current, commands, cards, "Subscription.Request", ownOrganisation: true, ct);
+
+    /// <summary>Humo stops it on the customer's request (their account manager, or a System Administrator).</summary>
+    private static Task<IResult> StaffCancelMandate(Guid orgId, CancelMandateRequest body, CurrentActor current, CommandRunner commands, CardPayments cards, CancellationToken ct) =>
+        CancelMandate(orgId, body, current, commands, cards, "Platform.Subscriptions.Manage", ownOrganisation: false, ct);
+
+    private static async Task<IResult> CancelMandate(Guid orgId, CancelMandateRequest body, CurrentActor current, CommandRunner commands, CardPayments cards, string permission, bool ownOrganisation, CancellationToken ct)
+    {
+        if (await current.GetAsync(ct) is not { } me) return Results.Unauthorized();
+        if (ownOrganisation && me.OrganisationId != orgId) return Problems.NotFound();
+        var reason = (body.Reason ?? "").Trim();
+        return await commands.RunAsync(new CommandSpec($"Cancelled the card debit order — {reason}", permission)
+        {
+            Resource = "Agreement",
+            ResourceId = orgId.ToString(),
+            OrganisationId = orgId,
+            Category = "security",
+            StepUp = false,
+            Validate = () => reason.Length < 5 ? new() { ["reason"] = "Say why, in a few words. It goes in the audit log." } : [],
+        }, async actor =>
+        {
+            var result = await cards.CancelAsync(orgId, actor.Human.Name, actor.Human.Id.ToString(), reason, ct);
+            if (!result.Ok) throw new CommandRefused("provider", $"The card debit order wasn’t cancelled: {result.Message}");
+            return Results.NoContent();
+        }, ct);
     }
 
     /// <summary>Humo Finance starts a checkout for a customer (e.g. while on the phone with them).</summary>
@@ -41,18 +74,18 @@ public static class PayfastEndpoints
     }
 
     /// <summary>The customer's administrator pays their own invoice ("Pay now", Settings › Billing &amp; invoices).</summary>
-    private static async Task<IResult> CustomerCheckout(Guid orgId, Guid id, CurrentActor current, CommandRunner commands, HumoDbContext db, CommercialRecords commercial, IPayfast payfast,
+    private static async Task<IResult> CustomerCheckout(Guid orgId, Guid id, bool? saveCard, CurrentActor current, CommandRunner commands, HumoDbContext db, CommercialRecords commercial, IPayfast payfast,
         IOptions<AppOptions> app, TimeProvider clock, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         var inv = await db.Invoices.FirstOrDefaultAsync(i => i.Id == id && i.OrganisationId == orgId, ct);
         // Another organisation's invoice can't be paid, or even found, from here.
         if (inv is null || actor.OrganisationId != orgId) return Problems.NotFound();
-        return await Start(inv, "Subscription.Request", $"/settings/billing/{id}", commands, db, commercial, payfast, app.Value, clock, ct);
+        return await Start(inv, "Subscription.Request", $"/settings/billing/{id}", commands, db, commercial, payfast, app.Value, clock, ct, saveCard == true);
     }
 
     private static async Task<IResult> Start(Invoice inv, string permission, string backTo, CommandRunner commands, HumoDbContext db, CommercialRecords commercial, IPayfast payfast,
-        AppOptions app, TimeProvider clock, CancellationToken ct)
+        AppOptions app, TimeProvider clock, CancellationToken ct, bool saveCard = false)
     {
         var rec = await commercial.AgreementAsync(inv.OrganisationId, ct);
         var paid = (await db.Payments.Where(p => p.InvoiceId == inv.Id && p.Status == "verified").Select(p => p.Amount).ToListAsync(ct)).Sum();
@@ -80,7 +113,7 @@ public static class PayfastEndpoints
                 Note = "Waiting for Payfast’s confirmation. Starting a checkout is not a payment.",
             });
             var checkout = payfast.Checkout(paymentId.ToString(), due, $"Humo invoice {inv.Reference}", "Humo Property Management subscription", rec?.Agreement.Billing.BillingEmail,
-                $"{site}{backTo}?payment=returned", $"{site}{backTo}?payment=cancelled", $"{site}/api{NotificationPath}", inv.Id.ToString());
+                $"{site}{backTo}?payment=returned", $"{site}{backTo}?payment=cancelled", $"{site}/api{NotificationPath}", inv.Id.ToString(), saveCard);
             return Task.FromResult(Results.Ok(new CheckoutSessionDto(paymentId.ToString(), paymentId.ToString(), null, payfast.Sandbox, new CheckoutFormDto(checkout.Action, checkout.Fields))));
         }, ct);
     }
@@ -89,7 +122,7 @@ public static class PayfastEndpoints
     /// Payfast's ITN. Genuine, for a payment we started, for the right amount: then COMPLETE verifies the payment
     /// (and pays the invoice once verified payments cover it), FAILED or CANCELLED records that. A repeat changes nothing.
     /// </summary>
-    private static async Task<IResult> Notify(HttpRequest request, HumoDbContext db, IPayfast payfast, AuditLog audit, Platform.Notices notices, TimeProvider clock,
+    private static async Task<IResult> Notify(HttpRequest request, HumoDbContext db, IPayfast payfast, AuditLog audit, Platform.Notices notices, CardPayments cards, TimeProvider clock,
         ILoggerFactory logs, CancellationToken ct)
     {
         var log = logs.CreateLogger("Humo.Payfast");
@@ -129,6 +162,8 @@ public static class PayfastEndpoints
                 var verified = (await db.Payments.Where(p => p.InvoiceId == inv.Id && p.Status == "verified" && p.Id != payment.Id).Select(p => p.Amount).ToListAsync(ct)).Sum() + payment.Amount;
                 if (verified + 0.005m >= inv.Total) inv.Status = "paid";
                 notices.ToRole(Roles.HumoFinance, null, $"Payment received: {inv.Reference}", $"{CommercialEndpoints.Rand(payment.Amount)} through Payfast.", $"/platform/invoices/{inv.Id}");
+                // They chose to save the card: later invoices are charged to it (a debit order). Humo keeps only Payfast's token.
+                if (n["custom_str2"] == PayfastClient.SaveCardMarker && n["token"] is { Length: > 0 } token) await cards.SaveMandateAsync(payment.OrganisationId, token, ct);
                 break;
             case "FAILED":
                 payment.Status = "failed";
@@ -143,7 +178,7 @@ public static class PayfastEndpoints
                 return Results.Ok();
         }
         audit.Record($"Payfast notification: {status} for invoice {inv.Reference} ({CommercialEndpoints.Rand(payment.Amount)}, Payfast {pfId})", "success",
-            category: "security", organisationId: inv.OrganisationId, resource: "Payment", resourceId: payment.Id.ToString());
+            category: "security", organisationId: inv.OrganisationId, resource: "Payment", resourceId: payment.Id.ToString(), system: "Payfast");
         await db.SaveChangesAsync(ct);
         await notices.SendEmailsAsync(ct);
         return Results.Ok();

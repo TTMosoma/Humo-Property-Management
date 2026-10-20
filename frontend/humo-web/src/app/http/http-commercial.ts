@@ -1,10 +1,11 @@
 import { Injectable } from '@angular/core';
-import { Observable, catchError, of, throwError } from 'rxjs';
+import { Observable, catchError, map, of, throwError } from 'rxjs';
 import {
   AddOnId,
   AddOnInput,
   AgreementChange,
   ApiError,
+  BillingRunResult,
   BusinessOverview,
   Catalogue,
   CatalogueDataSource,
@@ -91,8 +92,12 @@ export class HttpPlanDataSource extends HttpPort implements PlanDataSource {
     return orUndefined(this.live<InvoiceDocument>(`/organisations/${organisationId}/invoices/${invoiceId}`, ['subscriptions']));
   }
 
-  payInvoice(organisationId: string, invoiceId: string): Observable<CheckoutSession> {
-    return this.command<CheckoutSession>('POST', `/organisations/${organisationId}/invoices/${invoiceId}/checkout`, null, ['subscriptions']);
+  payInvoice(organisationId: string, invoiceId: string, saveCard = false): Observable<CheckoutSession> {
+    return this.command<CheckoutSession>('POST', `/organisations/${organisationId}/invoices/${invoiceId}/checkout${saveCard ? '?saveCard=true' : ''}`, null, ['subscriptions']);
+  }
+
+  cancelCardMandate(organisationId: string, reason: string): Observable<void> {
+    return this.command('POST', `/organisations/${organisationId}/card-mandate/cancel`, { reason }, ['subscriptions']);
   }
 
   requestUpgrade(input: { organisationId: string; addOn?: AddOnId; package?: PackageId; feature?: Feature; note?: string; source: UpgradeRequest['source'] }): Observable<void> {
@@ -168,6 +173,18 @@ export class HttpCommercialDataSource extends HttpPort implements CommercialData
   /** Recorded, not paid: the invoice stays unpaid until the EFT is reconciled. */
   recordEftProof(invoiceId: string, note: string): Observable<void> {
     return this.command('POST', `/platform/invoices/${invoiceId}/eft-proof`, { note }, ['subscriptions']);
+  }
+
+  runBilling(): Observable<BillingRunResult> {
+    return this.command<BillingRunResult>('POST', '/platform/billing/run', null, ['subscriptions', 'organisations', 'notifications']);
+  }
+
+  lastBillingRun(): Observable<string | null> {
+    return this.live<{ lastRun: string | null }>('/platform/billing/run', ['subscriptions']).pipe(map((r) => r.lastRun));
+  }
+
+  cancelCardMandate(organisationId: string, reason: string): Observable<void> {
+    return this.command('POST', `/platform/customers/${organisationId}/card-mandate/cancel`, { reason }, ['subscriptions']);
   }
 
   /** Platform.Billing.Manage with step-up: matched to a line on Humo's bank statement. */
