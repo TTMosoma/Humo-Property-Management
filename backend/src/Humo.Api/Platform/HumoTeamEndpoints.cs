@@ -25,11 +25,15 @@ public sealed record HumoTeamMemberDto(IdentityDto Identity, IReadOnlyList<RoleA
 /// Humo's own team (doc 16). Only System Administrators change it (Platform.ManageHumoRoles), each
 /// change with step-up and a reason. Nobody changes their own access; the last System Administrator
 /// can't be removed; a new System Administrator needs a second one's approval, except under the
-/// sole-administrator safeguard (confirm your own request after a 24-hour cooling-off period).
+/// sole-administrator safeguard (confirm your own request after a 24-hour cooling-off period). The same
+/// safeguard lets the only System Administrator allow impersonation for themselves: they ask, the team is
+/// told, and they confirm it after 24 hours. Withdrawing your own impersonation is immediate.
 /// </summary>
 public static partial class HumoTeamEndpoints
 {
     private const string Impersonate = "System.Impersonate";
+    /// <summary>A pending grant of impersonation (not a role): the sole System Administrator asking for it for themselves.</summary>
+    public const string ImpersonationGrant = Impersonate;
     private const string Delegated = AccountRequestEndpoints.DelegatedPermission;
 
     public static void MapHumoTeam(this IEndpointRouteBuilder api)
@@ -109,7 +113,8 @@ public static partial class HumoTeamEndpoints
             if (!created.Succeeded) throw new CommandRefused("forbidden", string.Join("; ", created.Errors.Select(x => x.Description)));
             if (needsSecond) await RequestSystemAdmin(db, notices, actor, user, body.Label!.Trim(), body.Reason!.Trim(), clock, ct);
             else GrantRole(db, user.Id, body.Role!, body.Label!.Trim(), actor.User.Name, clock.GetUtcNow());
-            await AccessEndpoints.SendInvitation(db, email, app.Value, clock, user, "the Humo team", logs, ct);
+            // A new System Administrator waits for approval: they hear nothing until it's approved (and nothing if it's declined).
+            if (!needsSecond) await AccessEndpoints.SendInvitation(db, email, app.Value, clock, user, "the Humo team", logs, ct);
             return Results.Created($"/api/platform/team/{id}", new { id = id.ToString() });
         }, ct);
     }
@@ -150,7 +155,8 @@ public static partial class HumoTeamEndpoints
         }, ct);
     }
 
-    private static async Task<IResult> Act(Guid id, HumoTeamActionRequest a, CurrentActor current, CommandRunner commands, HumoDbContext db, Notices notices, TimeProvider clock, CancellationToken ct)
+    private static async Task<IResult> Act(Guid id, HumoTeamActionRequest a, CurrentActor current, CommandRunner commands, HumoDbContext db, Notices notices, TimeProvider clock,
+        IEmailSender email, IOptions<AppOptions> app, ILoggerFactory logs, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } me) return Results.Unauthorized();
         var target = await db.Users.Include(u => u.Assignments).AsSplitQuery().FirstOrDefaultAsync(u => u.Id == id && u.Kind == IdentityKinds.Humo, ct);
@@ -172,6 +178,7 @@ public static partial class HumoTeamEndpoints
         var what = a.Type switch
         {
             "grant-role" => $"{(a.Role == Roles.SystemAdmin ? "Asked to make" : "Made")} {target.Name} {Roles.Label(a.Role ?? "")}{(a.Role == Roles.SystemAdmin ? " (needs a second System Administrator)" : "")}",
+            "set-impersonation" when id == me.User.Id && a.Allowed == true => $"Asked to be allowed to impersonate (sole System Administrator: confirmable after the {HumoTeamRules.SoleAdminCoolingOffHours}-hour cooling-off period)",
             "end-role" => $"Ended {(ended is null ? "a role" : Roles.Label(ended.Role))} for {target.Name}",
             "set-impersonation" => $"{(a.Allowed == true ? "Allowed" : "Withdrew")} impersonation for {target.Name}",
             "set-delegated-activation" => $"{(a.Allowed == true ? "Granted" : "Revoked")} delegated account activation ({Delegated}) for {target.Name}",
@@ -179,6 +186,7 @@ public static partial class HumoTeamEndpoints
             "suspend" => $"Suspended {target.Name}’s Humo access",
             "restore" => $"Restored {target.Name}’s Humo access",
             "offboard" => $"Offboarded {target.Name} from the Humo team",
+            "approve-grant" when grant?.Role == ImpersonationGrant => $"Confirmed impersonation for {grant.IdentityName} after the {HumoTeamRules.SoleAdminCoolingOffHours}-hour cooling-off period (sole System Administrator)",
             "approve-grant" => $"Approved {(grant is null ? "a grant" : $"{grant.IdentityName} as {Roles.Label(grant.Role)} (requested by {grant.RequestedBy})")}"
                 + (grant?.RequestedById == me.User.Id ? $" — confirmed by the sole System Administrator after the {HumoTeamRules.SoleAdminCoolingOffHours}-hour cooling-off period" : ""),
             "decline-grant" => $"Declined {(grant is null ? "a grant" : $"{grant.IdentityName} as {Roles.Label(grant.Role)}")}",
@@ -199,7 +207,9 @@ public static partial class HumoTeamEndpoints
                 if (a.Type is "approve-grant" or "decline-grant")
                 {
                     if (grant is null || grant.IdentityId != id) return new() { ["grantId"] = "That request is no longer waiting." };
-                    if (grant.IdentityId == me.User.Id) return new() { ["grantId"] = "You can’t decide on your own access." };
+                    // The one exception: the sole System Administrator's own impersonation request, after the cooling-off period.
+                    if (grant.IdentityId == me.User.Id && !(grant.Role == ImpersonationGrant && grant.RequestedById == me.User.Id && sole))
+                        return new() { ["grantId"] = "You can’t decide on your own access." };
                     if (a.Type == "approve-grant" && grant.RequestedById == me.User.Id)
                     {
                         // Sole-administrator safeguard: otherwise nobody could ever approve a second System Administrator.
@@ -209,7 +219,10 @@ public static partial class HumoTeamEndpoints
                     if (a.Type == "decline-grant" && (a.Reason ?? "").Trim().Length < 5) return new() { ["reason"] = PortfolioRules.ReasonMessage };
                     return [];
                 }
-                if (id == me.User.Id) return new() { ["id"] = "You can’t change your own access. Ask another System Administrator." };
+                // The sole System Administrator may ask for impersonation for themselves (cooling-off), and may always give it up.
+                var ownImpersonation = id == me.User.Id && a.Type == "set-impersonation" && (a.Allowed != true || sole);
+                if (id == me.User.Id && !ownImpersonation) return new() { ["id"] = "You can’t change your own access. Ask another System Administrator." };
+                if (ownImpersonation && a.Allowed == true && pendingForTarget) return new() { ["allowed"] = "Your request is already waiting for its cooling-off period." };
                 if (a.Type != "restore" && (a.Reason ?? "").Trim().Length < 5) return new() { ["reason"] = PortfolioRules.ReasonMessage };
                 return a.Type switch
                 {
@@ -253,6 +266,9 @@ public static partial class HumoTeamEndpoints
                     End(ended!, by, now);
                     target.SecurityStamp = Guid.NewGuid().ToString();
                     break;
+                case "set-impersonation" when id == me.User.Id && a.Allowed == true:
+                    await RequestOwnImpersonation(db, notices, actor, a.Reason!.Trim(), clock, ct);
+                    break;
                 case "set-impersonation":
                     SetGrant(roles.Where(x => x.Role == Roles.SystemAdmin), Impersonate, a.Allowed == true);
                     break;
@@ -283,12 +299,25 @@ public static partial class HumoTeamEndpoints
                     target.SecurityStamp = Guid.NewGuid().ToString();
                     db.PendingHumoGrants.RemoveRange(await db.PendingHumoGrants.Where(g => g.IdentityId == id || g.RequestedById == id).ToListAsync(ct));
                     break;
+                case "approve-grant" when grant!.Role == ImpersonationGrant:
+                    SetGrant(roles.Where(x => x.Role == Roles.SystemAdmin), Impersonate, true);
+                    db.PendingHumoGrants.Remove(grant);
+                    break;
                 case "approve-grant":
                     GrantRole(db, id, grant!.Role, grant.Label, $"{grant.RequestedBy}, approved by {by}", now);
                     db.PendingHumoGrants.Remove(grant);
+                    // Someone invited for this role hears about it only now that it's approved.
+                    if (target.Status == IdentityStatuses.Invited && roles.Count == 0)
+                        await AccessEndpoints.SendInvitation(db, email, app.Value, clock, target, "the Humo team", logs, ct);
                     break;
                 case "decline-grant":
                     db.PendingHumoGrants.Remove(grant!);
+                    // An invitee who was only ever invited for this role never hears from Humo; their sign-in is closed.
+                    if (target.Status == IdentityStatuses.Invited && roles.Count == 0)
+                    {
+                        target.Status = IdentityStatuses.Deactivated;
+                        target.SecurityStamp = Guid.NewGuid().ToString();
+                    }
                     break;
             }
             target.Version++;
@@ -314,6 +343,23 @@ public static partial class HumoTeamEndpoints
             notices.ToPerson(person, me.User.Id, $"{me.User.Name} asked to make {target.Name} a System Administrator",
                 $"{me.User.Name} is Humo’s only System Administrator, so they can confirm it themselves after a {HumoTeamRules.SoleAdminCoolingOffHours}-hour cooling-off period (from {from:d MMM yyyy HH:mm}). If you didn’t expect this, raise it with Humo’s founders before then.",
                 $"/platform/team/{target.Id}");
+    }
+
+    /// <summary>The sole System Administrator asks for impersonation for themselves: everyone on the team is told, and it applies after the cooling-off period.</summary>
+    private static async Task RequestOwnImpersonation(HumoDbContext db, Notices notices, Actor me, string reason, TimeProvider clock, CancellationToken ct)
+    {
+        var now = clock.GetUtcNow();
+        db.PendingHumoGrants.Add(new PendingHumoGrant
+        {
+            Id = Guid.CreateVersion7(), IdentityId = me.User.Id, IdentityName = me.User.Name, Role = ImpersonationGrant, Label = "Impersonation", Reason = reason,
+            RequestedById = me.User.Id, RequestedBy = me.User.Name, RequestedAt = now,
+        });
+        var from = now.AddHours(HumoTeamRules.SoleAdminCoolingOffHours).ToOffset(TimeSpan.FromHours(2));
+        var team = await db.Users.Where(u => u.Kind == IdentityKinds.Humo && u.Status != IdentityStatuses.Deactivated && u.Id != me.User.Id).Select(u => u.Id).ToListAsync(ct);
+        foreach (var person in team)
+            notices.ToPerson(person, me.User.Id, $"{me.User.Name} asked to be allowed to impersonate customer users",
+                $"{me.User.Name} is Humo’s only System Administrator, so they can confirm it themselves after a {HumoTeamRules.SoleAdminCoolingOffHours}-hour cooling-off period (from {from:d MMM yyyy HH:mm}). If you didn’t expect this, raise it with Humo’s founders before then.",
+                $"/platform/team/{me.User.Id}");
     }
 
     private static void GrantRole(HumoDbContext db, Guid identityId, string role, string label, string by, DateTimeOffset now) =>

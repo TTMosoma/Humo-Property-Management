@@ -1,5 +1,5 @@
 import { Identity, RoleAssignment, activeAssignments } from './identity';
-import { HumoRole } from './role';
+import { HumoRole, ROLE_LABELS } from './role';
 
 /**
  * Platform › Humo team: Humo's own staff (System Administrators, Account
@@ -21,8 +21,10 @@ import { HumoRole } from './role';
  *   - they may confirm their own request to make someone a System
  *     Administrator, but only after this cooling-off period, with a fresh
  *     step-up; the rest of the Humo team is told when it's requested;
- *   - they may decide new customer accounts they submitted themselves.
- * Both are marked in the audit log. The moment there are two, the normal
+ *   - they may decide new customer accounts they submitted themselves;
+ *   - they may ask to be allowed to impersonate customer users, and confirm it
+ *     themselves after the same cooling-off period (withdrawing it is immediate).
+ * All are marked in the audit log. The moment there are two, the normal
  * two-person rules apply again; nothing needs switching off.
  */
 export const SOLE_ADMIN_COOLING_OFF_HOURS = 24;
@@ -51,11 +53,14 @@ export interface HumoCustomerRef {
 }
 
 /** A request to make someone a System Administrator, waiting for a second System Administrator. */
+/** A pending grant of impersonation (the sole System Administrator asking for it), rather than a role. */
+export const IMPERSONATION_GRANT = 'System.Impersonate';
+
 export interface PendingHumoGrant {
   id: string;
   identityId: string;
   identityName: string;
-  role: HumoRole;
+  role: HumoRole | typeof IMPERSONATION_GRANT;
   label: string;
   reason: string;
   requestedById: string;
@@ -103,3 +108,15 @@ export type HumoTeamAction =
   | { type: 'offboard'; reason: string; reassignTo?: string }
   | { type: 'approve-grant'; grantId: string }
   | { type: 'decline-grant'; grantId: string; reason: string };
+
+/** What a pending request asks for, in words: "Terry Mosoma asks to make Lerato Dlamini System Administrator." */
+export function pendingGrantText(g: PendingHumoGrant, roleLabel: (role: HumoRole) => string): string {
+  return g.role === IMPERSONATION_GRANT
+    ? `${g.requestedBy} asks to be allowed to impersonate customer users.`
+    : `${g.requestedBy} asks to make ${g.identityName} ${roleLabel(g.role)}.`;
+}
+
+/** A pending grant's role in words; impersonation isn't a role. */
+export function grantLabel(role: PendingHumoGrant['role']): string {
+  return role === IMPERSONATION_GRANT ? 'allowed to impersonate' : ROLE_LABELS[role];
+}

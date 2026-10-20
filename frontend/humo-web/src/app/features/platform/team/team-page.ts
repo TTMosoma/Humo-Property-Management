@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { HumoTeamDataSource, HumoTeamMember, IDENTITY_STATUS_LABELS, PendingHumoGrant, ROLE_LABELS, RoleAssignment, isSoleSystemAdmin, soleAdminConfirmableFrom } from '../../../domain';
+import { HumoTeamDataSource, HumoTeamMember, IDENTITY_STATUS_LABELS, IMPERSONATION_GRANT, PendingHumoGrant, ROLE_LABELS, RoleAssignment, isSoleSystemAdmin, pendingGrantText, soleAdminConfirmableFrom, grantLabel } from '../../../domain';
 import { FeedbackService } from '../../../core/feedback/feedback.service';
 import { loadable } from '../../../core/data/loadable';
 import { StepUpService } from '../../../core/security/step-up.service';
@@ -43,7 +43,7 @@ export const MEMBER_TONE: Record<string, Tone> = { invited: 'info', active: 'suc
       <div class="pending surface">
         <ion-icon name="shield-checkmark-outline" aria-hidden="true" />
         <div class="p-text">
-          <strong>{{ g.requestedBy }} asks to make {{ g.identityName }} {{ roleLabel(g) }}.</strong>
+          <strong>{{ pendingText(g) }}</strong>
           <span class="muted">{{ g.reason }} · {{ relativeTime(g.requestedAt) }}</span>
         </div>
         @if (canManage() && g.requestedById !== me() && g.identityId !== me()) {
@@ -154,7 +154,7 @@ export class TeamPage {
   protected readonly statusLabel = (m: HumoTeamMember) => IDENTITY_STATUS_LABELS[m.identity.status];
   protected readonly relativeTime = relativeTime;
   protected readonly tone = (m: HumoTeamMember) => MEMBER_TONE[m.identity.status];
-  protected readonly roleLabel = (g: PendingHumoGrant) => ROLE_LABELS[g.role];
+  protected readonly pendingText = (g: PendingHumoGrant) => pendingGrantText(g, (r) => ROLE_LABELS[r]);
   protected readonly me = computed(() => this.session.actor().id);
   protected readonly currentRole = computed(() => ROLE_LABELS[this.session.assignment().role]);
   /** A System Administrator working in another of their roles: they switch to change the team. */
@@ -174,8 +174,8 @@ export class TeamPage {
   }
 
   protected approve(g: PendingHumoGrant): void {
-    this.stepUp.guard({ action: 'change-humo-team', detail: `Approve ${g.identityName} as ${ROLE_LABELS[g.role]}` }, () => this.data.act(g.identityId, { type: 'approve-grant', grantId: g.id })).subscribe({
-      next: () => this.feedback.success(`${g.identityName} is now ${ROLE_LABELS[g.role]}.`),
+    this.stepUp.guard({ action: 'change-humo-team', detail: g.role === IMPERSONATION_GRANT ? `Allow ${g.identityName} to impersonate` : `Approve ${g.identityName} as ${grantLabel(g.role)}` }, () => this.data.act(g.identityId, { type: 'approve-grant', grantId: g.id })).subscribe({
+      next: () => this.feedback.success(`${g.identityName} is now ${grantLabel(g.role)}.`),
       error: (e) => this.feedback.error(e?.fieldErrors?.grantId ?? e?.message ?? 'It wasn’t approved.'),
     });
   }

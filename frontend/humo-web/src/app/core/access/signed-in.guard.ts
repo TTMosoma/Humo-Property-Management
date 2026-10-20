@@ -16,6 +16,16 @@ export const signedInGuard: CanActivateFn = (_route, state) => {
   );
 };
 
+/**
+ * "/": everyone's own home (Humo roles have their own). It waits for /me: a redirect worked out before the session
+ * loads would send Humo staff to the agency dashboard, which isn't theirs.
+ */
+export const homeGuard: CanActivateFn = () => {
+  const session = inject(SessionService);
+  const router = inject(Router);
+  return session.loaded().pipe(map(() => router.parseUrl(session.homeRoute())));
+};
+
 /** The sign-in pages only make sense when signed out. */
 export const signedOutGuard: CanActivateFn = () => {
   const session = inject(SessionService);

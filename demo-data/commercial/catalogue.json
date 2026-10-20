@@ -276,30 +276,6 @@
       ]
     },
     {
-      "id": "storage",
-      "name": "Additional Storage",
-      "description": "Replaced by the 10, 50 and 100 GB storage packs.",
-      "kind": "storage",
-      "features": [
-        "storage-extra"
-      ],
-      "allowQuantity": false,
-      "status": "retired",
-      "terms": [
-        {
-          "version": 1,
-          "effectiveFrom": "2026-01-01",
-          "price": null,
-          "frequency": "monthly",
-          "priceStatus": "awaiting",
-          "changedBy": "Humo catalogue seed",
-          "changedAt": "2026-10-12T08:00:00+02:00",
-          "reason": "Retired: replaced by sized storage packs."
-        }
-      ],
-      "retiresOn": "2026-10-12"
-    },
-    {
       "id": "storage-10",
       "name": "Additional storage 10 GB",
       "description": "10 GB more for documents, photos and generated files.",

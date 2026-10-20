@@ -1,5 +1,5 @@
 import { Router } from '@angular/router';
-import { HUMO_EMAIL_DOMAIN, HUMO_ROLES, HumoRole, HumoTeamAction, HumoTeamDataSource, HumoTeamMember, PendingHumoGrant, ROLE_LABELS, RoleAssignment } from '../../../domain';
+import { HUMO_EMAIL_DOMAIN, HUMO_ROLES, HumoRole, HumoTeamAction, HumoTeamDataSource, HumoTeamMember, PendingHumoGrant, ROLE_LABELS, RoleAssignment, SOLE_ADMIN_COOLING_OFF_HOURS, grantLabel } from '../../../domain';
 import { DrawerService } from '../../../ui/drawer/drawer.service';
 import { openForm } from '../../shared/form-drawer';
 
@@ -38,7 +38,10 @@ export function inviteMemberForm(drawer: DrawerService, data: HumoTeamDataSource
     stepUp: (v) => step(`Invite ${v['name'] || 'someone'} as ${ROLE_LABELS[v['role'] as HumoRole]}`),
     submitLabel: 'Send invitation',
     submit: (v) => data.invite({ name: v['name'], email: v['email'], title: v['title'], role: v['role'] as HumoRole, label: v['label'], reason: v['reason'] }),
-    success: (_, v) => (v['role'] === 'system-admin' ? 'Invited. A second System Administrator approves the role before it applies.' : 'Invitation sent.'),
+    success: (_, v) =>
+      v['role'] === 'system-admin'
+        ? 'Waiting for approval. The invitation email goes out once a second System Administrator approves; nothing is sent if it’s declined.'
+        : 'Invitation sent.',
     done: (id) => router.navigate(['/platform/team', id]),
     failure: 'The invitation wasn’t sent',
   });
@@ -97,19 +100,22 @@ export function endRoleForm(drawer: DrawerService, data: HumoTeamDataSource, m: 
   });
 }
 
-export function impersonationForm(drawer: DrawerService, data: HumoTeamDataSource, m: HumoTeamMember): void {
+export function impersonationForm(drawer: DrawerService, data: HumoTeamDataSource, m: HumoTeamMember, self = false): void {
   const allow = !m.canImpersonate;
+  const ask = allow && self;
   openForm(drawer, {
     eyebrow: m.identity.name,
-    title: allow ? 'Allow impersonation' : 'Withdraw impersonation',
-    intro: allow
-      ? 'They’ll be able to view as a customer user (Observe), and act as one (Act, with step-up). Every session is recorded and visible to the customer’s administrators.'
-      : 'They can still look customer users up, but not view as them.',
+    title: ask ? 'Ask to allow impersonation' : allow ? 'Allow impersonation' : 'Withdraw impersonation',
+    intro: ask
+      ? `You’re the only System Administrator, so nobody else can allow it. The Humo team is told now, and you confirm it yourself on the Humo team page after a ${SOLE_ADMIN_COOLING_OFF_HOURS}-hour cooling-off period. Every impersonation session is recorded and visible to the customer’s administrators.`
+      : allow
+        ? 'They’ll be able to view as a customer user (Observe), and act as one (Act, with step-up). Every session is recorded and visible to the customer’s administrators.'
+        : 'They can still look customer users up, but not view as them.',
     fields: [{ key: 'reason', label: 'Why', type: 'text', required: true }],
     stepUp: step(`${allow ? 'Allow' : 'Withdraw'} impersonation for ${m.identity.name}`),
-    submitLabel: allow ? 'Allow' : 'Withdraw',
+    submitLabel: ask ? 'Ask' : allow ? 'Allow' : 'Withdraw',
     submit: (v) => act(data, m, { type: 'set-impersonation', allowed: allow, reason: v['reason'] }),
-    success: () => (allow ? 'Allowed.' : 'Withdrawn.'),
+    success: () => (ask ? `Asked. Confirm it on the Humo team page in ${SOLE_ADMIN_COOLING_OFF_HOURS} hours.` : allow ? 'Allowed.' : 'Withdrawn.'),
     failure: 'It wasn’t changed',
   });
 }
@@ -192,9 +198,9 @@ export function offboardForm(drawer: DrawerService, data: HumoTeamDataSource, m:
 export function declineForm(drawer: DrawerService, data: HumoTeamDataSource, g: PendingHumoGrant): void {
   openForm(drawer, {
     eyebrow: 'Humo team',
-    title: `Decline: ${g.identityName} as ${ROLE_LABELS[g.role]}`,
+    title: `Decline: ${g.identityName} as ${grantLabel(g.role)}`,
     fields: [{ key: 'reason', label: 'Why', type: 'text', required: true }],
-    stepUp: step(`Decline ${g.identityName} as ${ROLE_LABELS[g.role]}`),
+    stepUp: step(`Decline ${g.identityName} as ${grantLabel(g.role)}`),
     submitLabel: 'Decline',
     submit: (v) => data.act(g.identityId, { type: 'decline-grant', grantId: g.id, reason: v['reason'] }),
     success: () => 'Declined.',

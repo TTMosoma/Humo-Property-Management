@@ -185,8 +185,8 @@ export const PACKAGES: Package[] = [
   },
 ];
 
-export type KnownAddOnId = 'governance' | 'compliance' | 'advanced-reporting' | 'storage' | 'api-access' | 'whatsapp' | 'advanced-automation' | 'integrations' | 'document-branding-pack';
-/** Add-ons are catalogue data (docs/23): new ones, such as storage packs, need no code change. */
+export type KnownAddOnId = 'governance' | 'compliance' | 'advanced-reporting' | 'api-access' | 'whatsapp' | 'advanced-automation' | 'integrations' | 'document-branding-pack';
+/** Add-ons are catalogue data (docs/23): new ones, such as the 10, 50 and 100 GB storage packs, need no code change. */
 export type AddOnId = KnownAddOnId | (string & {});
 
 /** Features sold independently of the package. */
@@ -201,7 +201,6 @@ export const ADD_ONS: AddOn[] = [
   { id: 'governance', name: 'Governance', description: 'Trustee boards, meetings, AGMs and resolutions.', features: ['governance', 'trustee-management', 'meetings', 'agm-sgm'] },
   { id: 'compliance', name: 'Compliance', description: 'Statutory deadlines across every scheme, generated from your records.', features: ['compliance'] },
   { id: 'advanced-reporting', name: 'Advanced Reporting', description: 'Custom and scheduled reports, analytics.', features: ['reporting-advanced', 'analytics-advanced'] },
-  { id: 'storage', name: 'Additional Storage', description: 'More space for documents and photos.', features: ['storage-extra'] },
   { id: 'api-access', name: 'API Access', description: 'Programmatic access to Humo Property Management data.', features: ['api'] },
   { id: 'whatsapp', name: 'WhatsApp', description: 'Notices and reminders on WhatsApp.', features: ['whatsapp'] },
   { id: 'advanced-automation', name: 'Advanced Automation', description: 'Automated multi-step workflows.', features: ['automation', 'automation-advanced'] },

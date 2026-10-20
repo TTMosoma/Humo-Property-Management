@@ -3,7 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { map, take } from 'rxjs';
-import { HumoRole, HumoTeamDataSource, HumoTeamMember, IDENTITY_STATUS_LABELS, PERMISSION_META, Permission, PlatformDataSource, ROLE_LABELS, ROLE_PERMISSIONS, RoleAssignment } from '../../../domain';
+import { HumoRole, HumoTeamDataSource, HumoTeamMember, IDENTITY_STATUS_LABELS, PERMISSION_META, Permission, PlatformDataSource, ROLE_LABELS, ROLE_PERMISSIONS, RoleAssignment, PendingHumoGrant, pendingGrantText } from '../../../domain';
 import { FeedbackService } from '../../../core/feedback/feedback.service';
 import { loadable } from '../../../core/data/loadable';
 import { PrototypeControls } from '../../../core/prototype/prototype-controls';
@@ -55,7 +55,10 @@ import { MEMBER_TONE } from './team-page';
         <p class="banner surface info">Switch to your System Administrator role (your name, top right) to change their access.</p>
       }
       @if (self()) {
-        <p class="banner surface">This is you. Changes to your own access are made by another System Administrator.</p>
+        <p class="banner surface">
+          This is you. Changes to your own access are made by another System Administrator. While you’re the only System Administrator, you can ask to
+          be allowed to impersonate yourself: the Humo team is told, and you confirm it on the Humo team page after a 24-hour cooling-off period.
+        </p>
       }
       @if (i.status === 'invited') {
         <p class="banner surface info">
@@ -66,7 +69,7 @@ import { MEMBER_TONE } from './team-page';
         </p>
       }
       @if (m.pending; as g) {
-        <p class="banner surface warn">{{ g.requestedBy }} asked to make them {{ roleLabels[g.role] }} ({{ g.reason }}). It applies once another System Administrator approves it on the Humo team page.</p>
+        <p class="banner surface warn">{{ pendingText(g) }} ({{ g.reason }}) It applies once it’s approved, or confirmed after the cooling-off period, on the Humo team page.</p>
       }
 
       <div class="grid">
@@ -122,8 +125,10 @@ import { MEMBER_TONE } from './team-page';
             <h2 class="section-title">Impersonation</h2>
             @if (hasRole('system-admin')) {
               <p>{{ m.canImpersonate ? 'Allowed: they can view as a customer user. Every session is recorded.' : 'Not allowed. It’s granted to System Administrators individually, never by role.' }}</p>
-              @if (editable()) {
-                <button type="button" class="btn btn-secondary btn-sm" (click)="impersonation()">{{ m.canImpersonate ? 'Withdraw' : 'Allow impersonation' }}</button>
+              @if (editable() || (self() && canManage())) {
+                <button type="button" class="btn btn-secondary btn-sm" (click)="impersonation()">
+                  {{ m.canImpersonate ? 'Withdraw' : self() ? 'Ask to allow impersonation' : 'Allow impersonation' }}
+                </button>
               }
             } @else {
               <p class="muted">Only System Administrators can be allowed to impersonate.</p>
@@ -238,8 +243,10 @@ export class MemberPage {
   }
 
   protected impersonation(): void {
-    impersonationForm(this.drawer, this.data, this.view()!);
+    impersonationForm(this.drawer, this.data, this.view()!, this.self());
   }
+
+  protected readonly pendingText = (g: PendingHumoGrant) => pendingGrantText(g, (r) => ROLE_LABELS[r]);
 
   protected delegatedActivation(): void {
     delegatedActivationForm(this.drawer, this.data, this.view()!);

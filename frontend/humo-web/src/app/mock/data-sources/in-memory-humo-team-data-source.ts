@@ -1,24 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Observable, combineLatest, map, switchMap } from 'rxjs';
-import {
-  FieldErrors,
-  HUMO_EMAIL_DOMAIN,
-  HumoTeamAction,
-  HumoTeamDataSource,
-  HumoTeamMember,
-  Identity,
-  NewHumoMember,
-  PendingHumoGrant,
-  ROLE_LABELS,
-  RoleAssignment,
-  SOLE_ADMIN_COOLING_OFF_HOURS,
-  activeAssignments,
-  activeSystemAdmins,
-  isHumoRole,
-  isSoleSystemAdmin,
-  soleAdminConfirmableFrom,
-} from '../../domain';
+import { FieldErrors, HUMO_EMAIL_DOMAIN, HumoTeamAction, HumoTeamDataSource, HumoTeamMember, Identity, NewHumoMember, PendingHumoGrant, ROLE_LABELS, RoleAssignment, SOLE_ADMIN_COOLING_OFF_HOURS, activeAssignments, activeSystemAdmins, isHumoRole, isSoleSystemAdmin, soleAdminConfirmableFrom, grantLabel, IMPERSONATION_GRANT } from '../../domain';
 import { AccessStore } from '../db/access-store';
 import { HumoTeamStore } from '../db/humo-team-store';
 import { AccountRequestStore } from '../db/account-request-store';
@@ -228,8 +211,8 @@ export class InMemoryHumoTeamDataSource extends HumoTeamDataSource {
       suspend: `Suspended ${name}’s Humo access`,
       restore: `Restored ${name}’s Humo access`,
       offboard: `Offboarded ${name} from the Humo team`,
-      'approve-grant': `Approved ${grant ? `${grant.identityName} as ${ROLE_LABELS[grant.role]} (requested by ${grant.requestedBy})` : 'a grant'}${grant?.requestedById === me.id ? ` — confirmed by the sole System Administrator after the ${SOLE_ADMIN_COOLING_OFF_HOURS}-hour cooling-off period` : ''}`,
-      'decline-grant': `Declined ${grant ? `${grant.identityName} as ${ROLE_LABELS[grant.role]}` : 'a grant'}`,
+      'approve-grant': `Approved ${grant ? `${grant.identityName} as ${grantLabel(grant.role)} (requested by ${grant.requestedBy})` : 'a grant'}${grant?.requestedById === me.id ? ` — confirmed by the sole System Administrator after the ${SOLE_ADMIN_COOLING_OFF_HOURS}-hour cooling-off period` : ''}`,
+      'decline-grant': `Declined ${grant ? `${grant.identityName} as ${grantLabel(grant.role)}` : 'a grant'}`,
     };
     return this.gateway
       .command(
@@ -388,6 +371,10 @@ export class InMemoryHumoTeamDataSource extends HumoTeamDataSource {
         return;
       }
       case 'approve-grant':
+        if (grant!.role === IMPERSONATION_GRANT) {
+          this.team.remove(grant!.id);
+          return;
+        }
         this.grantRole(identityId, grant!.role, grant!.label, `${grant!.requestedBy}, approved by ${by}`);
         this.team.remove(grant!.id);
         return;

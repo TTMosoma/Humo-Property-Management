@@ -56,6 +56,7 @@
     {"id": "Platform.Customers.Approve", "mutates": true, "stepUp": false},
     {"id": "Platform.Customers.ActivateWithoutApproval", "mutates": true, "stepUp": false},
     {"id": "Platform.Customers.Users", "mutates": false, "stepUp": false},
+    {"id": "Platform.Users.ResetPasskeys", "mutates": true, "stepUp": true},
     {"id": "Platform.Customers.AnyAccount", "mutates": false, "stepUp": false},
     {"id": "Platform.Accounts.Own", "mutates": false, "stepUp": false},
     {"id": "Platform.Subscriptions.View", "mutates": false, "stepUp": false},
@@ -84,9 +85,9 @@
     "trustee": ["Work.View", "Portfolio.View", "Finance.View", "Maintenance.View", "Suppliers.View", "Communications.View", "Documents.View", "Governance.View", "Compliance.View", "Reports.View", "Work.Manage", "Approvals.Decide", "Security.ManageOwn"],
     "owner": ["Resident.Portal", "Account.ViewOwn", "Resident.Requests", "Security.ManageOwn"],
     "tenant": ["Resident.Portal", "Resident.Requests", "Security.ManageOwn"],
-    "system-admin": ["Platform.View", "Platform.Customers.View", "Platform.Customers.Manage", "Platform.Customers.Approve", "Platform.Customers.Users", "Platform.Customers.AnyAccount", "Platform.Subscriptions.View", "Platform.Subscriptions.Manage", "Platform.Packages.Manage", "Platform.Discounts.Approve", "Platform.Templates.Manage", "Platform.Health.View", "Platform.Revenue.View", "Platform.Insights.View", "Platform.Support.Assist", "Platform.Config.Manage", "Platform.Operations.View", "Platform.Operations.Manage", "Platform.ManageHumoRoles", "Platform.Audit", "Security.ManageOwn"],
+    "system-admin": ["Platform.View", "Platform.Customers.View", "Platform.Customers.Manage", "Platform.Customers.Approve", "Platform.Customers.Users", "Platform.Users.ResetPasskeys", "Platform.Customers.AnyAccount", "Platform.Subscriptions.View", "Platform.Subscriptions.Manage", "Platform.Packages.Manage", "Platform.Discounts.Approve", "Platform.Templates.Manage", "Platform.Health.View", "Platform.Revenue.View", "Platform.Insights.View", "Platform.Support.Assist", "Platform.Config.Manage", "Platform.Operations.View", "Platform.Operations.Manage", "Platform.ManageHumoRoles", "Platform.Audit", "Security.ManageOwn"],
     "humo-account-manager": ["Platform.View", "Platform.Customers.View", "Platform.Customers.Manage", "Platform.Customers.Users", "Platform.Subscriptions.View", "Platform.Subscriptions.Manage", "Platform.Health.View", "Platform.Revenue.View", "Platform.Accounts.Own", "Platform.Opportunities.Manage", "Platform.Support.Assist", "Security.ManageOwn"],
-    "humo-support": ["Platform.View", "Platform.Customers.View", "Platform.Customers.Users", "Platform.Subscriptions.View", "Platform.Health.View", "Platform.Support.Assist", "Platform.Operations.View", "Platform.Operations.Manage", "Platform.Audit", "Security.ManageOwn"],
+    "humo-support": ["Platform.View", "Platform.Customers.View", "Platform.Customers.Users", "Platform.Users.ResetPasskeys", "Platform.Subscriptions.View", "Platform.Health.View", "Platform.Support.Assist", "Platform.Operations.View", "Platform.Operations.Manage", "Platform.Audit", "Security.ManageOwn"],
     "humo-executive": ["Platform.View", "Platform.Customers.View", "Platform.Subscriptions.View", "Platform.Health.View", "Platform.Revenue.View", "Platform.Insights.View", "Security.ManageOwn"],
     "humo-finance": ["Platform.View", "Platform.Customers.View", "Platform.Subscriptions.View", "Platform.Health.View", "Platform.Revenue.View", "Platform.Insights.View", "Platform.Billing.Manage", "Platform.Discounts.Approve", "Security.ManageOwn"]
   }

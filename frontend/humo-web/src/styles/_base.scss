@@ -201,6 +201,13 @@ kbd {
   outline: none;
 }
 
+// The collapsed rail's group menus: never taller than the screen, scrolling inside like the rail itself.
+.menu-panel.flyout {
+  max-height: calc(100dvh - 2 * var(--s-3));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 .menu-section-label {
   padding: var(--s-2) var(--s-3) var(--s-1);
 }

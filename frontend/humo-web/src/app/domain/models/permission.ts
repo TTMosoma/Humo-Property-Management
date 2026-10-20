@@ -71,6 +71,7 @@ export type Permission =
   | 'Platform.Customers.Approve'
   | 'Platform.Customers.ActivateWithoutApproval'
   | 'Platform.Customers.Users'
+  | 'Platform.Users.ResetPasskeys'
   | 'Platform.Customers.AnyAccount'
   | 'Platform.Accounts.Own'
   | 'Platform.Subscriptions.View'
@@ -159,6 +160,7 @@ export const PERMISSIONS: PermissionMeta[] = [
   { id: 'Platform.Customers.Approve', area: 'Platform', label: 'Approve or reject new customer accounts', mutates: true },
   { id: 'Platform.Customers.ActivateWithoutApproval', area: 'Platform', label: 'Activate new customer accounts without separate approval (granted individually)', mutates: true },
   { id: 'Platform.Customers.Users', area: 'Platform', label: 'See and assist customer users', mutates: false },
+  { id: 'Platform.Users.ResetPasskeys', area: 'Platform', label: 'Remove a user’s passkeys (lost or stolen device), with a reason', mutates: true, stepUp: true },
   { id: 'Platform.Customers.AnyAccount', area: 'Platform', label: 'Act on any customer’s account, not only the ones you look after (D11)', mutates: false },
   { id: 'Platform.Accounts.Own', area: 'Platform', label: 'Look after a book of customer accounts', mutates: false },
   { id: 'Platform.Subscriptions.View', area: 'Platform', label: 'View subscriptions and entitlements', mutates: false },
@@ -223,7 +225,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   tenant: ['Resident.Portal', 'Resident.Requests', 'Security.ManageOwn'],
   // Highest operational authority — but impersonation is still an individual grant.
   'system-admin': [
-    'Platform.View', 'Platform.Customers.View', 'Platform.Customers.Manage', 'Platform.Customers.Approve', 'Platform.Customers.Users', 'Platform.Customers.AnyAccount', 'Platform.Subscriptions.View',
+    'Platform.View', 'Platform.Customers.View', 'Platform.Customers.Manage', 'Platform.Customers.Approve', 'Platform.Customers.Users', 'Platform.Users.ResetPasskeys', 'Platform.Customers.AnyAccount', 'Platform.Subscriptions.View',
     'Platform.Subscriptions.Manage', 'Platform.Packages.Manage', 'Platform.Discounts.Approve', 'Platform.Templates.Manage', 'Platform.Health.View', 'Platform.Revenue.View', 'Platform.Insights.View',
     'Platform.Support.Assist', 'Platform.Config.Manage', 'Platform.Operations.View', 'Platform.Operations.Manage', 'Platform.ManageHumoRoles', 'Platform.Audit', 'Security.ManageOwn',
   ],
@@ -235,7 +237,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   ],
   // Investigates and helps. Can't change packages, configuration, security policy or anyone's roles.
   'humo-support': [
-    'Platform.View', 'Platform.Customers.View', 'Platform.Customers.Users', 'Platform.Subscriptions.View', 'Platform.Health.View',
+    'Platform.View', 'Platform.Customers.View', 'Platform.Customers.Users', 'Platform.Users.ResetPasskeys', 'Platform.Subscriptions.View', 'Platform.Health.View',
     'Platform.Support.Assist', 'Platform.Operations.View', 'Platform.Operations.Manage', 'Platform.Audit', 'Security.ManageOwn',
   ],
   // Business intelligence: aggregates, revenue and health. Read-only; no customer users or audit detail.

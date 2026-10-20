@@ -39,10 +39,32 @@ public sealed class CommercialRecords(HumoDbContext db, TimeProvider clock)
     public static async Task SeedAsync(HumoDbContext db, CancellationToken ct = default)
     {
         var keys = await db.PlatformSettings.Where(s => s.Key == CatalogueKey || s.Key == SettingsKey).Select(s => s.Key).ToListAsync(ct);
+        if (keys.Contains(CatalogueKey)) await RemoveNeverSoldAsync(db, ct);
         if (keys.Count == 2) return;
         var initial = InitialCatalogue.Load();
         if (!keys.Contains(CatalogueKey)) db.PlatformSettings.Add(new PlatformSetting { Key = CatalogueKey, Value = Serialise(new { initial.Packages, initial.AddOns }) });
         if (!keys.Contains(SettingsKey)) db.PlatformSettings.Add(new PlatformSetting { Key = SettingsKey, Value = Serialise(initial.Settings) });
+        await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// Add-ons taken out of the catalogue altogether: "Additional Storage" was never sold and the 10, 50 and 100 GB packs
+    /// replace it. An add-on any agreement ever included stays (retired), so history keeps its name.
+    /// </summary>
+    private static readonly string[] Withdrawn = ["storage"];
+
+    private static async Task RemoveNeverSoldAsync(HumoDbContext db, CancellationToken ct)
+    {
+        var row = await db.PlatformSettings.FirstAsync(s => s.Key == CatalogueKey, ct);
+        if (System.Text.Json.Nodes.JsonNode.Parse(row.Value) is not System.Text.Json.Nodes.JsonObject cat || cat["addOns"] is not System.Text.Json.Nodes.JsonArray addOns) return;
+        var agreements = await db.Agreements.Select(a => a.Document).ToListAsync(ct);
+        var gone = addOns.OfType<System.Text.Json.Nodes.JsonObject>()
+            .Where(a => a["id"]?.GetValue<string>() is { } id && Withdrawn.Contains(id) && !agreements.Any(d => d.Contains($"\"addOnId\":\"{id}\"", StringComparison.Ordinal)))
+            .ToList();
+        if (gone.Count == 0) return;
+        foreach (var a in gone) addOns.Remove(a);
+        row.Value = cat.ToJsonString();
+        row.Version++;
         await db.SaveChangesAsync(ct);
     }
 

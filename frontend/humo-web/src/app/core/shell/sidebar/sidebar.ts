@@ -39,8 +39,14 @@ export class Sidebar {
   /** The scheme in the current URL, to highlight its pinned entry. */
   protected readonly activeSchemeId = computed(() => /^\/schemes\/([^/?#]+)/.exec(this.nav.url())?.[1] ?? null);
 
+  /**
+   * Beside the group: downwards from it, or upwards from its bottom when there isn't room below (groups low in the
+   * rail, like Settings, on a short tablet screen). A group taller than the screen scrolls inside the panel.
+   */
   protected readonly flyoutPosition: ConnectedPosition[] = [
     { originX: 'end', originY: 'top', overlayX: 'start', overlayY: 'top', offsetX: 8 },
+    { originX: 'end', originY: 'bottom', overlayX: 'start', overlayY: 'bottom', offsetX: 8 },
+    { originX: 'end', originY: 'center', overlayX: 'start', overlayY: 'center', offsetX: 8 },
   ];
 
   protected readonly isGroup = isGroup;

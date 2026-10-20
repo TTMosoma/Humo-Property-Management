@@ -142,6 +142,7 @@ api.MapAccess();
 api.MapAccountRequests();
 api.MapHumoTeam();
 api.MapImpersonation();
+Humo.Api.Platform.PasskeyResetEndpoints.MapPasskeyReset(api);
 api.MapAudit();
 api.MapSecurity();
 Humo.Api.Commercial.CustomerEndpoints.MapCustomers(api);
