@@ -205,6 +205,33 @@
       ]
     },
     {
+      "id": "sms-bundle",
+      "name": "SMS bundle",
+      "description": "1 000 SMS a month for notices, levy reminders, collection letters and replies. Add more bundles for more SMS.",
+      "kind": "communication",
+      "features": [
+        "communications"
+      ],
+      "allowQuantity": true,
+      "status": "active",
+      "terms": [
+        {
+          "version": 1,
+          "effectiveFrom": "2026-10-20",
+          "price": 500,
+          "frequency": "monthly",
+          "priceStatus": "approved",
+          "changedBy": "Terry Mosoma (product owner)",
+          "changedAt": "2026-10-20T18:00:00+02:00",
+          "reason": "R500 a month for 1 000 SMS; bundles can be added more than once (approved 20 Oct 2026).",
+          "usageAllowance": {
+            "unit": "SMS",
+            "included": 1000
+          }
+        }
+      ]
+    },
+    {
       "id": "advanced-automation",
       "name": "Advanced Automation",
       "description": "Automated multi-step workflows.",

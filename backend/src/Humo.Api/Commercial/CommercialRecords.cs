@@ -39,7 +39,11 @@ public sealed class CommercialRecords(HumoDbContext db, TimeProvider clock)
     public static async Task SeedAsync(HumoDbContext db, CancellationToken ct = default)
     {
         var keys = await db.PlatformSettings.Where(s => s.Key == CatalogueKey || s.Key == SettingsKey).Select(s => s.Key).ToListAsync(ct);
-        if (keys.Contains(CatalogueKey)) await RemoveNeverSoldAsync(db, ct);
+        if (keys.Contains(CatalogueKey))
+        {
+            await RemoveNeverSoldAsync(db, ct);
+            await AddNewAddOnsAsync(db, ct);
+        }
         if (keys.Count == 2) return;
         var initial = InitialCatalogue.Load();
         if (!keys.Contains(CatalogueKey)) db.PlatformSettings.Add(new PlatformSetting { Key = CatalogueKey, Value = Serialise(new { initial.Packages, initial.AddOns }) });
@@ -52,6 +56,24 @@ public sealed class CommercialRecords(HumoDbContext db, TimeProvider clock)
     /// replace it. An add-on any agreement ever included stays (retired), so history keeps its name.
     /// </summary>
     private static readonly string[] Withdrawn = ["storage"];
+
+    /// <summary>
+    /// Add-ons new in Humo's starting catalogue (e.g. the SMS bundle) join a catalogue that's already stored. Nothing
+    /// already there changes: prices and terms are edited in Pricing &amp; add-ons, with versions.
+    /// </summary>
+    private static async Task AddNewAddOnsAsync(HumoDbContext db, CancellationToken ct)
+    {
+        var row = await db.PlatformSettings.FirstAsync(s => s.Key == CatalogueKey, ct);
+        if (System.Text.Json.Nodes.JsonNode.Parse(row.Value) is not System.Text.Json.Nodes.JsonObject cat || cat["addOns"] is not System.Text.Json.Nodes.JsonArray addOns) return;
+        var have = addOns.OfType<System.Text.Json.Nodes.JsonObject>().Select(a => a["id"]?.GetValue<string>()).ToHashSet();
+        var initial = System.Text.Json.Nodes.JsonNode.Parse(Serialise(new { InitialCatalogue.Load().AddOns }))!["addOns"]!.AsArray();
+        var added = initial.OfType<System.Text.Json.Nodes.JsonObject>().Where(a => !have.Contains(a["id"]?.GetValue<string>()) && !Withdrawn.Contains(a["id"]?.GetValue<string>())).ToList();
+        if (added.Count == 0) return;
+        foreach (var a in added) addOns.Add(a.DeepClone());
+        row.Value = cat.ToJsonString();
+        row.Version++;
+        await db.SaveChangesAsync(ct);
+    }
 
     private static async Task RemoveNeverSoldAsync(HumoDbContext db, CancellationToken ct)
     {
