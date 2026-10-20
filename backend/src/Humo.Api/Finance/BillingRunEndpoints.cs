@@ -245,17 +245,20 @@ public static class BillingRunEndpoints
         }, ct);
     }
 
-    private static async Task<IResult> Act(Guid id, BillingActionRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, LevyBilling billing, CancellationToken ct)
+    private static async Task<IResult> Act(Guid id, BillingActionRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, LevyBilling billing,
+        StatementService statements, StatementQueue queue, TimeProvider clock, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } me) return Results.Unauthorized();
         if (await Visible(me, db, id, ct) is not { } x) return Problems.NotFound();
         var run = LevyBilling.Read(x.Row);
         var a = body.Action ?? new BillingAction("");
+        var payTo = a.Type != "send-statements" || await StatementEndpoints.HasTrustAccountAsync(db, x.Scheme.Id, ct);
         var what = a.Type switch
         {
             "decide" => $"Decided an exception on {run.Ref}",
             "send-for-approval" => $"Sent {run.Ref} for approval ({BillingRules.Rand(BillingRules.Total(run))})",
             "post" => $"Posted {run.Ref} ({BillingRules.Rand(BillingRules.Total(run))})",
+            "send-statements" => $"Sent the statements for {run.Ref}",
             "cancel" => $"Cancelled {run.Ref} — {a.Reason?.Trim()}",
             "comment" => $"Commented on {run.Ref}",
             _ => $"{a.Type} on {run.Ref}",
@@ -269,7 +272,12 @@ public static class BillingRunEndpoints
             Feature = Feature,
             ExpectedVersion = body.ExpectedVersion,
             CurrentVersion = run.Version,
-            Validate = () => BillingRules.Check(run, a),
+            Validate = () =>
+            {
+                var e = BillingRules.Check(run, a);
+                if (e.Count == 0 && !payTo) e["stage"] = StatementEndpoints.NoTrustAccount;
+                return e;
+            },
         }, async actor =>
         {
             var by = actor.Human.Name;
@@ -283,6 +291,9 @@ public static class BillingRunEndpoints
                     break;
                 case "post":
                     await billing.PostAsync(run, actor, ct);
+                    break;
+                case "send-statements":
+                    await SendStatementsAsync(run, actor, db, statements, queue, commands, clock, billing.Now, ct);
                     break;
                 case "cancel":
                     if (run.ApprovalWorkItemId is { } w && await db.WorkItems.FirstOrDefaultAsync(i => i.Id == Guid.Parse(w), ct) is { Status: "open" } item)
@@ -303,6 +314,38 @@ public static class BillingRunEndpoints
             LevyBilling.Write(x.Row, run);
             return Results.NoContent();
         }, ct);
+    }
+
+    /// <summary>
+    /// Issues each billed account's statement (D7: snapshot + hash, the template version recorded) and sends it by the
+    /// account's chosen channel. PDFs and emails follow in the background, so a big scheme doesn't hold the request.
+    /// Posted statements are printed and posted by the agency; portal ones are in the resident portal.
+    /// </summary>
+    private static async Task SendStatementsAsync(BillingRun run, Actor actor, HumoDbContext db, StatementService statements, StatementQueue queue, CommandRunner commands,
+        TimeProvider clock, string now, CancellationToken ct)
+    {
+        var counts = new Dictionary<string, int> { ["email"] = 0, ["post"] = 0, ["portal"] = 0 };
+        var issued = new List<IssuedStatement>();
+        foreach (var line in run.Lines.Where(l => !l.Excluded))
+        {
+            var account = await db.LevyAccounts.FirstAsync(x => x.Id == Guid.Parse(line.AccountId), ct);
+            if (await statements.IssueAsync(account, run.Period, actor.Human.Name, Guid.Parse(run.Id), ct) is not { } statement) continue;
+            var by = counts.ContainsKey(account.StatementBy) ? account.StatementBy : "email";
+            statement.SentBy = by;
+            statement.SentAt = clock.GetUtcNow();
+            counts[by]++;
+            issued.Add(statement);
+        }
+        var template = issued.FirstOrDefault() is { } first ? new RunTemplateRef(first.TemplateId, first.TemplateVersion) : new RunTemplateRef("levy-statement.standard", 1);
+        run.Statements = new RunStatements(now, actor.Human.Name, counts["email"], counts["post"], counts["portal"], template);
+        run.Stage = "sent";
+        BillingRules.Log(run, "statements", $"Statements sent: {counts["email"]} by email, {counts["portal"]} to the portal, {counts["post"]} by post", actor.Human.Name, now);
+        var ids = issued.Select(s => s.Id).ToList();
+        commands.AfterCommit(() =>
+        {
+            queue.Enqueue(ids);
+            return Task.CompletedTask;
+        });
     }
 
     private static async Task<(BillingRunRow Row, Scheme Scheme)?> Visible(Actor actor, HumoDbContext db, Guid id, CancellationToken ct)

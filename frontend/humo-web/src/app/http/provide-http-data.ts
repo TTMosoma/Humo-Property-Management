@@ -56,6 +56,7 @@ import { HttpCatalogueDataSource, HttpCommercialDataSource, HttpNudgeDataSource,
 import { HttpAccountRequestDataSource, HttpHumoTeamDataSource, HttpNotificationDataSource } from './http-platform';
 import { HttpOrganisationDataSource, HttpPersonDataSource, HttpSchemeDataSource, HttpStepUpAuthenticator, HttpUnitDataSource } from './http-portfolio';
 import { HttpSessionDataSource } from './http-session-data-source';
+import { HttpDocumentTemplateDataSource, HttpSettingsDataSource } from './http-settings';
 import { notConnected } from './not-connected';
 
 /** Ports whose HTTP adapters come with later backend slices. Remove each from this list as its adapter lands. */
@@ -67,7 +68,6 @@ const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
   [SupplierDataSource, 'SupplierDataSource'],
   [PayablesDataSource, 'PayablesDataSource'],
   [PaymentGateway, 'PaymentGateway'],
-  [DocumentTemplateDataSource, 'DocumentTemplateDataSource'],
   [PlatformTemplateDataSource, 'PlatformTemplateDataSource'],
   [MeetingDataSource, 'MeetingDataSource'],
   [ResolutionDataSource, 'ResolutionDataSource'],
@@ -76,7 +76,6 @@ const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
   [CollectionDataSource, 'CollectionDataSource'],
   [LibraryDataSource, 'LibraryDataSource'],
   [ComplianceDataSource, 'ComplianceDataSource'],
-  [SettingsDataSource, 'SettingsDataSource'],
   [ReportDataSource, 'ReportDataSource'],
   [NoticeDataSource, 'NoticeDataSource'],
   [OpsDataSource, 'OpsDataSource'],
@@ -99,6 +98,7 @@ const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
  * organisations, new customer accounts, notifications, the Humo team, schemes, units, people,
  * the trustee board, users & access, impersonation, the audit log and Settings › Security.
  * Commercial (docs/23): the catalogue, customers and subscriptions, Plan & features, pricing and agreements.
+ * Slice 2: levy accounts, receipts, billing runs, meter readings, My work, settings, document templates and statements.
  * The other ports answer "not connected yet" until their slice lands.
  */
 export function provideHttpData(): EnvironmentProviders {
@@ -129,6 +129,9 @@ export function provideHttpData(): EnvironmentProviders {
     { provide: MeterDataSource, useClass: HttpMeterDataSource },
     { provide: LevyDataSource, useClass: HttpLevyDataSource },
     { provide: WorkItemDataSource, useClass: HttpWorkItemDataSource },
+    // Slice 2c: settings, document templates and statements.
+    { provide: SettingsDataSource, useClass: HttpSettingsDataSource },
+    { provide: DocumentTemplateDataSource, useClass: HttpDocumentTemplateDataSource },
     ...pending,
   ]);
 }

@@ -18,7 +18,6 @@ import {
   WorkItem,
   WorkItemDataSource,
   AccountDetail,
-  ApiError,
   ListQuery,
   MatchView,
   NewReceipt,
@@ -38,7 +37,8 @@ const orUndefined = <T>(source: Observable<T>): Observable<T | undefined> =>
 
 /**
  * Levy accounts over HTTP (slice 2a): the ledger with running balances, ageing from the actual
- * transactions, and its status. Statements come with slice 2c (PDF and data snapshot, D7).
+ * transactions, and its status. Statements (slice 2c): worked out from the ledger until issued, then
+ * frozen as a data snapshot with a stored PDF (D7); emailed as a portal link or attachment (D9).
  */
 @Injectable()
 export class HttpAccountDataSource extends HttpPort implements AccountDataSource {
@@ -46,12 +46,18 @@ export class HttpAccountDataSource extends HttpPort implements AccountDataSource
     return orUndefined(this.live<AccountDetail>(`/accounts/${accountId}`, ['accounts', 'receipts']));
   }
 
-  statement(): Observable<StatementView | undefined> {
-    return throwError(() => new ApiError('server', 'Statements arrive with slice 2c'));
+  statement(accountId: string, period: string): Observable<StatementView | undefined> {
+    return orUndefined(this.live<StatementView>(`/accounts/${accountId}/statements/${period}`, ['accounts', 'billing', 'documents', 'settings']));
   }
 
-  sendStatement(): Observable<string> {
-    return throwError(() => new ApiError('server', 'Statements arrive with slice 2c'));
+  /** Issues the statement if it isn't yet and emails it to the holder. Returns the issued statement's id. */
+  sendStatement(accountId: string, period: string): Observable<string> {
+    return this.createId(`/accounts/${accountId}/statements/${period}/send`, {}, ['accounts']);
+  }
+
+  /** Where the issued statement's PDF downloads from (signed-in, same origin). */
+  pdfUrl(accountId: string, period: string): string {
+    return `${this.base}/accounts/${accountId}/statements/${period}/pdf`;
   }
 
   /** A journal adjustment (Billing.Run): positive charges, negative credits. Part of BillingDataSource, connected ahead of the billing run. */

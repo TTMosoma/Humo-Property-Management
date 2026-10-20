@@ -1,4 +1,4 @@
-import { DOCUMENT_FONTS, DOCUMENT_TYPE_META, DocumentFont, DocumentTemplate, DocumentTemplateDataSource, DocumentType, MAX_TEMPLATE_TEXT, OrganisationDocumentSettings, PlatformTemplateDataSource, STATEMENT_SECTIONS, StatementSection, TEMPLATE_STATUS_LABELS, TEMPLATE_STATUS_MOVES, TEMPLATE_TIERS, TemplateAvailability, TemplateDesign, TemplateStatus, templateVersion, todaySA } from '../../domain';
+import { DOCUMENT_FONTS, DOCUMENT_TYPE_META, DocumentFont, DocumentTemplate, DocumentTemplateDataSource, DocumentType, MAX_TEMPLATE_TEXT, OrganisationDocumentSettings, PlatformTemplateDataSource, STATEMENT_DELIVERY_LABELS, STATEMENT_SECTIONS, StatementDelivery, StatementSection, TEMPLATE_STATUS_LABELS, TEMPLATE_STATUS_MOVES, TEMPLATE_TIERS, TemplateAvailability, TemplateDesign, TemplateStatus, templateVersion, todaySA } from '../../domain';
 import { DrawerService } from '../../ui/drawer/drawer.service';
 import { FormField, FormValues, REASON_FIELD, openForm } from '../shared/form-drawer';
 
@@ -38,6 +38,14 @@ export function brandingForm(drawer: DrawerService, data: DocumentTemplateDataSo
     { key: 'email', label: 'Email on documents', type: 'email', required: true, half: true },
     { key: 'phone', label: 'Phone on documents', type: 'tel', required: true, half: true },
     { key: 'footerText', label: 'Footer line', type: 'text', help: 'Optional, e.g. your registration number. Printed under every document’s footer.' },
+    {
+      key: 'statementDelivery',
+      label: 'Emailed statements',
+      type: 'select',
+      required: true,
+      options: (Object.keys(STATEMENT_DELIVERY_LABELS) as StatementDelivery[]).map((value) => ({ value, label: STATEMENT_DELIVERY_LABELS[value] })),
+      help: 'A portal link keeps statements behind the owner’s sign-in. Attaching the PDF is easier for owners who rarely sign in.',
+    },
   ];
   if (branded) {
     fields.push(
@@ -58,6 +66,7 @@ export function brandingForm(drawer: DrawerService, data: DocumentTemplateDataSo
       email: settings.contact.email,
       phone: settings.contact.phone,
       footerText: settings.footerText ?? '',
+      statementDelivery: settings.statementDelivery ?? 'link',
       logo: b?.logo?.text ?? '',
       primary: b?.palette.primary ?? '#041b40',
       accent: b?.palette.accent ?? '#1d7a52',
@@ -69,6 +78,7 @@ export function brandingForm(drawer: DrawerService, data: DocumentTemplateDataSo
         {
           contact: { email: v['email'], phone: v['phone'] },
           footerText: v['footerText'],
+          statementDelivery: v['statementDelivery'] as StatementDelivery,
           branding: branded
             ? { logo: v['logo'].trim() ? { kind: 'wordmark', text: v['logo'].trim() } : undefined, palette: { primary: v['primary'], accent: v['accent'] }, font: v['font'] as DocumentFont }
             : undefined,

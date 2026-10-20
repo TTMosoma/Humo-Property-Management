@@ -36,7 +36,9 @@ export type DataTopic =
   | 'billing'
   | 'notifications'
   | 'subscriptions'
-  | 'quote-requests';
+  | 'quote-requests'
+  | 'settings'
+  | 'documents';
 
 @Injectable({ providedIn: 'root' })
 export class DataChanges {

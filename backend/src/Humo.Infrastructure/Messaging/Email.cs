@@ -6,7 +6,9 @@ using MimeKit;
 
 namespace Humo.Infrastructure.Messaging;
 
-public sealed record EmailMessage(string To, string Subject, string Text, string? Html = null);
+public sealed record EmailAttachment(string FileName, string ContentType, byte[] Content);
+
+public sealed record EmailMessage(string To, string Subject, string Text, string? Html = null, IReadOnlyList<EmailAttachment>? Attachments = null);
 
 /// <summary>Sends email. Which server, port and encryption is configuration (<c>Mail__*</c>, doc 25 §2), never code.</summary>
 public interface IEmailSender
@@ -62,7 +64,9 @@ public sealed class SmtpEmailSender(IOptions<MailOptions> options, ILogger<SmtpE
         if (!string.IsNullOrWhiteSpace(o.ReplyTo)) mime.ReplyTo.Add(MailboxAddress.Parse(o.ReplyTo));
         mime.To.Add(MailboxAddress.Parse(message.To));
         mime.Subject = message.Subject;
-        mime.Body = new BodyBuilder { TextBody = message.Text, HtmlBody = message.Html }.ToMessageBody();
+        var body = new BodyBuilder { TextBody = message.Text, HtmlBody = message.Html };
+        foreach (var a in message.Attachments ?? []) body.Attachments.Add(a.FileName, a.Content, ContentType.Parse(a.ContentType));
+        mime.Body = body.ToMessageBody();
 
         var (host, port, security, user, password) = o.Relay.Enabled && !string.IsNullOrWhiteSpace(o.Relay.Host)
             ? (o.Relay.Host!, o.Relay.Port, o.Relay.Security, o.Relay.Username, o.Relay.Password)

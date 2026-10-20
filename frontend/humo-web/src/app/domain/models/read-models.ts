@@ -54,6 +54,19 @@ export interface StatementView {
   payTo: TrustAccount;
   /** The template and version the statement was issued with. It keeps rendering that way after the template changes. */
   issuedWith: DocumentTemplateRef;
+  /** Once issued (D7): frozen as a data snapshot with its SHA-256, and a stored PDF. Missing: worked out from the ledger, not yet issued. */
+  issued?: IssuedStatementInfo;
+}
+
+export interface IssuedStatementInfo {
+  at: string;
+  by: string;
+  /** SHA-256 of the snapshot the document is drawn from. */
+  sha256: string;
+  /** The PDF is stored and can be downloaded. */
+  pdf: boolean;
+  sentBy?: 'email' | 'portal' | 'post';
+  sentAt?: string;
 }
 
 export interface ReceiptView {

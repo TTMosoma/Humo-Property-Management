@@ -51,6 +51,9 @@ public sealed class BillingEvent
 public sealed record RunApproval(string DecidedAt, string DecidedBy, string? Comment);
 public sealed record RunPosted(string At, string By, int Accounts, decimal Total);
 public sealed record RunCancelled(string At, string By, string Reason);
+public sealed record RunTemplateRef(string TemplateId, int Version);
+/// <summary>How the run's statements went out (slice 2c), and the template version they were issued with.</summary>
+public sealed record RunStatements(string At, string By, int Email, int Post, int Portal, RunTemplateRef Template);
 
 /// <summary>One month's charges for one scheme (docs/11 §1): prepared, checked and approved before anything reaches an account.</summary>
 public sealed class BillingRun
@@ -75,6 +78,7 @@ public sealed class BillingRun
     public RunApproval? Approval { get; set; }
     public RunPosted? Posted { get; set; }
     public RunCancelled? Cancelled { get; set; }
+    public RunStatements? Statements { get; set; }
     public List<BillingEvent> Events { get; set; } = [];
 }
 
@@ -190,7 +194,7 @@ public static class BillingRules
                 if (run.Stage != "approved") e["stage"] = run.Stage == "awaiting-approval" ? "The run is still with the approvers." : "Only an approved run can be posted.";
                 break;
             case "send-statements":
-                e["stage"] = "Statements are sent with slice 2c.";
+                if (run.Stage != "posted") e["stage"] = run.Stage == "sent" ? "This run’s statements have been sent." : "Statements are sent once the run is posted.";
                 break;
             case "cancel":
                 if (locked) e["stage"] = "A posted run can’t be cancelled. Correct accounts with journal adjustments.";

@@ -22,3 +22,17 @@ pm.humo.co.za {
 		-Server
 	}
 }
+
+# Inside the Docker network only (port 8081 isn't published): the API's headless Chromium opens the
+# app's print route here to render statement PDFs (D8), without leaving the server.
+http://caddy:8081 {
+	handle /api/* {
+		reverse_proxy api:8080
+	}
+
+	handle {
+		root * /srv/app
+		try_files {path} /index.html
+		file_server
+	}
+}

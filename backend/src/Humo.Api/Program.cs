@@ -38,6 +38,10 @@ builder.Services.AddScoped<Humo.Api.Commercial.BillingService>();
 builder.Services.AddScoped<Humo.Api.Commercial.CardPayments>();
 builder.Services.AddScoped<Humo.Api.Finance.AccountLedger>();
 builder.Services.AddScoped<Humo.Api.Finance.LevyBilling>();
+builder.Services.AddScoped<Humo.Api.Finance.StatementService>();
+builder.Services.AddSingleton<Humo.Api.Finance.PrintTokens>();
+builder.Services.AddSingleton<Humo.Api.Finance.StatementQueue>();
+builder.Services.AddHostedService<Humo.Api.Finance.StatementDeliveryHost>();
 builder.Services.AddScoped<Humo.Api.Work.IApprovalHandler>(sp => sp.GetRequiredService<Humo.Api.Finance.LevyBilling>());
 // The daily billing run (Billing:Enabled, Billing:RunHour): invoices, card charges, reminders.
 builder.Services.AddHostedService<Humo.Api.Commercial.BillingRunHost>();
@@ -143,6 +147,9 @@ Humo.Api.Finance.ReceiptEndpoints.MapReceipts(api);
 Humo.Api.Finance.BillingRunEndpoints.MapBillingRuns(api);
 Humo.Api.Finance.MeterEndpoints.MapMetersAndLevies(api);
 Humo.Api.Work.WorkItemEndpoints.MapWorkItems(api);
+Humo.Api.Finance.StatementEndpoints.MapStatements(api);
+Humo.Api.Settings.SettingsEndpoints.MapSettings(api);
+Humo.Api.Documents.DocumentEndpoints.MapDocuments(api);
 Notices.MapNotifications(api);
 
 // Operator check (doc 26): `send-test-sms <mobile number>` sends one SMS through the configured provider, then exits.

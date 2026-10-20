@@ -36,6 +36,11 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
     public DbSet<WaterSetting> WaterSettings => Set<WaterSetting>();
     public DbSet<MeterReading> MeterReadings => Set<MeterReading>();
     public DbSet<LevySetting> LevySettings => Set<LevySetting>();
+    public DbSet<AgencySetting> AgencySettings => Set<AgencySetting>();
+    public DbSet<DocumentSetting> DocumentSettings => Set<DocumentSetting>();
+    public DbSet<TrustAccountRow> TrustAccounts => Set<TrustAccountRow>();
+    public DbSet<IssuedStatement> IssuedStatements => Set<IssuedStatement>();
+    public DbSet<PersonalPreference> PersonalPreferences => Set<PersonalPreference>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Notice> Notices => Set<Notice>();
     public DbSet<NoticeRead> NoticeReads => Set<NoticeRead>();
@@ -241,6 +246,71 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.ToTable("LevySettings");
             e.HasKey(x => x.SchemeId);
             e.Property(x => x.Method).HasMaxLength(10);
+            e.Property(x => x.Version).IsConcurrencyToken();
+        });
+
+        builder.Entity<AgencySetting>(e =>
+        {
+            e.ToTable("AgencySettings");
+            e.HasKey(x => x.OrganisationId);
+            e.Property(x => x.RegistrationNumber).HasMaxLength(20);
+            e.Property(x => x.VatNumber).HasMaxLength(10);
+            e.Property(x => x.FfcNumber).HasMaxLength(30);
+            e.Property(x => x.Address).HasMaxLength(200);
+            e.Property(x => x.Email).HasMaxLength(254);
+            e.Property(x => x.Phone).HasMaxLength(30);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasOne<Organisation>().WithOne().HasForeignKey<AgencySetting>(x => x.OrganisationId);
+        });
+
+        builder.Entity<DocumentSetting>(e =>
+        {
+            e.ToTable("DocumentSettings");
+            e.HasKey(x => x.OrganisationId);
+            e.Property(x => x.ContactEmail).HasMaxLength(254);
+            e.Property(x => x.ContactPhone).HasMaxLength(30);
+            e.Property(x => x.FooterText).HasMaxLength(200);
+            e.Property(x => x.StatementDelivery).HasMaxLength(12);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasOne<Organisation>().WithOne().HasForeignKey<DocumentSetting>(x => x.OrganisationId);
+        });
+
+        builder.Entity<TrustAccountRow>(e =>
+        {
+            e.ToTable("TrustAccounts");
+            e.HasKey(x => x.SchemeId);
+            e.Property(x => x.Bank).HasMaxLength(60);
+            e.Property(x => x.AccountName).HasMaxLength(120);
+            e.Property(x => x.AccountNumber).HasMaxLength(20);
+            e.Property(x => x.BranchCode).HasMaxLength(10);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasOne<Scheme>().WithOne().HasForeignKey<TrustAccountRow>(x => x.SchemeId);
+        });
+
+        builder.Entity<IssuedStatement>(e =>
+        {
+            e.ToTable("IssuedStatements");
+            e.Property(x => x.Period).HasMaxLength(7);
+            e.Property(x => x.TemplateId).HasMaxLength(80);
+            e.Property(x => x.SnapshotSha256).HasMaxLength(64);
+            e.Property(x => x.PdfSha256).HasMaxLength(64);
+            e.Property(x => x.IssuedBy).HasMaxLength(200);
+            e.Property(x => x.SentBy).HasMaxLength(10);
+            // One statement per account per month: issuing twice is refused by the database too.
+            e.HasIndex(x => new { x.AccountId, x.Period }).IsUnique();
+            e.HasIndex(x => new { x.SchemeId, x.Period });
+            e.HasIndex(x => x.BillingRunId);
+            e.HasOne<LevyAccount>().WithMany().HasForeignKey(x => x.AccountId);
+        });
+
+        builder.Entity<PersonalPreference>(e =>
+        {
+            e.ToTable("PersonalPreferences");
+            e.HasKey(x => x.UserId);
+            e.Property(x => x.Work).HasMaxLength(60);
+            e.Property(x => x.Digest).HasMaxLength(10);
+            e.Property(x => x.QuietFrom).HasMaxLength(5);
+            e.Property(x => x.QuietTo).HasMaxLength(5);
             e.Property(x => x.Version).IsConcurrencyToken();
         });
 

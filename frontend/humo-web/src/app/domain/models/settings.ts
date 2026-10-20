@@ -67,6 +67,18 @@ export interface NotificationRule {
   channels: Channel[];
 }
 
+/** Humo's defaults: everything on, by email and the portal (and push for trustees' approvals). */
+export const DEFAULT_NOTIFICATION_RULES: NotificationRule[] = NOTIFICATION_EVENTS.map((e) => ({
+  event: e.id,
+  enabled: true,
+  channels: e.channels.filter((c) => c === 'email' || c === 'portal' || (e.audience === 'trustees' && c === 'push')),
+}));
+
+/** The agency's saved rules over Humo's defaults, one per event, in the defaults' order. */
+export function withDefaultRules(saved: NotificationRule[]): NotificationRule[] {
+  return DEFAULT_NOTIFICATION_RULES.map((d) => saved.find((r) => r.event === d.event) ?? d);
+}
+
 export interface AgencyDetails {
   name: string;
   shortName: string;

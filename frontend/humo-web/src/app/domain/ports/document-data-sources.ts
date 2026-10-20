@@ -6,6 +6,7 @@ import {
   DocumentTemplate,
   DocumentType,
   OrganisationDocumentSettings,
+  StatementDelivery,
   TemplateDesign,
   TemplateStatus,
 } from '../models/document';
@@ -16,6 +17,8 @@ export interface DocumentBrandingDetails {
   footerText?: string;
   /** Needs the document-branding entitlement; the API ignores it otherwise. */
   branding?: AgencyBranding;
+  /** D9: a portal link (default) or the PDF attached. */
+  statementDelivery?: StatementDelivery;
 }
 
 /**
