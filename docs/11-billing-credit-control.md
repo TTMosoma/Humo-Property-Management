@@ -69,6 +69,15 @@ Both are in `docs/02-ux-review.md`. Letters are template-driven A4 documents (`d
 
 Everything is behind `Collections.Manage` (Agency Administrator, Portfolio Manager, Finance) and the `credit-control` entitlement.
 
+**On the API (slice 2d, 20 October 2026):** the case and every rule above, ported to `backend/src/Humo.Domain/Finance/CreditControl.cs`; tests in `CreditControlTests`.
+- **Letters are issued documents**, like statements (D7): each one stores a snapshot of what it says and its SHA-256, with the payment-notice template version. A PDF is rendered from that snapshot through the app's print route (D8).
+- **Delivery:** by email with the PDF attached (a demand is a document the owner keeps), by SMS as a short notice with the reference, or by post. For post, the agency downloads and prints the stored PDF.
+- **No letter goes out before the scheme's trust account is on record**, and a letter needs a working email address or mobile number for its channel.
+- **Letters of demand** are approved by the scheme's trustees or an agency administrator in My work › Approvals.
+- **Follow-up Tasks:** each active case has one. It goes to a Finance person whose title mentions credit control, or else stays unassigned for the team.
+- **Delivery runs in the background**, for one letter or for bulk reminders, so the screen doesn't wait for the PDF.
+- **Days between letters** come from Settings › Billing configuration.
+
 ## 3. How the pieces connect
 
 - **Billing → accounts.** Posting adds the charges to each account's ledger (reference `BR-…`) and rebalances it. The latest month billed counts as current; older amounts age by month.
