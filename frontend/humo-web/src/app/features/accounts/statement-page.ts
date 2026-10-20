@@ -15,6 +15,7 @@ import { EmptyState } from '../../ui/states/empty-state';
 import { ErrorState } from '../../ui/states/error-state';
 import { Skeleton } from '../../ui/states/skeleton';
 import { links, statementSendFailure, unitChain } from './account-view';
+import { formatDate } from '../../ui/format/money';
 
 /**
  * A levy statement: opening balance, charges, payments, adjustments,
@@ -123,6 +124,13 @@ export class StatementPage {
     if (schemeId) return { schemeId, number: p.get('unitId') ?? '', period: p.get('period')! };
     return { schemeId: '', number: '', unitId: this.session.assignment().scope.unitId, period: p.get('period')! };
   }
+
+  /** The stored PDF of an issued statement: exactly what was sent (D7). */
+  protected readonly pdf = computed(() => {
+    const v = this.view();
+    return v?.issued?.pdf ? this.accounts.pdfUrl(v.account.id, v.statement.period) : undefined;
+  });
+  protected readonly formatDate = formatDate;
 
   protected print(): void {
     window.print();

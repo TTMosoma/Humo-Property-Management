@@ -43,6 +43,8 @@ public sealed class Organisation
     public DateTimeOffset CreatedAt { get; set; }
     /// <summary>Approving this amount or more needs a fresh passkey (doc 03). The agency's administrators set it; R50 000 by default.</summary>
     public decimal ApprovalStepUpAmount { get; set; } = 50_000;
+    /// <summary>Interest on arrears, percent per month, on what's 30 days and older (2% by default: common sectional-title practice, within the scheme's rules).</summary>
+    public decimal InterestPercentPerMonth { get; set; } = 2;
 }
 
 /// <summary>A request to open a new customer account (doc 21). The organisation exists only once approved or activated.</summary>
@@ -494,4 +496,183 @@ public sealed class StatementImport
     public int Debits { get; set; }
     public int Invalid { get; set; }
     public decimal Total { get; set; }
+}
+
+/// <summary>A billing run (docs/11 §1): key columns for queries; the run itself as JSON, as the frontend's <c>BillingRun</c>.</summary>
+public sealed class BillingRunRow
+{
+    public Guid Id { get; set; }
+    public int Version { get; set; } = 1;
+    /// <summary>"BR-KC-2611": unique, so a period is never run twice.</summary>
+    public string Ref { get; set; } = "";
+    public Guid SchemeId { get; set; }
+    public string Period { get; set; } = "";
+    public string Stage { get; set; } = "preview";
+    public string Document { get; set; } = "{}";
+}
+
+/// <summary>
+/// The Attention model on the API: an approval or task, in an organisation and usually a scheme. Approvals name
+/// the roles that decide them; the record the work is about moves on when it's decided.
+/// </summary>
+public sealed class WorkItemRow
+{
+    public Guid Id { get; set; }
+    public Guid OrganisationId { get; set; }
+    public Guid? SchemeId { get; set; }
+    public string Ref { get; set; } = "";
+    /// <summary>task, approval or message.</summary>
+    public string Kind { get; set; } = "task";
+    public string Type { get; set; } = "";
+    public string Title { get; set; } = "";
+    public string Detail { get; set; } = "";
+    public decimal? Amount { get; set; }
+    public int? Count { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset DueAt { get; set; }
+    public string? AssigneeId { get; set; }
+    /// <summary>JSON list of roles.</summary>
+    public string ApproverRoles { get; set; } = "[]";
+    /// <summary>JSON list of evidence lines.</summary>
+    public string Evidence { get; set; } = "[]";
+    /// <summary>open, done, approved or rejected.</summary>
+    public string Status { get; set; } = "open";
+    public string? DecidedBy { get; set; }
+    public Guid? DecidedById { get; set; }
+    public DateTimeOffset? DecidedAt { get; set; }
+    public string? Comment { get; set; }
+    public string Route { get; set; } = "";
+    /// <summary>The record it's about, e.g. the billing run's id.</summary>
+    public Guid? SourceId { get; set; }
+}
+
+/// <summary>A scheme that recovers water from owners, at one flat rate per kilolitre (docs/22 §2). No row: it doesn't.</summary>
+public sealed class WaterSetting
+{
+    public Guid SchemeId { get; set; }
+    public decimal RatePerKl { get; set; }
+    public int Version { get; set; } = 1;
+    public string? UpdatedBy { get; set; }
+    public DateTimeOffset? UpdatedAt { get; set; }
+}
+
+/// <summary>A water meter's running total (kl) for a billing month.</summary>
+public sealed class MeterReading
+{
+    public Guid Id { get; set; }
+    public Guid UnitId { get; set; }
+    public Guid SchemeId { get; set; }
+    public string Period { get; set; } = "";
+    public decimal Reading { get; set; }
+    public DateOnly ReadOn { get; set; }
+    public string CapturedBy { get; set; } = "";
+    public DateTimeOffset CapturedAt { get; set; }
+}
+
+/// <summary>How a scheme's levies are set (D13): manual (entered per unit) or budget (derived from the approved budget). No row: manual.</summary>
+public sealed class LevySetting
+{
+    public Guid SchemeId { get; set; }
+    public string Method { get; set; } = "manual";
+    public int Version { get; set; } = 1;
+    public string? UpdatedBy { get; set; }
+    public DateTimeOffset? UpdatedAt { get; set; }
+}
+
+/// <summary>An agency's own settings (Settings › Agency, Billing configuration, Notifications). No row: the defaults.</summary>
+public sealed class AgencySetting
+{
+    public Guid OrganisationId { get; set; }
+    public int Version { get; set; } = 1;
+    public string RegistrationNumber { get; set; } = "";
+    public string? VatNumber { get; set; }
+    /// <summary>PPRA Fidelity Fund certificate number.</summary>
+    public string? FfcNumber { get; set; }
+    public string Address { get; set; } = "";
+    public string Email { get; set; } = "";
+    public string Phone { get; set; } = "";
+    /// <summary>Day of the month the next month's runs are prepared (1–28).</summary>
+    public int BillingDay { get; set; } = 25;
+    /// <summary>Day of the month levies are due (1–28): the due date on statements.</summary>
+    public int DueDay { get; set; } = 7;
+    public int StepDays { get; set; } = 14;
+    public int AgmMonths { get; set; } = 4;
+    /// <summary>The agency's notification rules as JSON; null: Humo's defaults.</summary>
+    public string? NotificationsJson { get; set; }
+    public string? UpdatedBy { get; set; }
+    public DateTimeOffset? UpdatedAt { get; set; }
+}
+
+/// <summary>An organisation's document settings: default template per type, contact details, footer and branding (D9, D12).</summary>
+public sealed class DocumentSetting
+{
+    public Guid OrganisationId { get; set; }
+    public int Version { get; set; } = 1;
+    /// <summary>Document type → template id, as JSON.</summary>
+    public string DefaultsJson { get; set; } = "{}";
+    public string ContactEmail { get; set; } = "";
+    public string ContactPhone { get; set; } = "";
+    public string? FooterText { get; set; }
+    /// <summary>AgencyBranding as JSON; null: none set.</summary>
+    public string? BrandingJson { get; set; }
+    /// <summary>D9: <c>link</c> (a secure link to the resident portal, the default) or <c>attachment</c> (the PDF attached).</summary>
+    public string StatementDelivery { get; set; } = "link";
+}
+
+/// <summary>A scheme's trust bank account, as statements and letters show it. Changing it needs a fresh passkey.</summary>
+public sealed class TrustAccountRow
+{
+    public Guid SchemeId { get; set; }
+    public int Version { get; set; } = 1;
+    public string Bank { get; set; } = "";
+    public string AccountName { get; set; } = "";
+    public string AccountNumber { get; set; } = "";
+    public string BranchCode { get; set; } = "";
+    /// <summary>The bank's confirmation is on file.</summary>
+    public bool Verified { get; set; }
+    public string? UpdatedBy { get; set; }
+    public DateTimeOffset? UpdatedAt { get; set; }
+}
+
+/// <summary>
+/// An issued levy statement (D7): the data snapshot it was drawn from, its SHA-256, and the PDF.
+/// Never changed after issue: a correction is a journal on the account and shows on the next statement.
+/// </summary>
+public sealed class IssuedStatement
+{
+    public Guid Id { get; set; }
+    public Guid AccountId { get; set; }
+    public Guid SchemeId { get; set; }
+    public Guid OrganisationId { get; set; }
+    /// <summary>"2026-10".</summary>
+    public string Period { get; set; } = "";
+    public string TemplateId { get; set; } = "";
+    public int TemplateVersion { get; set; }
+    /// <summary>Everything the document shows, as JSON: the statement view, design, branding, contact details and agency name.</summary>
+    public string Snapshot { get; set; } = "";
+    /// <summary>SHA-256 of the snapshot, hex.</summary>
+    public string SnapshotSha256 { get; set; } = "";
+    /// <summary>The rendered PDF; null until rendered (straight after issue, or on first download if that failed).</summary>
+    public byte[]? Pdf { get; set; }
+    public string? PdfSha256 { get; set; }
+    public DateTimeOffset IssuedAt { get; set; }
+    public string IssuedBy { get; set; } = "";
+    /// <summary>The billing run that issued it, if any.</summary>
+    public Guid? BillingRunId { get; set; }
+    /// <summary>How it went out last: email, portal or post.</summary>
+    public string? SentBy { get; set; }
+    public DateTimeOffset? SentAt { get; set; }
+}
+
+/// <summary>A person's own notification preferences (Settings › My profile). No row: the defaults.</summary>
+public sealed class PersonalPreference
+{
+    public Guid UserId { get; set; }
+    public int Version { get; set; } = 1;
+    /// <summary>Channels, comma-separated.</summary>
+    public string Work { get; set; } = "email,portal";
+    /// <summary>none, daily or weekly.</summary>
+    public string Digest { get; set; } = "daily";
+    public string? QuietFrom { get; set; }
+    public string? QuietTo { get; set; }
 }

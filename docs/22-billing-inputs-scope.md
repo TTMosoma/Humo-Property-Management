@@ -72,6 +72,7 @@
 ## 2. Meter readings (water)
 
 **Status:** ✅ built 12 Oct 2026 (branch `feature/meter-readings`), behind `meter-readings`.
+- **On the API (slice 2b, 20 Oct 2026):** readings, the rate and water on billing runs, with the same checks. A scheme recovers water once its rate is set. Saving readings while the month's run is Preparing re-prices its water lines.
 - **Screens:**
   - Levies & billing › *Meter readings* (`/finance/billing/meters`): scheme, month, read-on date; a grid with the last reading, this reading, consumption and usual use; *Fill from CSV*; *Change rate*.
   - On a run that's Preparing, a link to capture readings when it has water exceptions.
@@ -114,6 +115,7 @@
 ## 3. Levy model per scheme (D13)
 
 **Status:** ✅ built 12 Oct 2026 (branch `feature/levy-model`), behind `levy-model`.
+- **On the API (slice 2b, 20 Oct 2026):** the per-scheme setting. Deriving a roll from the approved budget waits for budgets on the API; until then the proposal is "no approved budget" and levies are entered per unit.
 - **Screens:** Levies & billing › *How levies are set* (`/finance/billing/levies`): the method per scheme, then the proposed roll (budgeted levies, current → proposed roll, rounding difference, effective month, each unit's quota, share, current, proposed and change), and *Apply*.
 - **Code:** `domain/models/levy.ts` (`derivedLevy`); `LevyDataSource`; `mock/db/levy-store.ts`.
 - **Rule:** in a budget scheme a unit's levy can't be edited by hand.

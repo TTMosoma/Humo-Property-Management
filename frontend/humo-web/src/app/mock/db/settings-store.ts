@@ -4,6 +4,7 @@ import {
   AgencySettings,
   BillingSettings,
   DEFAULT_BILLING,
+  DEFAULT_NOTIFICATION_RULES,
   FieldErrors,
   NOTIFICATION_EVENTS,
   NotificationRule,
@@ -20,11 +21,7 @@ interface SettingsSnapshot {
   preferences: PersonalPreferences[];
 }
 
-const DEFAULT_RULES: NotificationRule[] = NOTIFICATION_EVENTS.map((e) => ({
-  event: e.id,
-  enabled: true,
-  channels: e.channels.filter((c) => c === 'email' || c === 'portal' || (e.audience === 'trustees' && c === 'push')),
-}));
+const DEFAULT_RULES: NotificationRule[] = DEFAULT_NOTIFICATION_RULES;
 
 /** Acacia's own choices for the demo: SMS for payments and requests, WhatsApp for notices. */
 const ACACIA_RULES: NotificationRule[] = DEFAULT_RULES.map((r) =>

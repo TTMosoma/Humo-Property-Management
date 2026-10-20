@@ -69,6 +69,10 @@ export abstract class AccountDataSource {
    * PRODUCTION: real delivery of the stored PDF (D7) — see docs/18 R-1.
    */
   abstract sendStatement(accountId: string, period: string): Observable<string>;
+  /** Where an issued statement's stored PDF downloads from; undefined where there's no stored PDF (the simulation). */
+  pdfUrl(_accountId: string, _period: string): string | undefined {
+    return undefined;
+  }
 }
 
 export abstract class ReceiptDataSource {

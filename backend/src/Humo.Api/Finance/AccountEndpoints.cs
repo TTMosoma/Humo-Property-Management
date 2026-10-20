@@ -91,7 +91,7 @@ public static class AccountEndpoints
             },
         }, async actor =>
         {
-            await ledger.PostAsync(account, ledger.Today, TransactionTypes.Adjustment, $"Adjustment — {reason}", body.Amount, actor.Human.Name, actor.Human.Name, ct: ct);
+            await ledger.PostAsync(account, ledger.Today, TransactionTypes.Adjustment, $"Adjustment — {reason}", body.Amount, actor.Human.Name, ct: ct);
             return Results.NoContent();
         }, ct);
     }

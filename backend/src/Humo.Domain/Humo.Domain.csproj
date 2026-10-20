@@ -11,4 +11,9 @@
     <EmbeddedResource Include="..\..\..\demo-data\commercial\catalogue.json" LogicalName="Humo.Domain.commercial-catalogue.json" Link="Commercial\commercial-catalogue.json" />
   </ItemGroup>
 
+  <!-- Humo's document templates (the frontend's template catalogue). -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\..\contracts\document-templates.json" LogicalName="Humo.Domain.document-templates.json" Link="Documents\document-templates.json" />
+  </ItemGroup>
+
 </Project>

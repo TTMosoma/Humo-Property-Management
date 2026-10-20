@@ -1,4 +1,5 @@
 using Humo.Infrastructure.Data;
+using Humo.Infrastructure.Documents;
 using Humo.Infrastructure.Messaging;
 using Humo.Infrastructure.Payments;
 using Microsoft.AspNetCore.DataProtection;
@@ -42,6 +43,10 @@ public static class InfrastructureServices
         services.AddOptions<PayfastOptions>().Bind(config.GetSection(PayfastOptions.Section));
         services.AddHttpClient(PayfastClient.HttpClientName, c => c.Timeout = TimeSpan.FromSeconds(20));
         services.AddSingleton<IPayfast, PayfastClient>();
+
+        // Statement PDFs (D7, D8): headless Chromium prints the app's print route. Documents__ChromiumPath in the Docker image.
+        services.AddOptions<DocumentOptions>().Bind(config.GetSection(DocumentOptions.Section));
+        services.AddSingleton<IPdfRenderer, ChromiumPdfRenderer>();
 
         return services;
     }

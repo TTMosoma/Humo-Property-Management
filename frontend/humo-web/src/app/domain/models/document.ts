@@ -287,7 +287,17 @@ export interface OrganisationDocumentSettings {
   /** Optional line in every document's footer, e.g. the agency's registration details. */
   footerText?: string;
   branding?: AgencyBranding;
+  /** D9: how statements reach owners by email. Missing means 'link'. */
+  statementDelivery?: StatementDelivery;
 }
+
+/** D9: a secure link to the resident portal (the default), or the PDF attached to the email. */
+export type StatementDelivery = 'link' | 'attachment';
+
+export const STATEMENT_DELIVERY_LABELS: Record<StatementDelivery, string> = {
+  link: 'A secure link to the resident portal',
+  attachment: 'The PDF attached to the email',
+};
 
 /** The look a document is finally drawn with, after the hierarchy below. */
 export interface ResolvedBranding {

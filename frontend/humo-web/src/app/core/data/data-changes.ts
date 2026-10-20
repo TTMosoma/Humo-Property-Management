@@ -33,9 +33,12 @@ export type DataTopic =
   | 'suppliers'
   | 'payables'
   | 'work-items'
+  | 'billing'
   | 'notifications'
   | 'subscriptions'
-  | 'quote-requests';
+  | 'quote-requests'
+  | 'settings'
+  | 'documents';
 
 @Injectable({ providedIn: 'root' })
 export class DataChanges {

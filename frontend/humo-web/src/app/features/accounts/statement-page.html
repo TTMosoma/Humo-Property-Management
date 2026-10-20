@@ -19,7 +19,11 @@
           <ion-icon name="mail-outline" aria-hidden="true" /> {{ sending() ? 'Sending…' : 'Email to owner' }}
         </button>
       }
-      <button type="button" class="btn btn-primary" (click)="print()"><ion-icon name="print-outline" aria-hidden="true" /> Print or save PDF</button>
+      @if (pdf(); as href) {
+        <a class="btn btn-primary" [href]="href" download><ion-icon name="download-outline" aria-hidden="true" /> Download PDF</a>
+      } @else {
+        <button type="button" class="btn btn-primary" (click)="print()"><ion-icon name="print-outline" aria-hidden="true" /> Print or save PDF</button>
+      }
     </div>
   </div>
 
@@ -66,11 +70,20 @@
     </section>
   }
 
-  <!-- P0-9 / D7: until issued PDFs are stored, every statement here is rebuilt from today's records. docs/18 R-2. -->
-  <p class="rerender-note no-print" role="note">
-    <span class="preview-tag">Preview</span>
-    Rebuilt from current records, so recent changes (like new bank details) can show on older statements. Once Humo Property Management is live, a past statement opens as the exact PDF that was issued.
-  </p>
+  <!-- D7: an issued statement is frozen (snapshot + hash + stored PDF); until then it's worked out from the ledger. -->
+  @if (view()?.issued; as issued) {
+    <p class="rerender-note no-print" role="note">
+      Issued {{ formatDate(issued.at) }}{{ issued.sentBy ? ' and sent by ' + issued.sentBy : '' }}. The figures are frozen as issued; later payments and journals show on the next statement.
+      @if (pdf()) {
+        The PDF is the exact document that was sent.
+      }
+    </p>
+  } @else {
+    <p class="rerender-note no-print" role="note">
+      <span class="preview-tag">Preview</span>
+      Not issued yet: worked out from the account as it stands. It’s frozen when it’s issued, with the billing run or when you email it.
+    </p>
+  }
 
   @if (shown(); as t) {
     @if (registry.settings(); as settings) {
