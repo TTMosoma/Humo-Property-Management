@@ -136,7 +136,7 @@ public sealed class PortfolioReads(HumoDbContext db, TimeProvider clock)
         u.SizeM2, u.ParticipationQuota, u.MonthlyLevy, u.Occupancy, u.ParkingBays);
 
     public static AccountDto ToDto(LevyAccount a) => new(a.Id.ToString(), a.AccountNo, a.UnitId.ToString(), a.SchemeId.ToString(), a.HolderPersonId?.ToString() ?? "",
-        a.Balance, new AgeingDto(a.Balance > 0 ? a.Balance : 0, 0, 0, 0, 0), a.Status, a.DebitOrder, a.StatementBy);
+        a.Balance, new AgeingDto(a.AgeingCurrent, a.AgeingD30, a.AgeingD60, a.AgeingD90, a.AgeingD120), a.Status, a.DebitOrder, a.StatementBy);
 
     public static PersonDto ToDto(Person p, string? personaId = null) => new(p.Id.ToString(), p.Version, p.FirstName, p.LastName, p.Kind, p.DisplayName, p.Initials,
         p.Email, p.Phone, p.PreferredChannel, p.PostalAddress, personaId);

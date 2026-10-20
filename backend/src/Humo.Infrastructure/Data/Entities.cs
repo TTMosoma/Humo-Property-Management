@@ -175,7 +175,13 @@ public sealed class LevyAccount
     public Guid SchemeId { get; set; }
     public string AccountNo { get; set; } = "";
     public Guid? HolderPersonId { get; set; }
+    /// <summary>From the ledger: kept in step on every ledger write (and refreshed daily, as charges age).</summary>
     public decimal Balance { get; set; }
+    public decimal AgeingCurrent { get; set; }
+    public decimal AgeingD30 { get; set; }
+    public decimal AgeingD60 { get; set; }
+    public decimal AgeingD90 { get; set; }
+    public decimal AgeingD120 { get; set; }
     public string Status { get; set; } = "up-to-date";
     public bool DebitOrder { get; set; }
     public string StatementBy { get; set; } = "email";
@@ -403,4 +409,89 @@ public sealed class Payment
     /// <summary>provider-notification or bank-reconciliation.</summary>
     public string? Verification { get; set; }
     public string? Note { get; set; }
+}
+
+/// <summary>
+/// One line on a levy account (docs/11 §3): charges positive, payments and credits negative. Never edited or
+/// deleted: a correction is another line (a journal adjustment, or reversing an allocation removes its payment line).
+/// </summary>
+public sealed class LedgerEntry
+{
+    public Guid Id { get; set; }
+    public Guid AccountId { get; set; }
+    public DateOnly Date { get; set; }
+    /// <summary>levy, special-levy, utility, interest, payment, adjustment or opening.</summary>
+    public string Type { get; set; } = "";
+    public string Description { get; set; } = "";
+    public string? Reference { get; set; }
+    public decimal Amount { get; set; }
+    /// <summary>Payments: the receipt they came from.</summary>
+    public Guid? ReceiptId { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public string CreatedBy { get; set; } = "";
+}
+
+/// <summary>Money that reached a scheme's trust account (docs/22 §1): captured, imported from a bank statement, or from a bank feed later.</summary>
+public sealed class Receipt
+{
+    public Guid Id { get; set; }
+    public int Version { get; set; } = 1;
+    public Guid SchemeId { get; set; }
+    public string BankAccount { get; set; } = "";
+    public DateOnly Date { get; set; }
+    public decimal Amount { get; set; }
+    /// <summary>Exactly as it appears on the bank statement.</summary>
+    public string Reference { get; set; } = "";
+    public string Payer { get; set; } = "";
+    /// <summary>unallocated, allocated or suspense.</summary>
+    public string Status { get; set; } = "unallocated";
+    public string? AllocatedBy { get; set; }
+    public bool AutoMatched { get; set; }
+    /// <summary>captured, statement-import or bank-feed.</summary>
+    public string Source { get; set; } = "captured";
+    public Guid? ImportBatchId { get; set; }
+    public string CapturedBy { get; set; } = "";
+    public DateTimeOffset CreatedAt { get; set; }
+    public List<ReceiptAllocation> Allocations { get; set; } = [];
+}
+
+public sealed class ReceiptAllocation
+{
+    public Guid ReceiptId { get; set; }
+    public Guid AccountId { get; set; }
+    public decimal Amount { get; set; }
+}
+
+/// <summary>"Remember this payer": a reference or payer name that means this account.</summary>
+public sealed class PayerRule
+{
+    public Guid Id { get; set; }
+    public Guid SchemeId { get; set; }
+    public string Pattern { get; set; } = "";
+    public Guid AccountId { get; set; }
+    public string CreatedBy { get; set; } = "";
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
+/// <summary>A scheme's bank-statement column mapping, remembered after an import (JSON, as the frontend's <c>StatementMapping</c>).</summary>
+public sealed class StatementMappingSetting
+{
+    public Guid SchemeId { get; set; }
+    public string Mapping { get; set; } = "{}";
+}
+
+/// <summary>A finished bank-statement import, kept for the record.</summary>
+public sealed class StatementImport
+{
+    public Guid Id { get; set; }
+    public Guid SchemeId { get; set; }
+    public string BankAccount { get; set; } = "";
+    public string FileName { get; set; } = "";
+    public DateTimeOffset At { get; set; }
+    public string By { get; set; } = "";
+    public int Imported { get; set; }
+    public int Duplicates { get; set; }
+    public int Debits { get; set; }
+    public int Invalid { get; set; }
+    public decimal Total { get; set; }
 }

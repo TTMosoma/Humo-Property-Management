@@ -25,6 +25,12 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
     public DbSet<Agreement> Agreements => Set<Agreement>();
     public DbSet<UpgradeRequest> UpgradeRequests => Set<UpgradeRequest>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
+    public DbSet<LedgerEntry> Ledger => Set<LedgerEntry>();
+    public DbSet<Receipt> Receipts => Set<Receipt>();
+    public DbSet<ReceiptAllocation> ReceiptAllocations => Set<ReceiptAllocation>();
+    public DbSet<PayerRule> PayerRules => Set<PayerRule>();
+    public DbSet<StatementMappingSetting> StatementMappings => Set<StatementMappingSetting>();
+    public DbSet<StatementImport> StatementImports => Set<StatementImport>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Notice> Notices => Set<Notice>();
     public DbSet<NoticeRead> NoticeReads => Set<NoticeRead>();
@@ -129,6 +135,60 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.HasOne<Organisation>().WithMany().HasForeignKey(x => x.OrganisationId);
         });
 
+        builder.Entity<LedgerEntry>(e =>
+        {
+            e.ToTable("Ledger");
+            e.Property(x => x.Type).HasMaxLength(20);
+            e.Property(x => x.Description).HasMaxLength(300);
+            e.Property(x => x.Reference).HasMaxLength(100);
+            e.Property(x => x.Amount).HasPrecision(18, 2);
+            e.HasIndex(x => new { x.AccountId, x.Date });
+            e.HasIndex(x => x.ReceiptId);
+            e.HasOne<LevyAccount>().WithMany().HasForeignKey(x => x.AccountId);
+        });
+
+        builder.Entity<Receipt>(e =>
+        {
+            e.ToTable("Receipts");
+            e.Property(x => x.Reference).HasMaxLength(200);
+            e.Property(x => x.Payer).HasMaxLength(200);
+            e.Property(x => x.Status).HasMaxLength(20);
+            e.Property(x => x.Source).HasMaxLength(20);
+            e.Property(x => x.Amount).HasPrecision(18, 2);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => new { x.SchemeId, x.Status });
+            e.HasOne<Scheme>().WithMany().HasForeignKey(x => x.SchemeId);
+            e.HasMany(x => x.Allocations).WithOne().HasForeignKey(x => x.ReceiptId);
+        });
+
+        builder.Entity<ReceiptAllocation>(e =>
+        {
+            e.ToTable("ReceiptAllocations");
+            e.HasKey(x => new { x.ReceiptId, x.AccountId });
+            e.Property(x => x.Amount).HasPrecision(18, 2);
+            e.HasOne<LevyAccount>().WithMany().HasForeignKey(x => x.AccountId);
+        });
+
+        builder.Entity<PayerRule>(e =>
+        {
+            e.ToTable("PayerRules");
+            e.Property(x => x.Pattern).HasMaxLength(200);
+            e.HasIndex(x => x.SchemeId);
+        });
+
+        builder.Entity<StatementMappingSetting>(e =>
+        {
+            e.ToTable("StatementMappings");
+            e.HasKey(x => x.SchemeId);
+        });
+
+        builder.Entity<StatementImport>(e =>
+        {
+            e.ToTable("StatementImports");
+            e.Property(x => x.Total).HasPrecision(18, 2);
+            e.HasIndex(x => x.SchemeId);
+        });
+
         builder.Entity<Invoice>(e =>
         {
             e.ToTable("Invoices");
@@ -186,7 +246,7 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
         {
             e.ToTable("LevyAccounts");
             e.Property(x => x.AccountNo).HasMaxLength(12);
-            e.Property(x => x.Balance).HasPrecision(18, 2);
+            e.Property(x => x.Balance).HasPrecision(18, 2); foreach (var p in new[] { "AgeingCurrent", "AgeingD30", "AgeingD60", "AgeingD90", "AgeingD120" }) e.Property<decimal>(p).HasPrecision(18, 2);
             e.Property(x => x.Status).HasMaxLength(20);
             e.Property(x => x.StatementBy).HasMaxLength(10);
             e.HasIndex(x => x.UnitId).IsUnique();
