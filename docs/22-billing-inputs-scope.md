@@ -22,6 +22,7 @@
 ## 1. Receipt capture and bank-statement import
 
 **Status:** ✅ built 12 Oct 2026 (branch `feature/receipt-capture`), behind `receipt-capture`.
+- **On the API (slice 2a, 20 Oct 2026):** the same rules in `backend/src/Humo.Domain/Finance/BankStatement.cs` and `ReceiptMatching.cs`, with the endpoints in `Humo.Api/Finance` and tests in `ReceiptTests` and `LedgerRulesTests`. Receipts need the `payment-allocation` entitlement (Professional and Enterprise).
 - **Screens:** Finance › Receipts › *Capture receipt* and *Import bank statement* (`/finance/receipts/import`); *Remove* on an unallocated receipt.
 - **Code:** `domain/models/bank-statement.ts` (the CSV reading rules); `ReceiptDataSource` (`capture`, `statementMapping`, `previewStatement`, `importStatement`, `imports`, `remove`).
 - **Tests:** `receipt-capture.spec.ts`, 10 tests.

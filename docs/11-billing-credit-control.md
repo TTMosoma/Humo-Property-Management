@@ -120,7 +120,7 @@ Everything is behind `Collections.Manage` (Agency Administrator, Portfolio Manag
 
 ## 8. Known gaps (for the backend)
 
-- **Ageing is approximated.** Months are estimated from the monthly charge, with the latest month billed as current. The API will age the actual transactions.
+- **Ageing** (done on the API, slice 2a): ages the actual transactions. Payments settle the oldest charges first; what's left of each charge is current under 30 days, then 30, 60, 90 and 120+. Balance, ageing and status are stored on the account, recalculated on every ledger write.
 - **Charge rules.** Interest rate, estimate method and step days are prototype constants. They belong in Settings › Billing configuration.
 - **Segregation of duties.** The person who prepared a run can currently approve it. The API should refuse that.
 - **Delivery.** Sending statements and letters is recorded, not delivered; Communications › Sent will show delivery.
