@@ -676,3 +676,39 @@ public sealed class PersonalPreference
     public string? QuietFrom { get; set; }
     public string? QuietTo { get; set; }
 }
+
+/// <summary>An account's collection case (docs/11 §2): stage and version as columns, the case itself as JSON (Humo.Domain.Finance.CollectionCase).</summary>
+public sealed class CollectionCaseRow
+{
+    public Guid AccountId { get; set; }
+    public Guid OrganisationId { get; set; }
+    public Guid SchemeId { get; set; }
+    public string Stage { get; set; } = "not-started";
+    public int Version { get; set; }
+    public string Json { get; set; } = "{}";
+}
+
+/// <summary>A reminder, final demand or letter of demand as sent (D7, like statements): the snapshot it's drawn from, its hash and the PDF.</summary>
+public sealed class IssuedLetter
+{
+    public Guid Id { get; set; }
+    public Guid AccountId { get; set; }
+    public Guid SchemeId { get; set; }
+    public Guid OrganisationId { get; set; }
+    /// <summary>The case step it was sent at.</summary>
+    public string StepId { get; set; } = "";
+    /// <summary>reminder, final-demand or letter-of-demand.</summary>
+    public string Kind { get; set; } = "";
+    /// <summary>email, sms or post.</summary>
+    public string Channel { get; set; } = "";
+    public string TemplateId { get; set; } = "";
+    public int TemplateVersion { get; set; }
+    public string Snapshot { get; set; } = "";
+    public string SnapshotSha256 { get; set; } = "";
+    public byte[]? Pdf { get; set; }
+    public string? PdfSha256 { get; set; }
+    public DateTimeOffset IssuedAt { get; set; }
+    public string IssuedBy { get; set; } = "";
+    /// <summary>When the email or SMS went out; null for post (the agency prints and posts it) or until delivered.</summary>
+    public DateTimeOffset? DeliveredAt { get; set; }
+}

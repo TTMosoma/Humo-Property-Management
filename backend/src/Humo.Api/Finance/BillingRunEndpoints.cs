@@ -246,7 +246,7 @@ public static class BillingRunEndpoints
     }
 
     private static async Task<IResult> Act(Guid id, BillingActionRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, LevyBilling billing,
-        StatementService statements, StatementQueue queue, TimeProvider clock, CancellationToken ct)
+        StatementService statements, DeliveryQueue queue, TimeProvider clock, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } me) return Results.Unauthorized();
         if (await Visible(me, db, id, ct) is not { } x) return Problems.NotFound();
@@ -321,7 +321,7 @@ public static class BillingRunEndpoints
     /// account's chosen channel. PDFs and emails follow in the background, so a big scheme doesn't hold the request.
     /// Posted statements are printed and posted by the agency; portal ones are in the resident portal.
     /// </summary>
-    private static async Task SendStatementsAsync(BillingRun run, Actor actor, HumoDbContext db, StatementService statements, StatementQueue queue, CommandRunner commands,
+    private static async Task SendStatementsAsync(BillingRun run, Actor actor, HumoDbContext db, StatementService statements, DeliveryQueue queue, CommandRunner commands,
         TimeProvider clock, string now, CancellationToken ct)
     {
         var counts = new Dictionary<string, int> { ["email"] = 0, ["post"] = 0, ["portal"] = 0 };
@@ -343,7 +343,7 @@ public static class BillingRunEndpoints
         var ids = issued.Select(s => s.Id).ToList();
         commands.AfterCommit(() =>
         {
-            queue.Enqueue(ids);
+            queue.Enqueue(DeliveryQueue.Statements, ids);
             return Task.CompletedTask;
         });
     }
