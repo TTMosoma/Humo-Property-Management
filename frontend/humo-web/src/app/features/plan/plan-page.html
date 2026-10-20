@@ -56,6 +56,29 @@
     </section>
   }
 
+  @if (p.messages?.length) {
+    <section class="storage surface" aria-labelledby="messages-h">
+      <div class="label-caps" id="messages-h">Messages this month</div>
+      @for (m of p.messages; track m.channel) {
+        <div class="s-head">
+          <div>
+            <strong>{{ m.channel === 'sms' ? 'SMS' : 'WhatsApp' }}: {{ m.used }} of {{ m.allowance }} {{ m.unit === 'SMS' ? 'SMS' : 'messages' }} used</strong>
+            <div class="muted small">
+              {{ m.included ? m.included + ' with your package' : '' }}{{ m.included && m.bundles ? ' + ' : '' }}{{ m.bundles ? m.bundles + ' from bundles' : '' }}
+              · resets {{ formatDate(m.resetsOn, true) }}; unused messages don’t carry over{{ m.channel === 'sms' ? ' · long SMS count as more than one' : '' }}
+            </div>
+          </div>
+          @if (m.state !== 'ok') {
+            <ui-status-pill [label]="m.state === 'over' ? 'Over by ' + (m.used - m.allowance) : 'Over 80%'" [tone]="m.state === 'over' ? 'danger' : 'warning'" />
+          }
+        </div>
+        <div class="meter" role="meter" [attr.aria-valuenow]="m.used" aria-valuemin="0" [attr.aria-valuemax]="m.allowance" [attr.aria-label]="(m.channel === 'sms' ? 'SMS' : 'WhatsApp') + ' used'">
+          <span [style.width.%]="m.allowance ? min((m.used / m.allowance) * 100, 100) : 100" [attr.data-state]="m.state === 'over' ? 'exhausted' : m.state === 'warning' ? 'warning' : 'ok'"></span>
+        </div>
+      }
+    </section>
+  }
+
   <ul class="modules">
     @for (row of rows(); track row.module) {
       <li class="module surface" [class.off]="!row.on" [class.focus]="focusModule() === row.module">

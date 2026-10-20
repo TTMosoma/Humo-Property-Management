@@ -68,8 +68,22 @@ public sealed class CommercialRecords(HumoDbContext db, TimeProvider clock)
         var have = addOns.OfType<System.Text.Json.Nodes.JsonObject>().Select(a => a["id"]?.GetValue<string>()).ToHashSet();
         var initial = System.Text.Json.Nodes.JsonNode.Parse(Serialise(new { InitialCatalogue.Load().AddOns }))!["addOns"]!.AsArray();
         var added = initial.OfType<System.Text.Json.Nodes.JsonObject>().Where(a => !have.Contains(a["id"]?.GetValue<string>()) && !Withdrawn.Contains(a["id"]?.GetValue<string>())).ToList();
-        if (added.Count == 0) return;
         foreach (var a in added) addOns.Add(a.DeepClone());
+        // Terms fields new in the starting catalogue (e.g. a package's included SMS) fill in on the same version where they're missing.
+        var filled = 0;
+        var seedPackages = System.Text.Json.Nodes.JsonNode.Parse(Serialise(new { InitialCatalogue.Load().Packages }))!["packages"]!.AsArray();
+        foreach (var stored in (cat["packages"] as System.Text.Json.Nodes.JsonArray ?? []).OfType<System.Text.Json.Nodes.JsonObject>())
+        {
+            var seed = seedPackages.OfType<System.Text.Json.Nodes.JsonObject>().FirstOrDefault(p => p["packageId"]?.GetValue<string>() == stored["packageId"]?.GetValue<string>());
+            if (seed?["terms"] is not System.Text.Json.Nodes.JsonArray seedTerms || stored["terms"] is not System.Text.Json.Nodes.JsonArray storedTerms) continue;
+            foreach (var t in storedTerms.OfType<System.Text.Json.Nodes.JsonObject>())
+            {
+                var match = seedTerms.OfType<System.Text.Json.Nodes.JsonObject>().FirstOrDefault(x => x["version"]?.GetValue<int>() == t["version"]?.GetValue<int>());
+                foreach (var (key, value) in match ?? [])
+                    if ((!t.ContainsKey(key) || t[key] is null) && value is not null) { t[key] = value.DeepClone(); filled++; }
+            }
+        }
+        if (added.Count == 0 && filled == 0) return;
         row.Value = cat.ToJsonString();
         row.Version++;
         await db.SaveChangesAsync(ct);

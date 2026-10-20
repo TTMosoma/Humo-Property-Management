@@ -42,6 +42,7 @@ builder.Services.AddScoped<Humo.Api.Finance.StatementService>();
 builder.Services.AddSingleton<Humo.Api.Finance.PrintTokens>();
 builder.Services.AddScoped<Humo.Api.Finance.DocumentPrinter>();
 builder.Services.AddScoped<Humo.Api.Messaging.SentRecords>();
+builder.Services.AddScoped<Humo.Api.Messaging.MessageUsage>();
 builder.Services.AddScoped<Humo.Api.Messaging.Communications>();
 builder.Services.AddScoped<Humo.Api.Messaging.Inbox>();
 builder.Services.AddSingleton<Humo.Api.Finance.DeliveryQueue>();

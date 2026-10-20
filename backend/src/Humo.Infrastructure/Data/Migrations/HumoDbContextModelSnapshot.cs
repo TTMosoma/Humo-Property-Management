@@ -1106,6 +1106,30 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.ToTable("MessageTemplates", (string)null);
                 });
 
+            modelBuilder.Entity("Humo.Infrastructure.Data.MessageUsageRow", b =>
+                {
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Period")
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.Property<string>("Channel")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<int>("Messages")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Units")
+                        .HasColumnType("integer");
+
+                    b.HasKey("OrganisationId", "Period", "Channel");
+
+                    b.ToTable("MessageUsage", (string)null);
+                });
+
             modelBuilder.Entity("Humo.Infrastructure.Data.MeterReading", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2645,6 +2669,15 @@ namespace Humo.Infrastructure.Data.Migrations
                 });
 
             modelBuilder.Entity("Humo.Infrastructure.Data.MessageTemplateRow", b =>
+                {
+                    b.HasOne("Humo.Infrastructure.Data.Organisation", null)
+                        .WithMany()
+                        .HasForeignKey("OrganisationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Humo.Infrastructure.Data.MessageUsageRow", b =>
                 {
                     b.HasOne("Humo.Infrastructure.Data.Organisation", null)
                         .WithMany()

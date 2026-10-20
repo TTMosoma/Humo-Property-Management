@@ -48,6 +48,7 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
     public DbSet<MessageTemplateRow> MessageTemplates => Set<MessageTemplateRow>();
     public DbSet<NoticeRow> SchemeNotices => Set<NoticeRow>();
     public DbSet<ConversationRow> Conversations => Set<ConversationRow>();
+    public DbSet<MessageUsageRow> MessageUsage => Set<MessageUsageRow>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Notice> Notices => Set<Notice>();
     public DbSet<NoticeRead> NoticeReads => Set<NoticeRead>();
@@ -411,6 +412,15 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.HasIndex(x => new { x.SchemeId, x.Status });
             e.HasIndex(x => x.PersonId);
             e.HasOne<Person>().WithMany().HasForeignKey(x => x.PersonId);
+        });
+
+        builder.Entity<MessageUsageRow>(e =>
+        {
+            e.ToTable("MessageUsage");
+            e.HasKey(x => new { x.OrganisationId, x.Period, x.Channel });
+            e.Property(x => x.Period).HasMaxLength(7);
+            e.Property(x => x.Channel).HasMaxLength(10);
+            e.HasOne<Organisation>().WithMany().HasForeignKey(x => x.OrganisationId);
         });
 
         builder.Entity<Invoice>(e =>

@@ -67,6 +67,7 @@ const STATUS_TONE: Record<PriceStatus, 'neutral' | 'warning' | 'success'> = { aw
               <dl>
                 <dt>Annual</dt><dd>{{ t.annualPrice === null ? '—' : rand(t.annualPrice) }}</dd>
                 <dt>Storage</dt><dd>{{ t.includedStorageGb === null ? 'Negotiated' : t.includedStorageGb + ' GB' }} <span class="muted">({{ statusLabel[t.storageStatus].toLowerCase() }})</span></dd>
+                <dt>SMS</dt><dd>{{ t.includedSms ? t.includedSms + ' a month' : 'None included' }} <span class="muted">(unused SMS don’t carry over)</span></dd>
                 <dt>Portfolio</dt><dd>{{ t.includedSchemes === null ? 'Not priced by portfolio size' : t.includedSchemes + ' schemes, then ' + (t.extraSchemePrice === null ? 'price to be set' : rand(t.extraSchemePrice) + ((t.extraSchemeBlock ?? 1) > 1 ? ' per ' + t.extraSchemeBlock + ' extra schemes' : ' per scheme')) }}</dd>
                 <dt>Renewal fee</dt><dd>{{ t.annualRenewalFee === null ? 'None' : rand(t.annualRenewalFee) + ' a year, on the renewal date' }}</dd>
                 <dt>Billing</dt><dd>{{ p.billingFrequencies.join(' or ') }}</dd>
@@ -149,7 +150,7 @@ const STATUS_TONE: Record<PriceStatus, 'neutral' | 'warning' | 'success'> = { aw
         </div>
         <div><span class="label-caps">Payment terms</span><strong>{{ c.settings.paymentTermsDays }} days</strong></div>
         <div><span class="label-caps">Designated account manager</span><strong>{{ managerName(c.settings.designatedAccountManagerId) }}</strong><span class="muted">New customers go to them by default.</span></div>
-        <div><span class="label-caps">Payment provider</span><strong>Not chosen yet</strong><span class="muted">The demo uses a simulated provider. Payfast, Peach Payments or another provider plugs in behind one interface (docs/23 §6).</span></div>
+        <div><span class="label-caps">Payment provider</span><strong>Payfast</strong><span class="muted">Card payments and card debit orders (D15). EFT is matched by hand. The demo uses a simulated provider.</span></div>
       </section>
     } @else {
       <ui-skeleton variant="tiles" [count]="3" />

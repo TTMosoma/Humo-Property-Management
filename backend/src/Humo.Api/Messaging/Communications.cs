@@ -38,7 +38,7 @@ public sealed record Addressee(Person Person, Unit? Unit, LevyAccount? Account);
 /// scheduled), message templates, and notices. Everything sent is one record in Sent, delivered in the
 /// background with each person's merge values, and its result is recorded as the mail server or SMS network reports it.
 /// </summary>
-public sealed partial class Communications(HumoDbContext db, SentRecords sent, IEmailSender email, SmsGateway sms, TimeProvider clock, ILogger<Communications> logger)
+public sealed partial class Communications(HumoDbContext db, SentRecords sent, IEmailSender email, SmsGateway sms, MessageUsage usage, TimeProvider clock, ILogger<Communications> logger)
 {
     public const string Feature = "communications";
     public const string Permission = "Messages.Reply";
@@ -231,6 +231,7 @@ public sealed partial class Communications(HumoDbContext db, SentRecords sent, I
                     case "sms":
                         var receipt = await sms.SendAsync(new SmsMessage(d.Address, text, d.Id.ToString("N")), ct);
                         sent.Mark(d, receipt.Accepted ? "queued" : "failed", receipt.Accepted ? null : receipt.Error ?? "The SMS provider refused it.", receipt.ProviderMessageId ?? "");
+                        if (receipt.Accepted) await usage.RecordAsync(m.OrganisationId, "sms", MessageUsage.SmsUnits(text, receipt.Parts), ct);
                         break;
                     default:
                         sent.Mark(d, "delivered", null);

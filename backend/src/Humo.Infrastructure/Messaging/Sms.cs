@@ -10,7 +10,7 @@ namespace Humo.Infrastructure.Messaging;
 public sealed record SmsMessage(string To, string Text, string? Reference = null);
 
 /// <summary>The outcome the provider reports, kept for delivery results in Sent (docs/18 R-5).</summary>
-public sealed record SmsReceipt(string Provider, string? ProviderMessageId, bool Accepted, string? Error = null);
+public sealed record SmsReceipt(string Provider, string? ProviderMessageId, bool Accepted, string? Error = null, int? Parts = null);
 
 /// <summary>
 /// Sends SMS through whichever provider configuration names (<c>Sms__Provider</c>).

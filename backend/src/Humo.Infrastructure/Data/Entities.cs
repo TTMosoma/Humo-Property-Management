@@ -841,3 +841,17 @@ public sealed class DeliveryRow
     /// <summary>The provider's id for the message (SMSSouthAfrica's event id).</summary>
     public string? ProviderMessageId { get; set; }
 }
+
+/// <summary>An organisation's messages in one calendar month (SA time) on one channel. A new month starts from zero.</summary>
+public sealed class MessageUsageRow
+{
+    public Guid OrganisationId { get; set; }
+    /// <summary>"2026-10".</summary>
+    public string Period { get; set; } = "";
+    /// <summary>sms or whatsapp.</summary>
+    public string Channel { get; set; } = "";
+    /// <summary>What counts against the allowance: SMS parts, WhatsApp messages.</summary>
+    public int Units { get; set; }
+    /// <summary>Messages sent (an SMS of three parts is one message, three units).</summary>
+    public int Messages { get; set; }
+}

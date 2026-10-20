@@ -333,6 +333,51 @@ public static partial class CommercialRules
         return new(includedGb, negotiated ? PriceStatuses.Approved : terms?.StorageStatus ?? PriceStatuses.Awaiting, negotiated, purchasedGb, exceptionGb, totalGb, used, percent, state, thresholds, m, false);
     }
 
+    // ---------------------------------------------------------------- Messages (SMS, WhatsApp)
+
+    /// <summary>The usage-allowance units add-ons count in, per channel.</summary>
+    public static readonly IReadOnlyDictionary<string, string> MessageUnits = new Dictionary<string, string> { ["sms"] = "SMS", ["whatsapp"] = "WhatsApp messages" };
+
+    /// <summary>
+    /// This calendar month's messages by channel: what the package includes (SMS only), plus each bundle in force
+    /// (allowance × quantity), against what's been sent. Monthly allowances: nothing carries over to the next month.
+    /// SMS count in message parts, as the networks charge them. Channels with no allowance and no use are left out.
+    /// </summary>
+    public static List<MessageAllowance> Messages(CommercialAgreement a, CommercialCatalogue cat, string on, IReadOnlyDictionary<string, int> used)
+    {
+        var pkg = PackageOn(a, on);
+        var terms = TermsOn(PackageDef(cat, pkg?.PackageId ?? "essentials")?.Terms ?? [], on);
+        var period = on[..7];
+        var month = DateOnly.ParseExact(period + "-01", "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+        var resets = month.AddMonths(1).ToString("yyyy-MM-dd");
+        var list = new List<MessageAllowance>();
+        foreach (var (channel, unit) in MessageUnits)
+        {
+            var included = channel == "sms" ? terms?.IncludedSms ?? 0 : 0;
+            var bundles = InForce(a.AddOns, on).Sum(l => (TermsOn(AddOnDef(cat, l.AddOnId)?.Terms ?? [], on)?.UsageAllowance is { } u && u.Unit == unit ? u.Included : 0) * l.Quantity);
+            var count = used.GetValueOrDefault(channel);
+            var allowance = included + bundles;
+            if (allowance == 0 && count == 0) continue;
+            var state = count > allowance ? "over" : allowance > 0 && count >= allowance * 0.8m ? "warning" : "ok";
+            list.Add(new MessageAllowance(channel, unit, included, bundles, allowance, count, Math.Max(0, allowance - count), period, resets, state));
+        }
+        return list;
+    }
+
+    /// <summary>
+    /// How many parts an SMS is billed as: one up to 160 characters (70 when it has characters outside the GSM alphabet,
+    /// like curly quotes or emoji), then 153 (or 67) per part.
+    /// </summary>
+    public static int SmsParts(string text)
+    {
+        const string gsm = "@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà";
+        const string extended = "^{}\\[~]|€";
+        var unicode = text.Any(c => !gsm.Contains(c) && !extended.Contains(c));
+        var length = unicode ? text.Length : text.Sum(c => extended.Contains(c) ? 2 : 1);
+        var (single, multi) = unicode ? (70, 67) : (160, 153);
+        return length <= single ? 1 : (int)Math.Ceiling(length / (double)multi);
+    }
+
     // ---------------------------------------------------------------- Invoices
 
     /// <summary>The annual renewal fee, if the renewal date falls in the period [start, end).</summary>

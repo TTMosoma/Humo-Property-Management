@@ -23,7 +23,8 @@
           "changedBy": "Terry Mosoma (product owner)",
           "changedAt": "2026-10-19T18:00:00+02:00",
           "reason": "Approved price list (doc 17, D15): includes schemes and storage; R150 per 10 extra schemes; R250 annual renewal fee.",
-          "extraSchemeBlock": 10
+          "extraSchemeBlock": 10,
+          "includedSms": 20
         }
       ]
     },
@@ -49,7 +50,8 @@
           "changedBy": "Terry Mosoma (product owner)",
           "changedAt": "2026-10-19T18:00:00+02:00",
           "reason": "Approved price list (doc 17, D15): includes schemes and storage; R150 per 10 extra schemes; R250 annual renewal fee.",
-          "extraSchemeBlock": 10
+          "extraSchemeBlock": 10,
+          "includedSms": 100
         }
       ]
     },
@@ -75,7 +77,8 @@
           "changedBy": "Terry Mosoma (product owner)",
           "changedAt": "2026-10-19T18:00:00+02:00",
           "reason": "Approved price list (doc 17, D15): includes schemes and storage; R150 per 10 extra schemes; R250 annual renewal fee.",
-          "extraSchemeBlock": 10
+          "extraSchemeBlock": 10,
+          "includedSms": 500
         }
       ]
     }
