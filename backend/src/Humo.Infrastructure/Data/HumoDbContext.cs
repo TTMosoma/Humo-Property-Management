@@ -45,6 +45,10 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
     public DbSet<IssuedLetter> IssuedLetters => Set<IssuedLetter>();
     public DbSet<SentMessageRow> SentMessages => Set<SentMessageRow>();
     public DbSet<DeliveryRow> Deliveries => Set<DeliveryRow>();
+    public DbSet<MessageTemplateRow> MessageTemplates => Set<MessageTemplateRow>();
+    public DbSet<NoticeRow> SchemeNotices => Set<NoticeRow>();
+    public DbSet<ConversationRow> Conversations => Set<ConversationRow>();
+    public DbSet<MessageUsageRow> MessageUsage => Set<MessageUsageRow>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Notice> Notices => Set<Notice>();
     public DbSet<NoticeRead> NoticeReads => Set<NoticeRead>();
@@ -368,6 +372,55 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.HasIndex(x => x.SentMessageId);
             e.HasIndex(x => x.DocumentId);
             e.HasOne<SentMessageRow>().WithMany().HasForeignKey(x => x.SentMessageId);
+        });
+
+        builder.Entity<MessageTemplateRow>(e =>
+        {
+            e.ToTable("MessageTemplates");
+            e.Property(x => x.BuiltInKey).HasMaxLength(30);
+            e.Property(x => x.Name).HasMaxLength(80);
+            e.Property(x => x.Category).HasMaxLength(20);
+            e.Property(x => x.Subject).HasMaxLength(200);
+            e.Property(x => x.UpdatedBy).HasMaxLength(200);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => x.OrganisationId);
+            e.HasOne<Organisation>().WithMany().HasForeignKey(x => x.OrganisationId);
+        });
+
+        builder.Entity<NoticeRow>(e =>
+        {
+            e.ToTable("SchemeNotices");
+            e.Property(x => x.Ref).HasMaxLength(20);
+            e.Property(x => x.Title).HasMaxLength(120);
+            e.Property(x => x.Audience).HasMaxLength(12);
+            e.Property(x => x.Category).HasMaxLength(20);
+            e.Property(x => x.PublishedBy).HasMaxLength(200);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => new { x.SchemeId, x.Ref }).IsUnique();
+            e.HasOne<Scheme>().WithMany().HasForeignKey(x => x.SchemeId);
+        });
+
+        builder.Entity<ConversationRow>(e =>
+        {
+            e.ToTable("Conversations");
+            e.Property(x => x.Ref).HasMaxLength(20);
+            e.Property(x => x.Subject).HasMaxLength(200);
+            e.Property(x => x.Status).HasMaxLength(10);
+            e.Property(x => x.AssigneeId).HasMaxLength(40);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => new { x.OrganisationId, x.Ref }).IsUnique();
+            e.HasIndex(x => new { x.SchemeId, x.Status });
+            e.HasIndex(x => x.PersonId);
+            e.HasOne<Person>().WithMany().HasForeignKey(x => x.PersonId);
+        });
+
+        builder.Entity<MessageUsageRow>(e =>
+        {
+            e.ToTable("MessageUsage");
+            e.HasKey(x => new { x.OrganisationId, x.Period, x.Channel });
+            e.Property(x => x.Period).HasMaxLength(7);
+            e.Property(x => x.Channel).HasMaxLength(10);
+            e.HasOne<Organisation>().WithMany().HasForeignKey(x => x.OrganisationId);
         });
 
         builder.Entity<Invoice>(e =>

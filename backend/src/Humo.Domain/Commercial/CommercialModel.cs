@@ -24,6 +24,8 @@ public sealed class PackageTerms
     public int? ExtraSchemeBlock { get; set; }
     /// <summary>Charged once a year on the renewal date. Null: no renewal fee.</summary>
     public decimal? AnnualRenewalFee { get; set; }
+    /// <summary>SMS a month that come with the package (20, 100, 500). Unused SMS don't carry over to the next month.</summary>
+    public int? IncludedSms { get; set; }
     public string ChangedBy { get; set; } = "";
     public string ChangedAt { get; set; } = "";
     public string Reason { get; set; } = "";
@@ -370,3 +372,6 @@ public static class InitialCatalogue
         return catalogue;
     }
 }
+
+/// <summary>A month's messages on one channel: what the package and bundles include, and what's been used.</summary>
+public sealed record MessageAllowance(string Channel, string Unit, int Included, int Bundles, int Allowance, int Used, int Remaining, string Period, string ResetsOn, string State);

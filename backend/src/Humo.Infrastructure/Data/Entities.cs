@@ -740,6 +740,82 @@ public sealed class SentMessageRow
     public string? SourceRoute { get; set; }
     /// <summary>JSON list of people the send couldn't reach, with the reason.</summary>
     public string Skipped { get; set; } = "[]";
+    /// <summary>The message template it was written from, if any.</summary>
+    public Guid? TemplateId { get; set; }
+    /// <summary>A scheduled send that was cancelled before it went out.</summary>
+    public DateTimeOffset? CancelledAt { get; set; }
+    public string? CancelledBy { get; set; }
+}
+
+/// <summary>An agency's message template (Communications › Templates): Humo's starter templates, editable, and the agency's own.</summary>
+public sealed class MessageTemplateRow
+{
+    public Guid Id { get; set; }
+    public Guid OrganisationId { get; set; }
+    public int Version { get; set; } = 1;
+    /// <summary>For Humo's starter templates: which one ("reminder", "statement", …).</summary>
+    public string? BuiltInKey { get; set; }
+    public string Name { get; set; } = "";
+    /// <summary>levies, collections, maintenance, meetings or general.</summary>
+    public string Category { get; set; } = "general";
+    public string Subject { get; set; } = "";
+    public string Body { get; set; } = "";
+    /// <summary>JSON list of the channels it's written for.</summary>
+    public string Channels { get; set; } = "[]";
+    public DateTimeOffset UpdatedAt { get; set; }
+    public string UpdatedBy { get; set; } = "";
+    public bool Archived { get; set; }
+}
+
+/// <summary>A notice to a scheme's people ("Water off on Thursday"): in the resident portal, and sent by the agency's notification rule for new notices.</summary>
+public sealed class NoticeRow
+{
+    public Guid Id { get; set; }
+    public int Version { get; set; } = 1;
+    /// <summary>"NTC-KC-12".</summary>
+    public string Ref { get; set; } = "";
+    public Guid OrganisationId { get; set; }
+    public Guid SchemeId { get; set; }
+    public string Title { get; set; } = "";
+    public string Body { get; set; } = "";
+    /// <summary>residents, owners or trustees.</summary>
+    public string Audience { get; set; } = "residents";
+    public string Category { get; set; } = "general";
+    public DateTimeOffset PublishedAt { get; set; }
+    public string PublishedBy { get; set; } = "";
+    public bool Pinned { get; set; }
+    public DateTimeOffset? ExpiresAt { get; set; }
+    /// <summary>JSON list of the channels it went out by.</summary>
+    public string SentBy { get; set; } = "[]";
+    public int Recipients { get; set; }
+    public DateTimeOffset? WithdrawnAt { get; set; }
+    public string? WithdrawnBy { get; set; }
+    public string? WithdrawnReason { get; set; }
+    /// <summary>Its record in Sent, so opening it in the portal can mark the person's delivery as read.</summary>
+    public Guid? SentMessageId { get; set; }
+}
+
+/// <summary>An Inbox conversation with an owner, tenant or trustee: the messages as JSON, newest last.</summary>
+public sealed class ConversationRow
+{
+    public Guid Id { get; set; }
+    public int Version { get; set; } = 1;
+    /// <summary>"CV-1001", per organisation.</summary>
+    public string Ref { get; set; } = "";
+    public Guid OrganisationId { get; set; }
+    public Guid SchemeId { get; set; }
+    public Guid PersonId { get; set; }
+    public Guid? UnitId { get; set; }
+    public string Subject { get; set; } = "";
+    /// <summary>open (needs a reply), waiting (for them) or closed.</summary>
+    public string Status { get; set; } = "open";
+    public string? AssigneeId { get; set; }
+    /// <summary>The open My work item while it needs a reply.</summary>
+    public Guid? WorkItemId { get; set; }
+    public string Messages { get; set; } = "[]";
+    /// <summary>Tasks (and later jobs) it was turned into, as JSON.</summary>
+    public string Links { get; set; } = "[]";
+    public DateTimeOffset LastAt { get; set; }
 }
 
 /// <summary>A sent message's delivery to one person, with its result as the email server or SMS provider reported it.</summary>
@@ -764,4 +840,18 @@ public sealed class DeliveryRow
     public Guid? DocumentId { get; set; }
     /// <summary>The provider's id for the message (SMSSouthAfrica's event id).</summary>
     public string? ProviderMessageId { get; set; }
+}
+
+/// <summary>An organisation's messages in one calendar month (SA time) on one channel. A new month starts from zero.</summary>
+public sealed class MessageUsageRow
+{
+    public Guid OrganisationId { get; set; }
+    /// <summary>"2026-10".</summary>
+    public string Period { get; set; } = "";
+    /// <summary>sms or whatsapp.</summary>
+    public string Channel { get; set; } = "";
+    /// <summary>What counts against the allowance: SMS parts, WhatsApp messages.</summary>
+    public int Units { get; set; }
+    /// <summary>Messages sent (an SMS of three parts is one message, three units).</summary>
+    public int Messages { get; set; }
 }

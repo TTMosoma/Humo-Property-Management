@@ -1,8 +1,7 @@
 import { inject } from '@angular/core';
 import { ActivatedRouteSnapshot, Router, Routes } from '@angular/router';
 import { accessGuard } from './core/access/access.guard';
-import { signedInGuard, signedOutGuard } from './core/access/signed-in.guard';
-import { SessionService } from './core/session/session.service';
+import { signedInGuard, signedOutGuard, homeGuard } from './core/access/signed-in.guard';
 import { Shell } from './core/shell/shell';
 import { Feature, Scheme, periodLabel } from './domain';
 import { schemeResolver } from './features/schemes/scheme.resolver';
@@ -55,7 +54,7 @@ export const routes: Routes = [
     canActivate: [signedInGuard],
     canActivateChild: [accessGuard],
     children: [
-      { path: '', pathMatch: 'full', redirectTo: () => inject(SessionService).homeRoute() },
+      { path: '', pathMatch: 'full', canActivate: [homeGuard], children: [] },
 
       // ---------------- My work (Attention model) ----------------
       {

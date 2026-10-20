@@ -39,10 +39,68 @@ public sealed class CommercialRecords(HumoDbContext db, TimeProvider clock)
     public static async Task SeedAsync(HumoDbContext db, CancellationToken ct = default)
     {
         var keys = await db.PlatformSettings.Where(s => s.Key == CatalogueKey || s.Key == SettingsKey).Select(s => s.Key).ToListAsync(ct);
+        if (keys.Contains(CatalogueKey))
+        {
+            await RemoveNeverSoldAsync(db, ct);
+            await AddNewAddOnsAsync(db, ct);
+        }
         if (keys.Count == 2) return;
         var initial = InitialCatalogue.Load();
         if (!keys.Contains(CatalogueKey)) db.PlatformSettings.Add(new PlatformSetting { Key = CatalogueKey, Value = Serialise(new { initial.Packages, initial.AddOns }) });
         if (!keys.Contains(SettingsKey)) db.PlatformSettings.Add(new PlatformSetting { Key = SettingsKey, Value = Serialise(initial.Settings) });
+        await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// Add-ons taken out of the catalogue altogether: "Additional Storage" was never sold and the 10, 50 and 100 GB packs
+    /// replace it. An add-on any agreement ever included stays (retired), so history keeps its name.
+    /// </summary>
+    private static readonly string[] Withdrawn = ["storage"];
+
+    /// <summary>
+    /// Add-ons new in Humo's starting catalogue (e.g. the SMS bundle) join a catalogue that's already stored. Nothing
+    /// already there changes: prices and terms are edited in Pricing &amp; add-ons, with versions.
+    /// </summary>
+    private static async Task AddNewAddOnsAsync(HumoDbContext db, CancellationToken ct)
+    {
+        var row = await db.PlatformSettings.FirstAsync(s => s.Key == CatalogueKey, ct);
+        if (System.Text.Json.Nodes.JsonNode.Parse(row.Value) is not System.Text.Json.Nodes.JsonObject cat || cat["addOns"] is not System.Text.Json.Nodes.JsonArray addOns) return;
+        var have = addOns.OfType<System.Text.Json.Nodes.JsonObject>().Select(a => a["id"]?.GetValue<string>()).ToHashSet();
+        var initial = System.Text.Json.Nodes.JsonNode.Parse(Serialise(new { InitialCatalogue.Load().AddOns }))!["addOns"]!.AsArray();
+        var added = initial.OfType<System.Text.Json.Nodes.JsonObject>().Where(a => !have.Contains(a["id"]?.GetValue<string>()) && !Withdrawn.Contains(a["id"]?.GetValue<string>())).ToList();
+        foreach (var a in added) addOns.Add(a.DeepClone());
+        // Terms fields new in the starting catalogue (e.g. a package's included SMS) fill in on the same version where they're missing.
+        var filled = 0;
+        var seedPackages = System.Text.Json.Nodes.JsonNode.Parse(Serialise(new { InitialCatalogue.Load().Packages }))!["packages"]!.AsArray();
+        foreach (var stored in (cat["packages"] as System.Text.Json.Nodes.JsonArray ?? []).OfType<System.Text.Json.Nodes.JsonObject>())
+        {
+            var seed = seedPackages.OfType<System.Text.Json.Nodes.JsonObject>().FirstOrDefault(p => p["packageId"]?.GetValue<string>() == stored["packageId"]?.GetValue<string>());
+            if (seed?["terms"] is not System.Text.Json.Nodes.JsonArray seedTerms || stored["terms"] is not System.Text.Json.Nodes.JsonArray storedTerms) continue;
+            foreach (var t in storedTerms.OfType<System.Text.Json.Nodes.JsonObject>())
+            {
+                var match = seedTerms.OfType<System.Text.Json.Nodes.JsonObject>().FirstOrDefault(x => x["version"]?.GetValue<int>() == t["version"]?.GetValue<int>());
+                foreach (var (key, value) in match ?? [])
+                    if ((!t.ContainsKey(key) || t[key] is null) && value is not null) { t[key] = value.DeepClone(); filled++; }
+            }
+        }
+        if (added.Count == 0 && filled == 0) return;
+        row.Value = cat.ToJsonString();
+        row.Version++;
+        await db.SaveChangesAsync(ct);
+    }
+
+    private static async Task RemoveNeverSoldAsync(HumoDbContext db, CancellationToken ct)
+    {
+        var row = await db.PlatformSettings.FirstAsync(s => s.Key == CatalogueKey, ct);
+        if (System.Text.Json.Nodes.JsonNode.Parse(row.Value) is not System.Text.Json.Nodes.JsonObject cat || cat["addOns"] is not System.Text.Json.Nodes.JsonArray addOns) return;
+        var agreements = await db.Agreements.Select(a => a.Document).ToListAsync(ct);
+        var gone = addOns.OfType<System.Text.Json.Nodes.JsonObject>()
+            .Where(a => a["id"]?.GetValue<string>() is { } id && Withdrawn.Contains(id) && !agreements.Any(d => d.Contains($"\"addOnId\":\"{id}\"", StringComparison.Ordinal)))
+            .ToList();
+        if (gone.Count == 0) return;
+        foreach (var a in gone) addOns.Remove(a);
+        row.Value = cat.ToJsonString();
+        row.Version++;
         await db.SaveChangesAsync(ct);
     }
 

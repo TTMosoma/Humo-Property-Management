@@ -1,4 +1,4 @@
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import { ComplianceAction, ComplianceDetail, ComplianceItem, ComplianceProfile, NewManualCompliance } from '../models/compliance';
 import { DocumentAction, LibraryDocument, NewDocument, RecordKind } from '../models/library';
 import { NewNotice, NoticeView } from '../models/notice';
@@ -61,6 +61,10 @@ export abstract class NoticeDataSource {
   abstract mine(): Observable<NoticeView[]>;
   abstract publish(input: NewNotice): Observable<string>;
   abstract act(id: string, action: { type: 'pin' | 'unpin' } | { type: 'withdraw'; reason: string }, expectedVersion?: number): Observable<void>;
+  /** A resident has seen it in the portal: their portal delivery shows as read in Sent. Nothing to record in the simulation. */
+  markRead(_id: string): Observable<void> {
+    return of(undefined);
+  }
 }
 
 /**

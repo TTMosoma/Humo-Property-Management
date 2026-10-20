@@ -49,6 +49,8 @@ export interface PackageTerms {
   extraSchemeBlock?: number | null;
   /** Charged once a year on the renewal date, on top of the recurring price. Null: no renewal fee. */
   annualRenewalFee: number | null;
+  /** SMS a month that come with the package (20, 100, 500). Unused SMS don't carry over. */
+  includedSms?: number | null;
   changedBy: string;
   changedAt: string;
   reason: string;

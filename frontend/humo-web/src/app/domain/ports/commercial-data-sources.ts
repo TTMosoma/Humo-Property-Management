@@ -56,7 +56,7 @@ export interface CustomerCommercialView {
   invoices: CustomerInvoice[];
 }
 
-export interface PackageTermsInput extends Pick<PackageTerms, 'effectiveFrom' | 'monthlyPrice' | 'annualPrice' | 'priceStatus' | 'includedStorageGb' | 'storageStatus' | 'includedSchemes' | 'extraSchemePrice' | 'extraSchemeBlock' | 'annualRenewalFee'> {
+export interface PackageTermsInput extends Pick<PackageTerms, 'effectiveFrom' | 'monthlyPrice' | 'annualPrice' | 'priceStatus' | 'includedStorageGb' | 'storageStatus' | 'includedSchemes' | 'extraSchemePrice' | 'extraSchemeBlock' | 'annualRenewalFee' | 'includedSms'> {
   reason: string;
 }
 

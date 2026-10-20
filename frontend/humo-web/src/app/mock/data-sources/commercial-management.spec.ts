@@ -133,9 +133,9 @@ describe('Commercial management', () => {
       expect(terms.map((t) => t.monthlyPrice)).toEqual([9_500, 2_400]);
       expect(terms[0]).toMatchObject({ version: 2, changedBy: 'Terry Mosoma' });
 
-      await run(data.saveAddOn({ id: 'sms-bundle', name: 'SMS bundle', description: '1 000 SMS a month.', kind: 'communication', features: ['communications'], allowQuantity: true, status: 'active', effectiveFrom: day(0), price: 250, frequency: 'monthly', priceStatus: 'proposed', usageAllowance: { unit: 'SMS', included: 1000 }, reason: 'New bundle for SMS-heavy agencies' }, true));
-      expect(store.catalogue().addOns.find((a) => a.id === 'sms-bundle')?.terms[0].price).toBe(250);
-      expect(access.audit()[0].action).toContain('Created the add-on SMS bundle');
+      await run(data.saveAddOn({ id: 'postage-pack', name: 'Postage pack', description: '100 printed and posted letters a month.', kind: 'communication', features: ['communications'], allowQuantity: true, status: 'active', effectiveFrom: day(0), price: 250, frequency: 'monthly', priceStatus: 'proposed', usageAllowance: { unit: 'letters', included: 100 }, reason: 'New pack for agencies that post letters' }, true));
+      expect(store.catalogue().addOns.find((a) => a.id === 'postage-pack')?.terms[0].price).toBe(250);
+      expect(access.audit()[0].action).toContain('Created the add-on Postage pack');
     });
   });
 

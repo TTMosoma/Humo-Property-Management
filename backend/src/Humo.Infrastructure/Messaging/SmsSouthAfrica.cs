@@ -83,7 +83,7 @@ public sealed class SmsSouthAfricaSender(IHttpClientFactory http, IOptions<SmsSo
             logger.LogInformation("SMS to {To} accepted by SMSSouthAfrica (event {EventId}, {Parts} part(s){Test})", MobileNumber.Mask(destination), eventId, sent!.Parts, o.TestMode ? ", test mode" : "");
         else
             logger.LogError("SMS to {To} not accepted by SMSSouthAfrica: {Fault}", MobileNumber.Mask(destination), fault ?? "no message was queued");
-        return new SmsReceipt(Name, eventId, accepted, accepted ? null : fault ?? "The message wasn't queued.");
+        return new SmsReceipt(Name, eventId, accepted, accepted ? null : fault ?? "The message wasn't queued.", accepted ? sent!.Parts : null);
     }
 
     // ---- MyMobileAPI v3 request and response (only the fields Humo uses) ----

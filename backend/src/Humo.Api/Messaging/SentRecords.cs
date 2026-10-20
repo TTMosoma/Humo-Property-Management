@@ -92,8 +92,7 @@ public sealed class SentRecords(HumoDbContext db, TimeProvider clock)
         var unit = await db.Units.AsNoTracking().FirstAsync(u => u.Id == a.UnitId, ct);
         var scheme = await db.Schemes.AsNoTracking().FirstAsync(s => s.Id == a.SchemeId, ct);
         var org = await db.Organisations.AsNoTracking().FirstAsync(o => o.Id == scheme.OrganisationId, ct);
-        var agency = await db.AgencySettings.AsNoTracking().FirstOrDefaultAsync(s => s.OrganisationId == org.Id, ct);
-        var values = Values(holder, unit, scheme, a, org.ShortName, agency?.Phone ?? "");
+        var values = Values(holder, unit, scheme, a, org.ShortName, await AgencyPhoneAsync(db, org.Id, ct));
         var label = $"Unit {unit.Number}";
         return channel switch
         {
@@ -105,6 +104,23 @@ public sealed class SentRecords(HumoDbContext db, TimeProvider clock)
             "portal" => new(holder.Id, holder.DisplayName, label, channel, "Resident portal", values, documentId, "delivered"),
             _ => new(holder.Id, holder.DisplayName, label, channel, "By post", values, documentId),
         };
+    }
+
+    /// <summary>Read receipts from the portal: the person opened it there. Only portal deliveries that arrived are marked; email and SMS can't tell us.</summary>
+    public async Task MarkReadAsync(IEnumerable<Guid> sentMessageIds, Guid personId, CancellationToken ct)
+    {
+        var ids = sentMessageIds.Distinct().ToList();
+        if (ids.Count == 0) return;
+        var unread = await db.Deliveries.Where(d => ids.Contains(d.SentMessageId) && d.PersonId == personId && d.Channel == "portal" && d.Status == "delivered").ToListAsync(ct);
+        foreach (var d in unread) Mark(d, "read", null);
+        if (unread.Count > 0) await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>The agency's phone (Settings › Agency), or the documents contact phone when the agency details don't have one.</summary>
+    public static async Task<string> AgencyPhoneAsync(HumoDbContext db, Guid orgId, CancellationToken ct)
+    {
+        var phone = await db.AgencySettings.Where(s => s.OrganisationId == orgId).Select(s => s.Phone).FirstOrDefaultAsync(ct);
+        return string.IsNullOrWhiteSpace(phone) ? await db.DocumentSettings.Where(s => s.OrganisationId == orgId).Select(s => s.ContactPhone).FirstOrDefaultAsync(ct) ?? "" : phone;
     }
 
     /// <summary>The merge values a statement or letter delivery used, like the app's Compose fills them in.</summary>
@@ -133,9 +149,10 @@ public sealed class SentRecords(HumoDbContext db, TimeProvider clock)
         {
             var list = deliveries[m.Id].OrderBy(d => d.Name).ToList();
             var counts = Statuses.ToDictionary(s => s, s => list.Count(d => d.Status == s));
-            var state = counts["scheduled"] > 0 ? "scheduled" : counts["queued"] > 0 ? "sending" : "sent";
-            var dto = new SentMessageDto(m.Id.ToString(), m.Version, m.Ref, m.Kind, m.SchemeId.ToString(), m.Subject, m.Body, null,
-                JsonSerializer.Deserialize<List<string>>(m.Channels, Json.Options) ?? [], m.AudienceLabel, m.CreatedAt.ToString("O"), m.SentBy, m.SendAt.ToString("O"), null,
+            var state = m.CancelledAt is not null ? "cancelled" : counts["scheduled"] > 0 ? "scheduled" : counts["queued"] > 0 ? "sending" : "sent";
+            var dto = new SentMessageDto(m.Id.ToString(), m.Version, m.Ref, m.Kind, m.SchemeId.ToString(), m.Subject, m.Body, m.TemplateId?.ToString(),
+                JsonSerializer.Deserialize<List<string>>(m.Channels, Json.Options) ?? [], m.AudienceLabel, m.CreatedAt.ToString("O"), m.SentBy, m.SendAt.ToString("O"),
+                m.CancelledAt is { } c ? new { at = c.ToString("O"), by = m.CancelledBy } : null,
                 [.. list.Select(d => new DeliveryDto(d.Id.ToString(), d.PersonId.ToString(), d.Name, d.UnitLabel, d.Channel, d.Address, d.Status, d.At.ToString("O"), d.Error,
                     JsonSerializer.Deserialize<Dictionary<string, string>>(d.Values, Json.Options) ?? []))],
                 JsonSerializer.Deserialize<List<SkippedDto>>(m.Skipped, Json.Options) ?? [],
@@ -191,7 +208,10 @@ public static class SentEndpoints
     {
         if (await current.GetAsync(ct) is not { } me) return Results.Unauthorized();
         if (await VisibleAsync(me, db, ct) is not { } visible || await visible.FirstOrDefaultAsync(m => m.Id == id, ct) is not { } message) return Problems.NotFound();
-        var failed = await db.Deliveries.Where(d => d.SentMessageId == id && (d.Status == "failed" || d.Status == "bounced") && d.DocumentId != null).ToListAsync(ct);
+        // Statements and letters go again from their issued document; composed messages and notices from their text.
+        var documents = message.Kind is "statement" or "letter" or "reminder";
+        var failed = await db.Deliveries.Where(d => d.SentMessageId == id && (d.Status == "failed" || d.Status == "bounced") && (!documents || d.DocumentId != null))
+            .ToListAsync(ct);
         return await commands.RunAsync(new CommandSpec($"Retried {failed.Count} failed deliver{(failed.Count == 1 ? "y" : "ies")} of {message.Ref}", "Messages.Reply")
         {
             Resource = "Sent message",
@@ -201,20 +221,36 @@ public static class SentEndpoints
         }, actor =>
         {
             foreach (var d in failed) sent.Mark(d, "queued", null);
-            var documents = failed.Select(d => d.DocumentId!.Value).ToList();
+            var ids = documents ? failed.Select(d => d.DocumentId!.Value).ToList() : failed.Select(d => d.Id).ToList();
+            var kind = !documents ? DeliveryQueue.Messages : message.Kind == "statement" ? DeliveryQueue.Statements : DeliveryQueue.Letters;
             commands.AfterCommit(() =>
             {
-                queue.Enqueue(message.Kind == "statement" ? DeliveryQueue.Statements : DeliveryQueue.Letters, documents);
+                queue.Enqueue(kind, ids);
                 return Task.CompletedTask;
             });
             return Task.FromResult(Results.NoContent());
         }, ct);
     }
 
-    private static async Task<IResult> Cancel(Guid id, CurrentActor current, HumoDbContext db, CancellationToken ct)
+    /// <summary>A scheduled message that hasn't gone out yet. Nothing is sent; it stays in Sent as cancelled.</summary>
+    private static async Task<IResult> Cancel(Guid id, CurrentActor current, CommandRunner commands, HumoDbContext db, TimeProvider clock, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } me) return Results.Unauthorized();
-        if (await VisibleAsync(me, db, ct) is not { } visible || !await visible.AnyAsync(m => m.Id == id, ct)) return Problems.NotFound();
-        return Problems.Validation(new() { ["sendAt"] = "This has already been sent: only a scheduled message can be cancelled." });
+        if (await VisibleAsync(me, db, ct) is not { } visible || await visible.FirstOrDefaultAsync(m => m.Id == id, ct) is not { } message) return Problems.NotFound();
+        var scheduled = await db.Deliveries.AnyAsync(d => d.SentMessageId == id && d.Status == "scheduled", ct);
+        return await commands.RunAsync(new CommandSpec($"Cancelled scheduled message {message.Ref}", "Messages.Reply")
+        {
+            Resource = "Sent message",
+            ResourceId = message.Ref,
+            SchemeId = message.SchemeId,
+            Validate = () => message.CancelledAt is not null ? new() { ["sendAt"] = "Already cancelled." }
+                : !scheduled || message.SendAt <= clock.GetUtcNow() ? new() { ["sendAt"] = "This has already been sent: only a scheduled message can be cancelled." } : [],
+        }, actor =>
+        {
+            message.CancelledAt = clock.GetUtcNow();
+            message.CancelledBy = actor.Human.Name;
+            message.Version++;
+            return Task.FromResult(Results.NoContent());
+        }, ct);
     }
 }

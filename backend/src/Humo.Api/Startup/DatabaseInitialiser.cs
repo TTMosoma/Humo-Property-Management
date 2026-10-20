@@ -30,6 +30,20 @@ public static class DatabaseInitialiser
         // The commercial catalogue Humo starts from: no base prices decided, example prices marked proposed (docs/23 §2).
         await Commercial.CommercialRecords.SeedAsync(db);
 
+        // Development only (Development:OpenMissingTrials in appsettings.Development.json): a customer added to a local
+        // database by hand gets the trial an approved account request would have opened, so its plan's features work.
+        if (app.Environment.IsDevelopment() && app.Configuration.GetValue<bool>("Development:OpenMissingTrials"))
+        {
+            var records = sp.GetRequiredService<Commercial.CommercialRecords>();
+            var withPlan = await db.Subscriptions.Select(s => s.OrganisationId).ToListAsync();
+            foreach (var org in await db.Organisations.Where(o => o.Kind == "managing-agency" && !withPlan.Contains(o.Id)).ToListAsync())
+            {
+                await records.OpenAsync(org, org.TrialPackageId ?? "professional", null, CancellationToken.None);
+                log.LogWarning("Development: opened a {Package} trial for {Organisation}", org.TrialPackageId ?? "professional", org.Name);
+            }
+            await db.SaveChangesAsync();
+        }
+
         var bootstrap = sp.GetRequiredService<IOptions<BootstrapOptions>>().Value;
         if (string.IsNullOrWhiteSpace(bootstrap.AdminEmail)) return;
 

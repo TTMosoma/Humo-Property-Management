@@ -98,7 +98,8 @@ export class SessionService {
   readonly homeRoute = computed(() => {
     const role = this.role();
     // Each Humo role has its own home: the board view, the book of accounts, or the customer list.
-    if (role === 'humo-executive') return '/platform/executive';
+    // The System Administrator and the executive start on the business overview: the platform's dashboard.
+    if (role === 'humo-executive' || role === 'system-admin') return '/platform/executive';
     if (role === 'humo-account-manager') return '/platform/accounts';
     if (role === 'humo-finance') return '/platform/invoices';
     if (isHumoRole(role)) return '/platform/customers';

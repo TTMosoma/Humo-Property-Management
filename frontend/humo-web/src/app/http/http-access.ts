@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, map, switchMap, tap } from 'rxjs';
-import { AccessDataSource, Identity, ImpersonationMode, ImpersonationReason, ImpersonationSession, NewAssignment, SessionDataSource } from '../domain';
+import { AccessDataSource, Identity, ImpersonationMode, ImpersonationReason, ImpersonationSession, NewAssignment, Passkey, SessionDataSource } from '../domain';
 import { HttpPort } from './http-port';
 import { HttpSessionDataSource } from './http-session-data-source';
 
@@ -13,6 +13,14 @@ import { HttpSessionDataSource } from './http-session-data-source';
 @Injectable()
 export class HttpAccessDataSource extends HttpPort implements AccessDataSource {
   private readonly session = inject(SessionDataSource) as HttpSessionDataSource;
+
+  passkeysOf(identityId: string): Observable<Passkey[]> {
+    return this.live<Passkey[]>(`/platform/users/${identityId}/passkeys`, ['access']);
+  }
+
+  removePasskeys(identityId: string, passkeyId: string | null, reason: string): Observable<void> {
+    return this.command('POST', `/platform/users/${identityId}/passkeys/remove`, { passkeyId, reason }, ['access', 'audit']);
+  }
 
   directory(organisationId: string | null): Observable<Identity[]> {
     return this.live<Identity[]>('/access/directory', ['access', 'session'], organisationId ? { organisationId } : undefined);

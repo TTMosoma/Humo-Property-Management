@@ -3,7 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { Dialog } from '@angular/cdk/dialog';
 import { RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { catchError, combineLatest, map, of } from 'rxjs';
+import { catchError, combineLatest, map, of, take } from 'rxjs';
 import { AccessDataSource, AuditDataSource, AuditEvent, IMPERSONATION_REASONS, Identity, ROLE_LABELS, RoleAssignment, activeAssignments } from '../../domain';
 import { loadable } from '../../core/data/loadable';
 import { organisationName, visibleOrganisations } from '../../core/session/organisations';
@@ -19,6 +19,9 @@ import { Skeleton } from '../../ui/states/skeleton';
 import { StatusPill } from '../../ui/status-pill/status-pill';
 import { roleColor } from '../access/access-view';
 import { ImpersonateDialog } from './impersonate-dialog';
+import { DrawerService } from '../../ui/drawer/drawer.service';
+import { FeedbackService } from '../../core/feedback/feedback.service';
+import { openForm } from '../shared/form-drawer';
 
 /**
  * Platform › Users & impersonation. Humo staff find a customer user to help them.
@@ -52,6 +55,10 @@ export class PlatformUsersPage {
   protected readonly loading = this.result.loading;
   protected readonly failed = this.result.failed;
   protected readonly canImpersonate = computed(() => this.session.actorCan('System.Impersonate'));
+  /** System Administrators and Humo Support can remove someone's passkeys (lost or stolen device). Never their own here. */
+  protected readonly canResetPasskeys = computed(() => this.session.actorCan('Platform.Users.ResetPasskeys'));
+  private readonly drawer = inject(DrawerService);
+  private readonly feedback = inject(FeedbackService);
 
   protected readonly tabs = computed(() => [
     { id: 'customers', label: 'Customer users', count: this.result.value()?.customers.length },
@@ -98,6 +105,50 @@ export class PlatformUsersPage {
 
   protected set(key: 'view' | 'q', value: string | null): void {
     this.state.update((s) => ({ ...s, [key]: value || null }));
+  }
+
+  protected isSelf(i: Identity): boolean {
+    return this.session.selfIds().includes(i.id);
+  }
+
+  /** Lists the person's passkeys, then removes the one chosen (or all) with a reason and a fresh passkey of your own. */
+  protected passkeys(target: Identity): void {
+    this.access
+      .passkeysOf(target.id)
+      .pipe(take(1))
+      .subscribe({
+        next: (list) => {
+          if (!list.length) {
+            this.feedback.success(`${target.name} has no passkeys: they sign in with an email link.`);
+            return;
+          }
+          openForm(this.drawer, {
+            eyebrow: `Passkeys · ${target.name}`,
+            title: 'Remove a passkey',
+            intro: `For a lost or stolen device. ${target.name} is signed out everywhere and emailed; they sign in with an email link and add a new passkey. This is recorded in the audit log.`,
+            fields: [
+              {
+                key: 'passkeyId',
+                label: 'Passkey',
+                type: 'select',
+                required: true,
+                options: [
+                  ...list.map((p) => ({ value: p.id, label: `${p.name} (${p.provider}, added ${new Date(p.createdAt).toLocaleDateString('en-ZA')})` })),
+                  ...(list.length > 1 ? [{ value: 'all', label: `All ${list.length} passkeys` }] : []),
+                ],
+              },
+              { key: 'reason', label: 'Reason', type: 'textarea', required: true, placeholder: 'e.g. Lost phone, confirmed by a call to their office number' },
+            ],
+            initial: { passkeyId: list.length > 1 ? 'all' : list[0].id, reason: '' },
+            submitLabel: 'Remove',
+            stepUp: { action: 'change-security', detail: `Remove ${target.name}’s passkeys` },
+            submit: (v) => this.access.removePasskeys(target.id, v['passkeyId'] === 'all' ? null : v['passkeyId'], v['reason']),
+            success: () => `Removed. ${target.name} has been signed out and emailed.`,
+            failure: 'The passkey wasn’t removed',
+          });
+        },
+        error: () => this.feedback.error('Couldn’t load their passkeys. Try again.'),
+      });
   }
 
   protected impersonate(target: Identity): void {

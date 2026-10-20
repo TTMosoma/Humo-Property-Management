@@ -179,9 +179,9 @@ public sealed class CommercialApiTests : IDisposable
         Assert.Equal((9500m, 2), (pro[0].GetProperty("monthlyPrice").GetDecimal(), pro[0].GetProperty("version").GetInt32()));
         Assert.Equal(2400m, pro[1].GetProperty("monthlyPrice").GetDecimal());
 
-        var addOn = new { id = "sms-bundle", name = "SMS bundle", description = "1 000 SMS a month.", kind = "communication", features = new[] { "communications" }, allowQuantity = true, status = "active", effectiveFrom = "2026-10-19", price = 250, frequency = "monthly", priceStatus = "proposed", usageAllowance = new { unit = "SMS", included = 1000 }, reason = "New bundle for SMS-heavy agencies", isNew = true };
-        await NoContent(await admin.PutAsJsonAsync("/api/platform/commercial/add-ons/sms-bundle", addOn));
-        Assert.Contains((await Ok(await admin.GetAsync("/api/catalogue"))).GetProperty("addOns").EnumerateArray(), a => a.GetProperty("id").GetString() == "sms-bundle");
+        var addOn = new { id = "postage-pack", name = "Postage pack", description = "100 printed and posted letters a month.", kind = "communication", features = new[] { "communications" }, allowQuantity = true, status = "active", effectiveFrom = "2026-10-19", price = 250, frequency = "monthly", priceStatus = "proposed", usageAllowance = new { unit = "letters", included = 100 }, reason = "New pack for agencies that post letters", isNew = true };
+        await NoContent(await admin.PutAsJsonAsync("/api/platform/commercial/add-ons/postage-pack", addOn));
+        Assert.Contains((await Ok(await admin.GetAsync("/api/catalogue"))).GetProperty("addOns").EnumerateArray(), a => a.GetProperty("id").GetString() == "postage-pack");
     }
 
     [Fact]

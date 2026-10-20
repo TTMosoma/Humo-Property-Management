@@ -32,6 +32,7 @@ public sealed record LetterSnapshot(CollectionViewDto View, CollectionStep Step,
 /// prints it). A letter of demand needs the trustees' approval in My work; every active case has one follow-up Task.
 /// </summary>
 public sealed class CreditControl(HumoDbContext db, Commercial.CommercialRecords commercial, DocumentPrinter printer, IEmailSender email, SmsGateway sms, Messaging.SentRecords sent,
+    Messaging.MessageUsage usage,
     TimeProvider clock, ILogger<CreditControl> logger) : IApprovalHandler
 {
     public const string Feature = "credit-control";
@@ -383,7 +384,9 @@ public sealed class CreditControl(HumoDbContext db, Commercial.CommercialRecords
                 else
                 {
                     // The delivery's id goes to the provider as our reference: its delivery report comes back with it.
-                    var receipt = await sms.SendAsync(new SmsMessage(holder.Phone, Sms(s), delivery?.Id.ToString("N") ?? s.View.Account.AccountNo), ct);
+                    var text = Sms(s);
+                    var receipt = await sms.SendAsync(new SmsMessage(holder.Phone, text, delivery?.Id.ToString("N") ?? s.View.Account.AccountNo), ct);
+                    if (receipt.Accepted) await usage.RecordAsync(letter.OrganisationId, "sms", Messaging.MessageUsage.SmsUnits(text, receipt.Parts), ct);
                     if (delivery is not null) sent.Mark(delivery, receipt.Accepted ? "queued" : "failed", receipt.Accepted ? null : receipt.Error ?? "The SMS provider refused it.", receipt.ProviderMessageId);
                     if (!receipt.Accepted)
                     {

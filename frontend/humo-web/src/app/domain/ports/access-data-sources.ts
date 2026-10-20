@@ -1,9 +1,10 @@
-import { Observable } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
+import { ApiError } from './api-error';
 import { ListQuery, Page } from './list-query';
 import { AuditEvent, AuditQuery, ImpersonationMode, ImpersonationReason, ImpersonationSession } from '../models/audit';
 import { AssignmentScope, Identity, RoleAssignment } from '../models/identity';
 import { HumoTeamAction, HumoTeamMember, NewHumoMember, PendingHumoGrant } from '../models/humo-team';
-import { SecurityProfile, StepUpMethod, StepUpRequest, StepUpResult } from '../models/security';
+import { Passkey, SecurityProfile, StepUpMethod, StepUpRequest, StepUpResult } from '../models/security';
 
 export interface NewAssignment {
   role: RoleAssignment['role'];
@@ -17,6 +18,19 @@ export interface NewAssignment {
  * SessionDataSource.current() emits next.
  */
 export abstract class AccessDataSource {
+  /** Someone's passkeys, for Humo removing them (Platform.Users.ResetPasskeys). The simulation has none to show. */
+  passkeysOf(_identityId: string): Observable<Passkey[]> {
+    return of([]);
+  }
+
+  /**
+   * Humo removes one passkey (or all, with null) from someone's sign-in, with a reason, e.g. a lost or stolen device.
+   * Needs a fresh passkey; signs them out everywhere and emails them. A security event in the audit log.
+   */
+  removePasskeys(_identityId: string, _passkeyId: string | null, _reason: string): Observable<void> {
+    return throwError(() => new ApiError('server', 'Removing someone’s passkeys needs Humo’s API'));
+  }
+
   /** Customer identities with at least one assignment in the agency (null = every agency). */
   abstract directory(organisationId: string | null): Observable<Identity[]>;
   /** Humo's own staff and their internal roles. */

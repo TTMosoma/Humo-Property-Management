@@ -58,6 +58,11 @@
           </div>
         </ng-template>
         <ng-template uiCell="action" let-r>
+          @if (canResetPasskeys() && !isSelf(r)) {
+            <button type="button" class="btn btn-ghost btn-sm" (click)="$event.stopPropagation(); passkeys(r)">
+              <ion-icon name="key-outline" aria-hidden="true" /> Passkeys
+            </button>
+          }
           @if (r.kind === 'humo') {
             @if (authorised(r)) {
               <ui-status-pill label="Can impersonate" tone="warning" />

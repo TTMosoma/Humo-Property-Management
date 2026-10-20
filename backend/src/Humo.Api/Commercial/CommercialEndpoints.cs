@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Humo.Api.Commercial;
 
 public sealed record PackageTermsRequest(string EffectiveFrom, decimal? MonthlyPrice, decimal? AnnualPrice, string PriceStatus, decimal? IncludedStorageGb, string StorageStatus,
-    int? IncludedSchemes, decimal? ExtraSchemePrice, decimal? AnnualRenewalFee, string Reason, int? ExtraSchemeBlock = null);
+    int? IncludedSchemes, decimal? ExtraSchemePrice, decimal? AnnualRenewalFee, string Reason, int? ExtraSchemeBlock = null, int? IncludedSms = null);
 public sealed record AddOnRequest(string Id, string Name, string? Description, string Kind, List<string>? Features, decimal? StorageGb, bool AllowQuantity, string Status, string? RetiresOn,
     string EffectiveFrom, decimal? Price, string Frequency, string PriceStatus, UsageAllowance? UsageAllowance, string Reason, bool IsNew);
 public sealed record SettingsRequest(CommercialSettings Settings, string Reason, int? ExpectedVersion);
@@ -73,6 +73,7 @@ public static partial class CommercialEndpoints
                 foreach (var (key, value) in new (string, decimal?)[] { ("monthlyPrice", t.MonthlyPrice), ("annualPrice", t.AnnualPrice), ("includedStorageGb", t.IncludedStorageGb), ("includedSchemes", t.IncludedSchemes), ("extraSchemePrice", t.ExtraSchemePrice), ("annualRenewalFee", t.AnnualRenewalFee) })
                     if (value < 0) e[key] = "A number of zero or more, or leave it empty.";
                 if (t.ExtraSchemeBlock is < 1 or > 100) e["extraSchemeBlock"] = "Between 1 and 100 schemes per block.";
+                if (t.IncludedSms is < 0 or > 100_000) e["includedSms"] = "SMS a month: zero or more.";
                 if (!PriceStatuses.All.Contains(t.PriceStatus)) e["priceStatus"] = "Awaiting, proposed or approved.";
                 else if (t.PriceStatus != PriceStatuses.Awaiting && t.MonthlyPrice is null) e["monthlyPrice"] = "A proposed or approved price needs an amount.";
                 if (!PriceStatuses.All.Contains(t.StorageStatus)) e["storageStatus"] = "Awaiting, proposed or approved.";
@@ -88,7 +89,7 @@ public static partial class CommercialEndpoints
                 {
                     Version = version, EffectiveFrom = t.EffectiveFrom, MonthlyPrice = t.MonthlyPrice, AnnualPrice = t.AnnualPrice, PriceStatus = t.PriceStatus,
                     IncludedStorageGb = t.IncludedStorageGb, StorageStatus = t.StorageStatus, IncludedSchemes = t.IncludedSchemes, ExtraSchemePrice = t.ExtraSchemePrice, ExtraSchemeBlock = t.ExtraSchemeBlock,
-                    AnnualRenewalFee = t.AnnualRenewalFee, ChangedBy = actor.Human.Name, ChangedAt = clock.GetUtcNow().ToString("O"), Reason = t.Reason!.Trim(),
+                    AnnualRenewalFee = t.AnnualRenewalFee, IncludedSms = t.IncludedSms, ChangedBy = actor.Human.Name, ChangedAt = clock.GetUtcNow().ToString("O"), Reason = t.Reason!.Trim(),
                 })
                 .OrderByDescending(x => x.EffectiveFrom, StringComparer.Ordinal).ToList();
             await commercial.SaveCatalogueAsync(cat, ct);

@@ -33,7 +33,7 @@ public sealed record PlatformCustomerDto(string OrganisationId, string Name, str
     IReadOnlyList<object> Opportunities, IReadOnlyList<UpgradeRequestDto> Requests, IReadOnlyList<object> Tickets);
 
 public sealed record CustomerPlanDto(string OrganisationId, string PackageId, string Status, string RenewsAt, IReadOnlyList<SubscriptionAddOn> AddOns, IReadOnlyList<Entitlement> Entitlements,
-    string AccountManager, IReadOnlyList<UpgradeRequestDto> Requests, StorageSummary Storage, CustomerBillingDto Billing);
+    string AccountManager, IReadOnlyList<UpgradeRequestDto> Requests, StorageSummary Storage, CustomerBillingDto Billing, IReadOnlyList<MessageAllowance> Messages);
 public sealed record CustomerBillingDto(string Preference, string NextBillingDate, RenewalDto Renewal);
 public sealed record RenewalDto(string On, decimal? Fee);
 
@@ -241,7 +241,7 @@ public static class CustomerEndpoints
     // ---- The customer's own plan (Agency Administrators: they can ask, not enable) ----
 
     /// <summary>Only what the customer should see: no health, opportunities or other customers' prices.</summary>
-    private static async Task<IResult> Plan(Guid id, CurrentActor current, HumoDbContext db, CommercialRecords commercial, CancellationToken ct)
+    private static async Task<IResult> Plan(Guid id, CurrentActor current, HumoDbContext db, CommercialRecords commercial, Messaging.MessageUsage usage, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         if (actor.OrganisationId != id || !actor.Can("Subscription.View")) return Problems.NotFound();
@@ -253,7 +253,8 @@ public static class CustomerEndpoints
         var a = rec.Agreement;
         return Results.Ok(new CustomerPlanDto(id.ToString(), plan.Subscription.PackageId, plan.Subscription.Status, plan.Subscription.RenewsAt, plan.Subscription.AddOns, plan.Entitlements,
             manager ?? "Humo", requests.OrderByDescending(r => r.At).Select(ToDto).ToList(), CommercialRules.Storage(a, cat, NotMeasured(id), commercial.Today),
-            new CustomerBillingDto(a.Billing.Preference, a.Billing.NextBillingDate, new RenewalDto(a.Renewal.On, a.Renewal.Fee))));
+            new CustomerBillingDto(a.Billing.Preference, a.Billing.NextBillingDate, new RenewalDto(a.Renewal.On, a.Renewal.Fee)),
+            CommercialRules.Messages(a, cat, commercial.Today, await usage.ThisMonthAsync(id, ct))));
     }
 
     private static async Task<IResult> RequestUpgrade(Guid id, NewUpgradeRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, CommercialRecords commercial,

@@ -92,6 +92,27 @@ export interface CustomerPlan {
   storage?: StorageSummary;
   /** Their own terms: how they pay, and their own renewal fee (never other customers' prices). */
   billing?: { preference: BillingPreference; nextBillingDate: string; renewal: { on: string; fee: number | null } };
+  /** This month's SMS and WhatsApp: what the package and bundles include, and what's been used. Resets on the 1st. */
+  messages?: MessageAllowance[];
+}
+
+/** A month's messages on one channel. Nothing carries over to the next month. */
+export interface MessageAllowance {
+  channel: 'sms' | 'whatsapp';
+  /** "SMS" (counted in billed parts) or "WhatsApp messages". */
+  unit: string;
+  /** With the package. */
+  included: number;
+  /** From bundles (allowance × quantity). */
+  bundles: number;
+  allowance: number;
+  used: number;
+  remaining: number;
+  /** "2026-10" */
+  period: string;
+  /** The 1st of next month. */
+  resetsOn: string;
+  state: 'ok' | 'warning' | 'over';
 }
 
 /** A change an authorised Humo person makes to a subscription. Always audited. */

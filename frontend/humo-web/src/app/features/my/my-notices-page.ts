@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, effect } from '@angular/core';
 import { IonIcon } from '@ionic/angular/standalone';
 import { NOTICE_CATEGORY_LABELS, NoticeDataSource, NoticeView } from '../../domain';
 import { loadable } from '../../core/data/loadable';
@@ -58,7 +58,20 @@ const ICON: Record<string, string> = { general: 'megaphone-outline', maintenance
 export class MyNoticesPage {
   private readonly data = inject(NoticeDataSource);
   protected readonly result = loadable(() => this.data.mine());
+
+  private readonly marked = new Set<string>();
   protected readonly formatDate = formatDate;
   protected readonly icon = (v: NoticeView) => ICON[v.notice.category] ?? 'megaphone-outline';
   protected readonly category = (v: NoticeView) => NOTICE_CATEGORY_LABELS[v.notice.category];
+
+  constructor() {
+    // Seeing a notice here is reading it: once each, it's marked read in the agency's Sent.
+    effect(() => {
+      for (const v of this.result.value() ?? []) {
+        if (this.marked.has(v.notice.id)) continue;
+        this.marked.add(v.notice.id);
+        this.data.markRead(v.notice.id).subscribe({ error: () => this.marked.delete(v.notice.id) });
+      }
+    });
+  }
 }
