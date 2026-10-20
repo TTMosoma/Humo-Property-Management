@@ -99,7 +99,7 @@ public sealed partial class Communications(HumoDbContext db, SentRecords sent, I
     }
 
     /// <summary>Their preference if it's one of the channels and they can receive it; else the first chosen channel they can. Or why not.</summary>
-    private static (string? Channel, string? Why) ChannelFor(Person p, IReadOnlyList<string> channels, ISet<Guid> portalPeople)
+    public static (string? Channel, string? Why) ChannelFor(Person p, IReadOnlyList<string> channels, ISet<Guid> portalPeople)
     {
         bool Can(string c) => c switch
         {
@@ -116,7 +116,7 @@ public sealed partial class Communications(HumoDbContext db, SentRecords sent, I
 
     private static string Address(Person p, string channel) => channel switch { "email" => p.Email.Trim(), "portal" => "Resident portal", _ => p.Phone };
 
-    private async Task<(Dictionary<string, string> Base, ISet<Guid> Portal)> ContextAsync(Guid schemeId, CancellationToken ct)
+    public async Task<(Dictionary<string, string> Base, ISet<Guid> Portal)> ContextAsync(Guid schemeId, CancellationToken ct)
     {
         var scheme = await db.Schemes.FirstAsync(s => s.Id == schemeId, ct);
         var org = await db.Organisations.FirstAsync(o => o.Id == scheme.OrganisationId, ct);
@@ -186,6 +186,18 @@ public sealed partial class Communications(HumoDbContext db, SentRecords sent, I
         if (scheduled) message.SendAt = sendAt!.Value;
         var queued = db.Deliveries.Local.Where(d => d.SentMessageId == message.Id && d.Status == "queued").Select(d => d.Id).ToList();
         return (message, queued);
+    }
+
+    /// <summary>One message to one person by one channel (an Inbox reply), recorded in Sent. Returns the record and the delivery to send.</summary>
+    public async Task<(SentMessageRow Message, List<Guid> SendNow)> SendToAsync(string kind, Guid schemeId, Addressee to, string channel, string subject, string body, string audienceLabel,
+        string by, SentSourceDto? source, CancellationToken ct)
+    {
+        var (b, _) = await ContextAsync(schemeId, ct);
+        var orgId = await db.Schemes.Where(s => s.Id == schemeId).Select(s => s.OrganisationId).FirstAsync(ct);
+        var r = new Recipient(to.Person.Id, to.Person.DisplayName, to.Unit is { } u ? $"Unit {u.Number}" : null, channel, Address(to.Person, channel), Values(to, b), null,
+            channel == "portal" ? "delivered" : "queued");
+        var message = await sent.RecordAsync(kind, orgId, schemeId, subject, body, audienceLabel, by, source, [r], null, ct);
+        return (message, db.Deliveries.Local.Where(d => d.SentMessageId == message.Id && d.Status == "queued").Select(d => d.Id).ToList());
     }
 
     /// <summary>Sends each delivery by its channel with its own merge values, and records what the mail server or SMS provider said.</summary>
@@ -342,6 +354,7 @@ public static class CommunicationsEndpoints
         n.MapPost("", Publish);
         n.MapPost("/{id:guid}/actions", ActOnNotice);
         api.MapGet("/me/notices", MyNotices).RequireAuthorization();
+        api.MapPost("/me/notices/{id:guid}/read", ReadNotice).RequireAuthorization();
     }
 
     private static async Task<IResult> Templates(CurrentActor current, Communications comms, CancellationToken ct)
@@ -522,6 +535,15 @@ public static class CommunicationsEndpoints
         return Results.Ok((await ViewsAsync(rows, [scheme], db, clock, ct)).Where(v => v.Current));
     }
 
+    /// <summary>A resident opened the notice in the portal: their portal delivery shows as read in Sent.</summary>
+    private static async Task<IResult> ReadNotice(Guid id, CurrentActor current, HumoDbContext db, SentRecords sent, CancellationToken ct)
+    {
+        if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
+        if (!Guid.TryParse(actor.User.PersonId, out var personId) || await db.SchemeNotices.FirstOrDefaultAsync(n => n.Id == id, ct) is not { } n) return Problems.NotFound();
+        if (n.SentMessageId is { } m) await sent.MarkReadAsync([m], personId, ct);
+        return Results.NoContent();
+    }
+
     private static async Task<IResult> Publish(NewNoticeRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, Communications comms, DeliveryQueue queue,
         TimeProvider clock, CancellationToken ct)
     {
@@ -563,7 +585,8 @@ public static class CommunicationsEndpoints
             };
             db.SchemeNotices.Add(notice);
             // It goes out by the agency's rule for new notices, and is recorded in Sent like everything else.
-            var (_, now) = await comms.SendAsync("notice", audience, title, text, channels, null, null, actor.Human.Name, new SentSourceDto($"Notice {notice.Ref}", "/communications/notices"), ct);
+            var (record, now) = await comms.SendAsync("notice", audience, title, text, channels, null, null, actor.Human.Name, new SentSourceDto($"Notice {notice.Ref}", "/communications/notices"), ct);
+            notice.SentMessageId = record.Id;
             commands.AfterCommit(() =>
             {
                 queue.Enqueue(DeliveryQueue.Messages, now);

@@ -791,6 +791,31 @@ public sealed class NoticeRow
     public DateTimeOffset? WithdrawnAt { get; set; }
     public string? WithdrawnBy { get; set; }
     public string? WithdrawnReason { get; set; }
+    /// <summary>Its record in Sent, so opening it in the portal can mark the person's delivery as read.</summary>
+    public Guid? SentMessageId { get; set; }
+}
+
+/// <summary>An Inbox conversation with an owner, tenant or trustee: the messages as JSON, newest last.</summary>
+public sealed class ConversationRow
+{
+    public Guid Id { get; set; }
+    public int Version { get; set; } = 1;
+    /// <summary>"CV-1001", per organisation.</summary>
+    public string Ref { get; set; } = "";
+    public Guid OrganisationId { get; set; }
+    public Guid SchemeId { get; set; }
+    public Guid PersonId { get; set; }
+    public Guid? UnitId { get; set; }
+    public string Subject { get; set; } = "";
+    /// <summary>open (needs a reply), waiting (for them) or closed.</summary>
+    public string Status { get; set; } = "open";
+    public string? AssigneeId { get; set; }
+    /// <summary>The open My work item while it needs a reply.</summary>
+    public Guid? WorkItemId { get; set; }
+    public string Messages { get; set; } = "[]";
+    /// <summary>Tasks (and later jobs) it was turned into, as JSON.</summary>
+    public string Links { get; set; } = "[]";
+    public DateTimeOffset LastAt { get; set; }
 }
 
 /// <summary>A sent message's delivery to one person, with its result as the email server or SMS provider reported it.</summary>

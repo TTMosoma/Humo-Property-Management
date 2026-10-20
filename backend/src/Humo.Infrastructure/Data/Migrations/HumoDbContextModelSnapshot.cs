@@ -349,6 +349,73 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.ToTable("CollectionCases", (string)null);
                 });
 
+            modelBuilder.Entity("Humo.Infrastructure.Data.ConversationRow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AssigneeId")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<DateTimeOffset>("LastAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Links")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Messages")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Ref")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("SchemeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid?>("UnitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("WorkItemId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PersonId");
+
+                    b.HasIndex("OrganisationId", "Ref")
+                        .IsUnique();
+
+                    b.HasIndex("SchemeId", "Status");
+
+                    b.ToTable("Conversations", (string)null);
+                });
+
             modelBuilder.Entity("Humo.Infrastructure.Data.DeliveryRow", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1193,6 +1260,9 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.Property<string>("SentBy")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<Guid?>("SentMessageId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -2479,6 +2549,15 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.HasOne("Humo.Infrastructure.Data.LevyAccount", null)
                         .WithOne()
                         .HasForeignKey("Humo.Infrastructure.Data.CollectionCaseRow", "AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Humo.Infrastructure.Data.ConversationRow", b =>
+                {
+                    b.HasOne("Humo.Infrastructure.Data.Person", null)
+                        .WithMany()
+                        .HasForeignKey("PersonId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

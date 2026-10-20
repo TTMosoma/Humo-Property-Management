@@ -1,6 +1,22 @@
 import { Injectable } from '@angular/core';
 import { Observable, catchError, map, of, throwError } from 'rxjs';
-import { Audience, Channel, CommunicationsDataSource, ComposeInput, ComposePreview, MessageTemplate, NewNotice, NoticeDataSource, NoticeView, SentView, TemplateInput } from '../domain';
+import {
+  Audience,
+  Channel,
+  CommunicationsDataSource,
+  ComposeInput,
+  ComposePreview,
+  ConversationAction,
+  ConversationView,
+  InboxDataSource,
+  MessageTemplate,
+  NewNotice,
+  NoticeDataSource,
+  NoticeView,
+  ResidentMessage,
+  SentView,
+  TemplateInput,
+} from '../domain';
 import { HttpPort, toApiErrorFromHttp } from './http-port';
 
 /**
@@ -73,5 +89,34 @@ export class HttpNoticeDataSource extends HttpPort implements NoticeDataSource {
 
   act(id: string, action: { type: 'pin' | 'unpin' } | { type: 'withdraw'; reason: string }, expectedVersion?: number): Observable<void> {
     return this.command('POST', `/notices/${id}/actions`, { action, expectedVersion }, ['notices']);
+  }
+
+  markRead(id: string): Observable<void> {
+    return this.http.post<void>(`${this.base}/me/notices/${id}/read`, {}, { withCredentials: true }).pipe(catchError((e) => throwError(() => toApiErrorFromHttp(e))));
+  }
+}
+
+/** The Inbox over HTTP: conversations with owners, tenants and trustees; replies go out by email, SMS or the portal and are recorded in Sent. */
+@Injectable()
+export class HttpInboxDataSource extends HttpPort implements InboxDataSource {
+  list(schemeIds: string[]): Observable<ConversationView[]> {
+    return this.live<ConversationView[]>('/inbox', ['inbox', 'work-items'], { schemeIds });
+  }
+
+  get(id: string): Observable<ConversationView | undefined> {
+    return this.live<ConversationView>(`/inbox/${id}`, ['inbox']).pipe(catchError((e) => (e.kind === 'not-found' ? of(undefined) : throwError(() => e))));
+  }
+
+  /** Returns the Task id for "to-task"; the conversation id otherwise. */
+  act(id: string, action: ConversationAction, expectedVersion?: number): Observable<string> {
+    return this.command<{ id: string }>('POST', `/inbox/${id}/actions`, { action, expectedVersion }, ['inbox', 'work-items', 'communications']).pipe(map((r) => r.id));
+  }
+
+  mine(): Observable<ConversationView[]> {
+    return this.live<ConversationView[]>('/me/conversations', ['inbox', 'session']);
+  }
+
+  write(message: ResidentMessage): Observable<string> {
+    return this.createId('/me/conversations', message, ['inbox']);
   }
 }

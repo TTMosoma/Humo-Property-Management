@@ -106,6 +106,16 @@ public sealed class SentRecords(HumoDbContext db, TimeProvider clock)
         };
     }
 
+    /// <summary>Read receipts from the portal: the person opened it there. Only portal deliveries that arrived are marked; email and SMS can't tell us.</summary>
+    public async Task MarkReadAsync(IEnumerable<Guid> sentMessageIds, Guid personId, CancellationToken ct)
+    {
+        var ids = sentMessageIds.Distinct().ToList();
+        if (ids.Count == 0) return;
+        var unread = await db.Deliveries.Where(d => ids.Contains(d.SentMessageId) && d.PersonId == personId && d.Channel == "portal" && d.Status == "delivered").ToListAsync(ct);
+        foreach (var d in unread) Mark(d, "read", null);
+        if (unread.Count > 0) await db.SaveChangesAsync(ct);
+    }
+
     /// <summary>The agency's phone (Settings › Agency), or the documents contact phone when the agency details don't have one.</summary>
     public static async Task<string> AgencyPhoneAsync(HumoDbContext db, Guid orgId, CancellationToken ct)
     {

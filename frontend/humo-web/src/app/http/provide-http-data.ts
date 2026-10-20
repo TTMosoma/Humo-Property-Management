@@ -49,7 +49,7 @@ import {
 } from '../domain';
 import { ContractorNetwork } from '../domain/contractor';
 import { HttpAccessDataSource } from './http-access';
-import { HttpCommunicationsDataSource, HttpNoticeDataSource } from './http-communications';
+import { HttpCommunicationsDataSource, HttpInboxDataSource, HttpNoticeDataSource } from './http-communications';
 import { HttpAuditDataSource, HttpSecurityDataSource } from './http-audit-security';
 import { HttpBoardDataSource } from './http-board';
 import { HttpAccountDataSource, HttpBillingDataSource, HttpCollectionDataSource, HttpLevyDataSource, HttpMeterDataSource, HttpReceiptDataSource, HttpWorkItemDataSource } from './http-finance';
@@ -78,7 +78,6 @@ const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
   [ComplianceDataSource, 'ComplianceDataSource'],
   [ReportDataSource, 'ReportDataSource'],
   [OpsDataSource, 'OpsDataSource'],
-  [InboxDataSource, 'InboxDataSource'],
   [StaffDataSource, 'StaffDataSource'],
   [BudgetDataSource, 'BudgetDataSource'],
   [RulesDataSource, 'RulesDataSource'],
@@ -135,6 +134,7 @@ export function provideHttpData(): EnvironmentProviders {
     // R-5: Communications: Sent with delivery results, Compose, templates and notices.
     { provide: CommunicationsDataSource, useClass: HttpCommunicationsDataSource },
     { provide: NoticeDataSource, useClass: HttpNoticeDataSource },
+    { provide: InboxDataSource, useClass: HttpInboxDataSource },
     ...pending,
   ]);
 }

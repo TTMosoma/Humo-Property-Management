@@ -47,6 +47,7 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
     public DbSet<DeliveryRow> Deliveries => Set<DeliveryRow>();
     public DbSet<MessageTemplateRow> MessageTemplates => Set<MessageTemplateRow>();
     public DbSet<NoticeRow> SchemeNotices => Set<NoticeRow>();
+    public DbSet<ConversationRow> Conversations => Set<ConversationRow>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Notice> Notices => Set<Notice>();
     public DbSet<NoticeRead> NoticeReads => Set<NoticeRead>();
@@ -396,6 +397,20 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.Property(x => x.Version).IsConcurrencyToken();
             e.HasIndex(x => new { x.SchemeId, x.Ref }).IsUnique();
             e.HasOne<Scheme>().WithMany().HasForeignKey(x => x.SchemeId);
+        });
+
+        builder.Entity<ConversationRow>(e =>
+        {
+            e.ToTable("Conversations");
+            e.Property(x => x.Ref).HasMaxLength(20);
+            e.Property(x => x.Subject).HasMaxLength(200);
+            e.Property(x => x.Status).HasMaxLength(10);
+            e.Property(x => x.AssigneeId).HasMaxLength(40);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => new { x.OrganisationId, x.Ref }).IsUnique();
+            e.HasIndex(x => new { x.SchemeId, x.Status });
+            e.HasIndex(x => x.PersonId);
+            e.HasOne<Person>().WithMany().HasForeignKey(x => x.PersonId);
         });
 
         builder.Entity<Invoice>(e =>
