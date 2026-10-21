@@ -30,6 +30,7 @@ public sealed class HumoApiFactory : WebApplicationFactory<Program>
         ["ConnectionStrings:Humo"] = "Host=unused-in-tests",
         ["Database:Initialise"] = "EnsureCreated",
         ["Mail:Provider"] = "Log",
+        ["Mail:WebhookSecret"] = MailEvents.Secret,
         // The tests run the billing run themselves (POST /api/platform/billing/run).
         ["Billing:Enabled"] = "false",
         // Tests that move the clock sign in again many times a (real) minute.
@@ -176,14 +177,19 @@ public sealed class CapturedEmail : IEmailSender
 {
     public ConcurrentQueue<EmailMessage> Sent { get; } = new();
 
+    /// <summary>The Message-IDs given to the messages sent, in order: what the provider's events quote back.</summary>
+    public ConcurrentQueue<string> MessageIds { get; } = new();
+
     /// <summary>Stands in for a mail server that's down.</summary>
     public bool Failing { get; set; }
 
-    public Task SendAsync(EmailMessage message, CancellationToken ct = default)
+    public Task<string> SendAsync(EmailMessage message, CancellationToken ct = default)
     {
         if (Failing) throw new InvalidOperationException("The mail server is down");
         Sent.Enqueue(message);
-        return Task.CompletedTask;
+        var id = $"{Guid.NewGuid():N}@test.humo";
+        MessageIds.Enqueue(id);
+        return Task.FromResult(id);
     }
 }
 

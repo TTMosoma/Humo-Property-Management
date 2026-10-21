@@ -84,6 +84,7 @@ public sealed class SentTests : IDisposable
         await NoContent(await Letter(s.Finance, s.Account42, "email"));
         await NoContent(await Letter(s.Finance, s.Account12, "sms"));
         await Settled();
+        await MailEvents.ProviderConfirmsEmails(api);
 
         var sent = await Sent(s.Finance, s.Kc);
         Assert.Equal(2, sent.Length);
@@ -109,6 +110,62 @@ public sealed class SentTests : IDisposable
         // Trustees see what was sent in their scheme; cancelling something already sent is refused.
         Assert.Equal(2, (await Sent(s.Trustee, s.Kc)).Length);
         Assert.True((await (await s.Finance.PostAsync($"/api/communications/sent/{after.GetProperty("message").GetProperty("id").GetString()}/cancel", null)).FieldErrors()).TryGetProperty("sendAt", out _));
+    }
+
+    [Fact]
+    public async Task A_delivered_event_from_the_provider_marks_the_email_delivered()
+    {
+        var s = await Scheme();
+        await NoContent(await Letter(s.Finance, s.Account42, "email"));
+        await HumoApiFactory.Until(() => api.Db(db => db.Deliveries.AnyAsync(d => d.Channel == "email" && d.Status == "queued")));
+        var messageId = await ProviderIdOfQueuedEmail();
+
+        Assert.Equal(HttpStatusCode.OK, (await MailEvents.Report(api, messageId, "delivered", recipient: "sipho@mail.example")).StatusCode);
+        var message = (await Sent(s.Finance, s.Kc)).Single();
+        Assert.Equal(1, message.GetProperty("counts").GetProperty("delivered").GetInt32());
+    }
+
+    [Fact]
+    public async Task A_bounce_shows_in_Sent_with_the_providers_reason()
+    {
+        var s = await Scheme();
+        await NoContent(await Letter(s.Finance, s.Account42, "email"));
+        await HumoApiFactory.Until(() => api.Db(db => db.Deliveries.AnyAsync(d => d.Channel == "email" && d.Status == "queued")));
+
+        Assert.Equal(HttpStatusCode.OK, (await MailEvents.Report(api, await ProviderIdOfQueuedEmail(), "bounced", "mailbox full")).StatusCode);
+        var message = (await Sent(s.Finance, s.Kc)).Single();
+        var delivery = message.GetProperty("message").GetProperty("deliveries")[0];
+        Assert.Equal(("bounced", 1), (delivery.GetProperty("status").GetString(), message.GetProperty("counts").GetProperty("bounced").GetInt32()));
+        Assert.Contains("mailbox full", delivery.GetProperty("error").GetString());
+    }
+
+    [Fact]
+    public async Task A_bounce_without_a_signature_is_refused_and_changes_nothing()
+    {
+        var s = await Scheme();
+        await NoContent(await Letter(s.Finance, s.Account42, "email"));
+        await HumoApiFactory.Until(() => api.Db(db => db.Deliveries.AnyAsync(d => d.Channel == "email" && d.Status == "queued")));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, (await MailEvents.Report(api, await ProviderIdOfQueuedEmail(), "delivered", sign: false)).StatusCode);
+        Assert.Equal(1, (await Sent(s.Finance, s.Kc)).Single().GetProperty("counts").GetProperty("queued").GetInt32());
+    }
+
+    [Fact]
+    public async Task An_event_for_a_different_address_is_ignored()
+    {
+        var s = await Scheme();
+        await NoContent(await Letter(s.Finance, s.Account42, "email"));
+        await HumoApiFactory.Until(() => api.Db(db => db.Deliveries.AnyAsync(d => d.Channel == "email" && d.Status == "queued")));
+
+        Assert.Equal(HttpStatusCode.OK, (await MailEvents.Report(api, await ProviderIdOfQueuedEmail(), "delivered", recipient: "someone@else.example")).StatusCode);
+        Assert.Equal(1, (await Sent(s.Finance, s.Kc)).Single().GetProperty("counts").GetProperty("queued").GetInt32());
+    }
+
+    /// <summary>The provider's Message-ID for the queued letter email (the test's setup also sends invitations).</summary>
+    private async Task<string> ProviderIdOfQueuedEmail()
+    {
+        await HumoApiFactory.Until(() => api.Db(db => db.Deliveries.AnyAsync(d => d.Channel == "email" && d.Status == "queued" && d.ProviderMessageId != null)));
+        return await api.Db(db => db.Deliveries.Where(d => d.Channel == "email" && d.Status == "queued").Select(d => d.ProviderMessageId!).SingleAsync());
     }
 
     private Task<HttpResponseMessage> Report(string reference, string status)
@@ -137,6 +194,7 @@ public sealed class SentTests : IDisposable
 
         api.Email.Failing = false;
         await NoContent(await s.Finance.PostAsync($"/api/communications/sent/{id}/retry", null));
+        await MailEvents.ProviderConfirmsEmails(api);
         await HumoApiFactory.Until(() => api.Db(db => db.Deliveries.AllAsync(d => d.Status == "delivered")));
         Assert.Equal("sipho@mail.example", Assert.Single(api.Email.Sent).To);
         Assert.True((await (await s.Finance.PostAsync($"/api/communications/sent/{id}/retry", null)).FieldErrors()).TryGetProperty("deliveries", out _));
@@ -149,6 +207,7 @@ public sealed class SentTests : IDisposable
         var s = await Scheme();
         Assert.Equal(1, await (await s.Finance.PostAsJsonAsync("/api/collections/reminders", new { accountIds = new[] { s.Account42.ToString(), s.Account12.ToString() }, channel = "email" })).Content.ReadFromJsonAsync<int>());
         await Settled();
+        await MailEvents.ProviderConfirmsEmails(api);
         var message = Assert.Single(await Sent(s.Finance, s.Kc)).GetProperty("message");
         Assert.Equal(("reminder", "1 account in arrears · Kingfisher Court"), (message.GetProperty("kind").GetString(), message.GetProperty("audienceLabel").GetString()));
         Assert.Equal("delivered", Assert.Single(message.GetProperty("deliveries").EnumerateArray()).GetProperty("status").GetString());
