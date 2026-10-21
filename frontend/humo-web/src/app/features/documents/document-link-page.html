@@ -1,0 +1,91 @@
+<header class="bar">
+  <ui-logo variant="full" [reverse]="true" [height]="30" />
+</header>
+
+@if (step() === 'view' && statement(); as s) {
+  <main class="viewer">
+    <div class="viewer-actions">
+      <div>
+        <h1>{{ info()?.title }}</h1>
+        <p class="sub">{{ s.view.scheme.name }} · Unit {{ s.view.unit.number }} · from {{ info()?.agencyName }}</p>
+      </div>
+      <button type="button" class="btn btn-primary" [disabled]="downloading()" (click)="download()">
+        <ion-icon name="download-outline" aria-hidden="true" /> {{ downloading() ? 'Preparing…' : 'Download PDF' }}
+      </button>
+    </div>
+    <app-levy-statement-document [view]="s.view" [design]="s.design" [branding]="s.branding" [settings]="s.settings" [organisationName]="s.organisationName" />
+    <p class="foot">This page closes after 30 minutes. Open the link in your email again whenever you need it, until {{ until() }}.</p>
+  </main>
+} @else {
+  <main class="panel">
+    <div class="card">
+      @switch (step()) {
+        @case ('loading') {
+          <p class="sub" aria-live="polite">Opening your link…</p>
+        }
+        @case ('start') {
+          <span class="icon" aria-hidden="true"><ion-icon name="document-lock-outline" /></span>
+          <h1>{{ info()!.title }}</h1>
+          <p class="sub">{{ info()!.schemeName }} · from {{ info()!.agencyName }}</p>
+          <p>For your privacy, we’ll {{ info()!.codeChannel === 'sms' ? 'SMS' : 'email' }} a one-time code to {{ info()!.codeSentTo }} before showing your statement.</p>
+          @if (error()) {
+            <p class="error" role="alert"><ion-icon name="alert-circle-outline" aria-hidden="true" /> {{ error() }}</p>
+          }
+          <button type="button" class="btn btn-primary big" [disabled]="busy()" (click)="sendCode()">
+            <ion-icon [name]="info()!.codeChannel === 'sms' ? 'chatbox-outline' : 'mail-outline'" aria-hidden="true" /> {{ busy() ? 'Sending…' : 'Send me a code' }}
+          </button>
+          <p class="hint">Have a Humo Property Management account? <a routerLink="/sign-in">Sign in</a> to see every statement.</p>
+        }
+        @case ('code') {
+          <span class="icon" aria-hidden="true"><ion-icon name="keypad-outline" /></span>
+          <h1>Enter your code</h1>
+          <p class="sub">We {{ sentBy() === 'sms' ? 'sent an SMS' : 'emailed it' }} to {{ sentTo() }}. It expires in 10 minutes.</p>
+          <form class="form" novalidate (submit)="$event.preventDefault(); verify()">
+            <label class="field">
+              <span class="label">6-digit code</span>
+              <input
+                class="code"
+                type="text"
+                name="code"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                [value]="code()"
+                [attr.aria-invalid]="!!error()"
+                [attr.aria-describedby]="error() ? 'code-error' : null"
+                (input)="setCode($event)"
+              />
+              @if (error()) {
+                <span class="error" id="code-error" role="alert"><ion-icon name="alert-circle-outline" aria-hidden="true" /> {{ error() }}</span>
+              }
+            </label>
+            <button type="submit" class="btn btn-primary big" [disabled]="busy()">{{ busy() ? 'Checking…' : 'Open my statement' }}</button>
+          </form>
+          <button type="button" class="btn btn-ghost" [disabled]="busy() || resendIn() > 0" (click)="sendCode()">
+            {{ resendIn() > 0 ? 'Send a new code in ' + resendIn() + 's' : 'Send a new code' }}
+          </button>
+        }
+        @case ('expired') {
+          <span class="icon muted" aria-hidden="true"><ion-icon name="time-outline" /></span>
+          <h1>This link has expired</h1>
+          <p>Links to statements work for 90 days. Sign in to Humo Property Management to see it, or ask your managing agent to send it again.</p>
+          <a class="btn btn-secondary big" routerLink="/sign-in">Sign in</a>
+        }
+        @case ('no-contact') {
+          <span class="icon muted" aria-hidden="true"><ion-icon name="call-outline" /></span>
+          <h1>We can’t send you a code</h1>
+          <p>There’s no mobile number or email address on record for you. Please contact {{ info()?.agencyName }} to update your details.</p>
+        }
+        @case ('not-found') {
+          <span class="icon muted" aria-hidden="true"><ion-icon name="unlink-outline" /></span>
+          <h1>This link isn’t valid</h1>
+          <p>Check that you opened the whole link from your email, or ask your managing agent to send the statement again.</p>
+        }
+        @default {
+          <span class="icon muted" aria-hidden="true"><ion-icon name="cloud-offline-outline" /></span>
+          <h1>Statements can’t be opened right now</h1>
+          <p>Please try again in a few minutes.</p>
+        }
+      }
+    </div>
+  </main>
+}

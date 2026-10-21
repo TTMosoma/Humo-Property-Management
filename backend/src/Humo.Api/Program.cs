@@ -39,6 +39,7 @@ builder.Services.AddScoped<Humo.Api.Commercial.CardPayments>();
 builder.Services.AddScoped<Humo.Api.Finance.AccountLedger>();
 builder.Services.AddScoped<Humo.Api.Finance.LevyBilling>();
 builder.Services.AddScoped<Humo.Api.Finance.StatementService>();
+builder.Services.AddScoped<Humo.Api.Documents.DocumentLinks>();
 builder.Services.AddSingleton<Humo.Api.Finance.PrintTokens>();
 builder.Services.AddScoped<Humo.Api.Finance.DocumentPrinter>();
 builder.Services.AddScoped<Humo.Api.Messaging.SentRecords>();
@@ -113,6 +114,9 @@ builder.Services.AddRateLimiter(o =>
     o.AddPolicy(RateLimits.SignIn, ctx => RateLimitPartition.GetFixedWindowLimiter(
         ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = config.GetValue("Auth:SignInRequestsPerMinute", 10), Window = TimeSpan.FromMinutes(1) }));
+    o.AddPolicy(RateLimits.DocumentLinks, ctx => RateLimitPartition.GetFixedWindowLimiter(
+        ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = config.GetValue("Documents:LinkRequestsPerMinute", 30), Window = TimeSpan.FromMinutes(1) }));
 });
 
 // Behind Caddy on the VPS: trust its X-Forwarded-For/Proto. The API's port is only reachable from Caddy (docker network).
@@ -159,6 +163,7 @@ Humo.Api.Finance.BillingRunEndpoints.MapBillingRuns(api);
 Humo.Api.Finance.MeterEndpoints.MapMetersAndLevies(api);
 Humo.Api.Work.WorkItemEndpoints.MapWorkItems(api);
 Humo.Api.Finance.StatementEndpoints.MapStatements(api);
+Humo.Api.Documents.DocumentLinkEndpoints.MapDocumentLinks(api);
 Humo.Api.Finance.CreditControlEndpoints.MapCreditControl(api);
 Humo.Api.Messaging.SentEndpoints.MapSent(api);
 Humo.Api.Messaging.CommunicationsEndpoints.MapCommunications(api);

@@ -37,7 +37,7 @@ public sealed record StatementSnapshot(StatementViewDto View, TemplateDesign Des
 /// resident portal by default; the PDF attached when the agency chooses that.
 /// </summary>
 public sealed class StatementService(HumoDbContext db, Commercial.CommercialRecords commercial, DocumentPrinter printer, IEmailSender email, Messaging.SentRecords sent,
-    IOptions<AppOptions> app, TimeProvider clock, ILogger<StatementService> logger)
+    DocumentLinks links, IOptions<AppOptions> app, TimeProvider clock, ILogger<StatementService> logger)
 {
     private DateOnly Today => DateOnly.FromDateTime(clock.GetUtcNow().ToOffset(TimeSpan.FromHours(2)).DateTime);
 
@@ -160,9 +160,16 @@ public sealed class StatementService(HumoDbContext db, Commercial.CommercialReco
                     continue;
                 }
                 var attach = snapshot.Settings.StatementDelivery == "attachment" && pdf is not null;
+                // Otherwise a secure link that opens with a one-time code: no Humo PM account needed.
+                string? secureLink = null;
+                if (!attach)
+                {
+                    secureLink = links.Create(issued, holder.Id);
+                    await db.SaveChangesAsync(ct);
+                }
                 try
                 {
-                    await email.SendAsync(Message(snapshot, holder.Email, attach ? pdf : null), ct);
+                    await email.SendAsync(Message(snapshot, holder.Email, attach ? pdf : null, secureLink), ct);
                 }
                 catch (Exception e) when (e is not OperationCanceledException)
                 {
@@ -204,23 +211,25 @@ public sealed class StatementService(HumoDbContext db, Commercial.CommercialReco
             by, source, to, skipped, ct);
     }
 
-    private EmailMessage Message(StatementSnapshot s, string to, byte[]? pdf)
+    private EmailMessage Message(StatementSnapshot s, string to, byte[]? pdf, string? secureLink)
     {
         var v = s.View;
-        var link = $"{app.Value.PublicUrl.TrimEnd('/')}/my/statements/{v.Statement.Period}";
+        var portal = $"{app.Value.PublicUrl.TrimEnd('/')}/my/statements/{v.Statement.Period}";
         var due = DateOnly.ParseExact(v.Statement.DueOn, "yyyy-MM-dd", CultureInfo.InvariantCulture).ToString("d MMMM yyyy", CultureInfo.InvariantCulture);
         var owing = v.Statement.Closing > 0 ? $"The balance owing is {BillingRules.Rand(v.Statement.Closing)}, due by {due}." : v.Statement.Closing < 0
             ? $"Your account is {BillingRules.Rand(-v.Statement.Closing)} in credit." : "Your account is paid up.";
         var reach = string.Join(" or ", new[] { s.Settings.Contact.Email, s.Settings.Contact.Phone }.Where(c => !string.IsNullOrWhiteSpace(c)));
         var questions = reach.Length > 0 ? $"Questions about your statement? Contact {s.OrganisationName} at {reach}." : $"Questions about your statement? Reply to {s.OrganisationName}.";
-        var how = pdf is not null ? "Your statement is attached as a PDF. You can also see it, and every earlier statement, in the resident portal:" : "See your statement in the resident portal:";
+        var how = pdf is not null
+            ? $"Your statement is attached as a PDF. You can also see it, and every earlier statement, in the resident portal:\n{portal}"
+            : $"Open your statement here:\n{secureLink}\n\nFor your privacy, we’ll send a one-time code to your phone (or this email address) when you open it. The link works for 90 days. "
+              + $"With a Humo Property Management account you can also sign in to see every statement:\n{portal}";
         var text = $"""
             Dear {v.Holder.DisplayName},
 
             Your {v.Scheme.Name} levy statement for unit {v.Unit.Number}, {v.Statement.PeriodLabel}, is ready. {owing}
 
             {how}
-            {link}
 
             Pay into the scheme’s trust account and use {v.Account.AccountNo} as the reference.
 

@@ -186,6 +186,84 @@ public sealed class StatementTests : IDisposable
     }
 
     [Fact]
+    public async Task An_owner_opens_their_statement_from_the_email_with_a_code_and_no_account()
+    {
+        var s = await Scheme();
+        await PostedRun(s);
+        var res = await s.Finance.PostAsync($"/api/accounts/{s.Account42}/statements/2026-11/send", null);
+        Assert.True(res.StatusCode == HttpStatusCode.OK, await res.Content.ReadAsStringAsync());
+        await HumoApiFactory.Until(() => !api.Email.Sent.IsEmpty);
+        var email = Assert.Single(api.Email.Sent);
+        var token = System.Text.RegularExpressions.Regex.Match(email.Text, "/d/([0-9a-f]{64})").Groups[1].Value;
+        Assert.NotEmpty(token);
+        Assert.Contains("one-time code", email.Text);
+        await HumoApiFactory.Until(() => api.Db(db => db.Deliveries.AnyAsync(d => d.Status == "delivered")));
+
+        // No session: the link alone shows only what it is and where the code will go.
+        var anyone = api.Client();
+        var link = $"/api/document-links/{token}";
+        Assert.Equal(HttpStatusCode.NotFound, (await anyone.GetAsync($"/api/document-links/{new string('0', 64)}")).StatusCode);
+        var info = await Ok(await anyone.GetAsync(link));
+        Assert.Equal(("Levy statement · November 2026", "Kingfisher Court", "sms", "the number ending 0274"), (info.GetProperty("title").GetString(),
+            info.GetProperty("schemeName").GetString(), info.GetProperty("codeChannel").GetString(), info.GetProperty("codeSentTo").GetString()));
+        Assert.Equal(HttpStatusCode.Unauthorized, (await anyone.GetAsync($"{link}/document")).StatusCode);
+
+        // The code goes by SMS to the mobile on record, and counts in the agency's SMS this month.
+        Assert.Equal("sms", (await Ok(await anyone.PostAsync($"{link}/code", null))).GetProperty("channel").GetString());
+        var sms = Assert.Single(api.Sms.Sent);
+        Assert.Equal("27835510274", sms.To);
+        var code = System.Text.RegularExpressions.Regex.Match(sms.Text, "^\\d{6}").Value;
+        Assert.Equal(1, await api.Db(db => db.MessageUsage.Where(u => u.Channel == "sms").Select(u => u.Units).SingleAsync()));
+        Assert.Equal(HttpStatusCode.TooManyRequests, (await anyone.PostAsync($"{link}/code", null)).StatusCode);
+
+        var wrong = ((int.Parse(code) + 1) % 1_000_000).ToString("D6");
+        var refused = await anyone.PostAsJsonAsync($"{link}/verify", new { code = wrong });
+        Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+        Assert.Equal("wrong-code", (await refused.Json()).GetProperty("code").GetString());
+        var grant = (await Ok(await anyone.PostAsJsonAsync($"{link}/verify", new { code }))).GetProperty("grant").GetString();
+        // A code works once.
+        Assert.Equal(HttpStatusCode.BadRequest, (await anyone.PostAsJsonAsync($"{link}/verify", new { code })).StatusCode);
+
+        anyone.DefaultRequestHeaders.Add("X-Document-Grant", grant);
+        var snapshot = await Ok(await anyone.GetAsync($"{link}/document"));
+        Assert.Equal("2026-11", snapshot.GetProperty("view").GetProperty("statement").GetProperty("period").GetString());
+        var pdf = await anyone.GetAsync($"{link}/pdf");
+        Assert.Equal("application/pdf", pdf.Content.Headers.ContentType?.MediaType);
+        // Opening it shows as read in Communications › Sent.
+        Assert.Equal("read", await api.Db(db => db.Deliveries.Select(d => d.Status).SingleAsync()));
+
+        // The viewing grant lasts 30 minutes; the link 90 days.
+        api.Clock.Advance(TimeSpan.FromMinutes(31));
+        Assert.Equal(HttpStatusCode.Unauthorized, (await anyone.GetAsync($"{link}/document")).StatusCode);
+        api.Clock.Advance(TimeSpan.FromDays(90));
+        Assert.Equal(HttpStatusCode.Gone, (await anyone.GetAsync(link)).StatusCode);
+    }
+
+    [Fact]
+    public async Task With_no_mobile_on_record_the_code_goes_by_email()
+    {
+        var s = await Scheme();
+        await PostedRun(s);
+        await api.Db(async db =>
+        {
+            (await db.People.SingleAsync(p => p.Email == "sipho@mail.example")).Phone = "";
+            return await db.SaveChangesAsync();
+        });
+        Assert.Equal(HttpStatusCode.OK, (await s.Finance.PostAsync($"/api/accounts/{s.Account42}/statements/2026-11/send", null)).StatusCode);
+        await HumoApiFactory.Until(() => !api.Email.Sent.IsEmpty);
+        var token = System.Text.RegularExpressions.Regex.Match(Assert.Single(api.Email.Sent).Text, "/d/([0-9a-f]{64})").Groups[1].Value;
+
+        var anyone = api.Client();
+        var sent = await Ok(await anyone.PostAsync($"/api/document-links/{token}/code", null));
+        Assert.Equal(("email", "s•••@mail.example"), (sent.GetProperty("channel").GetString(), sent.GetProperty("sentTo").GetString()));
+        Assert.Empty(api.Sms.Sent);
+        var codeEmail = api.Email.Sent.Last();
+        Assert.Equal("sipho@mail.example", codeEmail.To);
+        var code = System.Text.RegularExpressions.Regex.Match(codeEmail.Text, "\\b\\d{6}\\b").Value;
+        Assert.Equal(HttpStatusCode.OK, (await anyone.PostAsJsonAsync($"/api/document-links/{token}/verify", new { code })).StatusCode);
+    }
+
+    [Fact]
     public async Task A_PDF_that_failed_to_render_is_rendered_on_first_download()
     {
         var s = await Scheme();
