@@ -11,3 +11,7 @@ obj/
 TestResults/
 # Server secrets: never commit (doc 26 §2)
 .env
+
+# Local uploaded files (backend Files:Root in development)
+storage/
+backend/src/Humo.Api/storage/

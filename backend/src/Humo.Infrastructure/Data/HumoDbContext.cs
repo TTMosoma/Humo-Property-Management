@@ -67,6 +67,7 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
     public DbSet<SignInLink> SignInLinks => Set<SignInLink>();
     public DbSet<UserSession> UserSessions => Set<UserSession>();
     public DbSet<TrustedBrowser> TrustedBrowsers => Set<TrustedBrowser>();
+    public DbSet<UploadedFile> UploadedFiles => Set<UploadedFile>();
     public DbSet<DocumentLink> DocumentLinks => Set<DocumentLink>();
     public DbSet<ImpersonationSession> ImpersonationSessions => Set<ImpersonationSession>();
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
@@ -623,6 +624,19 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.Property(s => s.Method).HasMaxLength(20);
             e.Property(s => s.Device).HasMaxLength(120);
             e.Property(s => s.Ip).HasMaxLength(64);
+        });
+
+        builder.Entity<UploadedFile>(e =>
+        {
+            e.ToTable("UploadedFiles");
+            e.HasIndex(f => f.SchemeId);
+            e.HasIndex(f => f.StorageKey).IsUnique();
+            e.Property(f => f.Name).HasMaxLength(200);
+            e.Property(f => f.ContentType).HasMaxLength(100);
+            e.Property(f => f.Sha256).HasMaxLength(64);
+            e.Property(f => f.StorageKey).HasMaxLength(64);
+            e.Property(f => f.ScanResult).HasMaxLength(20);
+            e.Property(f => f.UploadedBy).HasMaxLength(200);
         });
 
         builder.Entity<TrustedBrowser>(e =>
