@@ -132,7 +132,6 @@ export class MockAuthSession {
   // ---- Sign-in links (SIMULATED, docs/18 R-8): kept in memory; the "email" is shown by the prototype controls.
 
   private readonly links = new Map<string, { identityId: string; code: string; triesLeft: number; expiresAt: number }>();
-  lastLink: { email: string; token: string; code: string; delivered: boolean } | null = null;
 
   /**
    * A one-time link for an active identity, and the six-digit code the asking
@@ -143,7 +142,6 @@ export class MockAuthSession {
     const token = `lnk-${Math.random().toString(36).slice(2, 12)}`;
     const code = String(Math.floor(Math.random() * 1_000_000)).padStart(6, '0');
     if (who) this.links.set(token, { identityId: who.id, code, triesLeft: MAX_LINK_TRIES, expiresAt: Date.now() + 15 * 60_000 });
-    this.lastLink = { email, token, code, delivered: !!who };
     return code;
   }
 

@@ -27,10 +27,12 @@ public static class SecurityEndpoints
         g.MapPost("/passkeys/{id}/remove", RemovePasskey);
         g.MapPost("/devices/{id}/remove", RemoveDevice);
         g.MapPost("/browser", AnswerBrowserTrust);
+        g.MapPost("/sessions/{id}/sign-out", SignOutSession);
         g.MapPost("/sign-out-others", SignOutOthers);
     }
 
-    private static async Task<IResult> Profile(HttpContext http, CurrentActor current, UserManager<HumoUser> users, HumoDbContext db, TimeProvider clock, CancellationToken ct)
+    private static async Task<IResult> Profile(HttpContext http, ClaimsPrincipal principal, CurrentActor current, UserManager<HumoUser> users, HumoDbContext db,
+        SignInSessions sessions, TimeProvider clock, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         var me = actor.Human;
@@ -43,15 +45,19 @@ public static class SecurityEndpoints
             .Where(t => t.ExpiresAt > now)
             .OrderBy(t => t.CreatedAt)
             .ToList();
-        var ip = http.Connection.RemoteIpAddress?.ToString() ?? "";
-        var agent = http.Request.Headers.UserAgent.ToString();
-        var nowText = now.ToString("O");
+        var here = await sessions.CurrentAsync(principal, ct);
+        // Every session still in force: not signed out, not past its limits. The limits are checked here, as SessionGuard does.
+        var active = (await db.UserSessions.AsNoTracking()
+            .Where(s => s.UserId == me.Id && s.RevokedAt == null)
+            .ToListAsync(ct))
+            .Where(s => s.AbsoluteExpiresAt > now && now - s.LastActiveAt <= TimeSpan.FromMinutes(s.IdleMinutes))
+            .OrderByDescending(s => s.LastActiveAt)
+            .ToList();
         return Results.Ok(new SecurityProfileDto(
             me.Id.ToString(),
             passkeys.Select(p => new PasskeyDto(WebEncoders.Base64UrlEncode(p.CredentialId), p.Name ?? "Passkey", p.IsBackupEligible ? "Synced passkey" : "Device passkey", p.CreatedAt.ToString("O"), null)).ToList(),
             remembered.Select(t => new TrustedDeviceDto(t.Id.ToString(), t.Label, SignInSessions.KindOf(t.Label), t.Trusted, false, t.CreatedAt.ToString("O"), t.CreatedAt.ToString("O"))).ToList(),
-            // Only this session is listed: the cookie holds the session, the server doesn't track devices yet.
-            [new ActiveSessionDto("current", agent.Length > 0 ? agent[..Math.Min(agent.Length, 80)] : "This device", "", "", ip, nowText, nowText, true)]));
+            active.Select(s => new ActiveSessionDto(s.Id.ToString(), s.Device, "", "", s.Ip, s.StartedAt.ToString("O"), s.LastActiveAt.ToString("O"), s.Id == here?.Id)).ToList()));
     }
 
     private static async Task<IResult> RemovePasskey(string id, CurrentActor current, CommandRunner commands, UserManager<HumoUser> users, CancellationToken ct)
@@ -125,6 +131,29 @@ public static class SecurityEndpoints
             await sessions.ReissueAsync(me, principal, claims, signIn, ct);
         }
         return Results.NoContent();
+    }
+
+    /// <summary>Ends one of the person's other sessions. This one is ended with Sign out, not here.</summary>
+    private static async Task<IResult> SignOutSession(string id, ClaimsPrincipal principal, CurrentActor current, CommandRunner commands, SignInSessions sessions,
+        HumoDbContext db, CancellationToken ct)
+    {
+        if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
+        var me = actor.Human;
+        if (!Guid.TryParse(id, out var sessionId)) return Problems.NotFound();
+        var target = await db.UserSessions.AsNoTracking().FirstOrDefaultAsync(s => s.Id == sessionId && s.UserId == me.Id && s.RevokedAt == null, ct);
+        if (target is null) return Problems.NotFound();
+        if (await sessions.CurrentAsync(principal, ct) is { } here && here.Id == sessionId) return Problems.Policy("use-sign-out", "Sign out of this session with Sign out.");
+
+        return await commands.RunAsync(new CommandSpec($"Signed out a session ({target.Device})", "Security.ManageOwn")
+        {
+            Resource = "Session",
+            Category = "security",
+            StepUp = true,
+        }, async _ =>
+        {
+            await sessions.RevokeAsync(sessionId, ct);
+            return Results.NoContent();
+        }, ct);
     }
 
     /// <summary>Every other session ends (security stamp); this one is re-issued and carries on.</summary>

@@ -152,6 +152,37 @@ public sealed partial class SessionTests : IDisposable
         Assert.Null(await api.Db(db => db.UserSessions.Select(s => s.RevokedAt).SingleAsync()));
     }
 
+    [Fact]
+    public async Task The_security_page_lists_every_session_and_signs_one_of_them_out()
+    {
+        var here = await api.SignedIn(HumoApiFactory.AdminEmail);
+        var elsewhere = await api.SignedIn(HumoApiFactory.AdminEmail);
+        await here.StepUp();
+
+        var sessions = (await (await here.GetAsync("/api/me/security")).Json()).GetProperty("sessions").EnumerateArray().ToList();
+        Assert.Equal(2, sessions.Count);
+        var current = Assert.Single(sessions, s => s.GetProperty("current").GetBoolean());
+        var other = Assert.Single(sessions, s => !s.GetProperty("current").GetBoolean());
+
+        // This session is ended with Sign out, not from this list.
+        Assert.NotEqual(HttpStatusCode.NoContent, (await here.PostAsync($"/api/me/security/sessions/{current.GetProperty("id").GetString()}/sign-out", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await here.PostAsync($"/api/me/security/sessions/{other.GetProperty("id").GetString()}/sign-out", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await elsewhere.GetAsync("/api/me")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await here.GetAsync("/api/me")).StatusCode);
+    }
+
+    [Fact]
+    public async Task A_session_that_has_gone_idle_is_not_listed()
+    {
+        var idle = await api.SignedIn(HumoApiFactory.AdminEmail);
+        api.Clock.Advance(TimeSpan.FromMinutes(16));
+        // Both sessions are past the 15-minute limit; signing in again leaves only the new one listed.
+        var stillHere = await api.SignedIn(HumoApiFactory.AdminEmail);
+        var sessions = (await (await stillHere.GetAsync("/api/me/security")).Json()).GetProperty("sessions").EnumerateArray().ToList();
+        Assert.Single(sessions);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await idle.GetAsync("/api/me")).StatusCode);
+    }
+
     // ---- "Is this your own computer?": asked once per browser ----
 
     [Fact]

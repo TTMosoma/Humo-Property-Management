@@ -115,12 +115,12 @@
               <span class="ico"><ion-icon [name]="s.browser === 'Humo Mobile' ? 'phone-portrait-outline' : 'globe-outline'" aria-hidden="true" /></span>
               <span class="li-text">
                 <span class="li-name">
-                  {{ s.browser }} · {{ s.device }}
+                  {{ s.device }}
                   @if (s.current) {
                     <ui-status-pill label="This session" tone="success" />
                   }
                 </span>
-                <span class="li-sub">{{ s.location }} · {{ s.ip }} · {{ s.current ? 'active now' : 'active ' + relativeTime(s.lastActiveAt) }}</span>
+                <span class="li-sub">{{ s.location ? s.location + ' · ' : '' }}{{ s.ip }} · {{ s.current ? 'active now' : 'active ' + relativeTime(s.lastActiveAt) }}</span>
               </span>
               @if (!s.current) {
                 <button type="button" class="btn btn-ghost btn-sm" (click)="signOut(s.id, s.device)" [disabled]="session.isImpersonating()">Sign out</button>

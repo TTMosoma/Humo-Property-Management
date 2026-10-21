@@ -3,9 +3,8 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { Subscription, map } from 'rxjs';
-import { Identity, ROLE_LABELS, SessionDataSource, SignInError, activeAssignments } from '../../domain';
+import { SessionDataSource, SignInError } from '../../domain';
 import { HUMO_PRODUCTS } from '../../core/product/product';
-import { PrototypeControls } from '../../core/prototype/prototype-controls';
 import { SessionService } from '../../core/session/session.service';
 import { Logo } from '../../ui/brand/logo';
 
@@ -51,8 +50,6 @@ export class SignInPage {
   private readonly sessions = inject(SessionDataSource);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
-  /** Demo accounts and "open the email" exist only with the mock data layer. */
-  protected readonly prototype = inject(PrototypeControls, { optional: true });
 
   private readonly params = toSignal(this.route.queryParamMap.pipe(map((p) => ({ name: p.get('name'), returnUrl: p.get('returnUrl'), token: p.get('token') }))), {
     initialValue: { name: null, returnUrl: null, token: null },
@@ -76,9 +73,6 @@ export class SignInPage {
   protected readonly linkCode = signal('');
   protected readonly codeError = signal('');
   protected readonly resendIn = signal(0);
-  protected readonly demoLink = signal<{ email: string; token: string; delivered: boolean } | null>(null);
-
-  protected readonly personas = toSignal(this.sessions.demoIdentities(), { initialValue: [] as Identity[] });
 
   private readonly heading = viewChild<ElementRef<HTMLElement>>('heading');
   private readonly emailInput = viewChild<ElementRef<HTMLInputElement>>('emailInput');
@@ -169,7 +163,6 @@ export class SignInPage {
       next: (code) => {
         this.shownCode.set(code);
         this.step.set('link-sent');
-        this.demoLink.set(this.prototype?.lastSignInLink() ?? null);
         this.countdown();
       },
       error: () => this.step.set('unavailable'),
@@ -196,23 +189,6 @@ export class SignInPage {
     this.step.set('start');
     this.passkeyFor.set('');
     queueMicrotask(() => this.emailInput()?.nativeElement.select());
-  }
-
-  /** Prototype: open the "email" — the same URL the real email's button would. */
-  protected openDemoLink(): void {
-    const link = this.demoLink();
-    if (!link) return;
-    void this.router.navigate(['/sign-in/link'], { queryParams: { token: link.token, returnUrl: this.params().returnUrl ?? undefined } });
-  }
-
-  protected useDemoAccount(p: Identity): void {
-    this.email.set(p.email);
-    this.emailError.set('');
-    this.passkey(p.email);
-  }
-
-  protected rolesOf(p: Identity): string {
-    return [...new Set(activeAssignments(p).map((x) => ROLE_LABELS[x.role]))].join(' · ');
   }
 
   // ---------------------------------------------------------------- Helpers

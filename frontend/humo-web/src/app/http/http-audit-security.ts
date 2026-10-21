@@ -77,9 +77,9 @@ export class HttpSecurityDataSource extends HttpPort implements SecurityDataSour
     return this.command('POST', `/me/security/devices/${encodeURIComponent(deviceId)}/remove`, null, ['session']);
   }
 
-  /** Only this session is listed; signing out "another" session signs out every other one. */
-  signOutSession(): Observable<void> {
-    return this.signOutOtherSessions();
+  /** Ends one of the person's other sessions (step-up). This session is ended with Sign out instead. */
+  signOutSession(_identityId: string, sessionId: string): Observable<void> {
+    return this.command('POST', `/me/security/sessions/${encodeURIComponent(sessionId)}/sign-out`, null, ['session']);
   }
 
   signOutOtherSessions(): Observable<void> {
