@@ -602,10 +602,9 @@ export class InMemorySessionDataSource extends SessionDataSource {
   answerBrowserTrust(trusted: boolean): Observable<void> {
     const id = this.auth.actor().id;
     this.auth.answerBrowser(id, trusted);
-    if (!trusted) return of(undefined);
     this.store.updateSecurity(id, (p) => ({
       ...p,
-      devices: [...p.devices.filter((d) => d.id !== THIS_BROWSER), { id: THIS_BROWSER, name: 'This browser', kind: 'laptop', humoMobile: false, addedAt: new Date().toISOString(), lastSeenAt: new Date().toISOString() }],
+      devices: [...p.devices.filter((d) => d.id !== THIS_BROWSER), { id: THIS_BROWSER, name: 'This browser', kind: 'laptop', trusted, humoMobile: false, addedAt: new Date().toISOString(), lastSeenAt: new Date().toISOString() }],
     }));
     return of(undefined);
   }

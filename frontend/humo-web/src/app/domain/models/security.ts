@@ -76,6 +76,8 @@ export interface TrustedDevice {
   id: string;
   name: string;
   kind: 'laptop' | 'phone' | 'tablet';
+  /** A browser's answer to "is this your own computer?": true for "mine", false for "shared". Humo Mobile devices are always trusted. */
+  trusted: boolean;
   /** Has Humo Mobile installed and can approve sign-ins and step-up requests. */
   humoMobile: boolean;
   addedAt: string;

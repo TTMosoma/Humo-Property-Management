@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Humo.Api.Auth;
 
 public sealed record PasskeyDto(string Id, string Name, string Provider, string CreatedAt, string? LastUsedAt);
-public sealed record TrustedDeviceDto(string Id, string Name, string Kind, bool HumoMobile, string AddedAt, string LastSeenAt);
+public sealed record TrustedDeviceDto(string Id, string Name, string Kind, bool Trusted, bool HumoMobile, string AddedAt, string LastSeenAt);
 public sealed record ActiveSessionDto(string Id, string Device, string Browser, string Location, string Ip, string StartedAt, string LastActiveAt, bool Current);
 public sealed record SecurityProfileDto(string IdentityId, IReadOnlyList<PasskeyDto> Passkeys, IReadOnlyList<TrustedDeviceDto> Devices, IReadOnlyList<ActiveSessionDto> Sessions);
 public sealed record BrowserTrustRequest(bool Trusted);
@@ -36,8 +36,9 @@ public static class SecurityEndpoints
         var me = actor.Human;
         var passkeys = await users.GetPasskeysAsync(me);
         var now = clock.GetUtcNow();
-        var trusted = (await db.TrustedBrowsers.AsNoTracking()
-            .Where(t => t.UserId == me.Id && t.Trusted && t.RevokedAt == null)
+        // Every browser that has answered the question, so a "shared" answer can be seen and removed too.
+        var remembered = (await db.TrustedBrowsers.AsNoTracking()
+            .Where(t => t.UserId == me.Id && t.RevokedAt == null)
             .ToListAsync(ct))
             .Where(t => t.ExpiresAt > now)
             .OrderBy(t => t.CreatedAt)
@@ -48,7 +49,7 @@ public static class SecurityEndpoints
         return Results.Ok(new SecurityProfileDto(
             me.Id.ToString(),
             passkeys.Select(p => new PasskeyDto(WebEncoders.Base64UrlEncode(p.CredentialId), p.Name ?? "Passkey", p.IsBackupEligible ? "Synced passkey" : "Device passkey", p.CreatedAt.ToString("O"), null)).ToList(),
-            trusted.Select(t => new TrustedDeviceDto(t.Id.ToString(), t.Label, SignInSessions.KindOf(t.Label), false, t.CreatedAt.ToString("O"), t.CreatedAt.ToString("O"))).ToList(),
+            remembered.Select(t => new TrustedDeviceDto(t.Id.ToString(), t.Label, SignInSessions.KindOf(t.Label), t.Trusted, false, t.CreatedAt.ToString("O"), t.CreatedAt.ToString("O"))).ToList(),
             // Only this session is listed: the cookie holds the session, the server doesn't track devices yet.
             [new ActiveSessionDto("current", agent.Length > 0 ? agent[..Math.Min(agent.Length, 80)] : "This device", "", "", ip, nowText, nowText, true)]));
     }
@@ -76,7 +77,7 @@ public static class SecurityEndpoints
     }
 
     /// <summary>
-    /// Stops trusting a browser. The question comes back the next time that browser signs in. Other sessions that were
+    /// Removes a browser's answer, trusted or shared. The question comes back the next time that browser signs in. Other sessions that were
     /// trusted on it end now; a session in this browser keeps going, with the limits of an untrusted sign-in. Its label
     /// is the only record of which browser a session came from.
     /// </summary>
@@ -86,7 +87,7 @@ public static class SecurityEndpoints
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         var me = actor.Human;
         if (!Guid.TryParse(id, out var deviceId)) return Problems.NotFound();
-        var device = await db.TrustedBrowsers.FirstOrDefaultAsync(t => t.Id == deviceId && t.UserId == me.Id && t.Trusted && t.RevokedAt == null, ct);
+        var device = await db.TrustedBrowsers.FirstOrDefaultAsync(t => t.Id == deviceId && t.UserId == me.Id && t.RevokedAt == null, ct);
         if (device is null) return Problems.NotFound();
 
         var now = clock.GetUtcNow();

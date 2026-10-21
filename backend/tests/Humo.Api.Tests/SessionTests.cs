@@ -168,15 +168,20 @@ public sealed partial class SessionTests : IDisposable
     }
 
     [Fact]
-    public async Task A_shared_answer_is_remembered_too_but_is_not_listed_as_a_trusted_device()
+    public async Task A_shared_answer_is_remembered_listed_as_shared_and_can_be_removed()
     {
         await Complete(await RequestLink(HumoApiFactory.AdminEmail));
         Assert.Equal(HttpStatusCode.NoContent, (await client.PostAsJsonAsync("/api/me/security/browser", new { trusted = false })).StatusCode);
 
         var again = await Complete(await RequestLink(HumoApiFactory.AdminEmail));
         Assert.False((await again.Json()).GetProperty("askBrowserTrust").GetBoolean());
-        var profile = await (await client.GetAsync("/api/me/security")).Json();
-        Assert.Empty(profile.GetProperty("devices").EnumerateArray());
+        var device = Assert.Single((await (await client.GetAsync("/api/me/security")).Json()).GetProperty("devices").EnumerateArray().ToList());
+        Assert.False(device.GetProperty("trusted").GetBoolean());
+
+        await client.StepUp();
+        Assert.Equal(HttpStatusCode.NoContent, (await client.PostAsync($"/api/me/security/devices/{device.GetProperty("id").GetString()}/remove", null)).StatusCode);
+        var asked = await Complete(await RequestLink(HumoApiFactory.AdminEmail));
+        Assert.True((await asked.Json()).GetProperty("askBrowserTrust").GetBoolean());
     }
 
     [Fact]
@@ -190,6 +195,7 @@ public sealed partial class SessionTests : IDisposable
         var devices = (await (await client.GetAsync("/api/me/security")).Json()).GetProperty("devices").EnumerateArray().ToList();
         var device = Assert.Single(devices);
         Assert.Equal("laptop", device.GetProperty("kind").GetString());
+        Assert.True(device.GetProperty("trusted").GetBoolean());
 
         await client.StepUp(); // Security.ManageOwn asks for step-up, as removing a passkey does
         Assert.Equal(HttpStatusCode.NoContent, (await client.PostAsync($"/api/me/security/devices/{device.GetProperty("id").GetString()}/remove", null)).StatusCode);
