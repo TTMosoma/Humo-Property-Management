@@ -65,6 +65,8 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
     public DbSet<RoleAssignment> RoleAssignments => Set<RoleAssignment>();
     public DbSet<AuditEntry> Audit => Set<AuditEntry>();
     public DbSet<SignInLink> SignInLinks => Set<SignInLink>();
+    public DbSet<UserSession> UserSessions => Set<UserSession>();
+    public DbSet<TrustedBrowser> TrustedBrowsers => Set<TrustedBrowser>();
     public DbSet<DocumentLink> DocumentLinks => Set<DocumentLink>();
     public DbSet<ImpersonationSession> ImpersonationSessions => Set<ImpersonationSession>();
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
@@ -611,6 +613,25 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.ToTable("SignInLinks");
             e.HasIndex(l => l.TokenHash).IsUnique();
             e.HasIndex(l => l.UserId);
+            e.Property(l => l.CodeHash).HasMaxLength(64);
+        });
+
+        builder.Entity<UserSession>(e =>
+        {
+            e.ToTable("UserSessions");
+            e.HasIndex(s => s.UserId);
+            e.Property(s => s.Method).HasMaxLength(20);
+            e.Property(s => s.Device).HasMaxLength(120);
+            e.Property(s => s.Ip).HasMaxLength(64);
+        });
+
+        builder.Entity<TrustedBrowser>(e =>
+        {
+            e.ToTable("TrustedBrowsers");
+            e.HasIndex(t => t.TokenHash).IsUnique();
+            e.HasIndex(t => t.UserId);
+            e.Property(t => t.TokenHash).HasMaxLength(64);
+            e.Property(t => t.Label).HasMaxLength(120);
         });
 
         builder.Entity<DocumentLink>(e =>

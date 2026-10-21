@@ -34,7 +34,7 @@ public static class ImpersonationEndpoints
     }
 
     private static async Task<IResult> Start(StartImpersonationRequest body, ClaimsPrincipal principal, UserManager<HumoUser> users, SignInManager<HumoUser> signIn,
-        SessionBuilder sessions, HumoDbContext db, AuditLog audit, TimeProvider clock, CancellationToken ct)
+        SessionBuilder sessions, Humo.Api.Auth.SignInSessions signInSessions, HumoDbContext db, AuditLog audit, TimeProvider clock, CancellationToken ct)
     {
         if (!Guid.TryParse(users.GetUserId(principal), out var actorId) || await sessions.LoadUserAsync(actorId, ct) is not { Status: IdentityStatuses.Active } actor) return Results.Unauthorized();
         var mine = await sessions.BuildAsync(actor, principal.FindFirstValue(AuthEndpoints.AssignmentClaim), ct);
@@ -74,12 +74,12 @@ public static class ImpersonationEndpoints
             organisationId: assignment.OrganisationId, resource: "Identity", resourceId: target.Id.ToString(), stepUpMethod: mode == "act" ? "passkey" : null, actingAs: target, impersonation: session);
         await db.SaveChangesAsync(ct);
 
-        await signIn.SignInWithClaimsAsync(actor, isPersistent: false, Claims(principal, session.Id));
+        await signInSessions.ReissueAsync(actor, principal, Claims(principal, session.Id), signIn, ct);
         return Results.Ok(new ImpersonationDto(session.Id.ToString(), actor.Id.ToString(), target.Id.ToString(), assignment.Id.ToString(), mode, reason, session.Note, session.Ticket, now.ToString("O")));
     }
 
     /// <summary>Always succeeds: the session ends server-side even if the response is lost.</summary>
-    private static async Task<IResult> End(ClaimsPrincipal principal, UserManager<HumoUser> users, SignInManager<HumoUser> signIn, HumoDbContext db, AuditLog audit, TimeProvider clock, CancellationToken ct)
+    private static async Task<IResult> End(ClaimsPrincipal principal, UserManager<HumoUser> users, SignInManager<HumoUser> signIn, Humo.Api.Auth.SignInSessions signInSessions, HumoDbContext db, AuditLog audit, TimeProvider clock, CancellationToken ct)
     {
         if (!Guid.TryParse(users.GetUserId(principal), out var actorId)) return Results.Unauthorized();
         var actor = await db.Users.FirstOrDefaultAsync(u => u.Id == actorId, ct);
@@ -92,7 +92,7 @@ public static class ImpersonationEndpoints
             audit.Record($"Ended impersonation ({minutes} min)", "success", actor, category: "impersonation", resource: "Identity", resourceId: imp.TargetId.ToString(), actingAs: target, impersonation: imp);
             await db.SaveChangesAsync(ct);
         }
-        await signIn.SignInWithClaimsAsync(actor, isPersistent: false, Claims(principal, null));
+        await signInSessions.ReissueAsync(actor, principal, Claims(principal, null), signIn, ct);
         return Results.NoContent();
     }
 

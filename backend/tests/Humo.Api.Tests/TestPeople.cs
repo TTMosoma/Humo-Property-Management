@@ -66,10 +66,12 @@ public static partial class TestPeople
     {
         var client = api.Client();
         api.Email.Sent.Clear();
-        Assert.Equal(HttpStatusCode.Accepted, (await client.PostAsJsonAsync("/api/auth/link", new { email })).StatusCode);
+        var sent = await client.PostAsJsonAsync("/api/auth/link", new { email });
+        Assert.Equal(HttpStatusCode.Accepted, sent.StatusCode);
+        var code = (await sent.Json()).GetProperty("code").GetString()!;
         var token = Token().Match(Assert.Single(api.Email.Sent).Text).Groups[1].Value;
         api.Email.Sent.Clear();
-        Assert.Equal(HttpStatusCode.NoContent, (await client.PostAsJsonAsync("/api/auth/link/complete", new { token })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await client.PostAsJsonAsync("/api/auth/link/complete", new { token, code })).StatusCode);
         return client;
     }
 

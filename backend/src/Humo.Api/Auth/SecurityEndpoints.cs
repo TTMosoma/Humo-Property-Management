@@ -64,7 +64,8 @@ public static class SecurityEndpoints
     }
 
     /// <summary>Every other session ends (security stamp); this one is re-issued and carries on.</summary>
-    private static async Task<IResult> SignOutOthers(ClaimsPrincipal principal, CurrentActor current, CommandRunner commands, UserManager<HumoUser> users, SignInManager<HumoUser> signIn, CancellationToken ct)
+    private static async Task<IResult> SignOutOthers(ClaimsPrincipal principal, CurrentActor current, CommandRunner commands, UserManager<HumoUser> users, SignInManager<HumoUser> signIn,
+        SignInSessions sessions, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         var me = actor.Human;
@@ -76,7 +77,10 @@ public static class SecurityEndpoints
         }, async _ =>
         {
             await users.UpdateSecurityStampAsync(me);
-            await signIn.SignInWithClaimsAsync(me, isPersistent: false, principal.Claims.Where(c => c.Type.StartsWith("humo:")).ToList());
+            if (await sessions.CurrentAsync(principal, ct) is { } keep) await sessions.RevokeOthersAsync(me.Id, keep.Id, ct);
+            // This session carries on: the cookie is re-issued for it, keeping the person's own claims.
+            var claims = principal.Claims.Where(c => c.Type.StartsWith("humo:") && c.Type != SessionPolicy.SessionClaim).ToList();
+            await sessions.ReissueAsync(me, principal, claims, signIn, ct);
             return Results.NoContent();
         }, ct);
     }

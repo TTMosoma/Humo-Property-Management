@@ -9,7 +9,7 @@ import { PrototypeControls } from '../../core/prototype/prototype-controls';
 import { SessionService } from '../../core/session/session.service';
 import { Logo } from '../../ui/brand/logo';
 
-type Step = 'start' | 'passkey' | 'no-passkey' | 'paused' | 'link-sent' | 'redeeming' | 'link-failed' | 'unavailable' | 'add-passkey' | 'creating-passkey';
+type Step = 'start' | 'passkey' | 'no-passkey' | 'paused' | 'link-sent' | 'enter-code' | 'redeeming' | 'link-failed' | 'unavailable' | 'add-passkey' | 'creating-passkey';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const RESEND_AFTER_S = 30;
@@ -64,13 +64,19 @@ export class SignInPage {
   protected readonly signedOutName = computed(() => (this.mode === 'signed-out' ? (this.params().name ?? '') : null));
   protected readonly year = new Date().getFullYear();
 
-  protected readonly step = signal<Step>(this.mode === 'link' ? 'redeeming' : 'start');
+  protected readonly step = signal<Step>(this.mode === 'link' ? 'enter-code' : 'start');
   /** Why creating a passkey after an email-link sign-in failed (not shown when they just closed the prompt). */
   protected readonly passkeyError = signal('');
   protected readonly email = signal('');
   protected readonly emailError = signal('');
   /** The email the passkey prompt was for ('' when the browser chose). */
   protected readonly passkeyFor = signal('');
+  /** "This is my own computer": a longer session for a passkey sign-in. Off unless they say so (shared computers stay off). */
+  protected readonly ownComputer = signal(false);
+  /** The six-digit code the asking screen shows; the link only works with it (entered on the page the link opens). */
+  protected readonly shownCode = signal('');
+  protected readonly linkCode = signal('');
+  protected readonly codeError = signal('');
   protected readonly resendIn = signal(0);
   protected readonly demoLink = signal<{ email: string; token: string; delivered: boolean } | null>(null);
 
@@ -102,11 +108,11 @@ export class SignInPage {
       }
       untracked(() => queueMicrotask(() => this.heading()?.nativeElement.focus()));
     });
-    // A sign-in link: redeem its token (again if another link opens on this page).
+    // A sign-in link: ask for its code (again if another link opens on this page).
     if (this.mode === 'link') {
       effect(() => {
         const token = this.params().token;
-        untracked(() => this.redeem(token));
+        untracked(() => this.openLink(token));
       });
     }
     afterNextRender(() => {
@@ -136,7 +142,7 @@ export class SignInPage {
     this.passkeyFor.set(email);
     this.step.set('passkey');
     this.pending?.unsubscribe();
-    this.pending = this.sessions.signInWithPasskey(email || undefined).subscribe({
+    this.pending = this.sessions.signInWithPasskey(email || undefined, this.ownComputer()).subscribe({
       next: () => this.done(),
       error: (e: unknown) => {
         const code = e instanceof SignInError ? e.code : 'no-passkey';
@@ -160,7 +166,8 @@ export class SignInPage {
     this.email.set(email);
     this.pending?.unsubscribe();
     this.pending = this.sessions.sendSignInLink(email).subscribe({
-      next: () => {
+      next: (code) => {
+        this.shownCode.set(code);
         this.step.set('link-sent');
         this.demoLink.set(this.prototype?.lastSignInLink() ?? null);
         this.countdown();
@@ -168,6 +175,17 @@ export class SignInPage {
       error: () => this.step.set('unavailable'),
     });
   }
+
+  protected setLinkCode(e: Event): void {
+    this.linkCode.set((e.target as HTMLInputElement).value);
+    this.codeError.set('');
+  }
+
+  /** The code, spaced as shown (123 456), in a form that's easy to read out. */
+  protected readonly spacedCode = computed(() => {
+    const code = this.shownCode();
+    return code.length === 6 ? `${code.slice(0, 3)} ${code.slice(3)}` : code;
+  });
 
   protected startOver(): void {
     this.pending?.unsubscribe();
@@ -199,17 +217,38 @@ export class SignInPage {
 
   // ---------------------------------------------------------------- Helpers
 
-  private redeem(token: string | null): void {
+  /** A sign-in link opened: nothing is signed in until the code from the asking screen is entered here. */
+  private openLink(token: string | null): void {
     this.pending?.unsubscribe();
-    this.step.set('redeeming');
+    this.linkCode.set('');
+    this.codeError.set('');
+    this.step.set(token ? 'enter-code' : 'link-failed');
+  }
+
+  protected submitLinkCode(): void {
+    const token = this.params().token;
+    const code = this.linkCode().replace(/\s/g, '');
     if (!token) {
       this.step.set('link-failed');
       return;
     }
-    this.pending = this.sessions.completeSignInLink(token).subscribe({
+    if (!/^\d{6}$/.test(code)) {
+      this.codeError.set('Enter the six-digit code shown on the screen where you asked for the link.');
+      return;
+    }
+    this.pending?.unsubscribe();
+    this.step.set('redeeming');
+    this.pending = this.sessions.completeSignInLink(token, code).subscribe({
       // Signed in by email: offer a passkey, so next time is one touch (newcomers get their first one here).
       next: () => this.step.set('add-passkey'),
-      error: () => this.step.set('link-failed'),
+      error: (e: unknown) => {
+        if (e instanceof SignInError && e.code === 'wrong-code') {
+          this.codeError.set(e.message);
+          this.step.set('enter-code');
+          return;
+        }
+        this.step.set('link-failed');
+      },
     });
   }
 

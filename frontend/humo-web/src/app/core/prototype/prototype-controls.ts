@@ -19,5 +19,5 @@ export abstract class PrototypeControls {
   /** Simulate an invited person accepting their invitation (in reality: they follow the email link and set up a passkey). */
   abstract acceptInvite(identityId: string): void;
   /** The last sign-in link "emailed" (nothing is really sent), so a presenter can open it. `delivered`: false when no account has that address. */
-  abstract lastSignInLink(): { email: string; token: string; delivered: boolean } | null;
+  abstract lastSignInLink(): { email: string; token: string; code: string; delivered: boolean } | null;
 }

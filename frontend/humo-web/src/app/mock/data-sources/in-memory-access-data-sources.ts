@@ -568,17 +568,23 @@ export class InMemorySessionDataSource extends SessionDataSource {
     );
   }
 
-  /** SIMULATED (docs/18 R-8): no email is sent; the prototype controls show the link instead. */
-  sendSignInLink(email: string): Observable<void> {
-    this.auth.issueLink(email.trim());
-    return timer(700).pipe(map(() => undefined));
+  /**
+   * SIMULATED (docs/18 R-8): no email is sent; the prototype controls show the link instead.
+   * The code is returned for the asking screen, as the API does.
+   */
+  sendSignInLink(email: string): Observable<string> {
+    const code = this.auth.issueLink(email.trim());
+    return timer(700).pipe(map(() => code));
   }
 
-  completeSignInLink(token: string): Observable<void> {
+  completeSignInLink(token: string, code: string): Observable<void> {
     return timer(600).pipe(
       switchMap(() => {
-        const id = this.auth.redeemLink(token);
-        const who = id ? this.store.identity(id) : undefined;
+        const result = this.auth.redeemLink(token, code.trim());
+        if (result && 'triesLeft' in result) {
+          return throwError(() => new SignInError('wrong-code', `That code isn’t right. ${result.triesLeft} ${result.triesLeft === 1 ? 'try' : 'tries'} left`));
+        }
+        const who = result ? this.store.identity(result.identityId) : undefined;
         if (!who || who.status !== 'active') return throwError(() => new SignInError('link-expired', 'This sign-in link has expired or was already used'));
         this.auth.signIn(who.id);
         this.audit('Signed in to Humo with an email link');

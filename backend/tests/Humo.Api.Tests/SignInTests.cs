@@ -66,25 +66,25 @@ public sealed partial class SignInTests : IDisposable
     [Fact]
     public async Task A_link_works_once()
     {
-        var token = await RequestLink(HumoApiFactory.AdminEmail);
-        Assert.Equal(HttpStatusCode.NoContent, (await Complete(token)).StatusCode);
-        await AssertFailure(await Complete(token), "link-expired");
+        var link = await RequestLink(HumoApiFactory.AdminEmail);
+        Assert.Equal(HttpStatusCode.NoContent, (await Complete(link)).StatusCode);
+        await AssertFailure(await Complete(link), "link-expired");
     }
 
     [Fact]
     public async Task A_link_expires_after_15_minutes()
     {
-        var token = await RequestLink(HumoApiFactory.AdminEmail);
+        var link = await RequestLink(HumoApiFactory.AdminEmail);
         api.Clock.Advance(TimeSpan.FromMinutes(16));
-        await AssertFailure(await Complete(token), "link-expired");
+        await AssertFailure(await Complete(link), "link-expired");
     }
 
     [Fact]
     public async Task A_suspended_person_can_t_sign_in()
     {
-        var token = await RequestLink(HumoApiFactory.AdminEmail);
+        var link = await RequestLink(HumoApiFactory.AdminEmail);
         await api.Db(db => db.Users.ExecuteUpdateAsync(s => s.SetProperty(u => u.Status, IdentityStatuses.Suspended)));
-        await AssertFailure(await Complete(token), "paused");
+        await AssertFailure(await Complete(link), "paused");
     }
 
     [Fact]
@@ -147,17 +147,23 @@ public sealed partial class SignInTests : IDisposable
 
     // ---- Helpers ----
 
-    private async Task<string> RequestLink(string email)
+    /// <summary>The link from the email, and the code the requesting screen was shown.</summary>
+    private sealed record Link(string Token, string Code);
+
+    private async Task<Link> RequestLink(string email)
     {
         var res = await client.PostAsJsonAsync("/api/auth/link", new { email });
         Assert.Equal(HttpStatusCode.Accepted, res.StatusCode);
+        var code = (await res.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString()!;
         var message = Assert.Single(api.Email.Sent);
         api.Email.Sent.Clear();
         Assert.Equal(email, message.To);
-        return LinkToken().Match(message.Text).Groups[1].Value;
+        return new Link(LinkToken().Match(message.Text).Groups[1].Value, code);
     }
 
-    private Task<HttpResponseMessage> Complete(string token) => client.PostAsJsonAsync("/api/auth/link/complete", new { token });
+    private Task<HttpResponseMessage> Complete(Link link) => Complete(link.Token, link.Code);
+
+    private Task<HttpResponseMessage> Complete(string token, string code) => client.PostAsJsonAsync("/api/auth/link/complete", new { token, code });
 
     private async Task SignInWithLink(string email) => Assert.Equal(HttpStatusCode.NoContent, (await Complete(await RequestLink(email))).StatusCode);
 

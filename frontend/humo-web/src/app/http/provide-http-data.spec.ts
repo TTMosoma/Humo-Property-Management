@@ -35,10 +35,16 @@ describe('Production data layer (provideHttpData)', () => {
   });
 
   it('an expired sign-in link comes back as link-expired', async () => {
-    const done = firstValueFrom(TestBed.inject(SessionDataSource).completeSignInLink('old'));
+    const done = firstValueFrom(TestBed.inject(SessionDataSource).completeSignInLink('old', '123456'));
     http.expectOne('/api/auth/link/complete').flush({ code: 'link-expired', title: 'Expired' }, { status: 400, statusText: 'Bad Request' });
     await expect(done).rejects.toBeInstanceOf(SignInError);
     await expect(done).rejects.toMatchObject({ code: 'link-expired' });
+  });
+
+  it('a wrong code comes back as wrong-code, with the tries left in its message', async () => {
+    const done = firstValueFrom(TestBed.inject(SessionDataSource).completeSignInLink('lnk', '000000'));
+    http.expectOne('/api/auth/link/complete').flush({ code: 'wrong-code', title: 'That code isn’t right. 4 tries left' }, { status: 400, statusText: 'Bad Request' });
+    await expect(done).rejects.toMatchObject({ code: 'wrong-code', message: 'That code isn’t right. 4 tries left' });
   });
 
   it('ports without an API yet say so', async () => {

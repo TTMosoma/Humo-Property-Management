@@ -28,6 +28,7 @@ builder.Services.AddProblemDetails();
 
 builder.Services.AddHumoInfrastructure(config);
 builder.Services.AddScoped<SessionBuilder>();
+builder.Services.AddScoped<Humo.Api.Auth.SignInSessions>();
 builder.Services.AddScoped<AuditLog>();
 builder.Services.AddScoped<CurrentActor>();
 builder.Services.AddScoped<CommandRunner>();
@@ -87,8 +88,9 @@ builder.Services.ConfigureApplicationCookie(o =>
     o.Cookie.HttpOnly = true;
     o.Cookie.SameSite = SameSiteMode.Lax; // Lax so links from emails open signed in
     o.Cookie.SecurePolicy = builder.Environment.IsDevelopment() ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
+    // The session's own limits (Auth/SessionPolicy) decide when it ends; the cookie only carries its id.
     o.ExpireTimeSpan = TimeSpan.FromHours(12);
-    o.SlidingExpiration = true;
+    o.SlidingExpiration = false;
     // An API answers 401/403; it never redirects to a login page.
     o.Events.OnRedirectToLogin = ctx => { ctx.Response.StatusCode = StatusCodes.Status401Unauthorized; return Task.CompletedTask; };
     o.Events.OnRedirectToAccessDenied = ctx => { ctx.Response.StatusCode = StatusCodes.Status403Forbidden; return Task.CompletedTask; };
@@ -134,6 +136,7 @@ app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseRateLimiter();
 app.UseAuthentication();
+app.UseMiddleware<Humo.Api.Auth.SessionGuard>(); // a session the policy has ended counts as signed out
 app.UseAuthorization();
 
 var api = app.MapGroup("/api");

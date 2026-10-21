@@ -42,26 +42,26 @@ export class HttpSessionDataSource extends SessionDataSource {
     return throwError(() => new SignInError('unavailable', 'Choose a passkey or an email link'));
   }
 
-  signInWithPasskey(emailHint?: string): Observable<void> {
+  signInWithPasskey(emailHint?: string, ownComputer = false): Observable<void> {
     if (!webAuthnJson()) return throwError(() => new SignInError('no-passkey', 'This browser can’t use passkeys'));
     return this.http.post<PublicKeyCredentialRequestOptionsJSON>(`${this.base}/auth/passkey/options`, { email: emailHint ?? null }, { withCredentials: true }).pipe(
       switchMap((options) => from(navigator.credentials.get({ publicKey: PublicKeyCredential.parseRequestOptionsFromJSON(options) }))),
-      switchMap((credential) => this.http.post(`${this.base}/auth/passkey`, { credential: (credential as PublicKeyCredential).toJSON() }, { withCredentials: true })),
+      switchMap((credential) => this.http.post(`${this.base}/auth/passkey`, { credential: (credential as PublicKeyCredential).toJSON(), ownComputer }, { withCredentials: true })),
       switchMap(() => this.reload()),
       map(() => undefined),
       catchError((e: unknown) => throwError(() => signInError(e, 'no-passkey'))),
     );
   }
 
-  sendSignInLink(email: string): Observable<void> {
-    return this.http.post(`${this.base}/auth/link`, { email }, { withCredentials: true }).pipe(
-      map(() => undefined),
+  sendSignInLink(email: string): Observable<string> {
+    return this.http.post<{ code: string }>(`${this.base}/auth/link`, { email }, { withCredentials: true }).pipe(
+      map((sent) => sent.code),
       catchError((e: unknown) => throwError(() => signInError(e, 'unavailable'))),
     );
   }
 
-  completeSignInLink(token: string): Observable<void> {
-    return this.http.post(`${this.base}/auth/link/complete`, { token }, { withCredentials: true }).pipe(
+  completeSignInLink(token: string, code: string): Observable<void> {
+    return this.http.post(`${this.base}/auth/link/complete`, { token, code }, { withCredentials: true }).pipe(
       switchMap(() => this.reload()),
       map(() => undefined),
       catchError((e: unknown) => throwError(() => signInError(e, 'link-expired'))),
@@ -98,7 +98,7 @@ function signInError(e: unknown, fallback: SignInFailure): SignInError {
   if (e instanceof DOMException && (e.name === 'NotAllowedError' || e.name === 'AbortError')) return new SignInError('cancelled', 'The passkey prompt was closed');
   if (e instanceof HttpErrorResponse) {
     const code = (e.error as { code?: string } | null)?.code;
-    if (code === 'paused' || code === 'link-expired' || code === 'no-passkey') return new SignInError(code, e.error?.title ?? code);
+    if (code === 'paused' || code === 'link-expired' || code === 'no-passkey' || code === 'wrong-code') return new SignInError(code, e.error?.title ?? code);
     if (e.status === 0 || e.status >= 500 || e.status === 404) return new SignInError('unavailable', 'Sign-in can’t be reached right now');
   }
   return new SignInError(fallback, 'Sign-in didn’t go through');

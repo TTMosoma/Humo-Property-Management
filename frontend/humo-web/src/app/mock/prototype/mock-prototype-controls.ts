@@ -12,7 +12,7 @@ export class MockPrototypeControls extends PrototypeControls {
   private readonly access = inject(AccessStore);
   private readonly auth = inject(MockAuthSession);
 
-  lastSignInLink(): { email: string; token: string; delivered: boolean } | null {
+  lastSignInLink(): { email: string; token: string; code: string; delivered: boolean } | null {
     return this.auth.lastLink;
   }
 
