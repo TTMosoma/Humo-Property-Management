@@ -87,7 +87,13 @@
 
   @if (shown(); as t) {
     @if (registry.settings(); as settings) {
-      <app-document-renderer [data]="document()!" [template]="t" [settings]="settings" [organisationName]="session.organisation()?.name ?? ''" />
+      <app-document-renderer
+        [data]="document()!"
+        [template]="t"
+        [settings]="issuedSettings() ?? settings"
+        [issuedBranding]="issuedBranding()"
+        [organisationName]="session.organisation()?.name ?? ''"
+      />
     }
   } @else {
     <ui-skeleton [count]="10" />

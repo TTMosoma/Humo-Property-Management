@@ -109,12 +109,16 @@ public sealed class StatementService(HumoDbContext db, Commercial.CommercialReco
     {
         if (await db.IssuedStatements.AsNoTracking().FirstOrDefaultAsync(s => s.AccountId == account.Id && s.Period == period, ct) is { } issued)
         {
-            var view = JsonNode.Parse(issued.Snapshot)!["view"]!.DeepClone();
+            var snapshot = JsonNode.Parse(issued.Snapshot)!;
+            var view = snapshot["view"]!.DeepClone();
             view["issued"] = JsonSerializer.SerializeToNode(new
             {
                 at = issued.IssuedAt.ToString("O"), by = issued.IssuedBy, sha256 = issued.SnapshotSha256, pdf = issued.Pdf is not null, sentBy = issued.SentBy,
                 sentAt = issued.SentAt?.ToString("O"),
             }, Json.Options);
+            // The screen draws with the branding and contact details the PDF was drawn with (D7, R-2), not today's.
+            view["branding"] = snapshot["branding"]!.DeepClone();
+            view["documentSettings"] = snapshot["settings"]!.DeepClone();
             return view;
         }
         return await DraftAsync(account, period, null, ct) is { } draft ? JsonSerializer.SerializeToNode(draft.View, Json.Options) : null;
