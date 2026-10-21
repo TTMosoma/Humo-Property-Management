@@ -171,17 +171,6 @@
               <button type="button" class="btn btn-ghost" (click)="startOver()">Use a different email</button>
             </div>
             <p class="hint">Nothing after a few minutes? Check your spam folder.</p>
-            @if (prototype && demoLink(); as link) {
-              <div class="demo-mail">
-                <span class="demo-tag">Prototype</span>
-                @if (link.delivered) {
-                  <p>No email is sent in the demo. Open the link the email would contain:</p>
-                  <button type="button" class="btn btn-primary btn-sm" (click)="openDemoLink()"><ion-icon name="open-outline" aria-hidden="true" /> Open the sign-in link</button>
-                } @else {
-                  <p>No email would arrive: there’s no active Humo account for this address. The page doesn’t say so, so nobody can test which addresses have accounts.</p>
-                }
-              </div>
-            }
           </div>
         }
 
@@ -274,23 +263,6 @@
         }
       }
 
-      @if (prototype && (step() === 'start' || step() === 'no-passkey')) {
-        <details class="demo">
-          <summary><span class="demo-tag">Prototype</span> Demo accounts</summary>
-          <p class="demo-note">Sign in as a demo person. Their passkey is simulated.</p>
-          <ul>
-            @for (p of personas(); track p.id) {
-              <li>
-                <button type="button" (click)="useDemoAccount(p)">
-                  <span class="av">{{ p.initials }}</span>
-                  <span class="who"><strong>{{ p.name }}</strong><span>{{ rolesOf(p) }}</span></span>
-                  <ion-icon name="chevron-forward-outline" aria-hidden="true" />
-                </button>
-              </li>
-            }
-          </ul>
-        </details>
-      }
 
       <footer class="foot">
         <p class="secure"><ion-icon name="shield-checkmark-outline" aria-hidden="true" /> Humo signs you in with passkeys: there’s no password to steal or forget.</p>

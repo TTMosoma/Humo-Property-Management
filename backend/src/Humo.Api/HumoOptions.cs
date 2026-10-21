@@ -13,6 +13,11 @@ public sealed class AppOptions
     public List<string> AllowedOrigins { get; set; } = ["https://pm.humo.co.za"];
     /// <summary>How long an emailed sign-in link works.</summary>
     public TimeSpan SignInLinkLifetime { get; set; } = TimeSpan.FromMinutes(15);
+    /// <summary>
+    /// The proxies whose forwarded headers the API trusts (Caddy). Only these addresses may set X-Forwarded-For and
+    /// X-Forwarded-Proto. Caddy runs on the same server, so loopback is the default.
+    /// </summary>
+    public List<string> TrustedProxies { get; set; } = ["127.0.0.1", "::1"];
 }
 
 /// <summary>The first System Administrator, created once on an empty database (doc 26 §7).</summary>

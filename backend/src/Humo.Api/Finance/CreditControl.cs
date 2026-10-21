@@ -369,9 +369,9 @@ public sealed class CreditControl(HumoDbContext db, Commercial.CommercialRecords
                 {
                     try
                     {
-                        await email.SendAsync(Email(s, holder.Email, pdf), ct);
-                        // Accepted by Humo's mail server. Bounces come back later by email and aren't matched up yet.
-                        if (delivery is not null) sent.Mark(delivery, "delivered", null);
+                        var providerId = await email.SendAsync(Email(s, holder.Email, pdf), ct);
+                        // Accepted by the mail server: queued until the provider reports it delivered or bounced (MailWebhookEndpoints).
+                        if (delivery is not null) sent.Mark(delivery, "queued", null, providerId);
                     }
                     catch (Exception e) when (e is not OperationCanceledException)
                     {

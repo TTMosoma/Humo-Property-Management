@@ -3,6 +3,7 @@ using MailKit.Security;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MimeKit;
+using MimeKit.Utils;
 
 namespace Humo.Infrastructure.Messaging;
 
@@ -13,7 +14,8 @@ public sealed record EmailMessage(string To, string Subject, string Text, string
 /// <summary>Sends email. Which server, port and encryption is configuration (<c>Mail__*</c>, doc 25 §2), never code.</summary>
 public interface IEmailSender
 {
-    Task SendAsync(EmailMessage message, CancellationToken ct = default);
+    /// <summary>Sends the message. Returns the Message-ID the provider's events will quote back (the webhook matches on it).</summary>
+    Task<string> SendAsync(EmailMessage message, CancellationToken ct = default);
 }
 
 public enum MailSecurity
@@ -38,6 +40,11 @@ public sealed class MailOptions
     public string? Username { get; set; }
     public string? Password { get; set; }
     public string From { get; set; } = "Humo Property Management <no-reply@notify.humo.co.za>";
+    /// <summary>
+    /// The secret the mail provider signs its delivery events with (docs/18 R-5). Without it, events are refused:
+    /// an unsigned "delivered" or "bounced" could be forged.
+    /// </summary>
+    public string? WebhookSecret { get; set; }
     public string? ReplyTo { get; set; } = "support@humo.co.za";
     /// <summary>The fallback relay (doc 25 §2, step 5): switched on by configuration only, when inbox placement fails.</summary>
     public RelayOptions Relay { get; set; } = new();
@@ -56,10 +63,10 @@ public sealed class MailOptions
 /// <summary>SMTP through MailKit: our own mail server (notify.humo.co.za), or the fallback relay when it's switched on.</summary>
 public sealed class SmtpEmailSender(IOptions<MailOptions> options, ILogger<SmtpEmailSender> logger) : IEmailSender
 {
-    public async Task SendAsync(EmailMessage message, CancellationToken ct = default)
+    public async Task<string> SendAsync(EmailMessage message, CancellationToken ct = default)
     {
         var o = options.Value;
-        var mime = new MimeMessage();
+        var mime = new MimeMessage { MessageId = MimeUtils.GenerateMessageId() };
         mime.From.Add(MailboxAddress.Parse(o.From));
         if (!string.IsNullOrWhiteSpace(o.ReplyTo)) mime.ReplyTo.Add(MailboxAddress.Parse(o.ReplyTo));
         mime.To.Add(MailboxAddress.Parse(message.To));
@@ -83,6 +90,7 @@ public sealed class SmtpEmailSender(IOptions<MailOptions> options, ILogger<SmtpE
         await client.SendAsync(mime, ct);
         await client.DisconnectAsync(true, ct);
         logger.LogInformation("Email sent to {To} via {Host}:{Port}: {Subject}", Mask(message.To), host, port, message.Subject);
+        return mime.MessageId;
     }
 
     /// <summary>Logs never hold a full address (POPIA): t***@example.com.</summary>
@@ -92,9 +100,9 @@ public sealed class SmtpEmailSender(IOptions<MailOptions> options, ILogger<SmtpE
 /// <summary>Development and tests: writes the message to the log instead of sending it.</summary>
 public sealed class LogEmailSender(ILogger<LogEmailSender> logger) : IEmailSender
 {
-    public Task SendAsync(EmailMessage message, CancellationToken ct = default)
+    public Task<string> SendAsync(EmailMessage message, CancellationToken ct = default)
     {
         logger.LogWarning("EMAIL NOT SENT (Mail:Provider=Log) to {To}: {Subject}\n{Text}", message.To, message.Subject, message.Text);
-        return Task.CompletedTask;
+        return Task.FromResult(MimeUtils.GenerateMessageId());
     }
 }

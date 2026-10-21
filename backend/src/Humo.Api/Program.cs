@@ -122,11 +122,14 @@ builder.Services.AddRateLimiter(o =>
 });
 
 // Behind Caddy on the VPS: trust its X-Forwarded-For/Proto. The API's port is only reachable from Caddy (docker network).
+// Forwarded headers are believed only from Caddy (App:TrustedProxies). Anyone else's X-Forwarded-For or X-Forwarded-Proto is ignored.
 builder.Services.Configure<ForwardedHeadersOptions>(o =>
 {
     o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
     o.KnownIPNetworks.Clear();
     o.KnownProxies.Clear();
+    foreach (var proxy in config.GetSection(AppOptions.Section).Get<AppOptions>()?.TrustedProxies ?? [])
+        o.KnownProxies.Add(System.Net.IPAddress.Parse(proxy));
 });
 
 var app = builder.Build();
@@ -144,6 +147,7 @@ api.MapGet("/health", async (HumoDbContext db, CancellationToken ct) =>
     await db.Database.CanConnectAsync(ct) ? Results.Ok(new { status = "ok" }) : Results.Problem("Database unavailable", statusCode: 503));
 api.MapHumoAuth();
 api.MapSmsWebhooks();
+api.MapMailWebhooks();
 api.MapOrganisations();
 api.MapSchemes();
 api.MapUnits();

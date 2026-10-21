@@ -2,7 +2,6 @@ import { Injectable, inject } from '@angular/core';
 import { PrototypeControls } from '../../core/prototype/prototype-controls';
 import { activeAssignments } from '../../domain';
 import { AccessStore } from '../db/access-store';
-import { MockAuthSession } from '../server/mock-auth-session';
 import { PlatformStore } from '../db/platform-store';
 import { simulationStorage } from '../simulation/simulation-storage';
 
@@ -10,11 +9,6 @@ import { simulationStorage } from '../simulation/simulation-storage';
 export class MockPrototypeControls extends PrototypeControls {
   private readonly platform = inject(PlatformStore);
   private readonly access = inject(AccessStore);
-  private readonly auth = inject(MockAuthSession);
-
-  lastSignInLink(): { email: string; token: string; code: string; delivered: boolean } | null {
-    return this.auth.lastLink;
-  }
 
   resetNudges(): void {
     this.platform.resetNudges();

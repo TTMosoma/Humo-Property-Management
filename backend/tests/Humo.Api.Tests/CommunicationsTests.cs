@@ -99,7 +99,8 @@ public sealed class CommunicationsTests : IDisposable
         Assert.Contains("unit 12, Kingfisher Court", sms.Text);
 
         var view = await Ok(await s.Admin.GetAsync($"/api/communications/sent/{id}"));
-        Assert.Equal(("message", "sending", 1, 1), (view.GetProperty("message").GetProperty("kind").GetString(), view.GetProperty("state").GetString(),
+        // Email and SMS are both queued: neither has been reported delivered yet.
+        Assert.Equal(("message", "sending", 0, 2), (view.GetProperty("message").GetProperty("kind").GetString(), view.GetProperty("state").GetString(),
             view.GetProperty("counts").GetProperty("delivered").GetInt32(), view.GetProperty("counts").GetProperty("queued").GetInt32()));
         Assert.Equal(reminder.GetProperty("id").GetString(), view.GetProperty("message").GetProperty("templateId").GetString());
     }
@@ -124,6 +125,7 @@ public sealed class CommunicationsTests : IDisposable
         using (var scope = api.Services.CreateScope())
             Assert.Equal(1, await scope.ServiceProvider.GetRequiredService<Humo.Api.Messaging.Communications>().SendDueAsync(CancellationToken.None));
         Assert.Equal("Dear Sipho Khumalo, the AGM is on Saturday.", Assert.Single(api.Email.Sent).Text);
+        await MailEvents.ProviderConfirmsEmails(api);
         // Two days on, the session has expired: sign in again.
         var admin = await api.SignedIn("thandeka@acacia.example");
         Assert.Equal("sent", (await Ok(await admin.GetAsync($"/api/communications/sent/{scheduled}"))).GetProperty("state").GetString());

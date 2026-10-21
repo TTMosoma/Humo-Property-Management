@@ -128,6 +128,9 @@ public sealed class InboxTests : IDisposable
     {
         var s = await Scheme();
         var notice = await Id(await s.Admin.PostAsJsonAsync("/api/notices", new { schemeId = s.Kc.ToString(), title = "New gate remotes", body = "Collect your new gate remote from the guardhouse, weekdays 08:00 to 17:00.", audience = "owners", category = "security", pinned = false, expiresAt = "2026-11-30" }));
+        // Email is queued until the provider reports it: wait for it to be sent, then confirm.
+        // Email is queued until the provider reports it: wait for it to be sent, then confirm.
+        await MailEvents.ProviderConfirmsEmails(api);
         await HumoApiFactory.Until(() => api.Db(db => db.Deliveries.AllAsync(d => d.Status != "queued")));
         // South African end of day, stored in UTC (PostgreSQL takes no other offset).
         Assert.Equal(new DateTimeOffset(2026, 11, 30, 21, 59, 0, TimeSpan.Zero), await api.Db(db => db.SchemeNotices.Select(n => n.ExpiresAt).SingleAsync()));

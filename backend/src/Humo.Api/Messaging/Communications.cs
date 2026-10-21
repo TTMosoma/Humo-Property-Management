@@ -218,9 +218,9 @@ public sealed partial class Communications(HumoDbContext db, SentRecords sent, I
                     case "email":
                         try
                         {
-                            await email.SendAsync(new EmailMessage(d.Address, Render(m.Subject, values), text), ct);
-                            // Accepted by Humo's mail server. Bounces come back later by email and aren't matched up yet.
-                            sent.Mark(d, "delivered", null);
+                            var providerId = await email.SendAsync(new EmailMessage(d.Address, Render(m.Subject, values), text), ct);
+                            // Accepted by the mail server: queued until the provider reports it delivered or bounced (MailWebhookEndpoints).
+                            sent.Mark(d, "queued", null, providerId);
                         }
                         catch (Exception e) when (e is not OperationCanceledException)
                         {
