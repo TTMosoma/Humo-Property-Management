@@ -44,7 +44,7 @@ export function brandingForm(drawer: DrawerService, data: DocumentTemplateDataSo
       type: 'select',
       required: true,
       options: (Object.keys(STATEMENT_DELIVERY_LABELS) as StatementDelivery[]).map((value) => ({ value, label: STATEMENT_DELIVERY_LABELS[value] })),
-      help: 'A portal link keeps statements behind the owner’s sign-in. Attaching the PDF is easier for owners who rarely sign in.',
+      help: 'The secure link works for 90 days and opens with a code sent to the owner’s mobile (or email), so owners don’t need an account. Each code SMS counts in your monthly SMS. Attaching the PDF sends it as is.',
     },
   ];
   if (branded) {

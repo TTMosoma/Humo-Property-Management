@@ -40,6 +40,12 @@ export const routes: Routes = [
     data: { kind: 'letter' },
     loadComponent: () => import('./features/documents/print-document-page').then((m) => m.PrintDocumentPage),
   },
+  // A statement's secure link from the email (docs/18 R-1): opens with a one-time code, no account or session.
+  {
+    path: 'd/:token',
+    title: 'Your statement',
+    loadComponent: () => import('./features/documents/document-link-page').then((m) => m.DocumentLinkPage),
+  },
   {
     path: 'signed-out',
     title: 'Signed out',

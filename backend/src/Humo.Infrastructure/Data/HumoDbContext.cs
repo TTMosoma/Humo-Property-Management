@@ -65,6 +65,7 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
     public DbSet<RoleAssignment> RoleAssignments => Set<RoleAssignment>();
     public DbSet<AuditEntry> Audit => Set<AuditEntry>();
     public DbSet<SignInLink> SignInLinks => Set<SignInLink>();
+    public DbSet<DocumentLink> DocumentLinks => Set<DocumentLink>();
     public DbSet<ImpersonationSession> ImpersonationSessions => Set<ImpersonationSession>();
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
@@ -610,6 +611,18 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.ToTable("SignInLinks");
             e.HasIndex(l => l.TokenHash).IsUnique();
             e.HasIndex(l => l.UserId);
+        });
+
+        builder.Entity<DocumentLink>(e =>
+        {
+            e.ToTable("DocumentLinks");
+            e.HasIndex(l => l.TokenHash).IsUnique();
+            e.HasIndex(l => l.DocumentId);
+            e.Property(l => l.Kind).HasMaxLength(20);
+            e.Property(l => l.TokenHash).HasMaxLength(64);
+            e.Property(l => l.CodeHash).HasMaxLength(64);
+            e.Property(l => l.GrantHash).HasMaxLength(64);
+            e.Property(l => l.CodesDay).HasMaxLength(10);
         });
     }
 

@@ -291,11 +291,11 @@ export interface OrganisationDocumentSettings {
   statementDelivery?: StatementDelivery;
 }
 
-/** D9: a secure link to the resident portal (the default), or the PDF attached to the email. */
+/** D9: a secure link that opens with a one-time code, no account needed (the default), or the PDF attached to the email. */
 export type StatementDelivery = 'link' | 'attachment';
 
 export const STATEMENT_DELIVERY_LABELS: Record<StatementDelivery, string> = {
-  link: 'A secure link to the resident portal',
+  link: 'A secure link (opens with a one-time code)',
   attachment: 'The PDF attached to the email',
 };
 

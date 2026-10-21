@@ -314,6 +314,37 @@ public sealed class ImpersonationSession
 }
 
 /// <summary>A one-time sign-in link: only a hash of the token is stored. Used once, then dead.</summary>
+/// <summary>
+/// A secure link to one issued document for one person (docs/18 R-1): it opens with a one-time code sent to them,
+/// with no Humo PM account. Only hashes of the link, the code and the viewing grant are stored.
+/// </summary>
+public sealed class DocumentLink
+{
+    public Guid Id { get; set; }
+    public Guid OrganisationId { get; set; }
+    public Guid SchemeId { get; set; }
+    /// <summary>"statement".</summary>
+    public string Kind { get; set; } = "statement";
+    public Guid DocumentId { get; set; }
+    public Guid PersonId { get; set; }
+    public string TokenHash { get; set; } = "";
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset ExpiresAt { get; set; }
+    public DateTimeOffset? RevokedAt { get; set; }
+    public string? CodeHash { get; set; }
+    public DateTimeOffset? CodeExpiresAt { get; set; }
+    public int CodeAttempts { get; set; }
+    public DateTimeOffset? CodeSentAt { get; set; }
+    /// <summary>Codes sent on <see cref="CodesDay"/> (South African date), to cap them per day.</summary>
+    public int CodesToday { get; set; }
+    public string? CodesDay { get; set; }
+    public string? GrantHash { get; set; }
+    public DateTimeOffset? GrantExpiresAt { get; set; }
+    public DateTimeOffset? FirstOpenedAt { get; set; }
+    public DateTimeOffset? LastOpenedAt { get; set; }
+    public int Opens { get; set; }
+}
+
 public sealed class SignInLink
 {
     public Guid Id { get; set; }
