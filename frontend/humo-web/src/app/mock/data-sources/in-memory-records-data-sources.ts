@@ -385,6 +385,26 @@ export class InMemoryCommunicationsDataSource extends CommunicationsDataSource {
       )
       .pipe(map(() => undefined));
   }
+
+  /** SIMULATED (docs/18 R-1): the prototype keeps no statement links, so revoking one only records the action. */
+  revokeLink(messageId: string, deliveryId: string): Observable<void> {
+    const m = this.store.get(messageId);
+    const delivery = m?.message.deliveries.find((d) => d.id === deliveryId);
+    return this.gateway
+      .command(
+        {
+          action: `Revoked a statement link sent to ${delivery?.name ?? 'someone'}`,
+          resource: 'Message',
+          resourceId: m?.message.ref,
+          schemeId: m?.message.schemeId,
+          permission: 'Collections.Manage',
+          feature: 'communications',
+          validate: () => (!delivery ? { id: 'No such delivery.' } : null),
+        },
+        () => undefined,
+      )
+      .pipe(map(() => undefined));
+  }
 }
 
 const INBOX_VERB: Record<ConversationAction['type'], string> = {
