@@ -54,6 +54,26 @@
 | R-13 | **Storage quotas**. **API, 19 Oct 2026:** allowances are calculated server-side; usage measurement and the upload check wait for documents on the API | Usage is a demo measurement plus files uploaded in this simulation. The simulated API refuses an upload over quota; the UI says *Not yet enforced by a server*. | A storage service measuring usage per organisation (documents, images, generated files; not backups or logs). **The API checks the quota before accepting an upload.** Threshold notifications; exceptions that expire; no automatic charges or upgrades. | — | `StorageMeter`; `storageSummary`; `InMemoryLibraryDataSource.upload` |
 | R-14 | **Humo invoices, payments and tax**. **API, 19 Oct 2026:** invoices (issued by hand, snapshot, unique reference, emailed link) and manual EFT with bank reconciliation are server-side; Payfast online payment with verified notifications (D15), card debit orders (tokenization) and the daily billing run with reminders; still to do: test Payfast end to end on the server (notifications need a public address) | Invoices are built in the browser and never sent. Payments are simulated: a simulated provider, a "Simulate provider confirmation" button and a manual bank-reconciliation step. VAT is off (not registered). | Choose the provider (Payfast, Peach Payments or another) behind `IPaymentProvider`: checkout and mandates, **verified server-to-server notifications** (signature, amount, idempotency by event id), reconciliation, failed-payment retries, overdue reminders. A billing run that issues invoices on the billing date. Configure VAT and tax-invoice numbering once decided (D10). **Remove the simulate buttons with the mock layer (R-6).** Never store card numbers or CVVs. | D10 | `PaymentGateway`; `SimulatedPaymentGateway`; `CommercialDataSource.issueInvoice`, `startCheckout`, `simulateProviderNotification`, `reconcileEft`, `invoices`, `invoice`; `PlanDataSource.invoices`, `invoice` (own organisation only) |
 
+## Production deployment requirements
+
+What the production server must have before go-live. Each item is configuration or a deployment step, not code. Secrets live in the server's `.env`, never in git (doc 26 §2). Check these against the release checklist (doc 26 §9) before each go-live.
+
+| # | Requirement | Setting or step | Why |
+|---|---|---|---|
+| D-1 | **Public address** is the real address, over HTTPS | `App:PublicUrl` = `https://pm.humo.co.za`; `App:PasskeyDomain` = `pm.humo.co.za`; `App:AllowedOrigins` = the same origin | Passkeys and webhook signatures are checked against these. A wrong value refuses every passkey and every signed event. |
+| D-2 | **Proxy headers come only from Caddy** (open: code change needed) | `Program.cs` clears the known-proxy and known-network lists, so forwarded headers are trusted from any caller. Set both to Caddy's address before go-live. | Forged headers could fake the caller's address and the request's scheme (cookies are `Secure` only over HTTPS). |
+| D-3 | **Database built by migrations, not `EnsureCreated`** | `Database:Initialise` = `Migrate`; back up before each migration (doc 26 §9) | The sessions and trusted-browser tables come from migrations. |
+| D-4 | **Mail sends for real** | `Mail:Provider` is not `Log`; `Mail:From` and `Mail:ReplyTo` set; SPF, DKIM and DMARC published for `notify.humo.co.za` | `Log` writes emails to the log and sends none. Missing records send mail to spam. |
+| D-5 | **Mail events are signed and reach Humo** | `Mail:WebhookSecret` set; the relay posts `delivered`, `bounced` and `failed` events to `https://pm.humo.co.za/api/webhooks/email` | Until this is set, every event is refused and emails stay Queued in Sent (R-5). |
+| D-6 | **SMS events are signed and reach Humo** | `Sms:SmsSouthAfrica:WebhookSecret` set; the webhook URL set in SMSSouthAfrica's panel, with signatures switched on | Same reason as D-5 (R-5). |
+| D-7 | **Sign-in limits agreed** | `Auth:SignInRequestsPerMinute` reviewed (default 10); session limits confirmed: passkey on a trusted browser 30 min idle and 12 h; other passkey 15 min and 8 h; email link 15 min and 4 h; admin roles 15 min idle | These are the values the policy in `SessionPolicy` enforces (R-8). |
+| D-8 | **Production build only** | Serve the `npm run build` output, which has no demo data, no demo hosting files and no prototype sign-in (R-6, R-7). CI checks this on every change. | The demo's "not for search engines" settings must never be deployed as production. |
+| D-9 | **Demo kept separate** | The demo is deployed to its own host from `npm run build:demo` only | Demo accounts and simulated passkeys must not be reachable from the real site. |
+| D-10 | **Backups tested** | A restore is tested before the first live data is loaded (doc 26 §6) | Sessions and sent-message records are kept in the database and must be recoverable. |
+| D-11 | **Sign-in still runs when a mail server is down** | Passkey sign-in works without email; email-link failures show the "can't be reached" message (R-8) | A mail outage must not lock people out. |
+
+The R-5 and R-8 entries above track what is still open for go-live. Requirements D-4 to D-6 close the delivery-results work once the provider is connected.
+
 ## Closed items
 
 | # | Item | What the demo does | What production must do | Decisions | Where |
