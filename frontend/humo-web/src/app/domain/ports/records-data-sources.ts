@@ -86,6 +86,8 @@ export abstract class CommunicationsDataSource {
   abstract message(id: string): Observable<SentView | undefined>;
   abstract retry(id: string): Observable<void>;
   abstract cancel(id: string): Observable<void>;
+  /** Ends the emailed statement link a delivery carries: it stops working for anyone holding it. */
+  abstract revokeLink(messageId: string, deliveryId: string): Observable<void>;
 }
 
 /**

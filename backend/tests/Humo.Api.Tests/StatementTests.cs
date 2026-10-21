@@ -200,6 +200,24 @@ public sealed class StatementTests : IDisposable
     }
 
     [Fact]
+    public async Task Staff_revoke_an_emailed_statement_link_and_it_stops_working()
+    {
+        var s = await Scheme();
+        await PostedRun(s);
+        Assert.Equal(HttpStatusCode.OK, (await s.Finance.PostAsync($"/api/accounts/{s.Account42}/statements/2026-11/send", null)).StatusCode);
+        await HumoApiFactory.Until(() => !api.Email.Sent.IsEmpty);
+        var token = System.Text.RegularExpressions.Regex.Match(Assert.Single(api.Email.Sent).Text, "/d/([0-9a-f]{64})").Groups[1].Value;
+        var delivery = await api.Db(db => db.Deliveries.Where(d => d.DocumentId != null).Select(d => new { d.Id, d.SentMessageId }).SingleAsync());
+        var anyone = api.Client();
+        Assert.Equal(HttpStatusCode.OK, (await anyone.GetAsync($"/api/document-links/{token}")).StatusCode);
+
+        var revoke = $"/api/communications/sent/{delivery.SentMessageId}/deliveries/{delivery.Id}/revoke-link";
+        Assert.Equal(HttpStatusCode.NoContent, (await s.Finance.PostAsync(revoke, null)).StatusCode);
+        Assert.NotEqual(HttpStatusCode.OK, (await anyone.GetAsync($"/api/document-links/{token}")).StatusCode);
+        Assert.Contains("no open link", (await (await s.Finance.PostAsync(revoke, null)).FieldErrors()).GetProperty("link").GetString());
+    }
+
+    [Fact]
     public async Task An_owner_opens_their_statement_from_the_email_with_a_code_and_no_account()
     {
         var s = await Scheme();

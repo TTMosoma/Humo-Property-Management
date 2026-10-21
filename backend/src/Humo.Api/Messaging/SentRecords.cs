@@ -12,7 +12,7 @@ namespace Humo.Api.Messaging;
 
 // The shapes match SentMessage and SentView in the app (messaging.ts).
 public sealed record DeliveryDto(string Id, string PersonId, string Name, string? UnitLabel, string Channel, string Address, string Status, string At, string? Error,
-    Dictionary<string, string> Values);
+    Dictionary<string, string> Values, bool HasLink);
 public sealed record SkippedDto(string PersonId, string Name, string? UnitLabel, string Reason);
 public sealed record SentSourceDto(string Label, string Route);
 public sealed record SentMessageDto(string Id, int Version, string Ref, string Kind, string SchemeId, string Subject, string Body, string? TemplateId, List<string> Channels,
@@ -154,7 +154,7 @@ public sealed class SentRecords(HumoDbContext db, TimeProvider clock)
                 JsonSerializer.Deserialize<List<string>>(m.Channels, Json.Options) ?? [], m.AudienceLabel, m.CreatedAt.ToString("O"), m.SentBy, m.SendAt.ToString("O"),
                 m.CancelledAt is { } c ? new { at = c.ToString("O"), by = m.CancelledBy } : null,
                 [.. list.Select(d => new DeliveryDto(d.Id.ToString(), d.PersonId.ToString(), d.Name, d.UnitLabel, d.Channel, d.Address, d.Status, d.At.ToString("O"), d.Error,
-                    JsonSerializer.Deserialize<Dictionary<string, string>>(d.Values, Json.Options) ?? []))],
+                    JsonSerializer.Deserialize<Dictionary<string, string>>(d.Values, Json.Options) ?? [], d.DocumentId is not null))],
                 JsonSerializer.Deserialize<List<SkippedDto>>(m.Skipped, Json.Options) ?? [],
                 m.SourceLabel is { } label ? new SentSourceDto(label, m.SourceRoute ?? "") : null);
             return new SentViewDto(dto, schemes[m.SchemeId.ToString()], counts, state);
@@ -178,6 +178,7 @@ public static class SentEndpoints
         g.MapGet("/{id:guid}", Get);
         g.MapPost("/{id:guid}/retry", Retry);
         g.MapPost("/{id:guid}/cancel", Cancel);
+        g.MapPost("/{id:guid}/deliveries/{deliveryId:guid}/revoke-link", RevokeLink);
     }
 
     private static async Task<IQueryable<SentMessageRow>?> VisibleAsync(Actor actor, HumoDbContext db, CancellationToken ct)
@@ -250,6 +251,31 @@ public static class SentEndpoints
             message.CancelledAt = clock.GetUtcNow();
             message.CancelledBy = actor.Human.Name;
             message.Version++;
+            return Task.FromResult(Results.NoContent());
+        }, ct);
+    }
+
+    /// <summary>
+    /// Ends the emailed statement link a delivery carries, for that person: the link stops working at once, for anyone
+    /// holding it. Staff use this when an email went to the wrong address or the link should not be used any more.
+    /// </summary>
+    private static async Task<IResult> RevokeLink(Guid id, Guid deliveryId, CurrentActor current, CommandRunner commands, HumoDbContext db, TimeProvider clock, CancellationToken ct)
+    {
+        if (await current.GetAsync(ct) is not { } me) return Results.Unauthorized();
+        if (await VisibleAsync(me, db, ct) is not { } visible || await visible.FirstOrDefaultAsync(m => m.Id == id, ct) is not { } message) return Problems.NotFound();
+        var delivery = await db.Deliveries.FirstOrDefaultAsync(d => d.Id == deliveryId && d.SentMessageId == id, ct);
+        if (delivery?.DocumentId is not { } documentId) return Problems.NotFound();
+        var links = await db.DocumentLinks.Where(l => l.DocumentId == documentId && l.PersonId == delivery.PersonId && l.RevokedAt == null).ToListAsync(ct);
+        return await commands.RunAsync(new CommandSpec($"Revoked the statement link sent to {delivery.Name}", "Collections.Manage")
+        {
+            Resource = "Sent message",
+            ResourceId = message.Ref,
+            SchemeId = message.SchemeId,
+            Validate = () => links.Count == 0 ? new() { ["link"] = "This delivery has no open link." } : [],
+        }, _ =>
+        {
+            var now = clock.GetUtcNow();
+            foreach (var link in links) link.RevokedAt = now;
             return Task.FromResult(Results.NoContent());
         }, ct);
     }

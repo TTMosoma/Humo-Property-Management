@@ -85,6 +85,14 @@ import { DELIVERY_TONE, deliverySummary, displaySubject } from './comms-view';
           </ng-template>
           <ng-template uiCell="at" let-d>{{ formatDate(d.at, true) }} {{ time(d.at) }}</ng-template>
         </ui-data-table>
+        @if (selected(); as d) {
+          @if (d.hasLink) {
+            <p class="muted small">
+              The statement link sent to {{ d.name }} works for anyone holding it.
+              <button type="button" class="btn btn-secondary btn-sm" (click)="revokeLink(d.id)"><ion-icon name="ban-outline" aria-hidden="true" /> Revoke the link</button>
+            </p>
+          }
+        }
       </section>
     }
   `,
@@ -160,6 +168,10 @@ export class SentMessagePage {
 
   protected retry(): void {
     this.data.retry(this.view()!.message.id).subscribe({ next: () => this.feedback.success('Retried.'), error: () => this.feedback.error('The retry didn’t go out.') });
+  }
+
+  protected revokeLink(deliveryId: string): void {
+    this.data.revokeLink(this.view()!.message.id, deliveryId).subscribe({ next: () => this.feedback.success('The link is revoked. It no longer opens the statement.'), error: () => this.feedback.error('The link wasn’t revoked.') });
   }
 
   protected cancel(): void {

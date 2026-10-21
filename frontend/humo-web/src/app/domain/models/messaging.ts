@@ -104,6 +104,8 @@ export interface Delivery {
   error?: string;
   /** The merge values used for this person. */
   values: Record<string, string>;
+  /** A statement link was emailed to this person, which staff can revoke. */
+  hasLink?: boolean;
 }
 
 /** Someone the audience includes who can't be reached by any chosen channel. */

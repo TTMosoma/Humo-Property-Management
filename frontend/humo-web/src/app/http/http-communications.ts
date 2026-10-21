@@ -45,6 +45,10 @@ export class HttpCommunicationsDataSource extends HttpPort implements Communicat
     return this.command('POST', `/communications/sent/${id}/cancel`, {}, ['communications']);
   }
 
+  revokeLink(messageId: string, deliveryId: string): Observable<void> {
+    return this.command('POST', `/communications/sent/${messageId}/deliveries/${deliveryId}/revoke-link`, {}, ['communications']);
+  }
+
   templates(): Observable<MessageTemplate[]> {
     return this.live<MessageTemplate[]>('/communications/templates', ['communications', 'session']);
   }
