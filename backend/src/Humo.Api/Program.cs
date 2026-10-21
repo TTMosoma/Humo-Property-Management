@@ -122,11 +122,14 @@ builder.Services.AddRateLimiter(o =>
 });
 
 // Behind Caddy on the VPS: trust its X-Forwarded-For/Proto. The API's port is only reachable from Caddy (docker network).
+// Forwarded headers are believed only from Caddy (App:TrustedProxies). Anyone else's X-Forwarded-For or X-Forwarded-Proto is ignored.
 builder.Services.Configure<ForwardedHeadersOptions>(o =>
 {
     o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
     o.KnownIPNetworks.Clear();
     o.KnownProxies.Clear();
+    foreach (var proxy in config.GetSection(AppOptions.Section).Get<AppOptions>()?.TrustedProxies ?? [])
+        o.KnownProxies.Add(System.Net.IPAddress.Parse(proxy));
 });
 
 var app = builder.Build();

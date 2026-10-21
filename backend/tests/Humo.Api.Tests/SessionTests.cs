@@ -4,7 +4,10 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Humo.Api.Auth;
 using Humo.Domain.Access;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Humo.Api.Tests;
 
@@ -181,6 +184,18 @@ public sealed partial class SessionTests : IDisposable
         var sessions = (await (await stillHere.GetAsync("/api/me/security")).Json()).GetProperty("sessions").EnumerateArray().ToList();
         Assert.Single(sessions);
         Assert.Equal(HttpStatusCode.Unauthorized, (await idle.GetAsync("/api/me")).StatusCode);
+    }
+
+    /// <summary>
+    /// Forwarded headers are believed only from the proxies in App:TrustedProxies (Caddy). The test server has no remote
+    /// address, so this checks the configured list; a live request from outside Caddy is checked on staging.
+    /// </summary>
+    [Fact]
+    public void Forwarded_headers_are_believed_only_from_the_trusted_proxies()
+    {
+        var forwarded = api.Services.GetRequiredService<IOptions<ForwardedHeadersOptions>>().Value;
+        Assert.Equal(["127.0.0.1", "::1"], forwarded.KnownProxies.Select(p => p.ToString()).OrderBy(p => p).ToArray());
+        Assert.Empty(forwarded.KnownIPNetworks);
     }
 
     // ---- "Is this your own computer?": asked once per browser ----
