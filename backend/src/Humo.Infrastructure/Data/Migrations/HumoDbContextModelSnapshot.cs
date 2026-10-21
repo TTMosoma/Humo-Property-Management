@@ -2463,6 +2463,11 @@ namespace Humo.Infrastructure.Data.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
+                    b.Property<bool>("Trusted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 

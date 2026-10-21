@@ -79,28 +79,6 @@
 
           <div class="divider" role="separator"><span>or</span></div>
 
-          <fieldset class="device-choice">
-            <legend>Whose computer is this?</legend>
-            <div class="choices">
-              <label class="choice" [class.selected]="!ownComputer()">
-                <input type="radio" name="device" [checked]="!ownComputer()" (change)="ownComputer.set(false)" />
-                <ion-icon name="people-outline" aria-hidden="true" />
-                <span>Shared or borrowed</span>
-              </label>
-              <label class="choice" [class.selected]="ownComputer()">
-                <input type="radio" name="device" [checked]="ownComputer()" (change)="ownComputer.set(true)" />
-                <ion-icon name="laptop-outline" aria-hidden="true" />
-                <span>My own</span>
-              </label>
-            </div>
-            <p class="choice-note" aria-live="polite">
-              @if (ownComputer()) {
-                Stay signed in until 30 minutes without use, for up to 12 hours.
-              } @else {
-                Signed out after 15 minutes without use, and within 8 hours.
-              }
-            </p>
-          </fieldset>
           <button type="button" class="btn btn-secondary big" (click)="passkey()">
             <ion-icon name="finger-print-outline" aria-hidden="true" /> Sign in with a passkey
           </button>
@@ -245,6 +223,19 @@
             <div class="passkey-anim calm" aria-hidden="true"><ion-icon name="link-outline" /></div>
             <h1 #heading tabindex="-1">Signing you in…</h1>
             <p class="sub" role="status">Checking your code.</p>
+          </div>
+        }
+
+        @case ('ask-trust') {
+          <div class="centre">
+            <div class="icon-badge ok" aria-hidden="true"><ion-icon name="laptop-outline" /></div>
+            <h1 #heading tabindex="-1">Is this your own computer?</h1>
+            <p class="sub">We’ll remember your answer on this browser, so we won’t ask again. You can change it in Settings › Security.</p>
+            <div class="stack">
+              <button type="button" class="btn btn-primary big" (click)="answerTrust(true)"><ion-icon name="checkmark-outline" aria-hidden="true" /> Yes, it’s mine</button>
+              <button type="button" class="btn btn-secondary big" (click)="answerTrust(false)"><ion-icon name="people-outline" aria-hidden="true" /> No, it’s shared</button>
+            </div>
+            <p class="hint">Say yes only on a computer nobody else uses. Your own computer stays signed in longer.</p>
           </div>
         }
 

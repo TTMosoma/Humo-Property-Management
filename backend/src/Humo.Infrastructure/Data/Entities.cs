@@ -380,12 +380,16 @@ public sealed class UserSession
     public DateTimeOffset? RevokedAt { get; set; }
 }
 
-/// <summary>A browser the person marked as their own. Its cookie holds a random token; only the token's hash is kept.</summary>
+/// <summary>
+/// A browser the person has answered the "is this your own computer?" question for. Its cookie holds a random token;
+/// only the token's hash is kept. Trusted means "my own"; false means "shared". Either answer is asked once.
+/// </summary>
 public sealed class TrustedBrowser
 {
     public Guid Id { get; set; }
     public Guid UserId { get; set; }
     public string TokenHash { get; set; } = "";
+    public bool Trusted { get; set; }
     public string Label { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset ExpiresAt { get; set; }

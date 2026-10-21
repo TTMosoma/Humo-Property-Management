@@ -67,7 +67,7 @@ public sealed partial class SignInTests : IDisposable
     public async Task A_link_works_once()
     {
         var link = await RequestLink(HumoApiFactory.AdminEmail);
-        Assert.Equal(HttpStatusCode.NoContent, (await Complete(link)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await Complete(link)).StatusCode);
         await AssertFailure(await Complete(link), "link-expired");
     }
 
@@ -165,7 +165,7 @@ public sealed partial class SignInTests : IDisposable
 
     private Task<HttpResponseMessage> Complete(string token, string code) => client.PostAsJsonAsync("/api/auth/link/complete", new { token, code });
 
-    private async Task SignInWithLink(string email) => Assert.Equal(HttpStatusCode.NoContent, (await Complete(await RequestLink(email))).StatusCode);
+    private async Task SignInWithLink(string email) => Assert.Equal(HttpStatusCode.OK, (await Complete(await RequestLink(email))).StatusCode);
 
     private async Task<JsonElement> Me()
     {

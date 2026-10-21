@@ -23,7 +23,10 @@ public sealed record LinkSentDto(string Code);
 public sealed record PasskeyOptionsRequest(string? Email);
 public sealed record PasskeyCredentialRequest(JsonElement Credential);
 /// <summary>"This is my own computer" was ticked on the sign-in screen (the browser is then trusted for 30 days).</summary>
-public sealed record PasskeySignInRequest(JsonElement Credential, bool OwnComputer);
+public sealed record PasskeySignInRequest(JsonElement Credential);
+
+/// <summary>After a sign-in: whether this browser still has to answer "is this your own computer?"</summary>
+public sealed record SignInResultDto(bool AskBrowserTrust);
 public sealed record SwitchAssignmentRequest(string AssignmentId);
 
 /// <summary>
@@ -146,7 +149,7 @@ public static class AuthEndpoints
         await db.SaveChangesAsync(ct);
         // A link sign-in is never trusted: it proves control of an inbox, not of a device (docs/17 session policy).
         await sessions.StartAsync(user, SessionPolicy.LinkMethod, trusted: false, signIn, ct);
-        return Results.NoContent();
+        return Results.Ok(new SignInResultDto(!await sessions.BrowserAnsweredAsync(user, ct)));
     }
 
     // ---- Passkeys ----
@@ -175,13 +178,12 @@ public static class AuthEndpoints
 
         // Keep the passkey's signature counter and last use up to date (as the framework asks).
         await users.AddOrUpdatePasskeyAsync(user, result.Passkey);
-        // A passkey proves the device holds the key. Ticking "my own computer" marks this browser; a browser already marked stays trusted.
-        var trusted = body.OwnComputer || await sessions.IsTrustedBrowserAsync(user, ct);
-        if (body.OwnComputer) await sessions.MarkTrustedAsync(user, ct);
+        // A passkey proves the device holds the key. The browser's answer to "is this your own computer?" decides the limits.
+        var trusted = await sessions.IsTrustedBrowserAsync(user, ct);
         audit.Record("Signed in with a passkey", "success", user, stepUpMethod: "passkey", reason: trusted ? "Trusted browser" : "Browser not marked as own");
         await db.SaveChangesAsync(ct);
         await sessions.StartAsync(user, SessionPolicy.PasskeyMethod, trusted, signIn, ct);
-        return Results.NoContent();
+        return Results.Ok(new SignInResultDto(!await sessions.BrowserAnsweredAsync(user, ct)));
     }
 
     /// <summary>Options for navigator.credentials.create(), for the signed-in person's new passkey.</summary>

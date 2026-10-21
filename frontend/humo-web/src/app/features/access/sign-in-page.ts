@@ -9,7 +9,7 @@ import { PrototypeControls } from '../../core/prototype/prototype-controls';
 import { SessionService } from '../../core/session/session.service';
 import { Logo } from '../../ui/brand/logo';
 
-type Step = 'start' | 'passkey' | 'no-passkey' | 'paused' | 'link-sent' | 'enter-code' | 'redeeming' | 'link-failed' | 'unavailable' | 'add-passkey' | 'creating-passkey';
+type Step = 'start' | 'passkey' | 'no-passkey' | 'paused' | 'link-sent' | 'enter-code' | 'redeeming' | 'link-failed' | 'unavailable' | 'ask-trust' | 'add-passkey' | 'creating-passkey';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const RESEND_AFTER_S = 30;
@@ -71,8 +71,6 @@ export class SignInPage {
   protected readonly emailError = signal('');
   /** The email the passkey prompt was for ('' when the browser chose). */
   protected readonly passkeyFor = signal('');
-  /** "This is my own computer": a longer session for a passkey sign-in. Off unless they say so (shared computers stay off). */
-  protected readonly ownComputer = signal(false);
   /** The six-digit code the asking screen shows; the link only works with it (entered on the page the link opens). */
   protected readonly shownCode = signal('');
   protected readonly linkCode = signal('');
@@ -85,6 +83,8 @@ export class SignInPage {
   private readonly heading = viewChild<ElementRef<HTMLElement>>('heading');
   private readonly emailInput = viewChild<ElementRef<HTMLInputElement>>('emailInput');
   private pending?: Subscription;
+  /** Where to go once this browser has answered "is this your own computer?" (a new link sign-in offers a passkey next). */
+  private afterTrust: 'done' | 'add-passkey' = 'done';
   private timer?: ReturnType<typeof setInterval>;
 
   protected readonly blockedText = {
@@ -142,8 +142,8 @@ export class SignInPage {
     this.passkeyFor.set(email);
     this.step.set('passkey');
     this.pending?.unsubscribe();
-    this.pending = this.sessions.signInWithPasskey(email || undefined, this.ownComputer()).subscribe({
-      next: () => this.done(),
+    this.pending = this.sessions.signInWithPasskey(email || undefined).subscribe({
+      next: (askTrust) => this.signedIn(askTrust, 'done'),
       error: (e: unknown) => {
         const code = e instanceof SignInError ? e.code : 'no-passkey';
         this.step.set(code === 'paused' ? 'paused' : code === 'cancelled' ? 'start' : code === 'unavailable' ? 'unavailable' : 'no-passkey');
@@ -239,8 +239,8 @@ export class SignInPage {
     this.pending?.unsubscribe();
     this.step.set('redeeming');
     this.pending = this.sessions.completeSignInLink(token, code).subscribe({
-      // Signed in by email: offer a passkey, so next time is one touch (newcomers get their first one here).
-      next: () => this.step.set('add-passkey'),
+      // Signed in by email: ask about this computer, then offer a passkey, so next time is one touch (newcomers get their first one here).
+      next: (askTrust) => this.signedIn(askTrust, 'add-passkey'),
       error: (e: unknown) => {
         if (e instanceof SignInError && e.code === 'wrong-code') {
           this.codeError.set(e.message);
@@ -250,6 +250,24 @@ export class SignInPage {
         this.step.set('link-failed');
       },
     });
+  }
+
+  /** Signed in: ask once whether this browser is the person's own computer, otherwise carry on. */
+  private signedIn(askTrust: boolean, next: 'done' | 'add-passkey'): void {
+    this.afterTrust = next;
+    if (askTrust) this.step.set('ask-trust');
+    else this.carryOn();
+  }
+
+  protected answerTrust(trusted: boolean): void {
+    this.pending?.unsubscribe();
+    // An answer that doesn't reach the server is asked again next time, so carry on either way.
+    this.pending = this.sessions.answerBrowserTrust(trusted).subscribe({ complete: () => this.carryOn(), error: () => this.carryOn() });
+  }
+
+  private carryOn(): void {
+    if (this.afterTrust === 'add-passkey') this.step.set('add-passkey');
+    else this.done();
   }
 
   protected createPasskey(): void {

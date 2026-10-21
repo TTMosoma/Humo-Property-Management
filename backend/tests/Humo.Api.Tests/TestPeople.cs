@@ -71,7 +71,7 @@ public static partial class TestPeople
         var code = (await sent.Json()).GetProperty("code").GetString()!;
         var token = Token().Match(Assert.Single(api.Email.Sent).Text).Groups[1].Value;
         api.Email.Sent.Clear();
-        Assert.Equal(HttpStatusCode.NoContent, (await client.PostAsJsonAsync("/api/auth/link/complete", new { token, code })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await client.PostAsJsonAsync("/api/auth/link/complete", new { token, code })).StatusCode);
         return client;
     }
 

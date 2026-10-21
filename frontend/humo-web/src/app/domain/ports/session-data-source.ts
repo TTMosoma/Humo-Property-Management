@@ -74,12 +74,12 @@ export abstract class SessionDataSource {
   /**
    * Sign in with a passkey. `emailHint` narrows the browser's passkey prompt to
    * that account; without it the browser offers the passkeys it holds for Humo.
-   * `ownComputer` is the person's say-so that this is their own computer, which
-   * gives a longer session; a shared computer leaves it off.
+   * Resolves with `askBrowserTrust`: true while this browser hasn't yet said
+   * whether it's the person's own computer (asked once, then remembered).
    * Fails with a SignInError. It never says whether an account exists.
    * PRODUCTION: the identity provider's WebAuthn ceremony (D5) — see docs/18 R-8.
    */
-  abstract signInWithPasskey(emailHint?: string, ownComputer?: boolean): Observable<void>;
+  abstract signInWithPasskey(emailHint?: string): Observable<boolean>;
   /**
    * Emails a one-time sign-in link and returns the six-digit code for the screen
    * that asked. The link only signs in together with that code, so a forwarded
@@ -90,10 +90,18 @@ export abstract class SessionDataSource {
   abstract sendSignInLink(email: string): Observable<string>;
   /**
    * Signs in with the token from a sign-in link and the code from the screen that
-   * asked for it. Fails with SignInError('wrong-code') while tries remain, and
-   * with SignInError('link-expired') once the link is used, too old or out of tries.
+   * asked for it. Resolves with `askBrowserTrust` (see signInWithPasskey). Fails with
+   * SignInError('wrong-code') while tries remain, and with SignInError('link-expired')
+   * once the link is used, too old or out of tries.
    */
-  abstract completeSignInLink(token: string, code: string): Observable<void>;
+  abstract completeSignInLink(token: string, code: string): Observable<boolean>;
+  /**
+   * Answers "is this your own computer?" for this browser, once. A computer the
+   * person owns keeps a passkey sign-in signed in longer. The answer can be removed
+   * in Settings › Security.
+   * PRODUCTION: the API records it against this browser (POST /me/security/browser).
+   */
+  abstract answerBrowserTrust(trusted: boolean): Observable<void>;
   /**
    * Creates a passkey on this device for the signed-in person (offered right
    * after an email-link sign-in, so newcomers get their first passkey).

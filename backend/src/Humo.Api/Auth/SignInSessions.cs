@@ -76,39 +76,84 @@ public sealed class SignInSessions(HumoDbContext db, SessionBuilder sessions, Ti
         db.UserSessions.Where(s => s.UserId == userId && s.Id != keepSessionId && s.RevokedAt == null)
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.RevokedAt, Now), ct);
 
-    /// <summary>Is this browser one the person marked as their own, and has the mark not lapsed?</summary>
-    public async Task<bool> IsTrustedBrowserAsync(HumoUser user, CancellationToken ct)
+    /// <summary>The browser's answer to "is this your own computer?", if it has one that's still in force.</summary>
+    private async Task<TrustedBrowser?> BrowserAnswerAsync(HumoUser user, CancellationToken ct)
     {
         var token = http.HttpContext?.Request.Cookies[DeviceCookie];
-        if (string.IsNullOrEmpty(token)) return false;
+        if (string.IsNullOrEmpty(token)) return null;
         var hash = Hash(token);
-        return await db.TrustedBrowsers.AnyAsync(t => t.UserId == user.Id && t.TokenHash == hash && t.RevokedAt == null && t.ExpiresAt > Now, ct);
+        // The expiry is checked here, not in the query: the test database can't translate DateTimeOffset comparisons.
+        var answer = await db.TrustedBrowsers.FirstOrDefaultAsync(t => t.UserId == user.Id && t.TokenHash == hash && t.RevokedAt == null, ct);
+        return answer is not null && answer.ExpiresAt > Now ? answer : null;
     }
 
-    /// <summary>Marks this browser as the person's own for 30 days.</summary>
-    public async Task MarkTrustedAsync(HumoUser user, CancellationToken ct)
+    /// <summary>Is this browser one the person has said is their own, and has that answer not lapsed or been removed?</summary>
+    public async Task<bool> IsTrustedBrowserAsync(HumoUser user, CancellationToken ct) =>
+        await BrowserAnswerAsync(user, ct) is { Trusted: true };
+
+    /// <summary>Has this browser already answered the question, so it needn't be asked again?</summary>
+    public async Task<bool> BrowserAnsweredAsync(HumoUser user, CancellationToken ct) =>
+        await BrowserAnswerAsync(user, ct) is not null;
+
+    /// <summary>
+    /// Records the browser's answer for 30 days. Answering again replaces the earlier answer. The cookie carries
+    /// the token, so the browser is asked once and remembers its answer.
+    /// </summary>
+    public async Task AnswerBrowserAsync(HumoUser user, bool trusted, CancellationToken ct)
     {
         var ctx = http.HttpContext!;
-        var token = WebEncoders.Base64UrlEncode(RandomNumberGenerator.GetBytes(32));
-        db.TrustedBrowsers.Add(new TrustedBrowser
+        var existing = await BrowserAnswerAsync(user, ct);
+        if (existing is not null)
         {
-            Id = Guid.CreateVersion7(), UserId = user.Id, TokenHash = Hash(token), Label = Label(ctx), CreatedAt = Now, ExpiresAt = Now + SessionPolicy.TrustLifetime,
-        });
-        ctx.Response.Cookies.Append(DeviceCookie, token, new CookieOptions
+            existing.Trusted = trusted;
+            existing.ExpiresAt = Now + SessionPolicy.TrustLifetime;
+            existing.Label = Label(ctx);
+        }
+        else
         {
-            HttpOnly = true, Secure = ctx.Request.IsHttps, SameSite = SameSiteMode.Lax, Expires = Now + SessionPolicy.TrustLifetime, IsEssential = true,
-        });
+            var token = WebEncoders.Base64UrlEncode(RandomNumberGenerator.GetBytes(32));
+            db.TrustedBrowsers.Add(new TrustedBrowser
+            {
+                Id = Guid.CreateVersion7(), UserId = user.Id, TokenHash = Hash(token), Trusted = trusted, Label = Label(ctx), CreatedAt = Now,
+                ExpiresAt = Now + SessionPolicy.TrustLifetime,
+            });
+            ctx.Response.Cookies.Append(DeviceCookie, token, new CookieOptions
+            {
+                HttpOnly = true, Secure = ctx.Request.IsHttps, SameSite = SameSiteMode.Lax, Expires = Now + SessionPolicy.TrustLifetime, IsEssential = true,
+            });
+        }
+        await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// Applies the browser's answer to the session it's answered in: a passkey session on a browser marked as its own
+    /// gets the longer limits from now on (the session's start stays where it was).
+    /// </summary>
+    public async Task ApplyTrustAsync(Guid sessionId, HumoUser user, bool trusted, CancellationToken ct)
+    {
+        var session = await db.UserSessions.FirstAsync(s => s.Id == sessionId, ct);
+        var (idle, absolute) = SessionPolicy.For(session.Method, trusted, await RoleAsync(user, null, ct));
+        session.Trusted = trusted;
+        session.IdleMinutes = idle;
+        session.AbsoluteExpiresAt = session.StartedAt + absolute;
         await db.SaveChangesAsync(ct);
     }
 
     public static string Hash(string value) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
 
-    /// <summary>The browser as the person will recognise it: the start of its user agent, not a fingerprint.</summary>
+    /// <summary>The browser as the person will recognise it, such as "Chrome on Mac". Never a fingerprint.</summary>
     public static string Label(HttpContext ctx)
     {
         var agent = ctx.Request.Headers.UserAgent.ToString();
-        return agent.Length == 0 ? "Unknown browser" : agent[..Math.Min(agent.Length, 120)];
+        if (agent.Length == 0) return "Unknown browser";
+        var browser = agent.Contains("Edg/") ? "Edge" : agent.Contains("Firefox/") ? "Firefox" : agent.Contains("Chrome/") ? "Chrome" : agent.Contains("Safari/") ? "Safari" : "Browser";
+        var system = agent.Contains("iPhone") ? "iPhone" : agent.Contains("iPad") ? "iPad" : agent.Contains("Android") ? "Android" : agent.Contains("Windows") ? "Windows" : agent.Contains("Mac OS") ? "Mac" : agent.Contains("Linux") ? "Linux" : "";
+        return system.Length == 0 ? browser : $"{browser} on {system}";
     }
+
+    /// <summary>Phone, tablet or laptop, from the browser's label.</summary>
+    public static string KindOf(string label) =>
+        label.Contains("iPad") ? "tablet" : label.Contains("iPhone") || label.Contains("Android") ? "phone" : "laptop";
 
     /// <summary>A browser the person marked as their own stays signed in across restarts (until the policy's limits); any other session ends with the browser.</summary>
     private static AuthenticationProperties Properties(UserSession session) =>

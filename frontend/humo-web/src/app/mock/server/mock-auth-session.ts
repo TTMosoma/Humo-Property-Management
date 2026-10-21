@@ -27,7 +27,7 @@ interface AuthState {
   impersonation: ImpersonationSession | null;
 }
 
-const KEYS = { identity: 'humo.persona', signedOut: 'humo.signedOut', assignment: 'humo.membership', impersonation: 'humo.impersonation' };
+const KEYS = { identity: 'humo.persona', signedOut: 'humo.signedOut', assignment: 'humo.membership', impersonation: 'humo.impersonation', browser: 'humo.browserTrust' };
 
 /** Wrong codes a link takes before it's spent (the API's MaxCodeAttempts). */
 const MAX_LINK_TRIES = 5;
@@ -96,6 +96,32 @@ export class MockAuthSession {
     const id = identityId && this.store.identity(identityId) ? identityId : this.state.identityId;
     this.proof = null;
     this.update({ identityId: id, signedIn: true, assignmentId: identityId ? null : this.state.assignmentId, impersonation: null });
+  }
+
+  /**
+   * "Is this your own computer?", answered once per person on this browser (the API keeps it against the browser's
+   * cookie). `true` means their own; `false` means shared.
+   */
+  browserAnswered(identityId: string): boolean {
+    return identityId in this.browserAnswers();
+  }
+
+  answerBrowser(identityId: string, trusted: boolean): void {
+    safeStorage.set(KEYS.browser, JSON.stringify({ ...this.browserAnswers(), [identityId]: trusted }));
+  }
+
+  /** Removing the trusted computer: the question comes back on the next sign-in here. */
+  forgetBrowser(identityId: string): void {
+    const { [identityId]: _, ...rest } = this.browserAnswers();
+    safeStorage.set(KEYS.browser, JSON.stringify(rest));
+  }
+
+  private browserAnswers(): Record<string, boolean> {
+    try {
+      return JSON.parse(safeStorage.get(KEYS.browser) ?? '{}') as Record<string, boolean>;
+    } catch {
+      return {};
+    }
   }
 
   /** Whose passkey this device holds: the last person who signed in here. */

@@ -630,6 +630,7 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.ToTable("TrustedBrowsers");
             e.HasIndex(t => t.TokenHash).IsUnique();
             e.HasIndex(t => t.UserId);
+            e.Property(t => t.Trusted).HasDefaultValue(true);
             e.Property(t => t.TokenHash).HasMaxLength(64);
             e.Property(t => t.Label).HasMaxLength(120);
         });

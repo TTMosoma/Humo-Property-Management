@@ -42,13 +42,12 @@ export class HttpSessionDataSource extends SessionDataSource {
     return throwError(() => new SignInError('unavailable', 'Choose a passkey or an email link'));
   }
 
-  signInWithPasskey(emailHint?: string, ownComputer = false): Observable<void> {
+  signInWithPasskey(emailHint?: string): Observable<boolean> {
     if (!webAuthnJson()) return throwError(() => new SignInError('no-passkey', 'This browser can’t use passkeys'));
     return this.http.post<PublicKeyCredentialRequestOptionsJSON>(`${this.base}/auth/passkey/options`, { email: emailHint ?? null }, { withCredentials: true }).pipe(
       switchMap((options) => from(navigator.credentials.get({ publicKey: PublicKeyCredential.parseRequestOptionsFromJSON(options) }))),
-      switchMap((credential) => this.http.post(`${this.base}/auth/passkey`, { credential: (credential as PublicKeyCredential).toJSON(), ownComputer }, { withCredentials: true })),
-      switchMap(() => this.reload()),
-      map(() => undefined),
+      switchMap((credential) => this.http.post<SignInResult>(`${this.base}/auth/passkey`, { credential: (credential as PublicKeyCredential).toJSON() }, { withCredentials: true })),
+      switchMap((result) => this.reload().pipe(map(() => result.askBrowserTrust))),
       catchError((e: unknown) => throwError(() => signInError(e, 'no-passkey'))),
     );
   }
@@ -60,11 +59,16 @@ export class HttpSessionDataSource extends SessionDataSource {
     );
   }
 
-  completeSignInLink(token: string, code: string): Observable<void> {
-    return this.http.post(`${this.base}/auth/link/complete`, { token, code }, { withCredentials: true }).pipe(
-      switchMap(() => this.reload()),
-      map(() => undefined),
+  completeSignInLink(token: string, code: string): Observable<boolean> {
+    return this.http.post<SignInResult>(`${this.base}/auth/link/complete`, { token, code }, { withCredentials: true }).pipe(
+      switchMap((result) => this.reload().pipe(map(() => result.askBrowserTrust))),
       catchError((e: unknown) => throwError(() => signInError(e, 'link-expired'))),
+    );
+  }
+
+  answerBrowserTrust(trusted: boolean): Observable<void> {
+    return this.http.post(`${this.base}/me/security/browser`, { trusted }, { withCredentials: true }).pipe(
+      map(() => undefined),
     );
   }
 
@@ -82,6 +86,11 @@ export class HttpSessionDataSource extends SessionDataSource {
   demoIdentities(): Observable<Identity[]> {
     return of([]);
   }
+}
+
+/** What a sign-in answers: whether this browser still has to say if it's the person's own computer. */
+interface SignInResult {
+  askBrowserTrust: boolean;
 }
 
 /** Browsers that read and write WebAuthn options as JSON (all current major browsers). */

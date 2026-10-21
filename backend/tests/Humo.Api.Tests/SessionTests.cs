@@ -35,7 +35,7 @@ public sealed partial class SessionTests : IDisposable
         Assert.Contains("4 tries left", problem.GetProperty("title").GetString());
 
         // A wrong code doesn't spend the link: the right code still signs in.
-        Assert.Equal(HttpStatusCode.NoContent, (await Complete(link)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await Complete(link)).StatusCode);
     }
 
     [Fact]
@@ -46,7 +46,7 @@ public sealed partial class SessionTests : IDisposable
         var second = await RequestLink(HumoApiFactory.AdminEmail);
         await AssertFailure(await Complete(first.Token, second.Code), "wrong-code");
 
-        Assert.Equal(HttpStatusCode.NoContent, (await Complete(first)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await Complete(first)).StatusCode);
     }
 
     [Fact]
@@ -150,6 +150,62 @@ public sealed partial class SessionTests : IDisposable
         Assert.Equal(HttpStatusCode.OK, (await signedIn.GetAsync("/api/me")).StatusCode);
         Assert.Equal(before, await api.Db(db => db.UserSessions.Select(s => s.Id).SingleAsync()));
         Assert.Null(await api.Db(db => db.UserSessions.Select(s => s.RevokedAt).SingleAsync()));
+    }
+
+    // ---- "Is this your own computer?": asked once per browser ----
+
+    [Fact]
+    public async Task A_browser_is_asked_once_and_remembers_its_answer()
+    {
+        var first = await Complete(await RequestLink(HumoApiFactory.AdminEmail));
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.True((await first.Json()).GetProperty("askBrowserTrust").GetBoolean());
+
+        Assert.Equal(HttpStatusCode.NoContent, (await client.PostAsJsonAsync("/api/me/security/browser", new { trusted = true })).StatusCode);
+
+        var again = await Complete(await RequestLink(HumoApiFactory.AdminEmail));
+        Assert.False((await again.Json()).GetProperty("askBrowserTrust").GetBoolean());
+    }
+
+    [Fact]
+    public async Task A_shared_answer_is_remembered_too_but_is_not_listed_as_a_trusted_device()
+    {
+        await Complete(await RequestLink(HumoApiFactory.AdminEmail));
+        Assert.Equal(HttpStatusCode.NoContent, (await client.PostAsJsonAsync("/api/me/security/browser", new { trusted = false })).StatusCode);
+
+        var again = await Complete(await RequestLink(HumoApiFactory.AdminEmail));
+        Assert.False((await again.Json()).GetProperty("askBrowserTrust").GetBoolean());
+        var profile = await (await client.GetAsync("/api/me/security")).Json();
+        Assert.Empty(profile.GetProperty("devices").EnumerateArray());
+    }
+
+    [Fact]
+    public async Task A_trusted_browser_is_listed_and_removing_it_brings_the_question_back()
+    {
+        // A trusted browser's cookie persists until its expiry, which the test client checks against the real clock.
+        api.Clock.Set(DateTimeOffset.UtcNow);
+        await Complete(await RequestLink(HumoApiFactory.AdminEmail));
+        await client.PostAsJsonAsync("/api/me/security/browser", new { trusted = true });
+
+        var devices = (await (await client.GetAsync("/api/me/security")).Json()).GetProperty("devices").EnumerateArray().ToList();
+        var device = Assert.Single(devices);
+        Assert.Equal("laptop", device.GetProperty("kind").GetString());
+
+        await client.StepUp(); // Security.ManageOwn asks for step-up, as removing a passkey does
+        Assert.Equal(HttpStatusCode.NoContent, (await client.PostAsync($"/api/me/security/devices/{device.GetProperty("id").GetString()}/remove", null)).StatusCode);
+        // This browser stays signed in, and no longer counts as trusted.
+        var after = await (await client.GetAsync("/api/me/security")).Json();
+        Assert.Empty(after.GetProperty("devices").EnumerateArray());
+
+        var again = await Complete(await RequestLink(HumoApiFactory.AdminEmail));
+        Assert.True((await again.Json()).GetProperty("askBrowserTrust").GetBoolean());
+    }
+
+    [Fact]
+    public async Task Answering_needs_a_signed_in_session()
+    {
+        var stranger = api.Client();
+        Assert.Equal(HttpStatusCode.Unauthorized, (await stranger.PostAsJsonAsync("/api/me/security/browser", new { trusted = true })).StatusCode);
     }
 
     // ---- Helpers ----
