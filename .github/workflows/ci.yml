@@ -51,8 +51,21 @@ jobs:
             exit 1
           fi
 
+      # R-7: the demo's "not for search engines" settings must never reach production.
+      - name: No demo hosting settings in the production build
+        run: |
+          if [ -e dist/humo-web/browser/robots.txt ] || [ -e dist/humo-web/browser/_headers ] || [ -e dist/humo-web/browser/_redirects ]; then
+            echo "::error::The production build carries demo hosting files (docs/18 R-7)."
+            exit 1
+          fi
+
       - name: Demo build (pm-demo.humo.co.za)
         run: npm run build:demo
+
+      - name: Demo build carries its hosting settings
+        run: |
+          grep -q "Disallow: /" dist/humo-web/browser/robots.txt
+          grep -q "X-Robots-Tag: noindex" dist/humo-web/browser/_headers
 
       - name: Humo Contractor build
         run: npm run build:contractor
