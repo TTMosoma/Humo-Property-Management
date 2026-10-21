@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
-import { CollectionStep, CollectionView, DocumentType, MeetingDetail, OrganisationDocumentSettings, StatementView } from '../../domain';
+import { CollectionStep, CollectionView, DocumentType, MeetingDetail, OrganisationDocumentSettings, ResolvedBranding, StatementView } from '../../domain';
 import { DocumentTemplatesService, ResolvedTemplate } from '../../core/documents/document-templates.service';
 import { LevyStatementDocument } from './levy-statement/levy-statement-document';
 import { MeetingMinutesDocument } from './meeting/meeting-minutes-document';
@@ -59,8 +59,10 @@ export class DocumentRenderer {
   readonly settings = input.required<OrganisationDocumentSettings>();
   /** The agency's name, for documents whose data doesn't carry it. */
   readonly organisationName = input('');
+  /** An issued document's own branding (docs/18 R-2). Missing: the branding as it stands today. */
+  readonly issuedBranding = input<ResolvedBranding>();
 
-  protected readonly branding = computed(() => this.registry.brandingFor(this.template().version.design));
+  protected readonly branding = computed(() => this.issuedBranding() ?? this.registry.brandingFor(this.template().version.design));
 
   /** For callers that need to know whether a type can be rendered at all. */
   static supports(type: DocumentType): boolean {

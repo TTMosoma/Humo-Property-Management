@@ -106,7 +106,7 @@ export class SecurityPage {
   }
 
   protected removeDevice(deviceId: string, name: string): void {
-    this.run(`Remove ${name} from your trusted devices`, () => this.data.removeDevice(this.identityId(), deviceId), `${name} is no longer trusted. It will need to verify again to sign in.`);
+    this.run(`Remove ${name}`, () => this.data.removeDevice(this.identityId(), deviceId), `${name} is no longer remembered. It’s asked about again on its next sign-in.`);
   }
 
   protected signOut(sessionId: string, device: string): void {

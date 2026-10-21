@@ -72,8 +72,9 @@ export class HttpSecurityDataSource extends HttpPort implements SecurityDataSour
     return this.command('POST', `/me/security/passkeys/${encodeURIComponent(passkeyId)}/remove`, null, ['session']);
   }
 
-  removeDevice(): Observable<void> {
-    return throwError(() => toApiErrorFromHttp(new HttpErrorResponse({ status: 404, statusText: 'Not found', error: { title: 'No trusted devices yet' } })));
+  /** Stops trusting a computer. The question comes back on its next sign-in. */
+  removeDevice(_identityId: string, deviceId: string): Observable<void> {
+    return this.command('POST', `/me/security/devices/${encodeURIComponent(deviceId)}/remove`, null, ['session']);
   }
 
   /** Only this session is listed; signing out "another" session signs out every other one. */

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -15,20 +16,31 @@ using Microsoft.Extensions.Options;
 namespace Humo.Api.Auth;
 
 public sealed record LinkRequest(string Email);
-public sealed record CompleteLinkRequest(string Token);
+/// <summary>The code is the one the requesting screen showed: the link works only with it (docs/17 D14).</summary>
+public sealed record CompleteLinkRequest(string Token, string? Code);
+/// <summary>What the requesting screen shows. The same shape whether or not the address has an account.</summary>
+public sealed record LinkSentDto(string Code);
 public sealed record PasskeyOptionsRequest(string? Email);
 public sealed record PasskeyCredentialRequest(JsonElement Credential);
+/// <summary>"This is my own computer" was ticked on the sign-in screen (the browser is then trusted for 30 days).</summary>
+public sealed record PasskeySignInRequest(JsonElement Credential);
+
+/// <summary>After a sign-in: whether this browser still has to answer "is this your own computer?"</summary>
+public sealed record SignInResultDto(bool AskBrowserTrust);
 public sealed record SwitchAssignmentRequest(string AssignmentId);
 
 /// <summary>
 /// Sign-in (D14): passkeys first, one-time email links to join or recover. No
 /// passwords. Answers never reveal whether an address has an account (docs/18 R-8).
-/// Failure codes match the frontend's SignInFailure: no-passkey, paused, link-expired.
+/// Failure codes match the frontend's SignInFailure: no-passkey, paused, link-expired, wrong-code.
 /// </summary>
 public static class AuthEndpoints
 {
     /// <summary>The cookie claim naming the active role assignment (switching role re-issues the cookie).</summary>
     public const string AssignmentClaim = "humo:assignment";
+
+    /// <summary>Wrong codes before a link is spent. Matches the statement links (DocumentLinks.MaxAttempts).</summary>
+    public const int MaxCodeAttempts = 5;
 
     public static void MapHumoAuth(this IEndpointRouteBuilder api)
     {
@@ -50,17 +62,25 @@ public static class AuthEndpoints
 
     // ---- Email links ----
 
-    /// <summary>Always 202, whether or not the address has an account.</summary>
+    /// <summary>
+    /// Always 202, with a six-digit code for the requesting screen, whether or not the address has an account.
+    /// The code is never in the email: a link that someone else receives is useless without the code on this screen.
+    /// </summary>
     private static async Task<IResult> SendLink(LinkRequest body, UserManager<HumoUser> users, HumoDbContext db, IEmailSender email,
         IOptions<AppOptions> app, TimeProvider clock, ILoggerFactory logs, CancellationToken ct)
     {
+        var code = RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6", CultureInfo.InvariantCulture);
         var address = (body.Email ?? "").Trim();
         var user = address.Length is > 3 and < 320 ? await users.FindByEmailAsync(address) : null;
-        if (user is null || user.Status is not (IdentityStatuses.Invited or IdentityStatuses.Active)) return Results.Accepted();
+        if (user is null || user.Status is not (IdentityStatuses.Invited or IdentityStatuses.Active)) return Results.Accepted(value: new LinkSentDto(code));
 
         var token = WebEncoders.Base64UrlEncode(RandomNumberGenerator.GetBytes(32));
         var now = clock.GetUtcNow();
-        db.SignInLinks.Add(new SignInLink { Id = Guid.CreateVersion7(), UserId = user.Id, TokenHash = Hash(token), CreatedAt = now, ExpiresAt = now + app.Value.SignInLinkLifetime });
+        var linkId = Guid.CreateVersion7();
+        db.SignInLinks.Add(new SignInLink
+        {
+            Id = linkId, UserId = user.Id, TokenHash = Hash(token), CodeHash = CodeHash(linkId, code), CreatedAt = now, ExpiresAt = now + app.Value.SignInLinkLifetime,
+        });
         await db.SaveChangesAsync(ct);
 
         var url = $"{app.Value.PublicUrl.TrimEnd('/')}/sign-in/link?token={token}";
@@ -70,22 +90,40 @@ public static class AuthEndpoints
             await email.SendAsync(new EmailMessage(
                 user.Email!,
                 "Your sign-in link for Humo Property Management",
-                $"Hello {user.Name},\n\nUse this link to sign in to Humo Property Management. It works once, for {minutes} minutes:\n\n{url}\n\nIf you didn't ask to sign in, ignore this email: nobody can sign in without the link.\n\nHumo Property Management"), ct);
+                $"Hello {user.Name},\n\nUse this link to sign in to Humo Property Management. It works once, for {minutes} minutes:\n\n{url}\n\n" +
+                "When you open it, enter the six-digit code shown on the screen where you asked for this link. The code isn't in this email.\n\n" +
+                "If you didn't ask to sign in, ignore this email: nobody can sign in without the code.\n\nHumo Property Management"), ct);
         }
         catch (Exception e)
         {
             // Still 202: the answer must not depend on the account. The failure is logged for the IT Technician (doc 26 §8).
             logs.CreateLogger("Humo.SignIn").LogError(e, "Couldn't send a sign-in link");
         }
-        return Results.Accepted();
+        return Results.Accepted(value: new LinkSentDto(code));
     }
 
-    private static async Task<IResult> CompleteLink(CompleteLinkRequest body, HumoDbContext db, SignInManager<HumoUser> signIn, AuditLog audit, TimeProvider clock, CancellationToken ct)
+    private static async Task<IResult> CompleteLink(CompleteLinkRequest body, HumoDbContext db, SignInManager<HumoUser> signIn, SignInSessions sessions, AuditLog audit,
+        TimeProvider clock, CancellationToken ct)
     {
         var hash = Hash(body.Token ?? "");
         var link = await db.SignInLinks.FirstOrDefaultAsync(l => l.TokenHash == hash, ct);
         var now = clock.GetUtcNow();
         if (link is null || link.UsedAt is not null || link.ExpiresAt <= now) return Failure("link-expired", "The sign-in link was used already or is too old.");
+        if (link.CodeAttempts >= MaxCodeAttempts) return Failure("link-expired", "Too many wrong codes. Ask for a new sign-in link.");
+
+        // The code shown on the requesting screen binds the link to that browser: a forwarded link can't be used without it.
+        var given = (body.Code ?? "").Trim();
+        if (!CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(CodeHash(link.Id, given)), Encoding.ASCII.GetBytes(link.CodeHash)))
+        {
+            link.CodeAttempts++;
+            var wrongUser = await db.Users.FirstAsync(u => u.Id == link.UserId, ct);
+            audit.Record("Entered a wrong code for a sign-in link", "denied", wrongUser);
+            await db.SaveChangesAsync(ct);
+            var left = MaxCodeAttempts - link.CodeAttempts;
+            return left > 0
+                ? Failure("wrong-code", $"That code isn’t right. {left} {(left == 1 ? "try" : "tries")} left.")
+                : Failure("link-expired", "Too many wrong codes. Ask for a new sign-in link.");
+        }
 
         // Used once: the update only succeeds for the first caller.
         var claimed = await db.SignInLinks.Where(l => l.Id == link.Id && l.UsedAt == null).ExecuteUpdateAsync(s => s.SetProperty(l => l.UsedAt, now), ct);
@@ -109,8 +147,9 @@ public static class AuthEndpoints
         }
         audit.Record("Signed in with an email link", "success", user);
         await db.SaveChangesAsync(ct);
-        await signIn.SignInAsync(user, isPersistent: false);
-        return Results.NoContent();
+        // A link sign-in is never trusted: it proves control of an inbox, not of a device (docs/17 session policy).
+        await sessions.StartAsync(user, SessionPolicy.LinkMethod, trusted: false, signIn, ct);
+        return Results.Ok(new SignInResultDto(!await sessions.BrowserAnsweredAsync(user, ct)));
     }
 
     // ---- Passkeys ----
@@ -123,7 +162,8 @@ public static class AuthEndpoints
         return Results.Content(json, "application/json");
     }
 
-    private static async Task<IResult> PasskeySignIn(PasskeyCredentialRequest body, UserManager<HumoUser> users, SignInManager<HumoUser> signIn, HumoDbContext db, AuditLog audit, CancellationToken ct)
+    private static async Task<IResult> PasskeySignIn(PasskeySignInRequest body, UserManager<HumoUser> users, SignInManager<HumoUser> signIn, HumoDbContext db,
+        AuditLog audit, SignInSessions sessions, CancellationToken ct)
     {
         var result = await signIn.PerformPasskeyAssertionAsync(body.Credential.GetRawText());
         if (!result.Succeeded) return Failure("no-passkey", "That passkey didn't work for Humo.");
@@ -138,10 +178,12 @@ public static class AuthEndpoints
 
         // Keep the passkey's signature counter and last use up to date (as the framework asks).
         await users.AddOrUpdatePasskeyAsync(user, result.Passkey);
-        audit.Record("Signed in with a passkey", "success", user, stepUpMethod: "passkey");
+        // A passkey proves the device holds the key. The browser's answer to "is this your own computer?" decides the limits.
+        var trusted = await sessions.IsTrustedBrowserAsync(user, ct);
+        audit.Record("Signed in with a passkey", "success", user, stepUpMethod: "passkey", reason: trusted ? "Trusted browser" : "Browser not marked as own");
         await db.SaveChangesAsync(ct);
-        await signIn.SignInAsync(user, isPersistent: false);
-        return Results.NoContent();
+        await sessions.StartAsync(user, SessionPolicy.PasskeyMethod, trusted, signIn, ct);
+        return Results.Ok(new SignInResultDto(!await sessions.BrowserAnsweredAsync(user, ct)));
     }
 
     /// <summary>Options for navigator.credentials.create(), for the signed-in person's new passkey.</summary>
@@ -184,9 +226,9 @@ public static class AuthEndpoints
         return Results.Ok(await sessions.BuildAsync(user, assignment, ct));
     }
 
-    /// <summary>Switch role: only to one of your own assignments in force. The cookie is re-issued for it.</summary>
+    /// <summary>Switch role: only to one of your own assignments in force. The cookie is re-issued for it, and the session's idle limit follows the role.</summary>
     private static async Task<IResult> SwitchAssignment(SwitchAssignmentRequest body, ClaimsPrincipal principal, UserManager<HumoUser> users, SignInManager<HumoUser> signIn,
-        SessionBuilder sessions, CancellationToken ct)
+        SessionBuilder sessions, SignInSessions signInSessions, CancellationToken ct)
     {
         if (!Guid.TryParse(users.GetUserId(principal), out var id)) return Results.Unauthorized();
         var user = await sessions.LoadUserAsync(id, ct);
@@ -195,7 +237,10 @@ public static class AuthEndpoints
             return Results.Problem(title: "End the impersonation first", statusCode: StatusCodes.Status403Forbidden, extensions: new Dictionary<string, object?> { ["code"] = "forbidden" });
         if (!sessions.InForce(user).Any(a => a.Id.ToString() == body.AssignmentId))
             return Results.Problem(title: "Not one of your roles", statusCode: StatusCodes.Status403Forbidden);
-        await signIn.SignInWithClaimsAsync(user, isPersistent: false, [new Claim(AssignmentClaim, body.AssignmentId)]);
+
+        var role = user.Assignments.First(a => a.Id.ToString() == body.AssignmentId).Role;
+        if (await signInSessions.CurrentAsync(principal, ct) is { } current) await signInSessions.SetRoleAsync(current.Id, role, ct);
+        await signInSessions.ReissueAsync(user, principal, [new Claim(AssignmentClaim, body.AssignmentId)], signIn, ct);
         return Results.Ok(await sessions.BuildAsync(user, body.AssignmentId, ct));
     }
 
@@ -211,7 +256,7 @@ public static class AuthEndpoints
 
     /// <summary>Verifies the passkey and records the proof's time in the session; commands check it is under 5 minutes old.</summary>
     private static async Task<IResult> StepUp(PasskeyCredentialRequest body, ClaimsPrincipal principal, UserManager<HumoUser> users, SignInManager<HumoUser> signIn,
-        IStepUpVerifier verifier, HumoDbContext db, AuditLog audit, TimeProvider clock, CancellationToken ct)
+        IStepUpVerifier verifier, HumoDbContext db, AuditLog audit, TimeProvider clock, SignInSessions sessions, CancellationToken ct)
     {
         var user = await users.GetUserAsync(principal);
         if (user is null) return Results.Unauthorized();
@@ -222,14 +267,15 @@ public static class AuthEndpoints
             return Failure("no-passkey", "That passkey didn't verify you.");
         }
         var at = clock.GetUtcNow();
-        List<Claim> claims = [new(Commands.CurrentActor.StepUpClaim, at.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture))];
+        List<Claim> claims = [new(Commands.CurrentActor.StepUpClaim, at.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture))];
         if (principal.FindFirstValue(AssignmentClaim) is { } assignment) claims.Add(new Claim(AssignmentClaim, assignment));
         if (principal.FindFirstValue(Commands.CurrentActor.ImpersonationClaim) is { } imp) claims.Add(new Claim(Commands.CurrentActor.ImpersonationClaim, imp));
-        await signIn.SignInWithClaimsAsync(user, isPersistent: false, claims);
+        await sessions.ReissueAsync(user, principal, claims, signIn, ct);
         return Results.Ok(new { verified = true, method = "passkey", device = "Passkey", at });
     }
 
-    private static async Task<IResult> SignOut(ClaimsPrincipal principal, SignInManager<HumoUser> signIn, UserManager<HumoUser> users, HumoDbContext db, AuditLog audit, TimeProvider clock, CancellationToken ct)
+    private static async Task<IResult> SignOut(ClaimsPrincipal principal, SignInManager<HumoUser> signIn, UserManager<HumoUser> users, HumoDbContext db, AuditLog audit,
+        TimeProvider clock, SignInSessions sessions, CancellationToken ct)
     {
         // Signing out ends an impersonation too (doc 08 section 2), and both are recorded.
         if (Guid.TryParse(users.GetUserId(principal), out var id) && await Commands.CurrentActor.ActiveImpersonation(db, principal, id, ct) is { } imp)
@@ -239,6 +285,8 @@ public static class AuthEndpoints
             audit.Record("Signed out (impersonation ended)", "success", user, category: "impersonation", resource: "Identity", resourceId: imp.TargetId.ToString(), impersonation: imp);
             await db.SaveChangesAsync(ct);
         }
+        // The session ends on the server too, so a copy of the cookie is refused from now on.
+        if (await sessions.CurrentAsync(principal, ct) is { } current) await sessions.RevokeAsync(current.Id, ct);
         await signIn.SignOutAsync();
         return Results.NoContent();
     }
@@ -250,4 +298,7 @@ public static class AuthEndpoints
         Results.Problem(title: message, statusCode: StatusCodes.Status400BadRequest, extensions: new Dictionary<string, object?> { ["code"] = code });
 
     private static string Hash(string token) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
+
+    /// <summary>The code is hashed with the link's id, so the same code means nothing on another link.</summary>
+    private static string CodeHash(Guid linkId, string code) => Hash($"{linkId:N}:{code}");
 }

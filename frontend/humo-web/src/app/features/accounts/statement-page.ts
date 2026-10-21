@@ -103,6 +103,9 @@ export class StatementPage {
     const v = this.view();
     return v ? this.registry.resolve(v.issuedWith) : undefined;
   });
+  /** An issued statement is drawn with the branding and contact details it was issued with (docs/18 R-2); a preview uses today's. */
+  protected readonly issuedBranding = computed(() => (this.previewing() ? undefined : this.view()?.branding));
+  protected readonly issuedSettings = computed(() => (this.previewing() ? undefined : this.view()?.documentSettings));
   protected readonly tierLabel = (tier: keyof typeof TEMPLATE_TIERS) => TEMPLATE_TIERS[tier].label;
 
   protected readonly document = computed<DocumentData | undefined>(() => {

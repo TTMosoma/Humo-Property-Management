@@ -521,6 +521,35 @@ input {
   color: var(--c-text-faint);
 }
 
+// The code the asking screen shows, read out or typed on the device the link opens on.
+.code-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-1);
+  margin: var(--s-6) 0 0;
+  padding: var(--s-4);
+  text-align: center;
+  background: var(--c-surface-2);
+  border-radius: 8px;
+
+  .code-label {
+    font-size: var(--fs-xs);
+    color: var(--c-text-faint);
+  }
+
+  .code {
+    font-size: var(--fs-2xl);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.12em;
+    color: var(--c-text);
+  }
+
+  .hint {
+    margin-top: var(--s-2);
+  }
+}
+
 // Prototype-only helpers
 .demo-tag {
   padding: 1px 6px;

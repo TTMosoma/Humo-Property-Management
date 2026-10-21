@@ -1,5 +1,5 @@
 import { Account, Statement, Transaction, TrustAccount } from './account';
-import { DocumentTemplateRef } from './document';
+import { DocumentTemplateRef, OrganisationDocumentSettings, ResolvedBranding } from './document';
 import { Person, Relationship } from './person';
 import { Receipt, ReceiptMatch } from './receipt';
 import { Scheme } from './scheme';
@@ -56,6 +56,9 @@ export interface StatementView {
   issuedWith: DocumentTemplateRef;
   /** Once issued (D7): frozen as a data snapshot with its SHA-256, and a stored PDF. Missing: worked out from the ledger, not yet issued. */
   issued?: IssuedStatementInfo;
+  /** Once issued: the branding and contact details the PDF was drawn with, so the screen matches it (docs/18 R-2). */
+  branding?: ResolvedBranding;
+  documentSettings?: OrganisationDocumentSettings;
 }
 
 export interface IssuedStatementInfo {

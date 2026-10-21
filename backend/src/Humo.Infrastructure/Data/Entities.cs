@@ -350,9 +350,50 @@ public sealed class SignInLink
     public Guid Id { get; set; }
     public Guid UserId { get; set; }
     public string TokenHash { get; set; } = "";
+    /// <summary>The six-digit code shown on the screen that asked for the link (hashed with the link's id). The link only works with it.</summary>
+    public string CodeHash { get; set; } = "";
+    public int CodeAttempts { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset ExpiresAt { get; set; }
     public DateTimeOffset? UsedAt { get; set; }
+}
+
+/// <summary>
+/// A signed-in session, kept on the server so it can end early (sign-out, a revoked session, a paused person) and so
+/// the idle and absolute limits are enforced here, not left to the cookie (docs/17, the session policy).
+/// </summary>
+public sealed class UserSession
+{
+    public Guid Id { get; set; }
+    public Guid UserId { get; set; }
+    /// <summary>"passkey" or "link": how the person signed in.</summary>
+    public string Method { get; set; } = "";
+    /// <summary>Signed in with a passkey on a browser the person marked as their own. Trusted browsers stay signed in across restarts.</summary>
+    public bool Trusted { get; set; }
+    public string Device { get; set; } = "";
+    public string Ip { get; set; } = "";
+    public DateTimeOffset StartedAt { get; set; }
+    public DateTimeOffset LastActiveAt { get; set; }
+    /// <summary>Set by the sign-in method and the active role (admin roles are shorter).</summary>
+    public int IdleMinutes { get; set; }
+    public DateTimeOffset AbsoluteExpiresAt { get; set; }
+    public DateTimeOffset? RevokedAt { get; set; }
+}
+
+/// <summary>
+/// A browser the person has answered the "is this your own computer?" question for. Its cookie holds a random token;
+/// only the token's hash is kept. Trusted means "my own"; false means "shared". Either answer is asked once.
+/// </summary>
+public sealed class TrustedBrowser
+{
+    public Guid Id { get; set; }
+    public Guid UserId { get; set; }
+    public string TokenHash { get; set; } = "";
+    public bool Trusted { get; set; }
+    public string Label { get; set; } = "";
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset ExpiresAt { get; set; }
+    public DateTimeOffset? RevokedAt { get; set; }
 }
 
 /// <summary>

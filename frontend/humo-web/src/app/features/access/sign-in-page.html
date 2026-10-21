@@ -82,6 +82,10 @@
           <button type="button" class="btn btn-secondary big" (click)="passkey()">
             <ion-icon name="finger-print-outline" aria-hidden="true" /> Sign in with a passkey
           </button>
+          <!-- No passkey on this device (a new phone, or a shared computer): a one-time link to the email above. -->
+          <button type="button" class="btn btn-ghost big" (click)="sendLink()">
+            <ion-icon name="mail-outline" aria-hidden="true" /> Email me a sign-in link
+          </button>
 
           <details class="help">
             <summary>Trouble signing in?</summary>
@@ -154,7 +158,12 @@
           <div class="centre">
             <div class="icon-badge ok" aria-hidden="true"><ion-icon name="mail-outline" /></div>
             <h1 #heading tabindex="-1">Check your email</h1>
-            <p class="sub">If <strong>{{ email() }}</strong> has a Humo account, a sign-in link is on its way. It works once and expires in 15 minutes.</p>
+            <p class="sub">If <strong>{{ email() }}</strong> has a Humo account, a sign-in link is on its way. It works once, with the code below, and expires in 15 minutes.</p>
+            <div class="code-box" role="group" aria-label="Your sign-in code">
+              <span class="code-label">Your code</span>
+              <strong class="code" aria-live="polite">{{ spacedCode() }}</strong>
+              <span class="hint">Keep this page open. Type this code on the page the link opens, on the device you want to sign in on. Don’t share it.</span>
+            </div>
             <div class="stack">
               <button type="button" class="btn btn-secondary big" [disabled]="resendIn() > 0" (click)="sendLink()">
                 {{ resendIn() > 0 ? 'Resend in ' + resendIn() + 's' : 'Resend the link' }}
@@ -176,11 +185,57 @@
           </div>
         }
 
+        @case ('enter-code') {
+          <div class="centre">
+            <div class="icon-badge ok" aria-hidden="true"><ion-icon name="link-outline" /></div>
+            <h1 #heading tabindex="-1">Enter your code</h1>
+            <p class="sub">Type the six-digit code shown on the screen where you asked for this link. The link won’t sign you in without it.</p>
+            <form class="form" novalidate (submit)="$event.preventDefault(); submitLinkCode()">
+              <label class="field">
+                <span class="label">Six-digit code</span>
+                <input
+                  type="text"
+                  name="code"
+                  inputmode="numeric"
+                  autocomplete="one-time-code"
+                  maxlength="7"
+                  placeholder="123 456"
+                  [value]="linkCode()"
+                  [attr.aria-invalid]="!!codeError()"
+                  [attr.aria-describedby]="codeError() ? 'code-error' : null"
+                  (input)="setLinkCode($event)"
+                />
+                @if (codeError()) {
+                  <span class="error" id="code-error" role="alert"><ion-icon name="alert-circle-outline" aria-hidden="true" /> {{ codeError() }}</span>
+                }
+              </label>
+              <button type="submit" class="btn btn-primary big">Sign in <ion-icon name="arrow-forward-outline" aria-hidden="true" /></button>
+            </form>
+            <div class="stack">
+              <button type="button" class="btn btn-ghost" (click)="startOver()">Ask for a new link</button>
+            </div>
+            <p class="hint">Not the one who asked? Don’t enter a code. Someone else opened your link, or it was forwarded.</p>
+          </div>
+        }
+
         @case ('redeeming') {
           <div class="centre">
             <div class="passkey-anim calm" aria-hidden="true"><ion-icon name="link-outline" /></div>
             <h1 #heading tabindex="-1">Signing you in…</h1>
-            <p class="sub" role="status">Checking your sign-in link.</p>
+            <p class="sub" role="status">Checking your code.</p>
+          </div>
+        }
+
+        @case ('ask-trust') {
+          <div class="centre">
+            <div class="icon-badge ok" aria-hidden="true"><ion-icon name="laptop-outline" /></div>
+            <h1 #heading tabindex="-1">Is this your own computer?</h1>
+            <p class="sub">We’ll remember your answer on this browser, so we won’t ask again. You can change it in Settings › Security.</p>
+            <div class="stack">
+              <button type="button" class="btn btn-primary big" (click)="answerTrust(true)"><ion-icon name="checkmark-outline" aria-hidden="true" /> Yes, it’s mine</button>
+              <button type="button" class="btn btn-secondary big" (click)="answerTrust(false)"><ion-icon name="people-outline" aria-hidden="true" /> No, it’s shared</button>
+            </div>
+            <p class="hint">Say yes only on a computer nobody else uses. Your own computer stays signed in longer.</p>
           </div>
         }
 
@@ -189,6 +244,7 @@
             <div class="icon-badge ok" aria-hidden="true"><ion-icon name="finger-print-outline" /></div>
             <h1 #heading tabindex="-1">You’re signed in. Set up a passkey?</h1>
             <p class="sub">Next time, sign in with your fingerprint, face or screen lock instead of waiting for an email. It takes a few seconds, and nothing is shared with Humo but a key for this account.</p>
+            <p class="hint">Only on your own device. On a shared or borrowed computer, skip this step.</p>
             <div class="stack">
               <button type="button" class="btn btn-primary big" (click)="createPasskey()"><ion-icon name="finger-print-outline" aria-hidden="true" /> Create a passkey</button>
               <button type="button" class="btn btn-ghost" (click)="done()">Not now</button>
@@ -211,8 +267,8 @@
         @case ('link-failed') {
           <div class="centre">
             <div class="icon-badge warn" aria-hidden="true"><ion-icon name="time-outline" /></div>
-            <h1 #heading tabindex="-1">That link has expired</h1>
-            <p class="sub">Sign-in links work once, for 15 minutes. Enter your email to get a new one, or use your passkey.</p>
+            <h1 #heading tabindex="-1">That link can’t be used</h1>
+            <p class="sub">Sign-in links work once, for 15 minutes, and stop working after five wrong codes. Enter your email to get a new link and code, or use your passkey.</p>
             <button type="button" class="btn btn-primary big" (click)="startOver()">Back to sign in</button>
           </div>
         }

@@ -74,8 +74,8 @@
       <section class="card surface">
         <header>
           <div>
-            <h2>Humo Mobile & trusted devices</h2>
-            <p class="muted small">A phone with Humo Mobile can approve sign-ins and sensitive actions with a tap and a matching number.</p>
+            <h2>Computers</h2>
+            <p class="muted small">Computers that have answered whether they’re yours. Trusted ones stay signed in longer. Remove one and it’s asked again on its next sign-in.</p>
           </div>
         </header>
         <ul class="list">
@@ -88,8 +88,9 @@
                   @if (d.humoMobile) {
                     <ui-status-pill label="Humo Mobile" tone="accent" />
                   }
+                  <ui-status-pill [label]="d.trusted ? 'Trusted' : 'Not trusted'" [tone]="d.trusted ? 'success' : 'warning'" />
                 </span>
-                <span class="li-sub">Trusted since {{ formatDate(d.addedAt, true) }} · last seen {{ relativeTime(d.lastSeenAt) }}</span>
+                <span class="li-sub">Answered {{ formatDate(d.addedAt, true) }}</span>
               </span>
               <button type="button" class="btn btn-ghost btn-sm" (click)="removeDevice(d.id, d.name)" [disabled]="session.isImpersonating()">Remove</button>
             </li>

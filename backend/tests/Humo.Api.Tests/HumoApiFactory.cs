@@ -167,6 +167,9 @@ public sealed class TestClock : TimeProvider
     public override DateTimeOffset GetUtcNow() => now;
 
     public void Advance(TimeSpan by) => now += by;
+
+    /// <summary>Moves the clock to a moment, for tests whose cookies must expire in real time.</summary>
+    public void Set(DateTimeOffset at) => now = at;
 }
 
 public sealed class CapturedEmail : IEmailSender

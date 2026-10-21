@@ -183,6 +183,20 @@ public sealed class StatementTests : IDisposable
         // The snapshot carries the branding and contact details as they were when it was issued.
         var snapshot = JsonDocument.Parse((await api.Db(db => db.IssuedStatements.SingleAsync())).Snapshot).RootElement;
         Assert.Equal(("agency", "ACACIA"), (snapshot.GetProperty("branding").GetProperty("source").GetString(), snapshot.GetProperty("branding").GetProperty("logo").GetProperty("text").GetString()));
+
+        // The screen shows what the PDF shows: the agency changes its logo, and the issued statement doesn't change.
+        var current = await Ok(await s.Admin.GetAsync("/api/documents/settings"));
+        await NoContent(await s.Admin.PutAsJsonAsync("/api/documents/settings/branding", new
+        {
+            contact = new { email = "accounts@acacia.example", phone = "011 555 0100" },
+            footerText = "Acacia Property Management (Pty) Ltd · FFC 2026/123",
+            branding = new { logo = new { kind = "wordmark", text = "ACACIA 2" }, palette = new { primary = "#0a3d62", accent = "#1d7a52" }, font = "outfit" },
+            statementDelivery = "attachment", expectedVersion = current.GetProperty("version").GetInt32(),
+        }));
+        Assert.Equal("ACACIA 2", (await Ok(await s.Admin.GetAsync("/api/documents/settings"))).GetProperty("branding").GetProperty("logo").GetProperty("text").GetString());
+        var issuedView = await Ok(await s.Finance.GetAsync($"/api/accounts/{s.Account42}/statements/2026-11"));
+        Assert.Equal(("ACACIA", "Acacia Property Management (Pty) Ltd · FFC 2026/123"),
+            (issuedView.GetProperty("branding").GetProperty("logo").GetProperty("text").GetString(), issuedView.GetProperty("documentSettings").GetProperty("footerText").GetString()));
     }
 
     [Fact]

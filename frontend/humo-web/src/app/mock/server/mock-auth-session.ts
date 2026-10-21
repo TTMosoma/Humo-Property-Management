@@ -27,7 +27,10 @@ interface AuthState {
   impersonation: ImpersonationSession | null;
 }
 
-const KEYS = { identity: 'humo.persona', signedOut: 'humo.signedOut', assignment: 'humo.membership', impersonation: 'humo.impersonation' };
+const KEYS = { identity: 'humo.persona', signedOut: 'humo.signedOut', assignment: 'humo.membership', impersonation: 'humo.impersonation', browser: 'humo.browserTrust' };
+
+/** Wrong codes a link takes before it's spent (the API's MaxCodeAttempts). */
+const MAX_LINK_TRIES = 5;
 
 /**
  * The prototype's server-side session: who is signed in, which assignment the
@@ -95,6 +98,32 @@ export class MockAuthSession {
     this.update({ identityId: id, signedIn: true, assignmentId: identityId ? null : this.state.assignmentId, impersonation: null });
   }
 
+  /**
+   * "Is this your own computer?", answered once per person on this browser (the API keeps it against the browser's
+   * cookie). `true` means their own; `false` means shared.
+   */
+  browserAnswered(identityId: string): boolean {
+    return identityId in this.browserAnswers();
+  }
+
+  answerBrowser(identityId: string, trusted: boolean): void {
+    safeStorage.set(KEYS.browser, JSON.stringify({ ...this.browserAnswers(), [identityId]: trusted }));
+  }
+
+  /** Removing the trusted computer: the question comes back on the next sign-in here. */
+  forgetBrowser(identityId: string): void {
+    const { [identityId]: _, ...rest } = this.browserAnswers();
+    safeStorage.set(KEYS.browser, JSON.stringify(rest));
+  }
+
+  private browserAnswers(): Record<string, boolean> {
+    try {
+      return JSON.parse(safeStorage.get(KEYS.browser) ?? '{}') as Record<string, boolean>;
+    } catch {
+      return {};
+    }
+  }
+
   /** Whose passkey this device holds: the last person who signed in here. */
   deviceIdentityId(): string {
     return this.state.identityId;
@@ -102,22 +131,41 @@ export class MockAuthSession {
 
   // ---- Sign-in links (SIMULATED, docs/18 R-8): kept in memory; the "email" is shown by the prototype controls.
 
-  private readonly links = new Map<string, { identityId: string; expiresAt: number }>();
-  lastLink: { email: string; token: string; delivered: boolean } | null = null;
+  private readonly links = new Map<string, { identityId: string; code: string; triesLeft: number; expiresAt: number }>();
+  lastLink: { email: string; token: string; code: string; delivered: boolean } | null = null;
 
-  /** A one-time link for an active identity. Unknown addresses get nothing, silently. */
-  issueLink(email: string): void {
+  /**
+   * A one-time link for an active identity, and the six-digit code the asking
+   * screen shows. Unknown addresses get nothing, silently (the code is still returned).
+   */
+  issueLink(email: string): string {
     const who = this.store.identities().find((i) => i.email.toLowerCase() === email.toLowerCase() && i.status === 'active');
     const token = `lnk-${Math.random().toString(36).slice(2, 12)}`;
-    if (who) this.links.set(token, { identityId: who.id, expiresAt: Date.now() + 15 * 60_000 });
-    this.lastLink = { email, token, delivered: !!who };
+    const code = String(Math.floor(Math.random() * 1_000_000)).padStart(6, '0');
+    if (who) this.links.set(token, { identityId: who.id, code, triesLeft: MAX_LINK_TRIES, expiresAt: Date.now() + 15 * 60_000 });
+    this.lastLink = { email, token, code, delivered: !!who };
+    return code;
   }
 
-  /** The identity a link signs in, once; undefined if it's unknown, used or expired. */
-  redeemLink(token: string): string | undefined {
+  /**
+   * The identity a link signs in, when the code matches. A wrong code spends one
+   * of five tries (`triesLeft` says how many remain); undefined if the link is
+   * unknown, used, expired or out of tries.
+   */
+  redeemLink(token: string, code: string): { identityId: string } | { triesLeft: number } | undefined {
     const link = this.links.get(token);
+    if (!link || link.expiresAt <= Date.now()) {
+      this.links.delete(token);
+      return undefined;
+    }
+    if (link.code !== code) {
+      link.triesLeft -= 1;
+      if (link.triesLeft > 0) return { triesLeft: link.triesLeft };
+      this.links.delete(token);
+      return undefined;
+    }
     this.links.delete(token);
-    return link && link.expiresAt > Date.now() ? link.identityId : undefined;
+    return { identityId: link.identityId };
   }
 
   signOut(): void {

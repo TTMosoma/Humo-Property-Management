@@ -25,8 +25,8 @@ function securityFor(identity: Identity): SecurityProfile {
         { id: 'pk-2', name: 'Terry’s iPhone', provider: 'iCloud Keychain', createdAt: daysAgo(180), lastUsedAt: daysAgo(3) },
       ],
       devices: [
-        { id: 'dv-1', name: 'Studio laptop', kind: 'laptop', humoMobile: false, addedAt: daysAgo(210), lastSeenAt: hoursAgo(0.1) },
-        { id: 'dv-2', name: 'Terry’s iPhone 15', kind: 'phone', humoMobile: true, addedAt: daysAgo(180), lastSeenAt: hoursAgo(5) },
+        { id: 'dv-1', name: 'Studio laptop', kind: 'laptop', humoMobile: false, trusted: true, addedAt: daysAgo(210), lastSeenAt: hoursAgo(0.1) },
+        { id: 'dv-2', name: 'Terry’s iPhone 15', kind: 'phone', humoMobile: true, trusted: true, addedAt: daysAgo(180), lastSeenAt: hoursAgo(5) },
       ],
       sessions: [
         { id: 'ss-1', device: 'Studio laptop', browser: 'Edge on Windows 11', location: 'Johannesburg, ZA', ip: '196.21.45.10', startedAt: hoursAgo(3), lastActiveAt: hoursAgo(0), current: true },
@@ -41,8 +41,8 @@ function securityFor(identity: Identity): SecurityProfile {
       { id: `${identity.id}-pk2`, name: `${first}’s phone`, provider: 'Google Password Manager', createdAt: daysAgo(90), lastUsedAt: daysAgo(6) },
     ],
     devices: [
-      { id: `${identity.id}-dv1`, name: identity.staffId ? 'Work laptop' : 'Home PC', kind: 'laptop', humoMobile: false, addedAt: daysAgo(120), lastSeenAt: hoursAgo(0.1) },
-      { id: `${identity.id}-dv2`, name: `${first}’s Samsung Galaxy S24`, kind: 'phone', humoMobile: true, addedAt: daysAgo(90), lastSeenAt: hoursAgo(9) },
+      { id: `${identity.id}-dv1`, name: identity.staffId ? 'Work laptop' : 'Home PC', kind: 'laptop', humoMobile: false, trusted: true, addedAt: daysAgo(120), lastSeenAt: hoursAgo(0.1) },
+      { id: `${identity.id}-dv2`, name: `${first}’s Samsung Galaxy S24`, kind: 'phone', humoMobile: true, trusted: true, addedAt: daysAgo(90), lastSeenAt: hoursAgo(9) },
     ],
     sessions: [
       { id: `${identity.id}-ss1`, device: identity.staffId ? 'Work laptop' : 'Home PC', browser: 'Chrome on Windows 11', location: 'Johannesburg, ZA', ip: '196.21.45.10', startedAt: hoursAgo(4), lastActiveAt: hoursAgo(0), current: true },

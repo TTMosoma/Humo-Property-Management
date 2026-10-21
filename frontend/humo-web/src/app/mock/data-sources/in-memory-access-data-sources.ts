@@ -10,6 +10,9 @@ import { toPage } from '../mock-page';
 import { MockAuthSession } from '../server/mock-auth-session';
 import { MockGateway } from '../server/mock-gateway';
 
+/** The trusted-device entry for this prototype browser (see answerBrowserTrust). */
+const THIS_BROWSER = 'browser-this';
+
 @Injectable()
 export class InMemoryAccessDataSource extends AccessDataSource {
   private readonly store = inject(AccessStore);
@@ -424,6 +427,7 @@ export class InMemoryAuditDataSource extends AuditDataSource {
 @Injectable()
 export class InMemorySecurityDataSource extends SecurityDataSource {
   private readonly store = inject(AccessStore);
+  private readonly auth = inject(MockAuthSession);
   private readonly gateway = inject(MockGateway);
   private readonly respond = mockResponder();
   private readonly security$ = toObservable(this.store.security);
@@ -444,6 +448,7 @@ export class InMemorySecurityDataSource extends SecurityDataSource {
   }
 
   removeDevice(identityId: string, deviceId: string): Observable<void> {
+    if (deviceId === THIS_BROWSER) this.auth.forgetBrowser(identityId);
     return this.change(identityId, 'Removed a trusted device', (p) => ({ ...p, devices: p.devices.filter((d) => d.id !== deviceId) }));
   }
 
@@ -549,7 +554,7 @@ export class InMemorySessionDataSource extends SessionDataSource {
    * then the passkey "found" for the email (or this device's last user).
    * Same answer for "no account" and "no passkey here", like the real thing.
    */
-  signInWithPasskey(emailHint?: string): Observable<void> {
+  signInWithPasskey(emailHint?: string): Observable<boolean> {
     const email = emailHint?.trim().toLowerCase();
     const who = email ? this.store.identities().find((i) => i.email.toLowerCase() === email) : this.store.identity(this.auth.deviceIdentityId());
     const hasPasskey = !!who && (this.store.security()[who.id]?.passkeys.length ?? 0) > 0;
@@ -563,28 +568,45 @@ export class InMemorySessionDataSource extends SessionDataSource {
         }
         this.auth.signIn(who.id);
         this.audit('Signed in to Humo with a passkey');
-        return of(undefined);
+        return of(!this.auth.browserAnswered(who.id));
       }),
     );
   }
 
-  /** SIMULATED (docs/18 R-8): no email is sent; the prototype controls show the link instead. */
-  sendSignInLink(email: string): Observable<void> {
-    this.auth.issueLink(email.trim());
-    return timer(700).pipe(map(() => undefined));
+  /**
+   * SIMULATED (docs/18 R-8): no email is sent; the prototype controls show the link instead.
+   * The code is returned for the asking screen, as the API does.
+   */
+  sendSignInLink(email: string): Observable<string> {
+    const code = this.auth.issueLink(email.trim());
+    return timer(700).pipe(map(() => code));
   }
 
-  completeSignInLink(token: string): Observable<void> {
+  completeSignInLink(token: string, code: string): Observable<boolean> {
     return timer(600).pipe(
       switchMap(() => {
-        const id = this.auth.redeemLink(token);
-        const who = id ? this.store.identity(id) : undefined;
+        const result = this.auth.redeemLink(token, code.trim());
+        if (result && 'triesLeft' in result) {
+          return throwError(() => new SignInError('wrong-code', `That code isn’t right. ${result.triesLeft} ${result.triesLeft === 1 ? 'try' : 'tries'} left`));
+        }
+        const who = result ? this.store.identity(result.identityId) : undefined;
         if (!who || who.status !== 'active') return throwError(() => new SignInError('link-expired', 'This sign-in link has expired or was already used'));
         this.auth.signIn(who.id);
         this.audit('Signed in to Humo with an email link');
-        return of(undefined);
+        return of(!this.auth.browserAnswered(who.id));
       }),
     );
+  }
+
+  /** SIMULATED (docs/18 R-8): the answer is kept on this prototype browser; "my own" lists it under trusted devices. */
+  answerBrowserTrust(trusted: boolean): Observable<void> {
+    const id = this.auth.actor().id;
+    this.auth.answerBrowser(id, trusted);
+    this.store.updateSecurity(id, (p) => ({
+      ...p,
+      devices: [...p.devices.filter((d) => d.id !== THIS_BROWSER), { id: THIS_BROWSER, name: 'This browser', kind: 'laptop', trusted, humoMobile: false, addedAt: new Date().toISOString(), lastSeenAt: new Date().toISOString() }],
+    }));
+    return of(undefined);
   }
 
   /** SIMULATED (docs/18 R-8): a moment at the sensor, then a passkey for this device. */
