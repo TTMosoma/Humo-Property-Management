@@ -79,10 +79,28 @@
 
           <div class="divider" role="separator"><span>or</span></div>
 
-          <label class="check">
-            <input type="checkbox" [checked]="ownComputer()" (change)="ownComputer.set($any($event.target).checked)" />
-            <span><strong>This is my own computer.</strong> Stay signed in longer (30 minutes of inactivity, up to 12 hours). Leave this off on a shared or borrowed computer.</span>
-          </label>
+          <fieldset class="device-choice">
+            <legend>Whose computer is this?</legend>
+            <div class="choices">
+              <label class="choice" [class.selected]="!ownComputer()">
+                <input type="radio" name="device" [checked]="!ownComputer()" (change)="ownComputer.set(false)" />
+                <ion-icon name="people-outline" aria-hidden="true" />
+                <span>Shared or borrowed</span>
+              </label>
+              <label class="choice" [class.selected]="ownComputer()">
+                <input type="radio" name="device" [checked]="ownComputer()" (change)="ownComputer.set(true)" />
+                <ion-icon name="laptop-outline" aria-hidden="true" />
+                <span>My own</span>
+              </label>
+            </div>
+            <p class="choice-note" aria-live="polite">
+              @if (ownComputer()) {
+                Stay signed in until 30 minutes without use, for up to 12 hours.
+              } @else {
+                Signed out after 15 minutes without use, and within 8 hours.
+              }
+            </p>
+          </fieldset>
           <button type="button" class="btn btn-secondary big" (click)="passkey()">
             <ion-icon name="finger-print-outline" aria-hidden="true" /> Sign in with a passkey
           </button>

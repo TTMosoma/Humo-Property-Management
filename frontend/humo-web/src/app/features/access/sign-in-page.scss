@@ -521,18 +521,70 @@ input {
   color: var(--c-text-faint);
 }
 
-// "This is my own computer": a checkbox with a sentence beside it.
-.check {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--s-3);
-  font-size: var(--fs-sm);
-  color: var(--c-text-muted);
-  cursor: pointer;
+// Whose computer is this? Two option cards for the passkey session length.
+.device-choice {
+  margin: 0 0 var(--s-4);
+  padding: 0;
+  border: 0;
 
-  input {
-    margin-top: 3px;
-    accent-color: var(--c-primary);
+  legend {
+    margin-bottom: var(--s-2);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+    color: var(--c-text-muted);
+  }
+
+  .choices {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--s-2);
+  }
+
+  .choice {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    padding: var(--s-3);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-medium);
+    color: var(--c-text);
+    background: var(--c-surface);
+    border: 1px solid var(--c-border-strong);
+    border-radius: var(--r-sm);
+    cursor: pointer;
+
+    ion-icon {
+      flex: none;
+      font-size: 1.25rem;
+      color: var(--c-text-muted);
+    }
+
+    input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    &:has(input:focus-visible) {
+      outline: 2px solid var(--c-primary);
+      outline-offset: 2px;
+    }
+
+    &.selected {
+      background: var(--c-primary-soft);
+      border-color: var(--c-primary);
+
+      ion-icon {
+        color: var(--c-primary);
+      }
+    }
+  }
+
+  .choice-note {
+    margin: var(--s-2) 0 0;
+    font-size: var(--fs-xs);
+    color: var(--c-text-faint);
   }
 }
 
