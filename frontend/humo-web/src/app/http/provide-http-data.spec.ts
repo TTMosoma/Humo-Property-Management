@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { firstValueFrom } from 'rxjs';
-import { AccessDataSource, ApiError, SupplierDataSource, PolicyError, SchemeDataSource, SessionDataSource, SignInError, JobDataSource } from '../domain';
+import { AccessDataSource, ApiError, JobDataSource, MeetingDataSource, PayablesDataSource, PolicyError, SchemeDataSource, SessionDataSource, SignInError, SupplierDataSource } from '../domain';
 import { provideHttpData } from './provide-http-data';
 
 /**
@@ -42,8 +42,16 @@ describe('Production data layer (provideHttpData)', () => {
   });
 
   it('ports without an API yet say so', async () => {
-    await expect(firstValueFrom(TestBed.inject(JobDataSource).list(['s-1']))).rejects.toBeInstanceOf(ApiError);
-    await expect(firstValueFrom(TestBed.inject(SupplierDataSource).list(['s-1']))).rejects.toMatchObject({ kind: 'server' });
+    await expect(firstValueFrom(TestBed.inject(MeetingDataSource).list(['s-1']))).rejects.toBeInstanceOf(ApiError);
+    await expect(firstValueFrom(TestBed.inject(PayablesDataSource).batches(['s-1']))).rejects.toMatchObject({ kind: 'server' });
+  });
+  it('reads jobs and suppliers from the API', async () => {
+    const jobs = firstValueFrom(TestBed.inject(JobDataSource).list(['s-1']));
+    http.expectOne('/api/jobs?schemeIds=s-1').flush({ items: [], total: 0, page: 1, pageSize: 25 });
+    expect((await jobs).total).toBe(0);
+    const suppliers = firstValueFrom(TestBed.inject(SupplierDataSource).list(['s-1']));
+    http.expectOne('/api/suppliers?schemeIds=s-1').flush([]);
+    expect(await suppliers).toEqual([]);
   });
   it('reads schemes from the API', async () => {
     const list = firstValueFrom(TestBed.inject(SchemeDataSource).list());

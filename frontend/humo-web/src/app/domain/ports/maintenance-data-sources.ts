@@ -79,7 +79,8 @@ export type JobAction =
   /** A quote chosen in a Humo Contractor quote request, compared against `compared` offers. */
   | { type: 'award-network-quote'; supplierId: string; amount: number; guaranteeMonths: number; quoteRequestId: string; compared: number; completeBy: string }
   | { type: 'approve-within-delegation'; quoteId: string }
-  | { type: 'issue-work-order'; scheduledFor: string; accessNotes?: string }
+  /** `overrideVetting`: the supplier's site-work documents are missing or expired and you proceed anyway (recorded on the job). */
+  | { type: 'issue-work-order'; scheduledFor: string; accessNotes?: string; overrideVetting?: boolean }
   | { type: 'start-work' }
   | { type: 'complete'; notes: string }
   | { type: 'verify'; outcome: 'fixed' | 'not-fixed'; comment?: string; onBehalf: boolean }

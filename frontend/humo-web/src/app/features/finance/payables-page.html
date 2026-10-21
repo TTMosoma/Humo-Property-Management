@@ -65,7 +65,7 @@
     [(selected)]="selected"
   >
     <ng-template uiCell="invoice" let-r>
-      <div class="inv-id">{{ r.invoice.id }}</div>
+      <div class="inv-id">{{ r.invoice.number ?? r.invoice.id }}</div>
       <div class="sub">
         {{ r.invoice.description }}
         @if (r.job) { · <a [routerLink]="['/maintenance', r.job.ref]" (click)="$event.stopPropagation()">{{ r.job.ref }}</a> }

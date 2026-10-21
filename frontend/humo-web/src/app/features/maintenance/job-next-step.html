@@ -279,11 +279,11 @@
       @if (d.invoice; as iv) {
         @switch (iv.invoice.status) {
           @case ('awaiting-approval') {
-            <p class="lead">Invoice {{ iv.invoice.id }} needs approval{{ iv.variance && iv.variance > 0 ? ' because it’s over the approved quote' : '' }}.</p>
+            <p class="lead">Invoice {{ iv.invoice.number ?? iv.invoice.id }} needs approval{{ iv.variance && iv.variance > 0 ? ' because it’s over the approved quote' : '' }}.</p>
             @if (d.invoiceApprovalItem; as item) { <app-approval-card [item]="item" [compact]="true" /> }
           }
           @case ('approved') {
-            <p class="lead">Invoice {{ iv.invoice.id }} is approved and ready to pay.</p>
+            <p class="lead">Invoice {{ iv.invoice.number ?? iv.invoice.id }} is approved and ready to pay.</p>
             <a class="btn btn-primary" routerLink="/finance/payables" [queryParams]="{ view: 'ready' }">Add to a payment batch in Payables</a>
           }
           @case ('in-batch') {
@@ -291,7 +291,7 @@
             <a class="btn btn-secondary" routerLink="/finance/payables" [queryParams]="{ view: 'batches' }">Open Payables</a>
           }
           @case ('rejected') {
-            <div class="note warn"><ion-icon name="close-circle-outline" aria-hidden="true" /><span>Invoice {{ iv.invoice.id }} was rejected. Ask the supplier for a corrected invoice.</span></div>
+            <div class="note warn"><ion-icon name="close-circle-outline" aria-hidden="true" /><span>Invoice {{ iv.invoice.number ?? iv.invoice.id }} was rejected. Ask the supplier for a corrected invoice.</span></div>
           }
         }
       }

@@ -50,6 +50,7 @@ import {
 import { ContractorNetwork } from '../domain/contractor';
 import { HttpAccessDataSource } from './http-access';
 import { HttpCommunicationsDataSource, HttpInboxDataSource, HttpNoticeDataSource } from './http-communications';
+import { HttpJobDataSource, HttpSupplierDataSource } from './http-maintenance';
 import { HttpAuditDataSource, HttpSecurityDataSource } from './http-audit-security';
 import { HttpBoardDataSource } from './http-board';
 import { HttpAccountDataSource, HttpBillingDataSource, HttpCollectionDataSource, HttpLevyDataSource, HttpMeterDataSource, HttpReceiptDataSource, HttpWorkItemDataSource } from './http-finance';
@@ -62,18 +63,12 @@ import { notConnected } from './not-connected';
 
 /** Ports whose HTTP adapters come with later backend slices. Remove each from this list as its adapter lands. */
 const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
-
-
   [TimelineDataSource, 'TimelineDataSource'],
-  [JobDataSource, 'JobDataSource'],
-  [SupplierDataSource, 'SupplierDataSource'],
   [PayablesDataSource, 'PayablesDataSource'],
   [PaymentGateway, 'PaymentGateway'],
   [PlatformTemplateDataSource, 'PlatformTemplateDataSource'],
   [MeetingDataSource, 'MeetingDataSource'],
   [ResolutionDataSource, 'ResolutionDataSource'],
-
-
   [LibraryDataSource, 'LibraryDataSource'],
   [ComplianceDataSource, 'ComplianceDataSource'],
   [ReportDataSource, 'ReportDataSource'],
@@ -135,6 +130,9 @@ export function provideHttpData(): EnvironmentProviders {
     { provide: CommunicationsDataSource, useClass: HttpCommunicationsDataSource },
     { provide: NoticeDataSource, useClass: HttpNoticeDataSource },
     { provide: InboxDataSource, useClass: HttpInboxDataSource },
+    // Slice 3a: maintenance jobs and suppliers. Payables (payment batches) follow.
+    { provide: JobDataSource, useClass: HttpJobDataSource },
+    { provide: SupplierDataSource, useClass: HttpSupplierDataSource },
     ...pending,
   ]);
 }

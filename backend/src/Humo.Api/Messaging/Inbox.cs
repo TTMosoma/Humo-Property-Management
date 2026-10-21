@@ -155,7 +155,7 @@ public static class InboxEndpoints
     }
 
     private static async Task<IResult> Act(Guid id, ConversationActionRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, Inbox inbox, Communications comms,
-        DeliveryQueue queue, TimeProvider clock, CancellationToken ct)
+        DeliveryQueue queue, TimeProvider clock, Maintenance.MaintenanceService maintenance, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } me) return Results.Unauthorized();
         if (await VisibleAsync(me, db, ct) is not { } visible || await visible.FirstOrDefaultAsync(c => c.Id == id, ct) is not { } c) return Problems.NotFound();
@@ -180,7 +180,7 @@ public static class InboxEndpoints
             Resource = "Conversation",
             ResourceId = c.Ref,
             SchemeId = c.SchemeId,
-            Feature = Communications.Feature,
+            Feature = a.Type == "to-job" ? "maintenance-basic" : Communications.Feature,
             ExpectedVersion = body.ExpectedVersion,
             CurrentVersion = c.Version,
             Validate = () => a.Type switch
@@ -192,8 +192,9 @@ public static class InboxEndpoints
                 "reopen" when c.Status != "closed" => new() { ["id"] = "It’s not closed." },
                 "to-task" when (a.Title ?? "").Trim().Length < 5 => new() { ["title"] = "What has to be done?" },
                 "to-task" when due is null => new() { ["dueAt"] = "When by?" },
-                "to-job" => new() { ["title"] = "Maintenance jobs aren’t on Humo’s API yet: make a Task for now." },
-                "reply" or "assign" or "close" or "reopen" or "to-task" => [],
+                "to-job" when (a.Title ?? "").Trim().Length < 5 => new() { ["title"] = "Describe the problem in a few words." },
+                "to-job" when c.UnitId is null && (a.Location ?? "").Trim().Length < 2 => new() { ["location"] = "Where is it?" },
+                "reply" or "assign" or "close" or "reopen" or "to-task" or "to-job" => [],
                 _ => new() { ["type"] = "That isn’t something a conversation does." },
             },
         }, async actor =>
@@ -231,6 +232,20 @@ public static class InboxEndpoints
                     c.Status = "open";
                     await inbox.ReopenWorkAsync(c, ct);
                     break;
+                case "to-job":
+                {
+                    var scheme = await db.Schemes.FirstAsync(x => x.Id == c.SchemeId, ct);
+                    var theirs = Inbox.Messages(c).LastOrDefault(m => m.From == "them")?.Body ?? c.Subject;
+                    var role = c.UnitId is { } unitId && await db.Relationships.AnyAsync(r => r.PersonId == person.Id && r.UnitId == unitId && r.Type == "tenant", ct) ? "tenant"
+                        : c.UnitId is not null ? "owner" : "trustee";
+                    var reference = await maintenance.NewJobAsync(scheme, c.UnitId, a.Location, a.Title!.Trim(), theirs, "Building", "normal",
+                        new Humo.Domain.Maintenance.ReportedBy(person.DisplayName, role, person.Id.ToString()), null, by, ct);
+                    var links = JsonSerializer.Deserialize<List<ConversationLink>>(c.Links, Json.Options) ?? [];
+                    links.Add(new ConversationLink($"Job {reference}", $"/maintenance/{reference}"));
+                    c.Links = JsonSerializer.Serialize(links, Json.Options);
+                    result = reference;
+                    break;
+                }
                 case "to-task":
                 {
                     var task = new WorkItemRow

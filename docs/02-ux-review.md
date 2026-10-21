@@ -132,6 +132,13 @@ Severity key: **P0** fix before building more screens · **P1** fix in the slice
   - Supplier invoices are **matched** to the job and its approved quote. A variance between quoted and invoiced amounts is flagged, and paying above the approved amount needs re-approval.
   - Finance › Payables, Suppliers › Supplier › Jobs and Approvals are **views of the same records**, not copies.
 - **Ripple:** Defines the procure-to-pay data shape the .NET domain will need (Job, Quote, Approval, WorkOrder, SupplierInvoice, Payment). This is a strong argument for building it as an early vertical slice.
+- **API, 20 Oct 2026 (slice 3a):** the job is on the API from report to close:
+  - reports from staff, residents (their own unit) and the Inbox, each waiting in My work for triage;
+  - quotes, then approval: within the agency's delegated authority (R5 000), or by the trustees in My work above it;
+  - the work order, start, completion, the resident's confirmation (or staff confirming on their behalf), and the supplier's invoice;
+  - an invoice above the approved quote, or with no quote, goes back for approval;
+  - one invoice number per supplier; comments and cancelling (not once invoiced).
+  - **Still to come:** paying invoices in batches with two approvers (slice 3b), and quotes from the Humo Contractor network.
 
 **F17 — Residents report problems but the follow-up loop is missing. (P1)**
 - Residents need: status updates pushed to them, a "Was this fixed?" confirmation that feeds *Verified*, and the ability to add photos later. Common-property issues must avoid duplicates ("3 residents have reported the gate motor" → *add yourself*).
@@ -142,6 +149,10 @@ Severity key: **P0** fix before building more screens · **P1** fix in the slice
 - SA managing agents vet suppliers: COIDA letter of good standing, public liability insurance, tax clearance, B-BBEE certificate, bank confirmation letter. Expiry of these should (a) block new work orders or warn about them, and (b) feed Compliance automatically (F24).
 - The Supplier page uses the Record pattern: Overview (services, schemes, rating) · Jobs · Quotes · Invoices & payments (a ledger) · Documents (with expiry) · Performance (on-time %, quote-vs-invoice variance, resident verification rate).
 - Changing a supplier's bank details is a fraud vector and needs a **verification step** with approval.
+- **API, 20 Oct 2026 (slice 3a):** suppliers, their documents and their status are on the API:
+  - a supplier with a missing or expired document (other than B-BBEE) gets a work order only when the person issuing it overrides the warning, and the job records that;
+  - suppliers on hold or archived, or not serving the scheme, can't be given work;
+  - changing bank details needs a fresh passkey and leaves the account unverified until it's confirmed.
 
 ### 1.9 Communication workflows
 

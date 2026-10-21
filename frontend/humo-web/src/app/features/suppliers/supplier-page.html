@@ -90,7 +90,7 @@
           <tbody>
             @for (iv of d.invoices.slice(0, 12); track iv.invoice.id) {
               <tr>
-                <td>{{ iv.invoice.id }}<div class="muted small">{{ iv.invoice.description }}</div></td>
+                <td>{{ iv.invoice.number ?? iv.invoice.id }}<div class="muted small">{{ iv.invoice.description }}</div></td>
                 <td>{{ iv.scheme.code }}</td>
                 <td class="end money">{{ iv.invoice.amount | rand }}</td>
                 <td>{{ iv.invoice.status === 'paid' ? 'Paid ' + formatDate(iv.invoice.paidAt, true) : iv.invoice.status.replace('-', ' ') }}</td>
