@@ -88,8 +88,9 @@
                   @if (d.humoMobile) {
                     <ui-status-pill label="Humo Mobile" tone="accent" />
                   }
+                  <ui-status-pill [label]="d.trusted ? 'Trusted' : 'Not trusted'" [tone]="d.trusted ? 'success' : 'warning'" />
                 </span>
-                <span class="li-sub">{{ d.trusted ? 'Trusted' : 'Not trusted' }} · answered {{ formatDate(d.addedAt, true) }}</span>
+                <span class="li-sub">Answered {{ formatDate(d.addedAt, true) }}</span>
               </span>
               <button type="button" class="btn btn-ghost btn-sm" (click)="removeDevice(d.id, d.name)" [disabled]="session.isImpersonating()">Remove</button>
             </li>
