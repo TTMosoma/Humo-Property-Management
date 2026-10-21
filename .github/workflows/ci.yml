@@ -115,6 +115,8 @@ jobs:
           Bootstrap__AdminEmail: ci@humo.co.za
           Bootstrap__AdminName: CI Administrator
           Mail__Provider: Log
+          # CI only: signs file links. The API refuses to start without a key (Files:SigningKey).
+          Files__SigningKey: 1koFV8PLkhl0uNVjH31FEz/8ZRmck4FEoFNoozVmSLI=
         run: |
           dotnet run -c Release --no-build --no-launch-profile --project src/Humo.Api > api.log 2>&1 &
           for i in $(seq 1 30); do curl -sf http://localhost:5080/api/health && break; sleep 2; done
