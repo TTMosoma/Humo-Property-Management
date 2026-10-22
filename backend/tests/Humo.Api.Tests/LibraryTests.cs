@@ -150,4 +150,120 @@ public sealed class LibraryTests : IDisposable
         Assert.Equal(HttpStatusCode.OK, content.StatusCode);
         Assert.Equal(Pdf, await content.Content.ReadAsByteArrayAsync());
     }
+
+    // ---- Units, and what's shared with trustees, owners and tenants ----
+
+    private static MultipartFormDataContent On(string kind, Guid recordId, string title, string category, string visibility, byte[]? content = null)
+    {
+        var form = new MultipartFormDataContent
+        {
+            { new StringContent(kind), "recordKind" },
+            { new StringContent(recordId.ToString()), "recordId" },
+            { new StringContent(title), "title" },
+            { new StringContent(category), "category" },
+            { new StringContent(visibility), "visibility" },
+        };
+        var file = new ByteArrayContent(content ?? Pdf);
+        file.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+        form.Add(file, "file", "doc.pdf");
+        return form;
+    }
+
+    private async Task<Guid> Unit(Setup s, string number)
+    {
+        var res = await s.Admin.PostAsJsonAsync($"/api/schemes/{s.Kc}/units", new { number, description = "2-bed", sizeM2 = 86, participationQuota = 1.25, monthlyLevy = 1800, occupancy = "owner-occupied" });
+        return await Id(res);
+    }
+
+    /// <summary>A person with a relationship to Kingfisher Court (and a unit, if given), signed in.</summary>
+    private async Task<HttpClient> Resident(Setup s, string email, string type, Guid? unit = null)
+    {
+        await api.Person(email, type == "trustee" ? Roles.Trustee : Roles.Owner, s.Org, [s.Kc]);
+        var personId = Guid.CreateVersion7();
+        await api.Db(async db =>
+        {
+            var user = await db.Users.SingleAsync(u => u.Email == email);
+            db.People.Add(new Person
+            {
+                Id = personId, OrganisationId = s.Org, FirstName = "Resident", LastName = "Test", Kind = "individual", DisplayName = email, Initials = "RT",
+                Email = email, Phone = "", PreferredChannel = "email", CreatedAt = DateTimeOffset.UtcNow,
+            });
+            db.Relationships.Add(new Relationship { Id = Guid.CreateVersion7(), PersonId = personId, Type = type, SchemeId = s.Kc, UnitId = unit, Since = new DateOnly(2020, 1, 1) });
+            user.PersonId = personId.ToString();
+            return await db.SaveChangesAsync();
+        });
+        return await api.SignedIn(email);
+    }
+
+    private static async Task<List<string>> Titles(HttpClient client) =>
+        (await Ok(await client.GetAsync("/api/documents/library/mine"))).EnumerateArray().Select(d => d.GetProperty("title").GetString()!).OrderBy(t => t).ToList();
+
+    [Fact]
+    public async Task A_unit_document_is_uploaded_on_the_unit_and_shows_its_unit_link()
+    {
+        var s = await Scheme();
+        var unit = await Unit(s, "42");
+        var res = await s.Admin.PostAsync("/api/documents/library", On("unit", unit, "Lease, unit 42", "contract", "unit"));
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+        var doc = Assert.Single((await Ok(await s.Admin.GetAsync($"/api/documents/library?schemeIds={s.Kc}"))).EnumerateArray());
+        Assert.Equal(("unit", "Unit 42, Kingfisher Court"), (doc.GetProperty("links")[0].GetProperty("kind").GetString(), doc.GetProperty("links")[0].GetProperty("label").GetString()));
+    }
+
+    [Fact]
+    public async Task This_unit_only_is_for_a_unit_document()
+    {
+        var s = await Scheme();
+        var res = await s.Admin.PostAsync("/api/documents/library", Form(s.Kc, visibility: "unit"));
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, res.StatusCode);
+        Assert.Contains("unit", (await res.FieldErrors()).GetProperty("visibility").GetString());
+    }
+
+    [Fact]
+    public async Task Each_person_sees_only_what_is_shared_with_them()
+    {
+        var s = await Scheme();
+        var unit42 = await Unit(s, "42");
+        await Ok(await s.Admin.PostAsync("/api/documents/library", Form(s.Kc, title: "Owners’ guide", visibility: "owners")));
+        await Ok(await s.Admin.PostAsync("/api/documents/library", Form(s.Kc, title: "Internal memo", visibility: "staff")));
+        await Ok(await s.Admin.PostAsync("/api/documents/library", Form(s.Kc, title: "Trustee pack", visibility: "trustees")));
+        await Ok(await s.Admin.PostAsync("/api/documents/library", On("unit", unit42, "Lease, unit 42", "contract", "unit")));
+
+        var ownerOfUnit = await Resident(s, "ownerunit@acacia.example", "owner", unit42);
+        var ownerOfScheme = await Resident(s, "owner@acacia.example", "owner");
+        var trustee = await Resident(s, "trustee@acacia.example", "trustee");
+
+        Assert.Equal(new[] { "Lease, unit 42", "Owners’ guide" }, await Titles(ownerOfUnit));
+        Assert.Equal(new[] { "Owners’ guide" }, await Titles(ownerOfScheme));
+        Assert.Equal(new[] { "Owners’ guide", "Trustee pack" }, await Titles(trustee));
+    }
+
+    [Fact]
+    public async Task A_document_a_person_cannot_see_is_not_found_to_them()
+    {
+        var s = await Scheme();
+        var memo = (await Ok(await s.Admin.PostAsync("/api/documents/library", Form(s.Kc, title: "Internal memo", visibility: "staff")))).GetProperty("id").GetString()!;
+        var owner = await Resident(s, "owner@acacia.example", "owner");
+        Assert.Equal(HttpStatusCode.NotFound, (await owner.GetAsync($"/api/documents/library/{memo}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await owner.GetAsync($"/api/documents/library/{memo}/link")).StatusCode);
+    }
+
+    [Fact]
+    public async Task A_job_document_is_uploaded_on_the_job_and_found_by_its_reference()
+    {
+        var s = await Scheme();
+        var created = await s.Admin.PostAsJsonAsync("/api/jobs", new { schemeId = s.Kc.ToString(), location = "Roof", title = "Roof leak over unit 42", description = "Ceiling stain.", category = "Plumbing", priority = "high" });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var reference = (await created.Json()).GetProperty("id").GetString()!;
+
+        var form = new MultipartFormDataContent { { new StringContent("job"), "recordKind" }, { new StringContent(reference), "recordId" }, { new StringContent("Roof report"), "title" }, { new StringContent("correspondence"), "category" }, { new StringContent("staff"), "visibility" } };
+        var file = new ByteArrayContent(Pdf);
+        file.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+        form.Add(file, "file", "roof.pdf");
+        Assert.Equal(HttpStatusCode.OK, (await s.Admin.PostAsync("/api/documents/library", form)).StatusCode);
+
+        var found = Assert.Single((await Ok(await s.Admin.GetAsync($"/api/documents/library?record=job:{reference}"))).EnumerateArray());
+        Assert.Equal(("job", reference), (found.GetProperty("links")[0].GetProperty("kind").GetString(), found.GetProperty("links")[0].GetProperty("id").GetString()));
+        Assert.Contains("Roof leak over unit 42", found.GetProperty("links")[0].GetProperty("label").GetString());
+    }
 }
+
