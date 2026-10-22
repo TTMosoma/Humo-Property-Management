@@ -35,6 +35,7 @@ Each entry records:
 | D17 | Refines D16: Professional includes 25 people with a sign-in; the Professional trial is offered at 80%, and the customer starts it; no existing customers to keep on old terms (not yet live) | Commercial slice |
 | D18 | Limit warnings: agency administrators are emailed at 80% and when a limit is reached; other staff see them in the app | Commercial slice |
 | D19 | Basic invoicing on Essentials: owner invoices posted to the unit's account; manual statements stay on Essentials, bulk runs on Professional | Commercial slice |
+| D20 | Storage limits: every uploaded file counts (1 GB = 1024³ bytes); the API refuses an upload past the limit before storing it; warnings at 80% as for units and people | Commercial slice |
 
 ---
 
@@ -468,6 +469,24 @@ Approved on 18 October 2026 by Terry Mosoma (product owner). Options and reasons
 
 **Consequences:**
 - The invoice number's sequence isn't gapless for tax purposes (Humo's own invoices are; agency invoices to owners aren't tax invoices, as D15 says for Humo).
+
+---
+
+## D20 — Storage limits: measured and refused by the API (22 October 2026)
+
+**Decided by:** Terry Mosoma (product owner). The allowances are D16's (5, 25 and 150 GB); this entry sets how storage is measured and enforced.
+
+**Decision:**
+- **Storage is the total size of every file uploaded for the agency**: documents, library files and any other upload. **1 GB is 1024³ bytes.**
+- **The API refuses an upload that would take the agency past its limit**, before the file is saved. A file that brings the agency to exactly its limit is accepted; one byte more is refused, with the package's allowance and the agency's current use in the message.
+- **Warnings** work as they do for units and people (D16, D18): the administrator is emailed and staff see it in the app at 80% and when the limit is reached. Reaching 80% of storage also offers the Professional trial (D17).
+- **A package with no storage figure** (negotiated) has no limit and no warning.
+- **Nothing is charged, and no package is upgraded, automatically** (doc 23 §5).
+
+**Consequences:**
+- **Not counted yet:** files Humo generates (statements, letters and packs), backups and logs. Generated files join the count when the API stores them (R-13).
+- **Archiving a library document keeps its file**, so it keeps its storage. A way to free storage (deleting files) isn't built.
+- **The storage pack and temporary exception** in doc 23 §5 aren't built; an agency at its limit can't upload until its package changes.
 
 ---
 

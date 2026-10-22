@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Security.Claims;
 using Humo.Api.Commands;
+using Humo.Api.Commercial;
 using Humo.Infrastructure.Data;
 using Humo.Infrastructure.Files;
 using Microsoft.AspNetCore.Mvc;
@@ -28,7 +29,7 @@ public static class FileEndpoints
     }
 
     private static async Task<IResult> Upload(HttpRequest request, CurrentActor current, CommandRunner commands, HumoDbContext db, IFileStore store,
-        IFileScanner scanner, IOptions<FilesOptions> options, TimeProvider clock, CancellationToken ct)
+        IFileScanner scanner, IOptions<FilesOptions> options, TimeProvider clock, PackageLimits limits, Platform.Notices notices, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         var form = await request.ReadFormAsync(ct);
@@ -39,6 +40,7 @@ public static class FileEndpoints
         var (accepted, refusal) = await PdfIntake.CheckAsync(form.Files.FirstOrDefault(), options.Value.MaxBytes, scanner, ct);
         if (refusal is not null) return refusal;
         var (bytes, name) = (accepted!.Bytes, accepted.Name);
+        if (await limits.RefuseNewFileAsync(scheme.OrganisationId, bytes.Length, ct) is { } full) return Problems.Validation(new() { ["file"] = full });
 
         return await commands.RunAsync(new CommandSpec($"Uploaded {name} to {scheme.Name}", "Documents.Manage")
         {
@@ -56,6 +58,8 @@ public static class FileEndpoints
                 Sha256 = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(bytes)), StorageKey = key, ScanResult = "clean",
                 UploadedBy = writer.Human.Name, UploadedAt = clock.GetUtcNow(),
             });
+            // The storage warning at 80% (D20), counted with this file.
+            await limits.NotifyAsync(scheme.OrganisationId, notices, writer.Human.Id, ct, extraBytes: bytes.Length);
             return Results.Ok(new UploadedFileDto(id.ToString()));
         }, ct);
     }

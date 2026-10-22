@@ -23,5 +23,7 @@ export interface PackageLimits {
   package: string;
   units: LimitUsage;
   users: LimitUsage;
+  /** Storage in GB (D20): every uploaded file counts. */
+  storage: LimitUsage;
   trial: ProfessionalTrial;
 }
