@@ -58,6 +58,7 @@ import { HttpCatalogueDataSource, HttpCommercialDataSource, HttpNudgeDataSource,
 import { HttpAccountRequestDataSource, HttpHumoTeamDataSource, HttpNotificationDataSource } from './http-platform';
 import { HttpOrganisationDataSource, HttpPersonDataSource, HttpSchemeDataSource, HttpStepUpAuthenticator, HttpUnitDataSource } from './http-portfolio';
 import { HttpSessionDataSource } from './http-session-data-source';
+import { HttpLibraryDataSource } from './http-library';
 import { HttpDocumentTemplateDataSource, HttpSettingsDataSource } from './http-settings';
 import { notConnected } from './not-connected';
 
@@ -69,7 +70,6 @@ const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
   [PlatformTemplateDataSource, 'PlatformTemplateDataSource'],
   [MeetingDataSource, 'MeetingDataSource'],
   [ResolutionDataSource, 'ResolutionDataSource'],
-  [LibraryDataSource, 'LibraryDataSource'],
   [ComplianceDataSource, 'ComplianceDataSource'],
   [ReportDataSource, 'ReportDataSource'],
   [OpsDataSource, 'OpsDataSource'],
@@ -109,6 +109,7 @@ export function provideHttpData(): EnvironmentProviders {
     { provide: HumoTeamDataSource, useClass: HttpHumoTeamDataSource },
     { provide: AuditDataSource, useClass: HttpAuditDataSource },
     { provide: SecurityDataSource, useClass: HttpSecurityDataSource },
+    { provide: LibraryDataSource, useClass: HttpLibraryDataSource },
     { provide: CatalogueDataSource, useClass: HttpCatalogueDataSource },
     { provide: PlatformDataSource, useClass: HttpPlatformDataSource },
     { provide: PlanDataSource, useClass: HttpPlanDataSource },

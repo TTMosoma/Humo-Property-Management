@@ -1,13 +1,14 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { map } from 'rxjs';
+import { catchError, map, of, switchMap } from 'rxjs';
 import { CATEGORY_LABELS, COMPLIANCE_TYPE, LibraryDataSource, LibraryDocument, RECORD_KIND_LABELS, VISIBILITY_LABELS, formatBytes } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
 import { DrawerService } from '../../ui/drawer/drawer.service';
+import { openDocumentFile } from './open-document';
 import { formatDate } from '../../ui/format/money';
 import { KeyFact, RecordHeader } from '../../ui/record/record-header';
 import { ChainLink } from '../../ui/record/relationship-chain';
@@ -37,9 +38,7 @@ import { expiryLabel, fileIcon } from './library-view';
       @let d = doc()!;
       <ui-record-header [eyebrow]="category()" [title]="d.title" [subtitle]="d.fileName + ' · ' + size()" [status]="status()" [facts]="facts()" [chain]="chain()">
         <ng-container recordActions>
-          @if (url(); as u) {
-            <a class="btn btn-primary" [href]="u" target="_blank" rel="noopener"><ion-icon [name]="icon(d)" aria-hidden="true" /> Open file</a>
-          }
+          <button type="button" class="btn btn-primary" (click)="openFile()"><ion-icon [name]="icon(d)" aria-hidden="true" /> Open file</button>
           @if (canManage()) {
             @if (!d.archived) {
               @if (d.compliance || d.supplierDoc) {
@@ -65,7 +64,7 @@ import { expiryLabel, fileIcon } from './library-view';
             @if (d.mimeType.startsWith('image/')) {
               <img class="preview" [src]="u" [alt]="d.title" />
             } @else {
-              <p>Uploaded in this session. <a [href]="u" target="_blank" rel="noopener">Open {{ d.fileName }}</a>.</p>
+              <p>Uploaded in this session. <button type="button" class="btn btn-ghost btn-sm" (click)="openFile()">Open {{ d.fileName }}</button>.</p>
             }
           } @else {
             <div class="placeholder">
@@ -140,7 +139,15 @@ export class DocumentPage {
   protected readonly doc = computed<LibraryDocument | undefined>(() => this.result.value() || undefined);
 
   protected readonly canManage = computed(() => this.session.can('Documents.Manage') && this.session.hasFeature('documents') && !this.session.readOnly());
-  protected readonly url = computed(() => (this.doc() ? this.data.contentUrl(this.doc()!.id) : null));
+  /** A preview's link, for images only: a file link lasts a few minutes, so it's fetched as the document loads. */
+  protected readonly url = toSignal(
+    toObservable(this.doc).pipe(switchMap((d) => (d ? this.data.contentLink(d.id).pipe(catchError(() => of(null))) : of(null)))),
+    { initialValue: null },
+  );
+
+  protected openFile(): void {
+    if (this.doc()) openDocumentFile(this.data, this.doc()!.id);
+  }
   protected readonly category = computed(() => (this.doc() ? CATEGORY_LABELS[this.doc()!.category] : ''));
   protected readonly size = computed(() => (this.doc() ? formatBytes(this.doc()!.sizeBytes) : ''));
   protected readonly complianceLabel = computed(() => (this.doc()?.compliance ? COMPLIANCE_TYPE[this.doc()!.compliance!].label : ''));

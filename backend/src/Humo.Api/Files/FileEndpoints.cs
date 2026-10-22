@@ -36,29 +36,9 @@ public static class FileEndpoints
         if (await db.Schemes.AsNoTracking().FirstOrDefaultAsync(s => s.Id == schemeId, ct) is not { } scheme || !actor.CoversScheme(schemeId))
             return Problems.NotFound();
 
-        var file = form.Files.FirstOrDefault();
-        var max = options.Value.MaxBytes;
-        if (file is null) return Problems.Validation(new() { ["file"] = "Choose a PDF to upload." });
-        if (file.Length > max) return Problems.Validation(new() { ["file"] = $"That file is larger than {max / 1024 / 1024} MB." });
-
-        var name = Path.GetFileName(file.FileName) is { Length: > 0 } n ? n[..Math.Min(n.Length, 200)] : "document.pdf";
-        using var buffer = new MemoryStream();
-        await file.CopyToAsync(buffer, ct);
-        var bytes = buffer.ToArray();
-        if (bytes.Length > max) return Problems.Validation(new() { ["file"] = $"That file is larger than {max / 1024 / 1024} MB." });
-        if (!Path.GetExtension(name).Equals(".pdf", StringComparison.OrdinalIgnoreCase) || !bytes.AsSpan().StartsWith("%PDF-"u8))
-            return Problems.Validation(new() { ["file"] = "Only PDF files can be uploaded." });
-
-        // A file that can't be checked isn't stored: the scanner has to answer first.
-        ScanResult scan;
-        try { scan = await scanner.ScanAsync(bytes, ct); }
-        catch (ScannerUnavailableException)
-        {
-            return Results.Problem(title: "The file can’t be checked for viruses right now, so it wasn’t stored. Try again shortly.", statusCode: StatusCodes.Status503ServiceUnavailable);
-        }
-        if (!scan.Clean)
-            return Results.Problem(title: $"The file was refused: {scan.Threat} was found in it.", statusCode: StatusCodes.Status422UnprocessableEntity,
-                extensions: new Dictionary<string, object?> { ["code"] = "infected" });
+        var (accepted, refusal) = await PdfIntake.CheckAsync(form.Files.FirstOrDefault(), options.Value.MaxBytes, scanner, ct);
+        if (refusal is not null) return refusal;
+        var (bytes, name) = (accepted!.Bytes, accepted.Name);
 
         return await commands.RunAsync(new CommandSpec($"Uploaded {name} to {scheme.Name}", "Documents.Manage")
         {
