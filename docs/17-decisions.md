@@ -37,6 +37,7 @@ Each entry records:
 | D19 | Basic invoicing on Essentials: owner invoices posted to the unit's account; manual statements stay on Essentials, bulk runs on Professional | Commercial slice |
 | D20 | Storage limits: every uploaded file counts (1 GB = 1024³ bytes); the API refuses an upload past the limit before storing it; warnings at 80% as for units and people | Commercial slice |
 | D21 | Advanced finance add-on for Essentials at R400 a month (proposed): levies, billing runs, payment allocation, debtors and credit control. Price to be confirmed | Commercial slice |
+| D22 | Confirms D21: the Advanced finance add-on is R400 a month, with levies included | Commercial slice |
 
 ---
 
@@ -505,6 +506,21 @@ Approved on 18 October 2026 by Terry Mosoma (product owner). Options and reasons
 - No new feature keys are needed: the add-on uses features that already exist in `contracts/entitlements.json`.
 - The add-on is catalogue data (`demo-data/commercial/catalogue.json`, `advanced-finance`), so changing the price or features needs no code change.
 - Levies moved from Professional to the add-on at the product owner's request, while D21 was still proposed. The price and scope are both still open to change.
+
+---
+
+## D22 — Advanced finance add-on confirmed (22 October 2026)
+
+**Status:** approved by the product owner (Terry Mosoma). Supersedes D21's "proposed" status.
+
+**Decision:**
+- The **Advanced finance** add-on is **R400 a month**.
+- Its scope stays as D21 set it: levy management, billing runs, payment allocation from bank receipts, debtors and credit control. Levies belong in the add-on.
+- Supplier payments (payables), budgets and financial reporting stay on Professional.
+
+**Consequences:**
+- The catalogue seed shows the price as approved (`demo-data/commercial/catalogue.json`, `advanced-finance`).
+- A database seeded before this change keeps the add-on's price as *proposed* until someone marks it approved in Platform › Pricing & add-ons. The catalogue keeps the history of who approved it and when.
 
 ---
 
