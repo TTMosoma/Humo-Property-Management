@@ -3,11 +3,14 @@ import { Observable, catchError, map, of, throwError } from 'rxjs';
 import { ApiError, DocumentAction, LibraryDataSource, LibraryDocument, NewDocument, RecordKind } from '../domain';
 import { HttpPort, toApiErrorFromHttp } from './http-port';
 
+/** The record kinds the API holds documents for. */
+const ON_API: RecordKind[] = ['scheme', 'unit', 'job'];
+
 /**
- * The document library over HTTP (docs/18 R-11). Documents on schemes are on the API: upload, list, read, edit,
- * archive and restore, and opening through a link signed for the person who asks. Documents on units, people,
- * suppliers, jobs and meetings, and the residents' own view, come in a later slice: until then those lists are
- * empty here, and uploads for those records are refused.
+ * The document library over HTTP (docs/18 R-11). Documents on schemes, units and jobs are on the API: upload, list,
+ * read, edit, archive and restore, and opening through a link signed for the person who asks. Each person sees what
+ * is shared with them (`mine`). Documents on people, suppliers and meetings come in a later slice: until then those
+ * lists are empty here, and uploads for those records are refused.
  */
 @Injectable()
 export class HttpLibraryDataSource extends HttpPort implements LibraryDataSource {
@@ -16,13 +19,13 @@ export class HttpLibraryDataSource extends HttpPort implements LibraryDataSource
   }
 
   forRecord(kind: RecordKind, id: string): Observable<LibraryDocument[]> {
-    if (kind !== 'scheme') return of([]);
-    return this.live<LibraryDocument[]>('/documents/library', ['documents'], { record: `scheme:${id}` });
+    if (!ON_API.includes(kind)) return of([]);
+    return this.live<LibraryDocument[]>('/documents/library', ['documents'], { record: `${kind}:${id}` });
   }
 
-  /** Residents' own documents come with the resident portal slice. */
+  /** What's shared with the signed-in person: their scheme's, unit's and trustee documents. */
   mine(): Observable<LibraryDocument[]> {
-    return of([]);
+    return this.live<LibraryDocument[]>('/documents/library/mine', ['documents']);
   }
 
   get(id: string): Observable<LibraryDocument | undefined> {
@@ -32,10 +35,13 @@ export class HttpLibraryDataSource extends HttpPort implements LibraryDataSource
   }
 
   upload(input: NewDocument, file?: File): Observable<string> {
-    if (input.record.kind !== 'scheme') return throwError(() => new ApiError('server', 'Documents on this record come in a later slice.'));
+    if (!ON_API.includes(input.record.kind)) return throwError(() => new ApiError('server', 'Documents on this record come in a later slice.'));
     if (!file) return throwError(() => new ApiError('validation', 'Choose a PDF to upload.', { file: 'Choose a PDF to upload.' }));
     const form = new FormData();
-    form.append('schemeId', input.record.id);
+    // A scheme names itself; a unit or a job is named with its own kind, and the API works out its scheme.
+    if (input.record.kind === 'scheme') form.append('schemeId', input.record.id);
+    form.append('recordKind', input.record.kind);
+    form.append('recordId', input.record.id);
     form.append('title', input.title);
     form.append('category', input.category);
     form.append('visibility', input.visibility);

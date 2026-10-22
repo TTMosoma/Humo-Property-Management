@@ -632,6 +632,7 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.ToTable("LibraryDocuments");
             e.HasIndex(d => d.SchemeId);
             e.HasIndex(d => d.FileId).IsUnique();
+            e.Property(d => d.RecordKind).HasMaxLength(20);
             e.Property(d => d.Title).HasMaxLength(200);
             e.Property(d => d.Category).HasMaxLength(30);
             e.Property(d => d.Visibility).HasMaxLength(20);

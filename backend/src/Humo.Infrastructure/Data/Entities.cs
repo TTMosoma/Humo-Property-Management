@@ -1027,6 +1027,9 @@ public sealed class LibraryDocument
     public Guid OrganisationId { get; set; }
     public Guid SchemeId { get; set; }
     public Guid FileId { get; set; }
+    /// <summary>What it's uploaded on: "scheme", "unit" or "job" (the record's own Id is <see cref="RecordId"/>; a scheme's is null).</summary>
+    public string RecordKind { get; set; } = "scheme";
+    public Guid? RecordId { get; set; }
     public string Title { get; set; } = "";
     public string Category { get; set; } = "other";
     public string Visibility { get; set; } = "staff";
