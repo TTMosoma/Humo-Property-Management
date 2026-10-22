@@ -1,3 +1,4 @@
+using Humo.Api.Files;
 using System.Threading.RateLimiting;
 using Humo.Api;
 using Humo.Api.Access;
@@ -148,6 +149,7 @@ api.MapGet("/health", async (HumoDbContext db, CancellationToken ct) =>
 api.MapHumoAuth();
 api.MapSmsWebhooks();
 api.MapMailWebhooks();
+api.MapFiles();
 api.MapOrganisations();
 api.MapSchemes();
 api.MapUnits();

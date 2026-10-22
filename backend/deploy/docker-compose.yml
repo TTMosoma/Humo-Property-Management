@@ -24,12 +24,19 @@ services:
       context: ../..
       dockerfile: backend/Dockerfile
     restart: unless-stopped
+    volumes:
+      - files-data:/data/files # uploaded files: back up with the database (doc 18 D-12)
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__Humo: Host=postgres;Database=humo;Username=humo;Password=${POSTGRES_PASSWORD}
       App__PublicUrl: https://pm.humo.co.za
       App__PasskeyDomain: pm.humo.co.za
       App__AllowedOrigins__0: https://pm.humo.co.za
+      # Uploaded PDFs (doc 18 D-12 to D-16): on the files volume, signed links with this key, scanned by ClamAV.
+      Files__Root: /data/files
+      Files__SigningKey: ${FILES_SIGNING_KEY}
+      Files__ClamAv__Host: ${CLAMAV_HOST}
+      Files__ClamAv__Port: ${CLAMAV_PORT}
       Bootstrap__AdminEmail: ${BOOTSTRAP_ADMIN_EMAIL}
       Bootstrap__AdminName: ${BOOTSTRAP_ADMIN_NAME}
       Mail__Host: ${MAIL_HOST}
@@ -88,6 +95,7 @@ services:
       - mail-data:/opt/stalwart # DKIM keys and configuration: back up (doc 26 §6). ⚠ Check the data path in Stalwart’s Docker docs at setup.
 
 volumes:
+  files-data:
   pgdata:
   caddy-data:
   caddy-config:

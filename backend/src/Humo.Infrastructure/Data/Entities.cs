@@ -996,3 +996,24 @@ public sealed class SupplierInvoiceRow
     public DateTimeOffset? PaidAt { get; set; }
     public int Version { get; set; } = 1;
 }
+
+/// <summary>
+/// A file uploaded to a scheme (docs/18 R-11). The content lives in <c>Files:Root</c> under <see cref="StorageKey"/>; the
+/// record keeps what the file is, who put it there, and that it was checked for malware before it was stored.
+/// </summary>
+public sealed class UploadedFile
+{
+    public Guid Id { get; set; }
+    public Guid OrganisationId { get; set; }
+    public Guid SchemeId { get; set; }
+    public string Name { get; set; } = "";
+    public string ContentType { get; set; } = "application/pdf";
+    public long SizeBytes { get; set; }
+    public string Sha256 { get; set; } = "";
+    public string StorageKey { get; set; } = "";
+    /// <summary>"clean": the only state a stored file is in. Infected files are refused before they're stored.</summary>
+    public string ScanResult { get; set; } = "clean";
+    public string UploadedBy { get; set; } = "";
+    public DateTimeOffset UploadedAt { get; set; }
+}
+

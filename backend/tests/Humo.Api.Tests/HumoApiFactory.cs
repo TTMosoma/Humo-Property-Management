@@ -31,6 +31,8 @@ public sealed class HumoApiFactory : WebApplicationFactory<Program>
         ["Database:Initialise"] = "EnsureCreated",
         ["Mail:Provider"] = "Log",
         ["Mail:WebhookSecret"] = MailEvents.Secret,
+        ["Files:SigningKey"] = FileTests.SigningKey,
+        ["Files:Root"] = Path.Combine(Path.GetTempPath(), "humo-tests-files", Guid.NewGuid().ToString("N")),
         // The tests run the billing run themselves (POST /api/platform/billing/run).
         ["Billing:Enabled"] = "false",
         // Tests that move the clock sign in again many times a (real) minute.
@@ -44,6 +46,7 @@ public sealed class HumoApiFactory : WebApplicationFactory<Program>
 
     public TestClock Clock { get; } = new();
     public CapturedEmail Email { get; } = new();
+    public TestFileScanner Scanner { get; } = new();
     public TestPdfRenderer Pdf { get; }
     public CapturedSms Sms { get; } = new();
 
@@ -68,6 +71,8 @@ public sealed class HumoApiFactory : WebApplicationFactory<Program>
             services.RemoveAll<TimeProvider>();
             services.AddSingleton<TimeProvider>(Clock);
             services.RemoveAll<IEmailSender>();
+            services.RemoveAll<Humo.Infrastructure.Files.IFileScanner>();
+            services.AddSingleton<Humo.Infrastructure.Files.IFileScanner>(Scanner);
             services.AddSingleton<IEmailSender>(Email);
             // Payfast's real checks call Payfast; the tests check the signature only.
             services.RemoveAll<Humo.Infrastructure.Payments.IPayfast>();
@@ -220,5 +225,18 @@ public sealed class CapturedSms : ISmsSender
     {
         Sent.Enqueue(message);
         return Task.FromResult(new SmsReceipt(Name, Guid.NewGuid().ToString("N"), true));
+    }
+}
+
+/// <summary>Stands in for ClamAV: the EICAR test string counts as an infection, and it can be made to not answer at all.</summary>
+public sealed class TestFileScanner : Humo.Infrastructure.Files.IFileScanner
+{
+    public bool Unavailable { get; set; }
+
+    public Task<Humo.Infrastructure.Files.ScanResult> ScanAsync(byte[] content, CancellationToken ct)
+    {
+        if (Unavailable) throw new Humo.Infrastructure.Files.ScannerUnavailableException("The test scanner is off.");
+        var infected = System.Text.Encoding.ASCII.GetString(content).Contains("EICAR-STANDARD-ANTIVIRUS-TEST-FILE");
+        return Task.FromResult(new Humo.Infrastructure.Files.ScanResult(!infected, infected ? "Eicar-Test-Signature" : null));
     }
 }

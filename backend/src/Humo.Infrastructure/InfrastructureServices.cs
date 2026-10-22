@@ -1,5 +1,6 @@
 using Humo.Infrastructure.Data;
 using Humo.Infrastructure.Documents;
+using Humo.Infrastructure.Files;
 using Humo.Infrastructure.Messaging;
 using Humo.Infrastructure.Payments;
 using Microsoft.AspNetCore.DataProtection;
@@ -31,6 +32,13 @@ public static class InfrastructureServices
             ? sp.GetRequiredService<LogEmailSender>()
             : sp.GetRequiredService<SmtpEmailSender>());
 
+        // Uploaded files (R-11): a signing key is required, and it must be a real 256-bit key.
+        services.AddOptions<FilesOptions>().Bind(config.GetSection(FilesOptions.Section)).ValidateOnStart()
+            .Validate(o => !string.IsNullOrWhiteSpace(o.SigningKey) && TryDecodeKey(o.SigningKey), "Files:SigningKey must be a base64 key of at least 32 bytes (openssl rand -base64 32).")
+            .Validate(o => o.MaxBytes > 0, "Files:MaxBytes must be positive.");
+        services.AddSingleton<IFileStore, LocalFileStore>();
+        services.AddSingleton<IFileScanner, ClamAvScanner>();
+
         services.AddOptions<SmsOptions>().Bind(config.GetSection(SmsOptions.Section));
         services.AddSingleton<ISmsSender, LogSmsSender>();
         // SMSSouthAfrica (D14): Sms__Provider=SmsSouthAfrica plus its Sms__SmsSouthAfrica__* settings.
@@ -49,5 +57,12 @@ public static class InfrastructureServices
         services.AddSingleton<IPdfRenderer, ChromiumPdfRenderer>();
 
         return services;
+    }
+
+    /// <summary>A signing key is base64 and at least 256 bits.</summary>
+    private static bool TryDecodeKey(string key)
+    {
+        try { return Convert.FromBase64String(key).Length >= 32; }
+        catch (FormatException) { return false; }
     }
 }
