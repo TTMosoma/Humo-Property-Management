@@ -53,6 +53,8 @@ public sealed class MessageAllowanceTests : IDisposable
     [Fact]
     public async Task Sending_an_SMS_counts_against_this_months_allowance_and_a_new_month_starts_from_zero()
     {
+        // The approved terms of 22 October 2026 (D16) take effect from that day; the test clock starts on 19 October.
+        api.Clock.Advance(TimeSpan.FromDays(4));
         var org = await api.Customer("Acacia", "professional");
         await api.Person("thandeka@acacia.example", Roles.AgencyAdmin, org);
         var admin = await api.SignedIn("thandeka@acacia.example");
@@ -66,7 +68,7 @@ public sealed class MessageAllowanceTests : IDisposable
 
         var before = (await (await admin.GetAsync($"/api/organisations/{org}/plan")).Json()).GetProperty("messages");
         var sms = Assert.Single(before.EnumerateArray());
-        Assert.Equal(("sms", 100, 0), (sms.GetProperty("channel").GetString(), sms.GetProperty("allowance").GetInt32(), sms.GetProperty("used").GetInt32()));
+        Assert.Equal(("sms", 250, 0), (sms.GetProperty("channel").GetString(), sms.GetProperty("allowance").GetInt32(), sms.GetProperty("used").GetInt32()));
 
         // Two parts: just over one SMS.
         var body = "Water is off on Thursday from 09:00 to 13:00 while the plumber replaces the main valve on Block A. Please keep some water aside, and switch your geyser off until it's back on.";
@@ -74,13 +76,13 @@ public sealed class MessageAllowanceTests : IDisposable
         await HumoApiFactory.Until(() => !api.Sms.Sent.IsEmpty);
         await HumoApiFactory.Until(() => api.Db(db => db.MessageUsage.AnyAsync()));
         sms = (await (await admin.GetAsync($"/api/organisations/{org}/plan")).Json()).GetProperty("messages")[0];
-        Assert.Equal((2, 98), (sms.GetProperty("used").GetInt32(), sms.GetProperty("remaining").GetInt32()));
+        Assert.Equal((2, 248), (sms.GetProperty("used").GetInt32(), sms.GetProperty("remaining").GetInt32()));
 
         // Next month: the allowance is whole again; October's use stays on record.
         api.Clock.Advance(TimeSpan.FromDays(14));
         admin = await api.SignedIn("thandeka@acacia.example");
         sms = (await (await admin.GetAsync($"/api/organisations/{org}/plan")).Json()).GetProperty("messages")[0];
-        Assert.Equal(("2026-11", 0, 100), (sms.GetProperty("period").GetString(), sms.GetProperty("used").GetInt32(), sms.GetProperty("remaining").GetInt32()));
+        Assert.Equal(("2026-11", 0, 250), (sms.GetProperty("period").GetString(), sms.GetProperty("used").GetInt32(), sms.GetProperty("remaining").GetInt32()));
         Assert.Equal(2, await api.Db(db => db.MessageUsage.Where(u => u.Period == "2026-10").Select(u => u.Units).SingleAsync()));
     }
 }

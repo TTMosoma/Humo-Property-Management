@@ -59,7 +59,8 @@ public static partial class UnitEndpoints
         return Results.Ok(found.Take(limit ?? 8));
     }
 
-    private static async Task<IResult> Create(Guid schemeId, UnitDetailsRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, TimeProvider clock, CancellationToken ct)
+    private static async Task<IResult> Create(Guid schemeId, UnitDetailsRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, TimeProvider clock,
+        Commercial.PackageLimits limits, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         var scheme = await SchemeEndpoints.Visible(actor, db).FirstOrDefaultAsync(s => s.Id == schemeId, ct);
@@ -68,6 +69,8 @@ public static partial class UnitEndpoints
         var exists = await db.Units.AnyAsync(u => u.SchemeId == schemeId && u.Number == number, ct);
         var id = Guid.CreateVersion7();
 
+        // The package's unit limit (D16): refused, with what the next package includes, once it's reached.
+        if (await limits.RefuseNewUnitAsync(scheme.OrganisationId, ct) is { } refusal) return Problems.Validation(new() { ["units"] = refusal });
         return await commands.RunAsync(new CommandSpec($"Added unit {number} to {scheme.Name}", "Units.Manage")
         {
             Resource = "Unit",
