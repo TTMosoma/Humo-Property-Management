@@ -36,6 +36,7 @@ Each entry records:
 | D18 | Limit warnings: agency administrators are emailed at 80% and when a limit is reached; other staff see them in the app | Commercial slice |
 | D19 | Basic invoicing on Essentials: owner invoices posted to the unit's account; manual statements stay on Essentials, bulk runs on Professional | Commercial slice |
 | D20 | Storage limits: every uploaded file counts (1 GB = 1024³ bytes); the API refuses an upload past the limit before storing it; warnings at 80% as for units and people | Commercial slice |
+| D21 | Advanced finance add-on for Essentials at R400 a month (proposed): billing runs, payment allocation, debtors and credit control. Price to be confirmed | Commercial slice |
 
 ---
 
@@ -487,6 +488,22 @@ Approved on 18 October 2026 by Terry Mosoma (product owner). Options and reasons
 - **Not counted yet:** files Humo generates (statements, letters and packs), backups and logs. Generated files join the count when the API stores them (R-13).
 - **Archiving a library document keeps its file**, so it keeps its storage. A way to free storage (deleting files) isn't built.
 - **The storage pack and temporary exception** in doc 23 §5 aren't built; an agency at its limit can't upload until its package changes.
+
+---
+
+## D21 — Advanced finance add-on for Essentials (proposed, 22 October 2026)
+
+**Status:** proposed. The price is the product owner's to confirm or change; until then the catalogue shows it as *proposed*.
+
+**Decision:**
+- **Advanced finance** is an add-on that an Essentials agency can buy without moving to Professional. It switches on billing runs, payment allocation from bank receipts, debtors (age analysis and arrears) and credit control.
+- **Price: R400 a month, proposed.** Essentials is R600 and Professional R2 400, a gap of R1 800. The add-on is about a fifth of that gap, so an agency that only needs the finance tools has a reason to stay on Essentials. It's priced above the WhatsApp add-on (R100) and below the SMS bundle (R500).
+- **Stays on Professional:** levies, supplier payments (payables), budgets and financial reporting. Levies are the one to revisit: a managing agent on Essentials that runs levy schedules would need them, so moving levies to the add-on would be a price and scope change.
+
+**Consequences:**
+- Manual statements and invoicing stay on Essentials (D19). The add-on doesn't change them.
+- No new feature keys are needed: the add-on uses features that already exist in `contracts/entitlements.json`.
+- The add-on is catalogue data (`demo-data/commercial/catalogue.json`, `advanced-finance`), so changing the price or features needs no code change.
 
 ---
 
