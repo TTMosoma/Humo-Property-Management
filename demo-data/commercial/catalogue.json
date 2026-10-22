@@ -318,9 +318,10 @@
     {
       "id": "advanced-finance",
       "name": "Advanced finance",
-      "description": "Billing runs, bulk statements, payment allocation from bank receipts, arrears (debtors) and credit control, on Essentials.",
+      "description": "Levy schedules, billing runs, payment allocation from bank receipts, arrears (debtors) and credit control, on Essentials.",
       "kind": "feature",
       "features": [
+        "levies",
         "billing",
         "payment-allocation",
         "debtors",
@@ -332,12 +333,12 @@
         {
           "version": 1,
           "effectiveFrom": "2026-10-22",
-          "price": 300,
+          "price": 400,
           "frequency": "monthly",
           "priceStatus": "proposed",
           "changedBy": "Claude (proposal for Terry Mosoma to confirm)",
           "changedAt": "2026-10-22T09:00:00+02:00",
-          "reason": "D21: proposed at R300 a month. Not yet confirmed by the product owner."
+          "reason": "D21: proposed at R400 a month, with levies included. Not yet confirmed by the product owner."
         }
       ]
     },
