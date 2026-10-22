@@ -69,6 +69,7 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
     public DbSet<TrustedBrowser> TrustedBrowsers => Set<TrustedBrowser>();
     public DbSet<UploadedFile> UploadedFiles => Set<UploadedFile>();
     public DbSet<LibraryDocument> LibraryDocuments => Set<LibraryDocument>();
+    public DbSet<OwnerInvoice> OwnerInvoices => Set<OwnerInvoice>();
     public DbSet<DocumentLink> DocumentLinks => Set<DocumentLink>();
     public DbSet<ImpersonationSession> ImpersonationSessions => Set<ImpersonationSession>();
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
@@ -625,6 +626,18 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.Property(s => s.Method).HasMaxLength(20);
             e.Property(s => s.Device).HasMaxLength(120);
             e.Property(s => s.Ip).HasMaxLength(64);
+        });
+
+        builder.Entity<OwnerInvoice>(e =>
+        {
+            e.ToTable("OwnerInvoices");
+            e.HasIndex(i => new { i.OrganisationId, i.Number }).IsUnique();
+            e.HasIndex(i => i.AccountId);
+            e.Property(i => i.Number).HasMaxLength(20);
+            e.Property(i => i.Status).HasMaxLength(20);
+            e.Property(i => i.IssuedBy).HasMaxLength(200);
+            e.Property(i => i.Total).HasPrecision(18, 2);
+            e.Property(i => i.Paid).HasPrecision(18, 2);
         });
 
         builder.Entity<LibraryDocument>(e =>

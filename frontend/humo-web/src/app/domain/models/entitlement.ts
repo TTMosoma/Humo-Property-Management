@@ -23,6 +23,7 @@ export type Feature =
   | 'team-management'
   // Finance
   | 'finance-basic'
+  | 'invoicing-basic'
   | 'levies'
   | 'billing'
   | 'statements'
@@ -93,6 +94,7 @@ export const FEATURES: FeatureDef[] = [
   { key: 'resident-portal', module: 'portfolio', label: 'Owner & tenant portal', description: 'Residents see their account, requests and notices.' },
   { key: 'team-management', module: 'portfolio', label: 'Team management', description: 'Staff workload, scheme assignment and cover.' },
   { key: 'finance-basic', module: 'finance', label: 'Basic finance', description: 'Owner accounts and balances.' },
+  { key: 'invoicing-basic', module: 'finance', label: 'Invoicing', description: 'Issue and email invoices to owners; record payments by hand.' },
   { key: 'levies', module: 'finance', label: 'Levy management', description: 'Levy schedules, special levies and quotas.' },
   { key: 'billing', module: 'finance', label: 'Billing runs', description: 'Monthly billing with approval and posting.' },
   { key: 'statements', module: 'finance', label: 'Statements', description: 'Generated and sent owner statements.' },
@@ -158,7 +160,7 @@ export const PACKAGES: Package[] = [
     tagline: 'For smaller agencies getting their portfolio in order.',
     features: [
       'agency-management', 'schemes', 'units', 'owners-tenants', 'resident-portal', 'documents', 'communications',
-      'maintenance-basic', 'reporting-basic', 'finance-basic', 'audit-log', 'mobile-approvals',
+      'maintenance-basic', 'reporting-basic', 'finance-basic', 'invoicing-basic', 'audit-log', 'mobile-approvals',
     ],
   },
   {

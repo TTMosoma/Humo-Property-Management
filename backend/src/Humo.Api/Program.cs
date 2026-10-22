@@ -1,3 +1,4 @@
+using Humo.Api.Finance;
 using Humo.Api.Files;
 using Humo.Api.Commercial;
 using System.Threading.RateLimiting;
@@ -153,6 +154,7 @@ api.MapSmsWebhooks();
 api.MapMailWebhooks();
 api.MapFiles();
 api.MapPackageLimits();
+api.MapOwnerInvoices();
 api.MapOrganisations();
 api.MapSchemes();
 api.MapUnits();

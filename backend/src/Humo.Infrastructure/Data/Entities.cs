@@ -1040,3 +1040,30 @@ public sealed class LibraryDocument
     public string? ArchiveReason { get; set; }
 }
 
+/// <summary>
+/// An invoice an agency issues to an owner for one of their levy accounts (Essentials, D17). Issuing it posts a charge to the
+/// account's ledger; each payment recorded posts a credit. Numbers run per agency, INV-0001 onwards.
+/// </summary>
+public sealed class OwnerInvoice
+{
+    public Guid Id { get; set; }
+    public Guid OrganisationId { get; set; }
+    public Guid SchemeId { get; set; }
+    public Guid AccountId { get; set; }
+    public string Number { get; set; } = "";
+    public DateOnly Date { get; set; }
+    public DateOnly DueOn { get; set; }
+    /// <summary>The lines: description, quantity, unit price and amount (JSON).</summary>
+    public string Lines { get; set; } = "[]";
+    public decimal Total { get; set; }
+    public decimal Paid { get; set; }
+    /// <summary>"issued" until it's paid in full, then "paid".</summary>
+    public string Status { get; set; } = "issued";
+    /// <summary>Payments recorded against it (JSON): date, amount, reference and who recorded it.</summary>
+    public string Payments { get; set; } = "[]";
+    public int Version { get; set; } = 1;
+    public string IssuedBy { get; set; } = "";
+    public DateTimeOffset IssuedAt { get; set; }
+    public DateTimeOffset? EmailedAt { get; set; }
+}
+

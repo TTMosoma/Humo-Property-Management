@@ -34,6 +34,7 @@ Each entry records:
 | D16 | Package limits by units, users and SMS; schemes unlimited; automatic Professional trial at 80% of an Essentials limit; existing customers keep their terms until renewal | Commercial slice |
 | D17 | Refines D16: Professional includes 25 people with a sign-in; the Professional trial is offered at 80%, and the customer starts it; no existing customers to keep on old terms (not yet live) | Commercial slice |
 | D18 | Limit warnings: agency administrators are emailed at 80% and when a limit is reached; other staff see them in the app | Commercial slice |
+| D19 | Basic invoicing on Essentials: owner invoices posted to the unit's account; manual statements stay on Essentials, bulk runs on Professional | Commercial slice |
 
 ---
 
@@ -452,6 +453,21 @@ Approved on 18 October 2026 by Terry Mosoma (product owner). Options and reasons
 
 **Consequences:**
 - The warning is raised when units are added or people are invited.
+
+---
+
+## D19 — Basic invoicing and manual statements on Essentials (22 October 2026)
+
+**Decided by:** Terry Mosoma (product owner).
+
+**Decision:**
+- **Basic invoicing** is part of Essentials (the `invoicing-basic` feature). An agency issues an invoice to an owner for a unit. Issuing it charges the unit's levy account, so the owner's statement shows it. A payment recorded by hand credits the account. Invoices are numbered per agency, INV-0001 onwards, and emailed to the owner on record on request.
+- **Basic invoicing doesn't cover** automated billing runs, payment allocation from bank receipts, or credit control. Those stay on Professional.
+- **Manual statements** stay on Essentials: an agency sends one owner a statement at a time. Bulk statement runs (after a billing run) stay on Professional.
+- **Ledger:** an invoice is posted as an *adjustment* line on the account, with the invoice number in its description. A payment is a *payment* line with the reference (the invoice number unless one is given).
+
+**Consequences:**
+- The invoice number's sequence isn't gapless for tax purposes (Humo's own invoices are; agency invoices to owners aren't tax invoices, as D15 says for Humo).
 
 ---
 

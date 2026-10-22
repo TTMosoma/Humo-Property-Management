@@ -51,6 +51,13 @@
       "baseline": false
     },
     {
+      "key": "invoicing-basic",
+      "module": "finance",
+      "label": "Invoicing",
+      "description": "Issue and email invoices to owners; record payments by hand.",
+      "baseline": false
+    },
+    {
       "key": "levies",
       "module": "finance",
       "label": "Levy management",
@@ -314,6 +321,7 @@
         "maintenance-basic",
         "reporting-basic",
         "finance-basic",
+        "invoicing-basic",
         "audit-log",
         "mobile-approvals"
       ]
