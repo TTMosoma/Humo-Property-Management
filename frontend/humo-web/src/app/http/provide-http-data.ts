@@ -19,6 +19,7 @@ import {
   JobDataSource,
   LevyDataSource,
   LibraryDataSource,
+  PackageLimitsDataSource,
   MeetingDataSource,
   MeterDataSource,
   NoticeDataSource,
@@ -59,6 +60,7 @@ import { HttpAccountRequestDataSource, HttpHumoTeamDataSource, HttpNotificationD
 import { HttpOrganisationDataSource, HttpPersonDataSource, HttpSchemeDataSource, HttpStepUpAuthenticator, HttpUnitDataSource } from './http-portfolio';
 import { HttpSessionDataSource } from './http-session-data-source';
 import { HttpLibraryDataSource } from './http-library';
+import { HttpPackageLimitsDataSource } from './http-package-limits';
 import { HttpDocumentTemplateDataSource, HttpSettingsDataSource } from './http-settings';
 import { notConnected } from './not-connected';
 
@@ -110,6 +112,7 @@ export function provideHttpData(): EnvironmentProviders {
     { provide: AuditDataSource, useClass: HttpAuditDataSource },
     { provide: SecurityDataSource, useClass: HttpSecurityDataSource },
     { provide: LibraryDataSource, useClass: HttpLibraryDataSource },
+    { provide: PackageLimitsDataSource, useClass: HttpPackageLimitsDataSource },
     { provide: CatalogueDataSource, useClass: HttpCatalogueDataSource },
     { provide: PlatformDataSource, useClass: HttpPlatformDataSource },
     { provide: PlanDataSource, useClass: HttpPlanDataSource },
