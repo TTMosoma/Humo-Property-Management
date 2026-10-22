@@ -1017,3 +1017,26 @@ public sealed class UploadedFile
     public DateTimeOffset UploadedAt { get; set; }
 }
 
+/// <summary>
+/// A document in the library (docs/18 R-11). Its file is an <see cref="UploadedFile"/>. Its scheme, category, visibility
+/// and expiry are what the library filters and what Compliance reads. Edits and archiving are versioned.
+/// </summary>
+public sealed class LibraryDocument
+{
+    public Guid Id { get; set; }
+    public Guid OrganisationId { get; set; }
+    public Guid SchemeId { get; set; }
+    public Guid FileId { get; set; }
+    public string Title { get; set; } = "";
+    public string Category { get; set; } = "other";
+    public string Visibility { get; set; } = "staff";
+    public DateOnly? ExpiresOn { get; set; }
+    public string? Notes { get; set; }
+    public int Version { get; set; }
+    public string UploadedBy { get; set; } = "";
+    public DateTimeOffset UploadedAt { get; set; }
+    public DateTimeOffset? ArchivedAt { get; set; }
+    public string? ArchivedBy { get; set; }
+    public string? ArchiveReason { get; set; }
+}
+

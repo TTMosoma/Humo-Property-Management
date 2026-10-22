@@ -29,8 +29,11 @@ export abstract class LibraryDataSource {
   /** Returns the new document's id. `file` is the browser file, when one was chosen. */
   abstract upload(input: NewDocument, file?: File): Observable<string>;
   abstract act(id: string, action: DocumentAction, expectedVersion?: number): Observable<void>;
-  /** A link to open the file, when the content is available. */
-  abstract contentUrl(id: string): string | null;
+  /**
+   * A link to open the file. On the API it's signed for the person asking and lasts a few minutes, so ask when it's
+   * opened rather than keeping it on the page.
+   */
+  abstract contentLink(id: string): Observable<string>;
 }
 
 /**

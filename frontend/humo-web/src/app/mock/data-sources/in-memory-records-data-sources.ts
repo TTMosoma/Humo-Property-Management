@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, map, switchMap } from 'rxjs';
+import { Observable, map, of, switchMap, throwError } from 'rxjs';
 import {
+  ApiError,
   BoardAction,
   BoardCandidate,
   BoardDataSource,
@@ -158,8 +159,9 @@ export class InMemoryLibraryDataSource extends LibraryDataSource {
       .pipe(map(() => undefined));
   }
 
-  contentUrl(id: string): string | null {
-    return this.store.contentUrl(id);
+  contentLink(id: string): Observable<string> {
+    const url = this.store.contentUrl(id);
+    return url ? of(url) : throwError(() => new ApiError('not-found', 'There’s no file for this document.'));
   }
 }
 

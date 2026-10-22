@@ -9,6 +9,7 @@ import { EmptyState } from '../../ui/states/empty-state';
 import { ErrorState } from '../../ui/states/error-state';
 import { Skeleton } from '../../ui/states/skeleton';
 import { fileIcon } from '../library/library-view';
+import { openDocumentFile } from '../library/open-document';
 
 /**
  * Resident portal › Documents: what the agency has shared — the scheme's rules,
@@ -37,11 +38,7 @@ import { fileIcon } from '../library/library-view';
                 <li>
                   <ion-icon [name]="icon(d)" aria-hidden="true" />
                   <div class="d-main">
-                    @if (url(d); as u) {
-                      <a [href]="u" target="_blank" rel="noopener">{{ d.title }}</a>
-                    } @else {
-                      <strong>{{ d.title }}</strong>
-                    }
+                    <button type="button" class="btn btn-ghost btn-sm" (click)="openFile(d)">{{ d.title }}</button>
                     <div class="muted">{{ category(d) }} · {{ formatDate(d.uploadedAt) }} · {{ size(d) }}</div>
                   </div>
                 </li>
@@ -80,7 +77,9 @@ export class MyDocumentsPage {
   });
   protected readonly formatDate = formatDate;
   protected readonly icon = fileIcon;
-  protected readonly url = (d: LibraryDocument) => this.data.contentUrl(d.id);
+  protected openFile(d: LibraryDocument): void {
+    openDocumentFile(this.data, d.id);
+  }
   protected readonly category = (d: LibraryDocument) => CATEGORY_LABELS[d.category];
   protected readonly size = (d: LibraryDocument) => formatBytes(d.sizeBytes);
 }

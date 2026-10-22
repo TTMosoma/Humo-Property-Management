@@ -25,6 +25,7 @@ public static class DocumentEndpoints
     public static void MapDocuments(this IEndpointRouteBuilder api)
     {
         var g = api.MapGroup("/documents").RequireAuthorization();
+        g.MapLibrary();
         g.MapGet("/templates", Templates);
         g.MapGet("/settings", GetSettings);
         g.MapPut("/settings/defaults/{type}", SetDefault);

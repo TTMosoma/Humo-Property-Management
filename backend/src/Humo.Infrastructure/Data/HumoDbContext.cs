@@ -68,6 +68,7 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
     public DbSet<UserSession> UserSessions => Set<UserSession>();
     public DbSet<TrustedBrowser> TrustedBrowsers => Set<TrustedBrowser>();
     public DbSet<UploadedFile> UploadedFiles => Set<UploadedFile>();
+    public DbSet<LibraryDocument> LibraryDocuments => Set<LibraryDocument>();
     public DbSet<DocumentLink> DocumentLinks => Set<DocumentLink>();
     public DbSet<ImpersonationSession> ImpersonationSessions => Set<ImpersonationSession>();
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
@@ -624,6 +625,19 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.Property(s => s.Method).HasMaxLength(20);
             e.Property(s => s.Device).HasMaxLength(120);
             e.Property(s => s.Ip).HasMaxLength(64);
+        });
+
+        builder.Entity<LibraryDocument>(e =>
+        {
+            e.ToTable("LibraryDocuments");
+            e.HasIndex(d => d.SchemeId);
+            e.HasIndex(d => d.FileId).IsUnique();
+            e.Property(d => d.Title).HasMaxLength(200);
+            e.Property(d => d.Category).HasMaxLength(30);
+            e.Property(d => d.Visibility).HasMaxLength(20);
+            e.Property(d => d.UploadedBy).HasMaxLength(200);
+            e.Property(d => d.ArchivedBy).HasMaxLength(200);
+            e.Property(d => d.ArchiveReason).HasMaxLength(500);
         });
 
         builder.Entity<UploadedFile>(e =>
