@@ -137,6 +137,51 @@ public sealed class PackageLimitTests : IDisposable
         Assert.False(await FeatureOn(later, "billing"));
     }
 
+    private static List<string> Titled(HumoApiFactory api, string fragment) =>
+        api.Email.Sent.Where(m => m.Subject.Contains(fragment)).Select(m => m.To).ToList();
+
+    [Fact]
+    public async Task The_administrator_is_emailed_once_at_80_percent_and_again_when_the_limit_is_reached()
+    {
+        var s = await Essentials();
+        for (var n = 1; n <= 40; n++) await AddUnit(s, n);
+        Assert.Equal(new[] { "thandeka@acacia.example" }, Titled(api, "at 80%"));
+
+        await AddUnit(s, 41); // still at 80%: no second warning
+        Assert.Single(Titled(api, "at 80%"));
+        Assert.Empty(Titled(api, "limit reached"));
+
+        for (var n = 42; n <= 50; n++) await AddUnit(s, n);
+        Assert.Equal(new[] { "thandeka@acacia.example" }, Titled(api, "limit reached"));
+    }
+
+    [Fact]
+    public async Task Other_staff_see_the_warning_in_the_app_and_are_not_emailed()
+    {
+        var s = await Essentials();
+        await api.Person("sipho@acacia.example", Roles.PortfolioManager, s.Org);
+        var manager = await api.SignedIn("sipho@acacia.example");
+        for (var n = 1; n <= 40; n++) await AddUnit(s, n);
+
+        Assert.DoesNotContain("sipho@acacia.example", Titled(api, "at 80%"));
+        var notices = await (await manager.GetAsync("/api/notifications")).Json();
+        Assert.Contains(notices.EnumerateArray(), n => n.GetProperty("title").GetString()!.Contains("at 80%"));
+    }
+
+    [Fact]
+    public async Task Inviting_someone_into_the_last_seat_tells_the_administrator_the_limit_is_reached()
+    {
+        var s = await Essentials();
+        // The administrator and three staff: four of five seats, 80%. The next invitation takes the last one.
+        for (var n = 1; n <= 3; n++) await api.Person($"staff{n}@acacia.example", Roles.Finance, s.Org);
+        Assert.Empty(Titled(api, "limit reached"));
+
+        await s.Admin.StepUp();
+        var invited = await s.Admin.PostAsJsonAsync("/api/access/invitations", Invitation(s.Org, "lerato@acacia.example"));
+        Assert.NotEqual(HttpStatusCode.UnprocessableEntity, invited.StatusCode);
+        Assert.Equal(new[] { "thandeka@acacia.example" }, Titled(api, "limit reached"));
+    }
+
     private static object Invitation(Guid org, string email) => new
     {
         organisationId = org.ToString(), name = "Lerato Mokoena", email,

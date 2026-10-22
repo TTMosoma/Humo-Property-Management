@@ -19,8 +19,8 @@ public sealed class Notices(HumoDbContext db, TimeProvider clock, IEmailSender e
 {
     private readonly List<(Notice Notice, Guid? ActorId)> queued = [];
 
-    public void ToRole(string role, Guid? actorId, string title, string detail, string link, Guid? organisationId = null) =>
-        Add(new Notice { Id = Guid.CreateVersion7(), ToRole = role, ActorId = actorId, Title = title, Detail = detail, Link = link, OrganisationId = organisationId, At = clock.GetUtcNow() });
+    public void ToRole(string role, Guid? actorId, string title, string detail, string link, Guid? organisationId = null, string kind = "platform") =>
+        Add(new Notice { Id = Guid.CreateVersion7(), Kind = kind, ToRole = role, ActorId = actorId, Title = title, Detail = detail, Link = link, OrganisationId = organisationId, At = clock.GetUtcNow() });
 
     public void ToPerson(Guid identityId, Guid? actorId, string title, string detail, string link)
     {

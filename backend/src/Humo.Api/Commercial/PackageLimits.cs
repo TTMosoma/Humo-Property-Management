@@ -4,6 +4,7 @@ using Humo.Api.Audit;
 using Humo.Api.Commands;
 using Humo.Domain.Access;
 using Humo.Domain.Commercial;
+using Humo.Api.Platform;
 using Humo.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -42,18 +43,53 @@ public sealed class PackageLimits(HumoDbContext db, Commercial.CommercialRecords
         return (packageId, CommercialRules.TermsOn(CommercialRules.PackageDef(catalogue, packageId)?.Terms ?? [], today));
     }
 
-    public async Task<PackageLimitsDto?> UsageAsync(Guid organisationId, CancellationToken ct)
+    /// <param name="extraUnits">Units about to be added in the same change (not yet saved).</param>
+    /// <param name="extraUsers">People about to be given a sign-in in the same change (not yet saved).</param>
+    public async Task<PackageLimitsDto?> UsageAsync(Guid organisationId, CancellationToken ct, int extraUnits = 0, int extraUsers = 0)
     {
         if (await PackageAsync(organisationId, ct) is not { } package) return null;
         var terms = package.Terms;
         var schemeIds = await db.Schemes.AsNoTracking().Where(s => s.OrganisationId == organisationId).Select(s => s.Id).ToListAsync(ct);
-        var units = await db.Units.AsNoTracking().CountAsync(u => schemeIds.Contains(u.SchemeId), ct);
-        var users = await db.Memberships.AsNoTracking().CountAsync(m => m.OrganisationId == organisationId && m.Status == MembershipStatuses.Active, ct);
+        var units = await db.Units.AsNoTracking().CountAsync(u => schemeIds.Contains(u.SchemeId), ct) + extraUnits;
+        var users = await db.Memberships.AsNoTracking().CountAsync(m => m.OrganisationId == organisationId && m.Status == MembershipStatuses.Active, ct) + extraUsers;
         var unitsMeasure = Measure(units, terms?.IncludedUnits);
         var usersMeasure = Measure(users, terms?.IncludedUsers);
         var trial = await TrialAsync(organisationId, package.PackageId, unitsMeasure, usersMeasure, ct);
         return new PackageLimitsDto(EntitlementCatalogue.Package(package.PackageId)?.Name ?? package.PackageId, unitsMeasure, usersMeasure, trial);
     }
+
+    /// <summary>
+    /// Tells the agency when a limit reaches 80% (a warning) or its ceiling (reached), once per limit and level. Agency
+    /// administrators get it in the app and by email; other staff get it in the app. Call it inside the command that
+    /// changes the count, with the change counted in <paramref name="extraUnits"/> or <paramref name="extraUsers"/>.
+    /// </summary>
+    public async Task NotifyAsync(Guid organisationId, Notices notices, Guid? actorId, CancellationToken ct, int extraUnits = 0, int extraUsers = 0)
+    {
+        var usage = await UsageAsync(organisationId, ct, extraUnits, extraUsers);
+        if (usage is null) return;
+        foreach (var (name, measure, measured) in new[] { ("units", usage.Units, "units under management"), ("users", usage.Users, "people with a sign-in") })
+        {
+            if (measure.Included is not { } included || measure.State == "ok") continue;
+            var level = measure.State;
+            var kind = $"limit:{name}:{level}";
+            if (await db.Notices.AnyAsync(n => n.OrganisationId == organisationId && n.Kind == kind, ct)) continue;
+
+            var title = level == "reached" ? $"{Cap(measured)} limit reached on {usage.Package}" : $"{Cap(measured)} at 80% of your {usage.Package} limit";
+            var detail = level == "reached"
+                ? $"You have {measure.Used:N0} of {included:N0} {measured}, the most {usage.Package} includes. Adding more is refused until you move to the next package."
+                : $"You have {measure.Used:N0} of {included:N0} {measured} on {usage.Package}. Move to the next package before you reach the limit.";
+            const string link = "/settings/plan";
+            // No actor: the warning isn't about what the person just did, so the administrator who made the change still gets it.
+            notices.ToRole("agency-admin", null, title, detail, link, organisationId, kind);
+            foreach (var role in StaffRoles)
+                db.Notices.Add(new Notice { Id = Guid.CreateVersion7(), Kind = kind, ToRole = role, OrganisationId = organisationId, Title = title, Detail = detail, Link = link, At = clock.GetUtcNow() });
+        }
+    }
+
+    /// <summary>Staff who see the limit in the app. Trustees, owners and tenants don't.</summary>
+    private static readonly string[] StaffRoles = [Roles.PortfolioManager, Roles.Finance, Roles.Operations];
+
+    private static string Cap(string s) => char.ToUpperInvariant(s[0]) + s[1..];
 
     /// <summary>Why one more unit can't be added to this organisation, or null when it can.</summary>
     public async Task<string?> RefuseNewUnitAsync(Guid organisationId, CancellationToken ct)

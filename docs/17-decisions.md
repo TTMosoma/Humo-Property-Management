@@ -33,6 +33,7 @@ Each entry records:
 | D15 | Commercial terms: Payfast, no VAT, approved package prices, daily pro-rata, a second approver for discounts above 20%, a Humo Finance role | Commercial slice |
 | D16 | Package limits by units, users and SMS; schemes unlimited; automatic Professional trial at 80% of an Essentials limit; existing customers keep their terms until renewal | Commercial slice |
 | D17 | Refines D16: Professional includes 25 people with a sign-in; the Professional trial is offered at 80%, and the customer starts it; no existing customers to keep on old terms (not yet live) | Commercial slice |
+| D18 | Limit warnings: agency administrators are emailed at 80% and when a limit is reached; other staff see them in the app | Commercial slice |
 
 ---
 
@@ -433,6 +434,24 @@ Approved on 18 October 2026 by Terry Mosoma (product owner). Options and reasons
 **Consequences:**
 - The initial catalogue carries Professional at 25 people.
 - The trial is an override on the agency's subscription that expires on its own.
+
+---
+
+## D18 — Limit warnings: email and in-app (22 October 2026)
+
+**Decided by:** Terry Mosoma (product owner).
+
+**Refines:** D16 and D17. Where they differ, this decision stands.
+
+**Decision:**
+- **Who is emailed:** the agency's administrators, at 80% of a limit and again when the limit is reached. Once per limit and level: the warning isn't repeated while the agency stays at that level.
+- **Who sees it in the app:** every staff member with a role in the agency's staff app (portfolio managers, finance and operations staff, as well as administrators). The app means the agency's staff app, the bell in the top bar. The owner and resident portal doesn't show limit warnings.
+- **Not emailed:** other staff. They see the warning in the app only.
+- **Who acted doesn't matter:** an administrator who adds the unit or invites the person still gets the warning. It isn't a notice about their own action.
+- **What it says:** which limit, how many of how many, and what the next package includes. It links to Settings › Plan & features.
+
+**Consequences:**
+- The warning is raised when units are added or people are invited.
 
 ---
 

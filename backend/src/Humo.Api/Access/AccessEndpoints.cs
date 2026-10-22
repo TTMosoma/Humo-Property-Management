@@ -74,7 +74,7 @@ public static partial class AccessEndpoints
     // ---- Invitations ----
 
     private static async Task<IResult> Invite(InviteRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, UserManager<HumoUser> users,
-        PortfolioReads reads, IEmailSender email, IOptions<AppOptions> app, TimeProvider clock, ILoggerFactory logs, Commercial.PackageLimits limits, CancellationToken ct)
+        PortfolioReads reads, IEmailSender email, IOptions<AppOptions> app, TimeProvider clock, ILoggerFactory logs, Commercial.PackageLimits limits, Platform.Notices notices, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         if (!Guid.TryParse(body.OrganisationId, out var orgId) || (!actor.IsHumo && orgId != actor.OrganisationId)) return Problems.NotFound();
@@ -129,6 +129,8 @@ public static partial class AccessEndpoints
             },
         }, async actor =>
         {
+            // A new seat in the package (D16): the warning at 80% of the people limit, counted with this person.
+            if (!alreadyIn) await limits.NotifyAsync(orgId, notices, actor.Human.Id, ct, extraUsers: 1);
             var user = existing;
             if (user is null)
             {
