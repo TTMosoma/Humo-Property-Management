@@ -59,7 +59,8 @@ public static partial class UnitEndpoints
         return Results.Ok(found.Take(limit ?? 8));
     }
 
-    private static async Task<IResult> Create(Guid schemeId, UnitDetailsRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, TimeProvider clock, CancellationToken ct)
+    private static async Task<IResult> Create(Guid schemeId, UnitDetailsRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, TimeProvider clock,
+        Commercial.PackageLimits limits, Platform.Notices notices, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         var scheme = await SchemeEndpoints.Visible(actor, db).FirstOrDefaultAsync(s => s.Id == schemeId, ct);
@@ -68,6 +69,8 @@ public static partial class UnitEndpoints
         var exists = await db.Units.AnyAsync(u => u.SchemeId == schemeId && u.Number == number, ct);
         var id = Guid.CreateVersion7();
 
+        // The package's unit limit (D16): refused, with what the next package includes, once it's reached.
+        if (await limits.RefuseNewUnitAsync(scheme.OrganisationId, ct) is { } refusal) return Problems.Validation(new() { ["units"] = refusal });
         return await commands.RunAsync(new CommandSpec($"Added unit {number} to {scheme.Name}", "Units.Manage")
         {
             Resource = "Unit",
@@ -79,8 +82,10 @@ public static partial class UnitEndpoints
                 if (!e.ContainsKey("number") && exists) e["number"] = $"There’s already a unit {number} in {scheme.Name}.";
                 return e;
             },
-        }, _ =>
+        }, async writer =>
         {
+            // The package's warning at 80% of the unit limit (D16), counted with this unit.
+            await limits.NotifyAsync(scheme.OrganisationId, notices, writer.Human.Id, ct, extraUnits: 1);
             var accountNo = AccountNumber(scheme.Code, number);
             db.Units.Add(new Unit
             {
@@ -89,7 +94,7 @@ public static partial class UnitEndpoints
             });
             // Every unit has its levy account from the start; the owner becomes its holder when linked.
             db.LevyAccounts.Add(new LevyAccount { Id = Guid.CreateVersion7(), UnitId = id, SchemeId = schemeId, AccountNo = accountNo });
-            return Task.FromResult(Results.Created($"/api/units/{id}", new { id = id.ToString() }));
+            return Results.Created($"/api/units/{id}", new { id = id.ToString() });
         }, ct);
     }
 

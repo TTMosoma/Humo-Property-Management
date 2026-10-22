@@ -26,6 +26,10 @@ public sealed class PackageTerms
     public decimal? AnnualRenewalFee { get; set; }
     /// <summary>SMS a month that come with the package (20, 100, 500). Unused SMS don't carry over to the next month.</summary>
     public int? IncludedSms { get; set; }
+    /// <summary>Units under management that the package includes (D16). Null: no limit.</summary>
+    public int? IncludedUnits { get; set; }
+    /// <summary>People with a sign-in to the agency that the package includes (D16). Null: no limit.</summary>
+    public int? IncludedUsers { get; set; }
     public string ChangedBy { get; set; } = "";
     public string ChangedAt { get; set; } = "";
     public string Reason { get; set; } = "";

@@ -176,7 +176,7 @@ public sealed class CommercialApiTests : IDisposable
         await NoContent(await admin.PutAsJsonAsync("/api/platform/commercial/packages/professional/terms", terms));
         var cat = await Ok(await admin.GetAsync("/api/platform/commercial/catalogue"));
         var pro = cat.GetProperty("packages").EnumerateArray().Single(p => p.GetProperty("packageId").GetString() == "professional").GetProperty("terms");
-        Assert.Equal((9500m, 2), (pro[0].GetProperty("monthlyPrice").GetDecimal(), pro[0].GetProperty("version").GetInt32()));
+        Assert.Equal((9500m, 3), (pro[0].GetProperty("monthlyPrice").GetDecimal(), pro[0].GetProperty("version").GetInt32()));
         Assert.Equal(2400m, pro[1].GetProperty("monthlyPrice").GetDecimal());
 
         var addOn = new { id = "postage-pack", name = "Postage pack", description = "100 printed and posted letters a month.", kind = "communication", features = new[] { "communications" }, allowQuantity = true, status = "active", effectiveFrom = "2026-10-19", price = 250, frequency = "monthly", priceStatus = "proposed", usageAllowance = new { unit = "letters", included = 100 }, reason = "New pack for agencies that post letters", isNew = true };

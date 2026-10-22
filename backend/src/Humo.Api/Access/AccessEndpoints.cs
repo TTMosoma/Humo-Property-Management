@@ -74,7 +74,7 @@ public static partial class AccessEndpoints
     // ---- Invitations ----
 
     private static async Task<IResult> Invite(InviteRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, UserManager<HumoUser> users,
-        PortfolioReads reads, IEmailSender email, IOptions<AppOptions> app, TimeProvider clock, ILoggerFactory logs, CancellationToken ct)
+        PortfolioReads reads, IEmailSender email, IOptions<AppOptions> app, TimeProvider clock, ILoggerFactory logs, Commercial.PackageLimits limits, Platform.Notices notices, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         if (!Guid.TryParse(body.OrganisationId, out var orgId) || (!actor.IsHumo && orgId != actor.OrganisationId)) return Problems.NotFound();
@@ -83,6 +83,9 @@ public static partial class AccessEndpoints
 
         var address = (body.Email ?? "").Trim().ToLowerInvariant();
         var existing = await db.Users.Include(u => u.Memberships).Include(u => u.Assignments).AsSplitQuery().FirstOrDefaultAsync(u => u.NormalizedEmail == address.ToUpperInvariant(), ct);
+        // A new person needs a seat in the package (D16); someone already in the organisation doesn't.
+        var alreadyIn = existing?.Memberships.Any(m => m.OrganisationId == orgId) == true;
+        if (!alreadyIn && await limits.RefuseNewUserAsync(orgId, ct) is { } refusal) return Problems.Validation(new() { ["email"] = refusal });
         var a = body.Assignment;
         var resident = ResidentRoles.Contains(a.Role);
         var personId = body.PersonId ?? existing?.PersonId;
@@ -126,6 +129,8 @@ public static partial class AccessEndpoints
             },
         }, async actor =>
         {
+            // A new seat in the package (D16): the warning at 80% of the people limit, counted with this person.
+            if (!alreadyIn) await limits.NotifyAsync(orgId, notices, actor.Human.Id, ct, extraUsers: 1);
             var user = existing;
             if (user is null)
             {

@@ -20,6 +20,7 @@ import { ROLE_LABELS, ROLE_META, coversAllSchemes } from '../../domain';
 import { PrototypeControls } from '../prototype/prototype-controls';
 import { PrototypeToolbar } from '../prototype/prototype-toolbar';
 import { ImpersonationBanner } from '../security/impersonation-banner';
+import { LimitsBanner } from '../limits/limits-banner';
 import { RoleSwitcher } from '../session/role-switcher';
 import { safeStorage } from '../prototype/safe-storage';
 import { SessionService } from '../session/session.service';
@@ -40,7 +41,7 @@ const DESKTOP_QUERY = '(min-width: 992px)';
  */
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, IonSplitPane, IonMenu, IonIcon, Sidebar, Topbar, Breadcrumbs, MobileTabBar, PrototypeToolbar, ImpersonationBanner, MaintenanceBanner],
+  imports: [RouterOutlet, IonSplitPane, IonMenu, IonIcon, Sidebar, Topbar, Breadcrumbs, MobileTabBar, PrototypeToolbar, ImpersonationBanner, MaintenanceBanner, LimitsBanner],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shell.html',
   styleUrl: './shell.scss',
