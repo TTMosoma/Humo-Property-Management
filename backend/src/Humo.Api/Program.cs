@@ -1,4 +1,5 @@
 using Humo.Api.Files;
+using Humo.Api.Commercial;
 using System.Threading.RateLimiting;
 using Humo.Api;
 using Humo.Api.Access;
@@ -29,6 +30,7 @@ builder.Services.AddProblemDetails();
 
 builder.Services.AddHumoInfrastructure(config);
 builder.Services.AddScoped<SessionBuilder>();
+builder.Services.AddScoped<Humo.Api.Commercial.PackageLimits>();
 builder.Services.AddScoped<Humo.Api.Auth.SignInSessions>();
 builder.Services.AddScoped<AuditLog>();
 builder.Services.AddScoped<CurrentActor>();
@@ -150,6 +152,7 @@ api.MapHumoAuth();
 api.MapSmsWebhooks();
 api.MapMailWebhooks();
 api.MapFiles();
+api.MapPackageLimits();
 api.MapOrganisations();
 api.MapSchemes();
 api.MapUnits();

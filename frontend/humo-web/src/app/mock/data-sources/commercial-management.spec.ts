@@ -130,8 +130,9 @@ describe('Commercial management', () => {
       stepUp();
       await run(data.savePackageTerms('professional', { effectiveFrom: day(1), monthlyPrice: 9_500, annualPrice: 102_600, priceStatus: 'approved', includedStorageGb: 25, storageStatus: 'approved', includedSchemes: 20, extraSchemePrice: 45, annualRenewalFee: 2_400, reason: 'Board approved the 2027 price list' }));
       const terms = store.catalogue().packages.find((p) => p.packageId === 'professional')!.terms;
-      expect(terms.map((t) => t.monthlyPrice)).toEqual([9_500, 2_400]);
-      expect(terms[0]).toMatchObject({ version: 2, changedBy: 'Terry Mosoma' });
+      // Newest first: the change, then the D15 terms and the D16 limits (both at R2 400).
+      expect(terms.map((t) => t.monthlyPrice)).toEqual([9_500, 2_400, 2_400]);
+      expect(terms[0]).toMatchObject({ version: 3, changedBy: 'Terry Mosoma' });
 
       await run(data.saveAddOn({ id: 'postage-pack', name: 'Postage pack', description: '100 printed and posted letters a month.', kind: 'communication', features: ['communications'], allowQuantity: true, status: 'active', effectiveFrom: day(0), price: 250, frequency: 'monthly', priceStatus: 'proposed', usageAllowance: { unit: 'letters', included: 100 }, reason: 'New pack for agencies that post letters' }, true));
       expect(store.catalogue().addOns.find((a) => a.id === 'postage-pack')?.terms[0].price).toBe(250);

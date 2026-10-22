@@ -43,6 +43,7 @@ public sealed class CommercialRecords(HumoDbContext db, TimeProvider clock)
         {
             await RemoveNeverSoldAsync(db, ct);
             await AddNewAddOnsAsync(db, ct);
+            await AddNewPackageTermsAsync(db, ct);
         }
         if (keys.Count == 2) return;
         var initial = InitialCatalogue.Load();
@@ -84,6 +85,33 @@ public sealed class CommercialRecords(HumoDbContext db, TimeProvider clock)
             }
         }
         if (added.Count == 0 && filled == 0) return;
+        row.Value = cat.ToJsonString();
+        row.Version++;
+        await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// A package's terms version that's new in the starting catalogue (D16: units, users and SMS) is added to a stored
+    /// catalogue that doesn't have it yet. Versions already there are never changed.
+    /// </summary>
+    private static async Task AddNewPackageTermsAsync(HumoDbContext db, CancellationToken ct)
+    {
+        var row = await db.PlatformSettings.FirstAsync(s => s.Key == CatalogueKey, ct);
+        if (System.Text.Json.Nodes.JsonNode.Parse(row.Value) is not System.Text.Json.Nodes.JsonObject cat || cat["packages"] is not System.Text.Json.Nodes.JsonArray packages) return;
+        var seedPackages = System.Text.Json.Nodes.JsonNode.Parse(Serialise(new { InitialCatalogue.Load().Packages }))!["packages"]!.AsArray();
+        var added = 0;
+        foreach (var stored in packages.OfType<System.Text.Json.Nodes.JsonObject>())
+        {
+            var seed = seedPackages.OfType<System.Text.Json.Nodes.JsonObject>().FirstOrDefault(p => p["packageId"]?.GetValue<string>() == stored["packageId"]?.GetValue<string>());
+            if (seed?["terms"] is not System.Text.Json.Nodes.JsonArray seedTerms || stored["terms"] is not System.Text.Json.Nodes.JsonArray storedTerms) continue;
+            var have = storedTerms.OfType<System.Text.Json.Nodes.JsonObject>().Select(t => t["version"]?.GetValue<int>()).ToHashSet();
+            foreach (var t in seedTerms.OfType<System.Text.Json.Nodes.JsonObject>().Where(t => !have.Contains(t["version"]?.GetValue<int>())))
+            {
+                storedTerms.Add(t.DeepClone());
+                added++;
+            }
+        }
+        if (added == 0) return;
         row.Value = cat.ToJsonString();
         row.Version++;
         await db.SaveChangesAsync(ct);

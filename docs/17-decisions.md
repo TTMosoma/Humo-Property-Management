@@ -31,6 +31,9 @@ Each entry records:
 | D13 | Each scheme chooses how levies are set: entered per unit (default) or derived from the approved budget and participation quotas | Slice 2, billing |
 | D14 | Sign-in with ASP.NET Core Identity and passkeys inside Humo's API; hosted on a Webway VPS in South Africa; self-hosted email (supersedes D5's "not built in-house") | Slice 1 |
 | D15 | Commercial terms: Payfast, no VAT, approved package prices, daily pro-rata, a second approver for discounts above 20%, a Humo Finance role | Commercial slice |
+| D16 | Package limits by units, users and SMS; schemes unlimited; automatic Professional trial at 80% of an Essentials limit; existing customers keep their terms until renewal | Commercial slice |
+| D17 | Refines D16: Professional includes 25 people with a sign-in; the Professional trial is offered at 80%, and the customer starts it; no existing customers to keep on old terms (not yet live) | Commercial slice |
+| D18 | Limit warnings: agency administrators are emailed at 80% and when a limit is reached; other staff see them in the app | Commercial slice |
 
 ---
 
@@ -378,6 +381,77 @@ Approved on 18 October 2026 by Terry Mosoma (product owner). Options and reasons
 - A discount above the threshold waits on the agreement (*Waiting for approval*) until Humo Finance or a System Administrator approves it.
 
 **Open:** Humo's legal name and registration number on invoices; the custom-template add-on's price.
+
+---
+
+## D16 — Package limits: units, users and SMS; schemes unlimited (22 October 2026)
+
+**Decided by:** Terry Mosoma (product owner).
+
+**Supersedes:** the package limits in D15 (schemes included, extra-scheme blocks and included storage). D15's prices, annual terms, renewal fee and add-on prices stand.
+
+**Decision:**
+- **Prices (unchanged from D15):** Essentials R600 a month, Professional R2 400, Enterprise R9 600. Annual is 11 months. Renewal fee R250, every package.
+- **Schemes:** unlimited on every package. The extra-scheme charge (R150 per block of 10) is removed.
+- **Units under management** (the measure for limits):
+
+  | Package | Units | Users | SMS a month | Storage |
+  |---|---|---|---|---|
+  | Essentials | 50 | 5 | 50 | 5 GB |
+  | Professional | 250 | 50 | 250 | 25 GB |
+  | Enterprise | 1 500 | 150 | 1 500 | 150 GB |
+
+- **Warnings:** a warning at 80% of any limit, in the app and by email to the account administrator.
+- **Reaching a limit:** adding a unit, a user or a message beyond the limit is refused with a plain message that says what the next package includes. Nothing that already exists is removed or locked.
+- **Automatic Professional trial:** when an Essentials customer reaches 80% of a limit, they're offered a 30-day Professional trial automatically. It's offered once per customer, never charges anything, and ends by returning them to Essentials. It doesn't start during a billing run.
+- **What a trial customer is told, before it starts and again when it ends:** everything they created stays, records and documents remain visible, and automated features stop (billing runs, payment allocation, credit control, bulk statements). They can upgrade again at any time.
+- **Records during and after a trial:** anything created during the trial stays and remains readable after the trial. Automated features that create new work stop when the trial ends.
+- **Existing customers** keep their current terms until renewal. The new limits apply from the renewal date.
+- **Messages:** the included SMS allowance is a monthly allowance; extra messages are bought as SMS bundles (D15 add-ons).
+
+**Consequences:**
+- The initial catalogue (`demo-data/commercial/catalogue.json`) carries these limits as approved.
+- The catalogue gains included units, users and monthly SMS; the scheme limits and extra-scheme blocks are no longer used.
+- The app enforces unit and user limits when they're added, and warns at 80%.
+
+**Open:** whether email counts against any allowance (none is set); the wording of the trial messages is to be approved before launch.
+
+---
+
+## D17 — Refinements to D16 (22 October 2026)
+
+**Decided by:** Terry Mosoma (product owner).
+
+**Refines:** D16. Where they differ, this decision stands.
+
+**Decision:**
+- **People with a sign-in:** Essentials 5, Professional **25**, Enterprise 150.
+- **Professional trial:** the customer decides. At 80% of an Essentials limit, the agency's administrator is *prompted* to try Humo Professional free for 30 days, and starts it themselves. It's never started automatically. It can be used once per agency, charges nothing, and ends by itself, returning the agency to Essentials.
+- **What the trial says:** the prompt and the end of the trial state that everything created stays and remains visible, and that automated features stop (billing runs, payment allocation, credit control, bulk statements).
+- **Warnings:** the warning shows in the staff app (the agency's working console), not in the owner and resident portal. Warning emails to the agency's administrator are not part of this decision yet.
+- **Existing customers:** none. The product isn't live, so there's nothing to keep on old terms. D16's requirement to keep existing customers on their current terms until renewal is withdrawn.
+
+**Consequences:**
+- The initial catalogue carries Professional at 25 people.
+- The trial is an override on the agency's subscription that expires on its own.
+
+---
+
+## D18 — Limit warnings: email and in-app (22 October 2026)
+
+**Decided by:** Terry Mosoma (product owner).
+
+**Refines:** D16 and D17. Where they differ, this decision stands.
+
+**Decision:**
+- **Who is emailed:** the agency's administrators, at 80% of a limit and again when the limit is reached. Once per limit and level: the warning isn't repeated while the agency stays at that level.
+- **Who sees it in the app:** every staff member with a role in the agency's staff app (portfolio managers, finance and operations staff, as well as administrators). The app means the agency's staff app, the bell in the top bar. The owner and resident portal doesn't show limit warnings.
+- **Not emailed:** other staff. They see the warning in the app only.
+- **Who acted doesn't matter:** an administrator who adds the unit or invites the person still gets the warning. It isn't a notice about their own action.
+- **What it says:** which limit, how many of how many, and what the next package includes. It links to Settings › Plan & features.
+
+**Consequences:**
+- The warning is raised when units are added or people are invited.
 
 ---
 

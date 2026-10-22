@@ -25,6 +25,25 @@
           "reason": "Approved price list (doc 17, D15): includes schemes and storage; R150 per 10 extra schemes; R250 annual renewal fee.",
           "extraSchemeBlock": 10,
           "includedSms": 20
+        },
+        {
+          "version": 2,
+          "effectiveFrom": "2026-10-22",
+          "monthlyPrice": 600,
+          "annualPrice": 6600,
+          "priceStatus": "approved",
+          "includedStorageGb": 5,
+          "storageStatus": "approved",
+          "includedSchemes": null,
+          "extraSchemePrice": null,
+          "annualRenewalFee": 250,
+          "changedBy": "Terry Mosoma (product owner)",
+          "changedAt": "2026-10-22T09:00:00+02:00",
+          "reason": "D16: units, users and SMS limits; schemes unlimited; storage 5 / 25 / 150 GB.",
+          "extraSchemeBlock": null,
+          "includedSms": 50,
+          "includedUnits": 50,
+          "includedUsers": 5
         }
       ]
     },
@@ -52,6 +71,25 @@
           "reason": "Approved price list (doc 17, D15): includes schemes and storage; R150 per 10 extra schemes; R250 annual renewal fee.",
           "extraSchemeBlock": 10,
           "includedSms": 100
+        },
+        {
+          "version": 2,
+          "effectiveFrom": "2026-10-22",
+          "monthlyPrice": 2400,
+          "annualPrice": 26400,
+          "priceStatus": "approved",
+          "includedStorageGb": 25,
+          "storageStatus": "approved",
+          "includedSchemes": null,
+          "extraSchemePrice": null,
+          "annualRenewalFee": 250,
+          "changedBy": "Terry Mosoma (product owner)",
+          "changedAt": "2026-10-22T09:00:00+02:00",
+          "reason": "D16: units, users and SMS limits; schemes unlimited; storage 5 / 25 / 150 GB.",
+          "extraSchemeBlock": null,
+          "includedSms": 250,
+          "includedUnits": 250,
+          "includedUsers": 25
         }
       ]
     },
@@ -79,6 +117,25 @@
           "reason": "Approved price list (doc 17, D15): includes schemes and storage; R150 per 10 extra schemes; R250 annual renewal fee.",
           "extraSchemeBlock": 10,
           "includedSms": 500
+        },
+        {
+          "version": 2,
+          "effectiveFrom": "2026-10-22",
+          "monthlyPrice": 9600,
+          "annualPrice": 105600,
+          "priceStatus": "approved",
+          "includedStorageGb": 150,
+          "storageStatus": "approved",
+          "includedSchemes": null,
+          "extraSchemePrice": null,
+          "annualRenewalFee": 250,
+          "changedBy": "Terry Mosoma (product owner)",
+          "changedAt": "2026-10-22T09:00:00+02:00",
+          "reason": "D16: units, users and SMS limits; schemes unlimited; storage 5 / 25 / 150 GB.",
+          "extraSchemeBlock": null,
+          "includedSms": 1500,
+          "includedUnits": 1500,
+          "includedUsers": 150
         }
       ]
     }

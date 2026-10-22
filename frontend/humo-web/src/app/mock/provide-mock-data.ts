@@ -44,9 +44,9 @@ import {
   SessionDataSource,
   TimelineDataSource,
   UnitDataSource,
-  WorkItemDataSource,
-} from '../domain';
+  WorkItemDataSource, PackageLimitsDataSource } from '../domain';
 import { InMemoryHumoTeamDataSource } from './data-sources/in-memory-humo-team-data-source';
+import { InMemoryPackageLimitsDataSource } from './data-sources/in-memory-package-limits';
 import {
   InMemoryAccountDataSource,
   InMemoryPersonDataSource,
@@ -99,6 +99,7 @@ import { InMemoryWorkItemDataSource } from './data-sources/in-memory-work-item-d
 export function provideMockData(): EnvironmentProviders {
   return makeEnvironmentProviders([
     { provide: SessionDataSource, useClass: InMemorySessionDataSource },
+    { provide: PackageLimitsDataSource, useClass: InMemoryPackageLimitsDataSource },
     { provide: OrganisationDataSource, useClass: InMemoryOrganisationDataSource },
     { provide: NotificationDataSource, useClass: InMemoryNotificationDataSource },
     { provide: SchemeDataSource, useClass: InMemorySchemeDataSource },
