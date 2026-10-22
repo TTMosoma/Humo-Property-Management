@@ -12,7 +12,7 @@ Status: **built in the frontend prototype (12 October 2026, branch `feature/comm
 | Agreements, charges, preview, changes (§2–§4) | ✅ | `CommercialRules` ports `chargesOn`, `checkAgreementChange`, `applyAgreementChange`, `previewAgreementChange` and `buildInvoice` rule for rule. Own customers only for Account Managers (D11). |
 | Subscriptions and entitlements | ✅ | A new account opens a 30-day trial of its package. `GET /me` carries the entitlements; the API refuses commands the plan doesn't include (`not-entitled`): today the trustee board (Governance) and adding schemes. Features and packages come from `contracts/entitlements.json`, shared with the frontend. |
 | Customers list, Customer 360, Plan & features, upgrade requests | ✅ | Health uses only what the API measures (active users, sign-ins, payment); the other signals say *Not measured yet* and are left out of the score. |
-| Storage quotas (§5) | Partly | Allowances are calculated; usage isn't measured until documents are stored by the API (R-13). |
+| Storage quotas (§5) | Partly | Allowances are calculated; the API counts uploaded files and refuses an upload past the limit (D20). Generated files aren't counted yet (R-13). |
 | Invoices and manual EFT (§6) | ✅ | Step C2. A System Administrator issues the next period's invoice (step-up): a snapshot of the agreement, reference `HPM-{customer}-{yyyymm}`, emailed to the billing address as a link. Refused while any charge has no price. A proof of EFT is recorded, but the invoice is paid only once the payment is reconciled with Humo's bank statement (step-up). Overdue from the due date; health shows it. Customers see their own invoices only. |
 | Online payment (Payfast, D15) | ✅ | *Pay now* on the customer's invoice: a signed Payfast checkout (form POST). Paid only by Payfast's notification after its signature, source, Payfast's confirmation and the amount check out; repeats change nothing. Needs the account's security passphrase in configuration (backend README). |
 | Billing run | ✅ | Every morning (`Billing:RunHour`, 06:00 by default; Humo Finance can also *Run billing now* on Platform › Invoices). Trials that have ended become active; due agreements are invoiced and emailed, never twice; customers without agreed prices are skipped and named. Reminders 1, 7 and 14 days after the due date; after the last, the subscription is *past due* and Humo Finance is told. Nothing is suspended automatically. |
@@ -207,7 +207,7 @@ There is no *Business* tier: the repository's packages are Essentials, Professio
 - Humo's own templates.
 
 **When the allowance is used up:**
-- The simulated API refuses uploads with a clear message (`StorageMeter.checkUpload`).
+- The API refuses an upload past the limit, before the file is saved, with the allowance and the current use (D20). The prototype does the same in its simulation (`StorageMeter.checkUpload`).
 - **Nothing is charged, and no package is upgraded, automatically.**
 - The account manager adds a storage pack (*Add storage*) or grants a temporary exception, both audited.
 - The customer's administrator can *Ask Humo for more storage* from Plan & features.
@@ -215,7 +215,7 @@ There is no *Business* tier: the repository's packages are Essentials, Professio
 **Measured vs simulated:**
 - Every figure in the demo is a **demo measurement**, labelled as such.
 - In the demo agency, the figure includes files uploaded since the simulation started.
-- **No quota is enforced in production until the API checks it before accepting an upload.** The UI says *Not yet enforced by a server* (`enforcedByServer: false`).
+- **The API checks the quota before it stores an upload** (D20), so the quota is enforced for uploaded files. Generated files aren't counted yet (R-13). The prototype's Customer commercial screen still says *Not yet enforced by a server* (`enforcedByServer: false`) until its tags are removed with R-6.
 
 ## 6. Billing preferences, payments and tax
 

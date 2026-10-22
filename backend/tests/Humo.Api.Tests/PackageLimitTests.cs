@@ -1,7 +1,11 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
+using Humo.Api.Commercial;
 using Humo.Domain.Access;
+using Humo.Infrastructure.Data;
 
 namespace Humo.Api.Tests;
 
@@ -180,6 +184,81 @@ public sealed class PackageLimitTests : IDisposable
         var invited = await s.Admin.PostAsJsonAsync("/api/access/invitations", Invitation(s.Org, "lerato@acacia.example"));
         Assert.NotEqual(HttpStatusCode.UnprocessableEntity, invited.StatusCode);
         Assert.Equal(new[] { "thandeka@acacia.example" }, Titled(api, "limit reached"));
+    }
+
+    private static readonly byte[] Pdf = Encoding.ASCII.GetBytes("%PDF-1.4\n%%EOF\n");
+
+    /// <summary>Stands in for files already stored: a row of this size counts towards the agency's storage.</summary>
+    private async Task StoreBytes(Setup s, long bytes)
+    {
+        await api.Db(async db =>
+        {
+            db.UploadedFiles.Add(new UploadedFile
+            {
+                Id = Guid.CreateVersion7(), OrganisationId = s.Org, SchemeId = s.Kc, Name = "earlier.pdf", ContentType = "application/pdf",
+                SizeBytes = bytes, Sha256 = "", StorageKey = "", ScanResult = "clean", UploadedBy = "Thandeka", UploadedAt = DateTimeOffset.UtcNow,
+            });
+            return await db.SaveChangesAsync();
+        });
+    }
+
+    private static async Task<HttpResponseMessage> UploadFile(Setup s, byte[] content)
+    {
+        var form = new MultipartFormDataContent { { new StringContent(s.Kc.ToString()), "schemeId" } };
+        var file = new ByteArrayContent(content);
+        file.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+        form.Add(file, "file", "notice.pdf");
+        return await s.Admin.PostAsync("/api/files", form);
+    }
+
+    [Fact]
+    public async Task A_file_that_would_take_the_agency_past_its_storage_limit_is_refused()
+    {
+        var s = await Essentials();
+        var small = Pdf.Concat(new byte[1000]).ToArray();
+        await StoreBytes(s, 5 * PackageLimits.BytesPerGb - small.Length);
+
+        // Exactly the 5 GB limit is allowed; one byte more is refused.
+        Assert.Equal(HttpStatusCode.OK, (await UploadFile(s, small)).StatusCode);
+        var refused = await UploadFile(s, Pdf.Concat(new byte[1]).ToArray());
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, refused.StatusCode);
+        Assert.Contains("5 GB of storage", (await refused.FieldErrors()).GetProperty("file").GetString());
+        var storage = (await Limits(s.Admin)).GetProperty("storage");
+        Assert.Equal(("reached", 5m), (storage.GetProperty("state").GetString(), storage.GetProperty("used").GetDecimal()));
+    }
+
+    [Fact]
+    public async Task A_library_document_is_refused_past_the_storage_limit_too()
+    {
+        var s = await Essentials();
+        await StoreBytes(s, 5 * PackageLimits.BytesPerGb);
+        var form = new MultipartFormDataContent
+        {
+            { new StringContent(s.Kc.ToString()), "schemeId" },
+            { new StringContent("Building insurance 2027"), "title" },
+            { new StringContent("insurance"), "category" },
+            { new StringContent("trustees"), "visibility" },
+        };
+        var file = new ByteArrayContent(Pdf);
+        file.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+        form.Add(file, "file", "insurance.pdf");
+        var res = await s.Admin.PostAsync("/api/documents/library", form);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, res.StatusCode);
+        Assert.Contains("5 GB of storage", (await res.FieldErrors()).GetProperty("file").GetString());
+    }
+
+    [Fact]
+    public async Task The_administrator_is_warned_at_80_percent_of_storage_by_email_and_in_the_app()
+    {
+        var s = await Essentials();
+        // Just under 4 GB (80% of 5 GB): no warning yet.
+        await StoreBytes(s, 4 * PackageLimits.BytesPerGb - 2000);
+        Assert.Empty(Titled(api, "Storage at 80%"));
+
+        Assert.Equal(HttpStatusCode.OK, (await UploadFile(s, Pdf.Concat(new byte[3000]).ToArray())).StatusCode);
+        Assert.Equal(new[] { "thandeka@acacia.example" }, Titled(api, "Storage at 80%"));
+        var notices = await (await s.Admin.GetAsync("/api/notifications")).Json();
+        Assert.Contains(notices.EnumerateArray(), n => n.GetProperty("title").GetString()!.Contains("Storage at 80%"));
     }
 
     private static object Invitation(Guid org, string email) => new

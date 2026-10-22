@@ -5,7 +5,7 @@ import { LimitUsage, PackageLimitsDataSource } from '../../domain';
 import { FeedbackService } from '../feedback/feedback.service';
 
 /**
- * Warns the agency when it's at 80% of a package limit (docs/18 D16): units under management or people with a sign-in.
+ * Warns the agency when it's at 80% of a package limit (docs/18 D16, D20): units under management, people with a sign-in or storage.
  * At 80% an Essentials agency is offered the Professional trial, which it starts itself (D17). Nothing shows when all
  * is well. Shown in the staff app, not the owner and resident portal.
  */
@@ -64,14 +64,15 @@ export class LimitsBanner {
       return `You’re trying Humo Professional until ${ends}. Everything you create stays; automated features stop when the trial ends.`;
     }
     const closest = [
-      { label: 'units', usage: l.units },
-      { label: 'people with a sign-in', usage: l.users },
+      { label: 'units', unit: '', usage: l.units },
+      { label: 'people with a sign-in', unit: '', usage: l.users },
+      { label: 'storage', unit: ' GB', usage: l.storage },
     ]
       .filter((x) => x.usage.included !== null && x.usage.state !== 'ok')
       .sort((a, b) => ratio(b.usage) - ratio(a.usage))[0];
     if (!closest) return null;
     const { used, included } = closest.usage;
-    const count = `${used.toLocaleString('en-ZA')} of ${included!.toLocaleString('en-ZA')} ${closest.label}`;
+    const count = `${used.toLocaleString('en-ZA', { maximumFractionDigits: 2 })} of ${included!.toLocaleString('en-ZA', { maximumFractionDigits: 2 })}${closest.unit} ${closest.label}`;
     return closest.usage.state === 'reached'
       ? `You’ve reached the ${count} your ${l.package} package includes. Upgrade to add more.`
       : `You’ve used ${count} on ${l.package}.`;

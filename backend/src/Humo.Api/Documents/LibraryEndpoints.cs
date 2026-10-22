@@ -1,4 +1,5 @@
 using Humo.Api.Commands;
+using Humo.Api.Commercial;
 using Humo.Api.Files;
 using Humo.Domain.Access;
 using Humo.Infrastructure.Data;
@@ -93,11 +94,11 @@ public static class LibraryEndpoints
 
     /// <summary>A PDF on a scheme, unit or job, with its title, category, who may open it and when it lapses.</summary>
     private static async Task<IResult> Upload(HttpRequest request, CurrentActor current, CommandRunner commands, HumoDbContext db, IFileStore store,
-        IFileScanner scanner, IOptions<FilesOptions> options, TimeProvider clock, CancellationToken ct)
+        IFileScanner scanner, IOptions<FilesOptions> options, TimeProvider clock, PackageLimits limits, Platform.Notices notices, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         var form = await request.ReadFormAsync(ct);
-        var kind = form["recordKind"].ToString() is { Length: > 0 } k ? k : "scheme";
+        var kind =form["recordKind"].ToString() is { Length: > 0 } k ? k : "scheme";
         var recordValue = (kind == "scheme" ? form["schemeId"] : form["recordId"]).ToString().Trim();
         var title = form["title"].ToString().Trim();
         var category = form["category"].ToString();
@@ -111,6 +112,7 @@ public static class LibraryEndpoints
 
         var (accepted, refusal) = await PdfIntake.CheckAsync(form.Files.FirstOrDefault(), options.Value.MaxBytes, scanner, ct);
         if (refusal is not null) return refusal;
+        if (await limits.RefuseNewFileAsync(placement.OrganisationId, accepted!.Bytes.Length, ct) is { } full) return Problems.Validation(new() { ["file"] = full });
 
         return await commands.RunAsync(new CommandSpec($"Uploaded {title} to {placement.SchemeName}", "Documents.Manage")
         {
@@ -120,7 +122,7 @@ public static class LibraryEndpoints
             Category = "documents",
         }, async writer =>
         {
-            var key = await store.SaveAsync(accepted!.Bytes, ct);
+            var key = await store.SaveAsync(accepted.Bytes, ct);
             var fileId = Guid.CreateVersion7();
             db.UploadedFiles.Add(new UploadedFile
             {
@@ -128,6 +130,8 @@ public static class LibraryEndpoints
                 SizeBytes = accepted.Bytes.Length, Sha256 = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(accepted.Bytes)),
                 StorageKey = key, ScanResult = "clean", UploadedBy = writer.Human.Name, UploadedAt = clock.GetUtcNow(),
             });
+            // The storage warning at 80% (D20), counted with this file.
+            await limits.NotifyAsync(placement.OrganisationId, notices, writer.Human.Id, ct, extraBytes: accepted.Bytes.Length);
             var id = Guid.CreateVersion7();
             db.LibraryDocuments.Add(new LibraryDocument
             {

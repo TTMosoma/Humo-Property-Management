@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { IonIcon } from '@ionic/angular/standalone';
 import { OwnerInvoice, OwnerInvoiceDataSource, Scheme, SchemeDataSource, UnitDataSource, UnitSummary } from '../../../domain';
 import { FeedbackService } from '../../../core/feedback/feedback.service';
 import { SessionService } from '../../../core/session/session.service';
@@ -19,7 +18,7 @@ interface DraftLine {
  */
 @Component({
   selector: 'app-owner-invoices-page',
-  imports: [FormsModule, IonIcon],
+  imports: [FormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <header class="page-head">
