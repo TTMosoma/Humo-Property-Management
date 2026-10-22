@@ -332,12 +332,12 @@
         {
           "version": 1,
           "effectiveFrom": "2026-10-22",
-          "price": 400,
+          "price": 300,
           "frequency": "monthly",
           "priceStatus": "proposed",
           "changedBy": "Claude (proposal for Terry Mosoma to confirm)",
           "changedAt": "2026-10-22T09:00:00+02:00",
-          "reason": "D21: proposed at R400 a month. Not yet confirmed by the product owner."
+          "reason": "D21: proposed at R300 a month. Not yet confirmed by the product owner."
         }
       ]
     },

@@ -36,7 +36,7 @@ Each entry records:
 | D18 | Limit warnings: agency administrators are emailed at 80% and when a limit is reached; other staff see them in the app | Commercial slice |
 | D19 | Basic invoicing on Essentials: owner invoices posted to the unit's account; manual statements stay on Essentials, bulk runs on Professional | Commercial slice |
 | D20 | Storage limits: every uploaded file counts (1 GB = 1024³ bytes); the API refuses an upload past the limit before storing it; warnings at 80% as for units and people | Commercial slice |
-| D21 | Advanced finance add-on for Essentials at R400 a month (proposed): billing runs, payment allocation, debtors and credit control. Price to be confirmed | Commercial slice |
+| D21 | Advanced finance add-on for Essentials at R300 a month (proposed): billing runs, payment allocation, debtors and credit control. Price to be confirmed | Commercial slice |
 
 ---
 
@@ -497,7 +497,7 @@ Approved on 18 October 2026 by Terry Mosoma (product owner). Options and reasons
 
 **Decision:**
 - **Advanced finance** is an add-on that an Essentials agency can buy without moving to Professional. It switches on billing runs, payment allocation from bank receipts, debtors (age analysis and arrears) and credit control.
-- **Price: R400 a month, proposed.** Essentials is R600 and Professional R2 400, a gap of R1 800. The add-on is about a fifth of that gap, so an agency that only needs the finance tools has a reason to stay on Essentials. It's priced above the WhatsApp add-on (R100) and below the SMS bundle (R500).
+- **Price: R300 a month, proposed.** Essentials is R600 and Professional R2 400, a gap of R1 800. The add-on is about a sixth of that gap, so an agency that only needs the finance tools has a reason to stay on Essentials. It's priced above the WhatsApp add-on (R100) and below the SMS bundle (R500).
 - **Stays on Professional:** levies, supplier payments (payables), budgets and financial reporting. Levies are the one to revisit: a managing agent on Essentials that runs levy schedules would need them, so moving levies to the add-on would be a price and scope change.
 
 **Consequences:**
