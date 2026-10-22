@@ -83,6 +83,7 @@ export const NAV: NavSection[] = [
         icon: 'wallet-outline',
         children: [
           { id: 'billing', label: 'Levies & billing', route: '/finance/billing', permission: 'Billing.View', feature: 'billing', keywords: 'levy billing run charges statements' },
+          { id: 'invoices', label: 'Invoices', route: '/finance/invoices', permission: 'Billing.View', feature: 'invoicing-basic', keywords: 'invoice owner charge bill pay payment email' },
           { id: 'receipts', label: 'Receipts', route: '/finance/receipts', permission: 'Receipts.Allocate', feature: 'payment-allocation', badge: 'receipts', keywords: 'payments bank allocate unallocated deposits' },
           { id: 'credit-control', label: 'Credit control', route: '/finance/credit-control', permission: 'Billing.View', feature: 'credit-control', badge: 'credit-control', keywords: 'debtors arrears collections ageing demand' },
           { id: 'payables', label: 'Payables', route: '/finance/payables', permission: 'Finance.View', feature: 'payables', badge: 'payables', keywords: 'creditors supplier invoices pay payment batch' },

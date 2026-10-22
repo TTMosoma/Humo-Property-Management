@@ -302,6 +302,13 @@ export const routes: Routes = [
             ],
           },
           {
+            path: 'invoices',
+            data: { permission: 'Billing.View', breadcrumb: 'Invoices', feature: 'invoicing-basic' },
+            children: [
+              { path: '', title: 'Invoices', loadComponent: () => import('./features/finance/owner-invoices/owner-invoices-page').then((m) => m.OwnerInvoicesPage) },
+            ],
+          },
+          {
             path: 'credit-control',
             data: { permission: 'Billing.View', breadcrumb: 'Credit control', feature: 'credit-control' },
             children: [

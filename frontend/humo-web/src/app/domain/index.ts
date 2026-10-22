@@ -65,3 +65,5 @@ export * from './models/staff';
 export * from './models/budget';
 export * from './models/package-limits';
 export * from './ports/package-limits-data-source';
+export * from './models/owner-invoice';
+export * from './ports/owner-invoice-data-source';
