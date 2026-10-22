@@ -6,12 +6,13 @@
  *   401 / 403 → policy      (PolicyError: why it was refused)
  *   404       → not-found
  *   409 / 412 → conflict    (someone else changed it first)
+ *   503       → unavailable (a service it needs is down for now; the message says which)
  *   0 / 5xx   → network / server
  *
  * Forms keep what the person typed on any failure and show field errors next to
  * the fields; everything else becomes one plain sentence.
  */
-export type ApiErrorKind = 'validation' | 'policy' | 'not-found' | 'conflict' | 'network' | 'server';
+export type ApiErrorKind = 'validation' | 'policy' | 'not-found' | 'conflict' | 'unavailable' | 'network' | 'server';
 
 /** Field name → what's wrong with it, in words the person can act on. */
 export type FieldErrors = Record<string, string>;
@@ -70,6 +71,8 @@ export function describeFailure(error: unknown, action: string): string {
       return `${action}: it no longer exists.`;
     case 'policy':
       return `${action}. ${e.message}.`;
+    case 'unavailable':
+      return `${action}. ${e.message}`;
     case 'server':
       return `${action}. Something went wrong on our side; nothing was changed.`;
     default:

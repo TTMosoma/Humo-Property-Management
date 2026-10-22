@@ -67,7 +67,7 @@ npm run build:demo
 npm run build:contractor
 ```
 
-Local services for the API (PostgreSQL on port 55432 and Mailpit on 8025):
+Local services for the API (PostgreSQL on port 55432, Mailpit on 8025, and ClamAV on 3310, which checks every upload; without it uploads are refused):
 
 ```bash
 docker compose -f backend/deploy/docker-compose.dev.yml up -d

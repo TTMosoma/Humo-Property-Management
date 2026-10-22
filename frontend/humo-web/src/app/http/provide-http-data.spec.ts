@@ -85,6 +85,11 @@ describe('Production data layer (provideHttpData)', () => {
     const stale = firstValueFrom(schemes.update('s-1', { name: 'Kingfisher', code: 'KC', type: 'Sectional Title', suburb: 'a', city: 'b', province: 'Gauteng' }, 1));
     http.expectOne('/api/schemes/s-1').flush({ title: 'Someone else changed this first' }, { status: 409, statusText: 'Conflict' });
     await expect(stale).rejects.toMatchObject({ kind: 'conflict' });
+
+    // A service the API needs is down (the virus scanner, say): its message reaches the person.
+    const down = firstValueFrom(schemes.update('s-1', { name: 'Kingfisher', code: 'KC', type: 'Sectional Title', suburb: 'a', city: 'b', province: 'Gauteng' }, 1));
+    http.expectOne('/api/schemes/s-1').flush({ title: 'The file can’t be checked for viruses right now, so it wasn’t stored. Try again shortly.' }, { status: 503, statusText: 'Service Unavailable' });
+    await expect(down).rejects.toMatchObject({ kind: 'unavailable', message: 'The file can’t be checked for viruses right now, so it wasn’t stored. Try again shortly.' });
   });
   it('reads the access directory and invites over HTTP', async () => {
     const access = TestBed.inject(AccessDataSource);

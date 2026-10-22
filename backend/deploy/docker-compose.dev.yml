@@ -1,4 +1,5 @@
-# Local development services: PostgreSQL and Mailpit (catches every email; nothing leaves your machine).
+# Local development services: PostgreSQL, Mailpit (catches every email; nothing leaves your machine) and
+# ClamAV, which checks every upload as production does (its first start downloads virus signatures: a few minutes).
 #   docker compose -f backend/deploy/docker-compose.dev.yml up -d
 # Then run the API (dotnet run --project backend/src/Humo.Api) and open Mailpit at http://localhost:8025.
 name: humo-dev
@@ -25,5 +26,13 @@ services:
       - "1025:1025" # SMTP the API sends to (Mail__Port=1025, Mail__Security=None)
       - "8025:8025" # Inbox in the browser
 
+  clamav:
+    image: clamav/clamav:1.4
+    ports:
+      - "3310:3310" # clamd, which the API sends uploads to (Files__ClamAv__Host=localhost)
+    volumes:
+      - clamdb:/var/lib/clamav # virus signatures, kept between restarts
+
 volumes:
   pgdata:
+  clamdb:
