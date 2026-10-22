@@ -8,4 +8,8 @@ export class InMemoryPackageLimitsDataSource extends PackageLimitsDataSource {
   usage(): Observable<PackageLimits | undefined> {
     return of(undefined);
   }
+
+  startProfessionalTrial(): Observable<void> {
+    return of(undefined);
+  }
 }

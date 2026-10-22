@@ -89,7 +89,7 @@
           "extraSchemeBlock": null,
           "includedSms": 250,
           "includedUnits": 250,
-          "includedUsers": 50
+          "includedUsers": 25
         }
       ]
     },

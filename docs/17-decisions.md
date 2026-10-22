@@ -32,6 +32,7 @@ Each entry records:
 | D14 | Sign-in with ASP.NET Core Identity and passkeys inside Humo's API; hosted on a Webway VPS in South Africa; self-hosted email (supersedes D5's "not built in-house") | Slice 1 |
 | D15 | Commercial terms: Payfast, no VAT, approved package prices, daily pro-rata, a second approver for discounts above 20%, a Humo Finance role | Commercial slice |
 | D16 | Package limits by units, users and SMS; schemes unlimited; automatic Professional trial at 80% of an Essentials limit; existing customers keep their terms until renewal | Commercial slice |
+| D17 | Refines D16: Professional includes 25 people with a sign-in; the Professional trial is offered at 80%, and the customer starts it; no existing customers to keep on old terms (not yet live) | Commercial slice |
 
 ---
 
@@ -413,6 +414,25 @@ Approved on 18 October 2026 by Terry Mosoma (product owner). Options and reasons
 - The app enforces unit and user limits when they're added, and warns at 80%.
 
 **Open:** whether email counts against any allowance (none is set); the wording of the trial messages is to be approved before launch.
+
+---
+
+## D17 — Refinements to D16 (22 October 2026)
+
+**Decided by:** Terry Mosoma (product owner).
+
+**Refines:** D16. Where they differ, this decision stands.
+
+**Decision:**
+- **People with a sign-in:** Essentials 5, Professional **25**, Enterprise 150.
+- **Professional trial:** the customer decides. At 80% of an Essentials limit, the agency's administrator is *prompted* to try Humo Professional free for 30 days, and starts it themselves. It's never started automatically. It can be used once per agency, charges nothing, and ends by itself, returning the agency to Essentials.
+- **What the trial says:** the prompt and the end of the trial state that everything created stays and remains visible, and that automated features stop (billing runs, payment allocation, credit control, bulk statements).
+- **Warnings:** the warning shows in the staff app (the agency's working console), not in the owner and resident portal. Warning emails to the agency's administrator are not part of this decision yet.
+- **Existing customers:** none. The product isn't live, so there's nothing to keep on old terms. D16's requirement to keep existing customers on their current terms until renewal is withdrawn.
+
+**Consequences:**
+- The initial catalogue carries Professional at 25 people.
+- The trial is an override on the agency's subscription that expires on its own.
 
 ---
 

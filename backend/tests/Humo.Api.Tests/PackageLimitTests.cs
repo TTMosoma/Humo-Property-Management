@@ -104,6 +104,39 @@ public sealed class PackageLimitTests : IDisposable
         Assert.Equal(5, usage.GetProperty("users").GetProperty("included").GetInt32());
     }
 
+    private static async Task<string> TrialStatus(HttpClient client) =>
+        (await Limits(client)).GetProperty("trial").GetProperty("status").GetString()!;
+
+    private static async Task<bool> FeatureOn(HttpClient client, string feature)
+    {
+        var me = await (await client.GetAsync("/api/me")).Json();
+        return me.GetProperty("entitlements").EnumerateArray().Single(e => e.GetProperty("feature").GetString() == feature).GetProperty("enabled").GetBoolean();
+    }
+
+    [Fact]
+    public async Task The_professional_trial_is_offered_only_at_80_percent_and_the_agency_starts_it()
+    {
+        var s = await Essentials();
+        for (var n = 1; n <= 10; n++) await AddUnit(s, n);
+        Assert.Equal("not-applicable", await TrialStatus(s.Admin));
+        Assert.Equal(HttpStatusCode.Forbidden, (await s.Admin.PostAsync("/api/me/limits/professional-trial", null)).StatusCode);
+
+        for (var n = 11; n <= 40; n++) await AddUnit(s, n);
+        Assert.Equal("available", await TrialStatus(s.Admin));
+        Assert.False(await FeatureOn(s.Admin, "billing"));
+
+        Assert.Equal(HttpStatusCode.NoContent, (await s.Admin.PostAsync("/api/me/limits/professional-trial", null)).StatusCode);
+        Assert.Equal("active", await TrialStatus(s.Admin));
+        Assert.True(await FeatureOn(s.Admin, "billing"));
+
+        // Once an agency has had the trial, it isn't offered again, even after it has ended.
+        Assert.Equal(HttpStatusCode.Forbidden, (await s.Admin.PostAsync("/api/me/limits/professional-trial", null)).StatusCode);
+        api.Clock.Advance(TimeSpan.FromDays(31));
+        var later = await api.SignedIn("thandeka@acacia.example"); // the earlier session has been idle too long
+        Assert.Equal("used", await TrialStatus(later));
+        Assert.False(await FeatureOn(later, "billing"));
+    }
+
     private static object Invitation(Guid org, string email) => new
     {
         organisationId = org.ToString(), name = "Lerato Mokoena", email,

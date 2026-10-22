@@ -12,4 +12,8 @@ export class HttpPackageLimitsDataSource extends HttpPort implements PackageLimi
   usage(): Observable<PackageLimits | undefined> {
     return this.http.get<PackageLimits>(`${this.base}/me/limits`, { withCredentials: true }).pipe(catchError(() => of(undefined)));
   }
+
+  startProfessionalTrial(): Observable<void> {
+    return this.command('POST', '/me/limits/professional-trial', null, ['session']);
+  }
 }

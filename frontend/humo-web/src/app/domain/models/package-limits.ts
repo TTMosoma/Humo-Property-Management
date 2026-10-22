@@ -8,9 +8,20 @@ export interface LimitUsage {
   state: 'ok' | 'warning' | 'reached';
 }
 
+/**
+ * The Professional trial (D17): "available" once an Essentials agency is at 80% of a limit, "active" while it runs,
+ * "used" once it has run (once per agency), and "not-applicable" otherwise.
+ */
+export interface ProfessionalTrial {
+  status: 'available' | 'active' | 'used' | 'not-applicable';
+  /** When a running trial ends (ISO). */
+  endsAt: string | null;
+}
+
 export interface PackageLimits {
   /** The package's name, e.g. "Humo Essentials". */
   package: string;
   units: LimitUsage;
   users: LimitUsage;
+  trial: ProfessionalTrial;
 }

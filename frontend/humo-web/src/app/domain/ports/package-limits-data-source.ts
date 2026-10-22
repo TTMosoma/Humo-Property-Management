@@ -7,4 +7,6 @@ import { PackageLimits } from '../models/package-limits';
  */
 export abstract class PackageLimitsDataSource {
   abstract usage(): Observable<PackageLimits | undefined>;
+  /** The agency starts the Professional trial itself (D17). Refused unless it's available. */
+  abstract startProfessionalTrial(): Observable<void>;
 }
