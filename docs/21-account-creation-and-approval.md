@@ -74,7 +74,7 @@ There's deliberately no "auto-approve everything" setting: it would give every A
 
 - **Request:** `pending` → `approved` or `rejected`. Route: `approval` or `delegated`.
 - **Organisation:** exists only after approval or delegated activation. It starts in the **existing** status `onboarding`, then follows the existing lifecycle (`active`, `suspended`, `archived`). No new organisation status was added.
-- **Users:** activation creates **no identities, assignments or invitations**. The first administrator is invited as before, from Users & impersonation. That person accepts and sets up a passkey before anyone at the customer can sign in. Invitation acceptance, step-up and the first-administrator rule (D3, audit F-22) are untouched.
+- **Users:** activation creates **no identities, assignments or invitations**. The first administrator is invited as before, from Users & impersonation. That person accepts and sets up a passkey before anyone at the customer can sign in. **The organisation can't be moved to `active` until it has an Agency Administrator who has accepted** (22 October 2026), so an agency without users only exists while it's onboarding. Invitation acceptance, step-up and the first-administrator rule (D3, audit F-22) are untouched.
 
 A pending or rejected request can't look like a customer, because no organisation exists for it.
 

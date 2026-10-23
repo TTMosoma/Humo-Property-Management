@@ -241,7 +241,7 @@ public static class CustomerEndpoints
     // ---- The customer's own plan (Agency Administrators: they can ask, not enable) ----
 
     /// <summary>Only what the customer should see: no health, opportunities or other customers' prices.</summary>
-    private static async Task<IResult> Plan(Guid id, CurrentActor current, HumoDbContext db, CommercialRecords commercial, Messaging.MessageUsage usage, CancellationToken ct)
+    private static async Task<IResult> Plan(Guid id, CurrentActor current, HumoDbContext db, CommercialRecords commercial, Messaging.MessageUsage usage, TimeProvider clock, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         if (actor.OrganisationId != id || !actor.Can("Subscription.View")) return Problems.NotFound();
@@ -252,7 +252,7 @@ public static class CustomerEndpoints
         var requests = await db.UpgradeRequests.Where(r => r.OrganisationId == id).ToListAsync(ct);
         var a = rec.Agreement;
         return Results.Ok(new CustomerPlanDto(id.ToString(), plan.Subscription.PackageId, plan.Subscription.Status, plan.Subscription.RenewsAt, plan.Subscription.AddOns, plan.Entitlements,
-            manager ?? "Humo", requests.OrderByDescending(r => r.At).Select(ToDto).ToList(), CommercialRules.Storage(a, cat, NotMeasured(id), commercial.Today),
+            manager ?? "Humo", requests.OrderByDescending(r => r.At).Select(ToDto).ToList(), CommercialRules.Storage(a, cat, await MeasuredAsync(db, id, clock, ct), commercial.Today),
             new CustomerBillingDto(a.Billing.Preference, a.Billing.NextBillingDate, new RenewalDto(a.Renewal.On, a.Renewal.Fee)),
             CommercialRules.Messages(a, cat, commercial.Today, await usage.ThisMonthAsync(id, ct))));
     }
@@ -379,7 +379,16 @@ public static class CustomerEndpoints
     }
 
     /// <summary>Storage isn't measured until documents are stored by the API (docs/23 §5).</summary>
-    internal static StorageMeasurement NotMeasured(Guid organisationId) => new(organisationId.ToString(), "", "measured", 0, 0, 0);
+    /// <summary>
+    /// What the agency stores now: every uploaded file, as the upload check counts it (D20). Generated files
+    /// (statements, letters) aren't counted yet (docs/18 R-13).
+    /// </summary>
+    internal static async Task<StorageMeasurement> MeasuredAsync(HumoDbContext db, Guid organisationId, TimeProvider clock, CancellationToken ct)
+    {
+        var files = await db.UploadedFiles.AsNoTracking().Where(f => f.OrganisationId == organisationId).Select(f => new { f.ContentType, f.SizeBytes }).ToListAsync(ct);
+        var images = files.Where(f => f.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)).Sum(f => f.SizeBytes);
+        return new(organisationId.ToString(), clock.GetUtcNow().ToString("O"), "measured", files.Sum(f => f.SizeBytes) - images, images, 0);
+    }
 
     internal static UpgradeRequestDto ToDto(UpgradeRequest r) =>
         new(r.Id.ToString(), r.OrganisationId.ToString(), r.AddOn, r.Package, r.RequestedBy, r.At.ToString("O"), r.Note, r.Source, r.Status);

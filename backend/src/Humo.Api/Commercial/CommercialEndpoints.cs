@@ -192,7 +192,7 @@ public static partial class CommercialEndpoints
 
     // ---- A customer's agreement (Account Managers for their own customers, or System Administrators; D11) ----
 
-    private static async Task<IResult> Customer(Guid id, CurrentActor current, HumoDbContext db, CommercialRecords commercial, CancellationToken ct)
+    private static async Task<IResult> Customer(Guid id, CurrentActor current, HumoDbContext db, CommercialRecords commercial, TimeProvider clock, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         // Prices and contract values are for Humo staff with Platform.Revenue.View only.
@@ -217,7 +217,7 @@ public static partial class CommercialEndpoints
         var invoices = await db.Invoices.Where(i => i.OrganisationId == id).ToListAsync(ct);
         var payments = (await db.Payments.Where(p => p.OrganisationId == id).ToListAsync(ct)).ToLookup(p => p.InvoiceId);
         return Results.Ok(new CustomerCommercialViewDto(id.ToString(), org.ShortName, schemes, manager, a, today, CommercialRules.ChargesOn(a, today, cat, schemes), scheduled,
-            CommercialRules.Storage(a, cat, CustomerEndpoints.NotMeasured(id), today),
+            CommercialRules.Storage(a, cat, await CustomerEndpoints.MeasuredAsync(db, id, clock, ct), today),
             invoices.OrderByDescending(i => i.PeriodStart, StringComparer.Ordinal).Select(i => (object)BillingEndpoints.ToCustomerInvoice(i, payments[i.Id], today)).ToList()));
     }
 
