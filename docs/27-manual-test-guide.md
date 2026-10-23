@@ -6,7 +6,7 @@
 
 ## 0. Set up
 
-1. Start PostgreSQL and Mailpit, the API and the web app (or use the local `.bat` files, in their numbered order):
+1. Start PostgreSQL, Mailpit and ClamAV (uploads are refused without it), the API and the web app (or use the local `.bat` files, in their numbered order):
    ```bash
    docker compose -f backend/deploy/docker-compose.dev.yml up -d
    dotnet run --project backend/src/Humo.Api --launch-profile http

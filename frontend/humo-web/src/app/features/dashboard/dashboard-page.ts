@@ -128,7 +128,8 @@ export class DashboardPage {
       this.schemesDs.health(),
       this.schemesDs.changes(ids, since),
       this.can.maintenance() ? this.jobsDs.list(ids).pipe(map((p) => p.items)) : of([] as JobSummary[]),
-      this.can.payables() ? this.payablesDs.invoices(ids) : of([] as InvoiceView[]),
+      // Supplier payments come to the API in slice 3b: until then the dashboard shows the rest without them.
+      this.can.payables() ? this.payablesDs.invoices(ids).pipe(catchError(() => of([] as InvoiceView[]))) : of([] as InvoiceView[]),
     ]).pipe(map(([health, changes, jobs, invoices]) => ({ health: health.filter((h) => ids.includes(h.schemeId)), changes, jobs, invoices })));
   });
 

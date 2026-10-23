@@ -33,7 +33,7 @@ The rest of slice 1 follows port by port: organisations, schemes, units, people,
 - Node 24, for the frontend.
 
 **Steps:**
-1. **Start PostgreSQL and Mailpit.** Mailpit catches every email; nothing leaves your machine.
+1. **Start PostgreSQL, Mailpit and ClamAV.** Mailpit catches every email; nothing leaves your machine. ClamAV checks every upload, as in production: without it, uploads are refused. Its first start downloads virus signatures, which takes a few minutes.
    ```bash
    docker compose -f backend/deploy/docker-compose.dev.yml up -d
    ```

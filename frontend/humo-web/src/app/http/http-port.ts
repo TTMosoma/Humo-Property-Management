@@ -29,6 +29,8 @@ export function toApiErrorFromHttp(e: unknown): ApiError {
       return new ApiError('not-found', title);
     case e.status === 409 || e.status === 412:
       return new ApiError('conflict', title);
+    case e.status === 503 && !!body.title:
+      return new ApiError('unavailable', title);
     case e.status === 0:
       return new ApiError('network', 'Humo can’t be reached');
     default:
