@@ -1,6 +1,6 @@
 import { Observable } from 'rxjs';
 import { TrustAccount } from '../models/account';
-import { AgencyDetails, AgencySettings, BillingSettings, NotificationRule, PersonalPreferences, SchemeTrustAccount } from '../models/settings';
+import { AgencyDetails, AgencySettings, BillingSettings, NewTrusteePermission, NotificationRule, PersonalPreferences, SchemeAuthority, SchemeTrustAccount } from '../models/settings';
 import { ComplianceProfile } from '../models/compliance';
 import { ReportDef, ReportId, ReportParams, ReportResult } from '../models/report';
 
@@ -12,6 +12,9 @@ import { ReportDef, ReportId, ReportParams, ReportResult } from '../models/repor
  *   PUT   /settings/agency/notifications           Notifications.Configure
  *   GET   /settings/trust-accounts?schemeIds=…
  *   PUT   /settings/trust-accounts/{schemeId}      Organisation.Manage + step-up (bank details)
+ *   GET   /trustee-permissions                     Organisation.Manage (D24)
+ *   POST  /trustee-permissions                     Organisation.Manage + step-up, multipart with the PDF
+ *   POST  /trustee-permissions/{id}/withdraw       Organisation.Manage
  *   PUT   /compliance/profiles/{schemeId}          Compliance.Manage (financial year-end, lifts)
  *   GET   /me/preferences   PUT /me/preferences
  */
@@ -21,6 +24,11 @@ export abstract class SettingsDataSource {
   abstract updateBilling(billing: BillingSettings, expectedVersion?: number): Observable<void>;
   abstract updateNotifications(rules: NotificationRule[], expectedVersion?: number): Observable<void>;
   abstract trustAccounts(schemeIds: string[]): Observable<SchemeTrustAccount[]>;
+  /** D24: each scheme's trustees on Humo and the trustees' permission to approve alone. */
+  abstract trusteePermissions(): Observable<SchemeAuthority[]>;
+  /** Uploads the trustees' signed permission (PDF). Needs a fresh passkey. */
+  abstract addTrusteePermission(input: NewTrusteePermission, file?: File): Observable<string>;
+  abstract withdrawTrusteePermission(id: string, reason: string): Observable<void>;
   abstract updateTrustAccount(schemeId: string, account: TrustAccount): Observable<void>;
   abstract updateComplianceProfile(profile: ComplianceProfile): Observable<void>;
   abstract preferences(): Observable<PersonalPreferences>;

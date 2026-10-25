@@ -71,6 +71,43 @@ export class ApprovalCard {
     this.decide('approved');
   }
 
+  /** D24: under the trustees' permission, always with a passkey; it takes effect after the 24-hour cooling-off. */
+  protected approveAlone(): void {
+    const item = this.item();
+    this.busy.set(true);
+    this.stepUp
+      .guard({ action: 'approve-large-amount', detail: `Approve ${item.ref} alone under the trustees’ permission — ${item.title}` }, () =>
+        this.attention.decide(item.id, 'approved', undefined, true),
+      )
+      .subscribe({
+        complete: () => this.busy.set(false),
+        next: () => {
+          this.busy.set(false);
+          this.feedback.success(`Approved ${item.ref} alone. It takes effect in 24 hours, and the trustees are told.`);
+        },
+        error: () => {
+          this.busy.set(false);
+          this.feedback.error('The approval could not be saved. Nothing was changed — try again.');
+        },
+      });
+  }
+
+  protected stopHold(): void {
+    const item = this.item();
+    this.busy.set(true);
+    this.attention.cancelHold(item.id).subscribe({
+      complete: () => this.busy.set(false),
+      next: () => {
+        this.busy.set(false);
+        this.feedback.success(`Stopped ${item.ref}: it waits for a decision again.`);
+      },
+      error: () => {
+        this.busy.set(false);
+        this.feedback.error('It couldn’t be stopped. Try again.');
+      },
+    });
+  }
+
   protected confirmReject(): void {
     if (!this.comment().trim()) return;
     this.decide('rejected', this.comment().trim());

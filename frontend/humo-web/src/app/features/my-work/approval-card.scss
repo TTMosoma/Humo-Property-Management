@@ -239,6 +239,14 @@ h3 {
     background: var(--c-danger-soft);
   }
 
+  &.held {
+    align-items: center;
+    color: var(--c-warning);
+    background: var(--c-warning-soft);
+
+    span { flex: 1; }
+  }
+
   .comment {
     display: block;
     color: var(--c-text-2);

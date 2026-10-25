@@ -216,8 +216,12 @@ export class HttpWorkItemDataSource extends HttpPort implements WorkItemDataSour
   }
 
   /** Approving a large amount needs a fresh passkey (the agency's threshold); the API checks who may decide. */
-  decide(id: string, decision: 'approved' | 'rejected', _by: string, comment?: string): Observable<void> {
-    return this.command('POST', `/work-items/${id}/decision`, { decision, comment }, ['work-items', 'billing']);
+  decide(id: string, decision: 'approved' | 'rejected', _by: string, comment?: string, alone?: boolean): Observable<void> {
+    return this.command('POST', `/work-items/${id}/decision`, { decision, comment, alone }, ['work-items', 'billing']);
+  }
+
+  cancelHold(id: string): Observable<void> {
+    return this.command('POST', `/work-items/${id}/cancel-hold`, {}, ['work-items']);
   }
 }
 

@@ -11,5 +11,8 @@ export abstract class WorkItemDataSource {
   abstract complete(ids: string[], by: string): Observable<void>;
   abstract reopen(ids: string[]): Observable<void>;
   abstract assign(ids: string[], assigneeId: string | null): Observable<void>;
-  abstract decide(id: string, decision: 'approved' | 'rejected', by: string, comment?: string): Observable<void>;
+  /** `alone`: approve alone under the trustees' permission (D24), held for the 24-hour cooling-off. */
+  abstract decide(id: string, decision: 'approved' | 'rejected', by: string, comment?: string, alone?: boolean): Observable<void>;
+  /** Stops an approval in its cooling-off: it waits for a decision again. */
+  abstract cancelHold(id: string): Observable<void>;
 }

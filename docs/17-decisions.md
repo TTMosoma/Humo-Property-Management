@@ -39,6 +39,7 @@ Each entry records:
 | D21 | Advanced finance add-on for Essentials at R400 a month (proposed): levies, billing runs, payment allocation, debtors and credit control. Price to be confirmed | Commercial slice |
 | D22 | Confirms D21: the Advanced finance add-on is R400 a month, with levies included | Commercial slice |
 | D23 | Custom document templates are Enterprise only: the separate add-on is withdrawn; Enterprise includes one custom template (refines D12) | Documents, commercial |
+| D24 | Approving with one authoriser: a trustee on Humo approves; with none on Humo, the agency approves alone under the trustees’ written permission, with a passkey, after a 24-hour cooling-off | Approvals |
 
 ---
 
@@ -538,6 +539,29 @@ Approved on 18 October 2026 by Terry Mosoma (product owner). Options and reasons
 - The add-on is gone from the starting catalogue. At start-up, a stored catalogue drops it too, unless an agreement ever included it (then it stays, retired, so history keeps its name).
 - An agency on Essentials or Professional that wants its own design moves to Enterprise.
 - D12's open question on pricing is answered for the first template (included); further engagements are quoted.
+
+---
+
+## D24 — Approving with one authoriser (25 October 2026)
+
+**Status:** approved by the product owner (Terry Mosoma).
+
+**The problem:** some approvals can't be approved by the person who prepared them (segregation of duties: a billing run today, supplier payments with slice 3b). An agency with one authoriser was stuck.
+
+**Decision:**
+1. **A trustee first.** When the preparer is the agency's only member of staff who could approve it, the scheme's trustees with a Humo sign-in can approve it in My work.
+2. **Approving alone, only with no trustee on Humo.** The agency can't make trustees join Humo, and many boards have trustees who never will. So, where the scheme has no trustee on Humo:
+   - **The trustees' written permission**, once per scheme: a signed resolution, letter or email, uploaded as a PDF in Settings › Agency. It lasts up to 12 months, or until withdrawn. Adding it needs a passkey.
+   - **A passkey for every approval** made alone.
+   - **A 24-hour cooling-off.** The approval takes effect only after it. Until then any approver can stop it.
+   - **Notifications when it takes effect:** the approver, in the app, and by email and SMS as they chose for their work (WhatsApp once it's on Humo); and the scheme's trustees on record, by email (or SMS where they prefer it or have no email), with or without a Humo sign-in.
+   - **Flagged in the audit log**, both when approved alone and when it takes effect.
+3. **No mode to switch.** Humo doesn't switch it on. It applies only while the conditions hold: once a second authoriser joins (another approver at the agency, or a trustee on Humo), approving alone stops applying.
+
+**Consequences:**
+- API: `POST /work-items/{id}/decision` takes `alone`; `POST /work-items/{id}/cancel-hold`; `/trustee-permissions` (list, add with the PDF, withdraw). Approvals in their cooling-off have the status `cooling-off`; the minute loop releases them.
+- My work shows who can approve instead, "Verify and approve alone", and the cooling-off with "Stop it".
+- Supplier payments (slice 3b) use the same rules when they arrive.
 
 ---
 

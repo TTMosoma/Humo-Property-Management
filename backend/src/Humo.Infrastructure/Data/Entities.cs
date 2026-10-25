@@ -345,6 +345,28 @@ public sealed class DocumentLink
     public int Opens { get; set; }
 }
 
+/// <summary>
+/// The trustees' written permission for the agency to approve alone on a scheme with no trustee on Humo (D24):
+/// a signed resolution, letter or email as a PDF, valid for up to 12 months or until withdrawn.
+/// </summary>
+public sealed class TrusteePermission
+{
+    public Guid Id { get; set; }
+    public Guid OrganisationId { get; set; }
+    public Guid SchemeId { get; set; }
+    public Guid FileId { get; set; }
+    /// <summary>What it is and who signed it, e.g. "Resolution of 12 October 2026, signed by J Smith and T Dlamini".</summary>
+    public string Summary { get; set; } = "";
+    public DateOnly GrantedOn { get; set; }
+    public DateOnly Until { get; set; }
+    public Guid AddedById { get; set; }
+    public string AddedBy { get; set; } = "";
+    public DateTimeOffset AddedAt { get; set; }
+    public DateTimeOffset? WithdrawnAt { get; set; }
+    public string? WithdrawnBy { get; set; }
+    public string? WithdrawnReason { get; set; }
+}
+
 public sealed class SignInLink
 {
     public Guid Id { get; set; }
@@ -613,6 +635,14 @@ public sealed class WorkItemRow
     public Guid? DecidedById { get; set; }
     public DateTimeOffset? DecidedAt { get; set; }
     public string? Comment { get; set; }
+    /// <summary>
+    /// Approved alone under the trustees' permission (D24): the decision takes effect at this time, after the
+    /// cooling-off. Status is "cooling-off" until then.
+    /// </summary>
+    public DateTimeOffset? HeldUntil { get; set; }
+    public Guid? HeldById { get; set; }
+    public string? HeldBy { get; set; }
+    public Guid? HeldPermissionId { get; set; }
     public string Route { get; set; } = "";
     /// <summary>The record it's about, e.g. the billing run's id.</summary>
     public Guid? SourceId { get; set; }

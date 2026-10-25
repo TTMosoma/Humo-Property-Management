@@ -1,13 +1,15 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, map, switchMap } from 'rxjs';
+import { Observable, map, switchMap, throwError } from 'rxjs';
 import {
   AgencyDetails,
   AgencySettings,
+  ApiError,
   BillingSettings,
   ComplianceProfile,
   FieldErrors,
   NotificationRule,
   PersonalPreferences,
+  SchemeAuthority,
   SchemeTrustAccount,
   SettingsDataSource,
   TrustAccount,
@@ -87,6 +89,19 @@ export class InMemorySettingsDataSource extends SettingsDataSource {
         () => this.store.updateRules(this.orgId, rules),
       )
       .pipe(map(() => undefined));
+  }
+
+  /** D24 approving alone happens on the API only: the simulation has no trustees' permissions. */
+  trusteePermissions(): Observable<SchemeAuthority[]> {
+    return this.respond([]);
+  }
+
+  addTrusteePermission(): Observable<string> {
+    return throwError(() => new ApiError('server', 'The trustees’ permission is only on Humo’s API'));
+  }
+
+  withdrawTrusteePermission(): Observable<void> {
+    return throwError(() => new ApiError('server', 'The trustees’ permission is only on Humo’s API'));
   }
 
   trustAccounts(schemeIds: string[]): Observable<SchemeTrustAccount[]> {

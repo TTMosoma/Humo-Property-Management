@@ -9,9 +9,11 @@ import {
   DocumentTemplate,
   DocumentTemplateDataSource,
   DocumentType,
+  NewTrusteePermission,
   NotificationRule,
   OrganisationDocumentSettings,
   PersonalPreferences,
+  SchemeAuthority,
   SchemeTrustAccount,
   SettingsDataSource,
   TrustAccount,
@@ -45,6 +47,25 @@ export class HttpSettingsDataSource extends HttpPort implements SettingsDataSour
 
   trustAccounts(schemeIds: string[]): Observable<SchemeTrustAccount[]> {
     return this.live<SchemeTrustAccount[]>('/settings/trust-accounts', ['settings', 'schemes'], { schemeIds });
+  }
+
+  trusteePermissions(): Observable<SchemeAuthority[]> {
+    return this.live<SchemeAuthority[]>('/trustee-permissions', ['settings', 'schemes', 'work-items']);
+  }
+
+  addTrusteePermission(input: NewTrusteePermission, file?: File): Observable<string> {
+    if (!file) return throwError(() => new ApiError('validation', 'Attach the signed permission as a PDF.', { file: 'Attach the signed permission as a PDF.' }));
+    const form = new FormData();
+    form.append('schemeId', input.schemeId);
+    form.append('summary', input.summary);
+    form.append('grantedOn', input.grantedOn);
+    if (input.until) form.append('until', input.until);
+    form.append('file', file, file.name);
+    return this.createId('/trustee-permissions', form, ['settings', 'work-items']);
+  }
+
+  withdrawTrusteePermission(id: string, reason: string): Observable<void> {
+    return this.command('POST', `/trustee-permissions/${id}/withdraw`, { reason }, ['settings', 'work-items']);
   }
 
   updateTrustAccount(schemeId: string, account: TrustAccount): Observable<void> {

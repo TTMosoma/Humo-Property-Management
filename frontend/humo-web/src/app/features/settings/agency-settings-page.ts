@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { LARGE_APPROVAL_AMOUNT, OrganisationDataSource, SchemeTrustAccount, SettingsDataSource } from '../../domain';
+import { LARGE_APPROVAL_AMOUNT, OrganisationDataSource, SchemeAuthority, SchemeTrustAccount, SettingsDataSource, TRUSTEE_PERMISSION_MONTHS, TrusteePermission } from '../../domain';
 import { loadable } from '../../core/data/loadable';
 import { ScopeService } from '../../core/scope/scope.service';
 import { SessionService } from '../../core/session/session.service';
@@ -82,6 +82,49 @@ import { agencyDetailsForm, trustAccountForm } from './settings-forms';
           </ui-data-table>
         }
       </section>
+
+      @if (canManage()) {
+        <section class="surface panel">
+          <h2 class="section-title">Approving with one authoriser</h2>
+          <p class="muted">
+            When you’re the agency’s only approver, a scheme’s trustees on Humo approve what you prepared. On a scheme with no trustee on Humo, you can approve alone under the
+            trustees’ written permission: once per scheme, for up to {{ months }} months, with your passkey each time. An approval made alone takes effect after 24 hours, the
+            trustees on record are told, and it’s flagged in the audit log. Once a second authoriser joins, approving alone stops applying.
+          </p>
+          @if (authority.loading()) {
+            <ui-skeleton [count]="3" />
+          } @else {
+            <ui-data-table caption="Approving with one authoriser" [rows]="authority.value() ?? []" [columns]="authorityColumns" [rowId]="authorityId">
+              <ng-template uiCell="scheme" let-a>{{ a.schemeName }}</ng-template>
+              <ng-template uiCell="trustees" let-a>
+                @if (a.trusteesOnHumo) {
+                  {{ a.trusteesOnHumo }} trustee{{ a.trusteesOnHumo === 1 ? '' : 's' }} on Humo
+                } @else {
+                  <span class="muted">None on Humo</span>
+                }
+              </ng-template>
+              <ng-template uiCell="permission" let-a>
+                @if (a.permission; as p) {
+                  <div>{{ p.summary }}</div>
+                  <div class="muted">Until {{ p.until }} · added by {{ p.addedBy }}</div>
+                } @else if (!a.trusteesOnHumo) {
+                  <ui-status-pill label="No permission" tone="warning" />
+                }
+              </ng-template>
+              <ng-template uiCell="action" let-a>
+                @if (!a.trusteesOnHumo) {
+                  <button type="button" class="btn btn-ghost btn-sm" (click)="addPermission(a)">
+                    <ion-icon name="finger-print-outline" aria-hidden="true" /> {{ a.permission ? 'Renew' : 'Add' }}
+                  </button>
+                }
+                @if (a.permission; as p) {
+                  <button type="button" class="btn btn-ghost btn-sm" (click)="withdrawPermission(p)">Withdraw</button>
+                }
+              </ng-template>
+            </ui-data-table>
+          }
+        </section>
+      }
     }
   `,
   styles: `
@@ -140,6 +183,49 @@ export class AgencySettingsPage {
       submit: (f) => this.organisations.setApprovalStepUpAmount(org.id, Number(f['amount']), f['reason'], org.version),
       success: (_r, f) => `Approvals of ${this.rand(Number(f['amount']))} or more now need a passkey.`,
       failure: 'The threshold wasn’t changed',
+    });
+  }
+
+  protected readonly months = TRUSTEE_PERMISSION_MONTHS;
+  protected readonly authority = loadable(() => this.data.trusteePermissions());
+  protected readonly authorityColumns: ColumnDef<SchemeAuthority>[] = [
+    { key: 'scheme', header: 'Scheme', mobile: 'title', sort: (a) => a.schemeName },
+    { key: 'trustees', header: 'Trustees', width: '170px' },
+    { key: 'permission', header: 'Trustees’ permission' },
+    { key: 'action', header: '', align: 'end', width: '200px' },
+  ];
+  protected readonly authorityId = (a: SchemeAuthority) => a.schemeId;
+
+  /** D24: the trustees' signed permission (PDF), with a passkey. */
+  protected addPermission(a: SchemeAuthority): void {
+    openForm(this.drawer, {
+      eyebrow: `${a.schemeName} · Approving alone`,
+      title: a.permission ? 'Renew the trustees’ permission' : 'Add the trustees’ permission',
+      intro: `The trustees’ written permission for the agency to approve on ${a.schemeName}’s behalf while it has no trustee on Humo: a signed resolution, letter or email. It lasts up to ${TRUSTEE_PERMISSION_MONTHS} months from the day they signed it.`,
+      fields: [
+        { key: 'file', label: 'Signed permission (PDF)', type: 'file', required: true, accept: '.pdf' },
+        { key: 'summary', label: 'What it is and who signed it', type: 'text', required: true, placeholder: 'Resolution of 1 October 2026, signed by S Khumalo and L Mokoena' },
+        { key: 'grantedOn', label: 'Signed on', type: 'date', required: true, half: true },
+        { key: 'until', label: 'Valid until (optional)', type: 'date', half: true, help: `Leave empty for ${TRUSTEE_PERMISSION_MONTHS} months.` },
+      ],
+      submitLabel: 'Verify and save',
+      stepUp: { action: 'change-security', detail: `Let the agency approve alone on ${a.schemeName}` },
+      submit: (f, files) => this.data.addTrusteePermission({ schemeId: a.schemeId, summary: f['summary'], grantedOn: f['grantedOn'], until: f['until'] || undefined }, files['file']),
+      success: () => `Saved. On ${a.schemeName}, you can now approve alone; each approval takes effect after 24 hours.`,
+      failure: 'The permission wasn’t saved',
+    });
+  }
+
+  protected withdrawPermission(p: TrusteePermission): void {
+    openForm(this.drawer, {
+      eyebrow: 'Approving alone',
+      title: 'Withdraw the trustees’ permission',
+      intro: `${p.summary}. Approvals already in their cooling-off still take effect unless you stop them in My work.`,
+      fields: [REASON_FIELD],
+      submitLabel: 'Withdraw',
+      submit: (f) => this.data.withdrawTrusteePermission(p.id, f['reason']),
+      success: () => 'Withdrawn. Approving alone no longer applies on this scheme.',
+      failure: 'The permission wasn’t withdrawn',
     });
   }
 

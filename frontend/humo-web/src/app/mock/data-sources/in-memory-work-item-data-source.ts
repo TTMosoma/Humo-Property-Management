@@ -55,6 +55,11 @@ export class InMemoryWorkItemDataSource extends WorkItemDataSource {
     return this.mutate([id], spec, (w) => ({ ...w, status: decision, decidedBy: by, decidedAt: new Date().toISOString(), comment }));
   }
 
+  /** D24's cooling-off happens on the API only; the simulation never holds an approval, so this just reopens it. */
+  cancelHold(id: string): Observable<void> {
+    return this.mutate([id], this.spec([id], 'Stopped in its cooling-off'), (w) => ({ ...w, status: 'open', heldBy: undefined, heldUntil: undefined }));
+  }
+
   /** Applies a change only after the simulated request succeeds (so error mode leaves data untouched). */
   private mutate(ids: string[], spec: CommandSpec, change: (w: WorkItem) => WorkItem): Observable<void> {
     return this.gateway.command(spec, () => this.db.updateWork(ids, change)).pipe(map(() => undefined));

@@ -22,16 +22,17 @@ public sealed class Notices(HumoDbContext db, TimeProvider clock, IEmailSender e
     public void ToRole(string role, Guid? actorId, string title, string detail, string link, Guid? organisationId = null, string kind = "platform") =>
         Add(new Notice { Id = Guid.CreateVersion7(), Kind = kind, ToRole = role, ActorId = actorId, Title = title, Detail = detail, Link = link, OrganisationId = organisationId, At = clock.GetUtcNow() });
 
-    public void ToPerson(Guid identityId, Guid? actorId, string title, string detail, string link)
+    /// <param name="sendEmail">False when the person chose not to hear about their work by email: the notice is in the app only.</param>
+    public void ToPerson(Guid identityId, Guid? actorId, string title, string detail, string link, bool sendEmail = true)
     {
         if (identityId == actorId) return;
-        Add(new Notice { Id = Guid.CreateVersion7(), ToIdentityId = identityId, ActorId = actorId, Title = title, Detail = detail, Link = link, At = clock.GetUtcNow() });
+        Add(new Notice { Id = Guid.CreateVersion7(), ToIdentityId = identityId, ActorId = actorId, Title = title, Detail = detail, Link = link, At = clock.GetUtcNow() }, sendEmail);
     }
 
-    private void Add(Notice notice)
+    private void Add(Notice notice, bool sendEmail = true)
     {
         db.Notices.Add(notice);
-        queued.Add((notice, notice.ActorId));
+        if (sendEmail) queued.Add((notice, notice.ActorId));
     }
 
     /// <summary>The command didn't go through: nothing to email.</summary>
