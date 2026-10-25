@@ -137,6 +137,10 @@ namespace Humo.Infrastructure.Data.Migrations
                         .HasMaxLength(254)
                         .HasColumnType("character varying(254)");
 
+                    b.Property<string>("EmailSignature")
+                        .HasMaxLength(600)
+                        .HasColumnType("character varying(600)");
+
                     b.Property<string>("FfcNumber")
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
@@ -1872,6 +1876,10 @@ namespace Humo.Infrastructure.Data.Migrations
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)");
 
+                    b.Property<string>("EmailSignOff")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
                     b.Property<string>("QuietFrom")
                         .HasMaxLength(5)
                         .HasColumnType("character varying(5)");
@@ -2228,6 +2236,9 @@ namespace Humo.Infrastructure.Data.Migrations
 
                     b.Property<DateTimeOffset>("SendAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("SenderUserId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("SentBy")
                         .IsRequired()

@@ -77,6 +77,7 @@ Every port reports failures as `ApiError` (`domain/ports/api-error.ts`):
 | 401 / 403 | `policy`, a `PolicyError` with code `observe-only` / `forbidden` / `step-up-required` / `not-entitled` | `PolicyNotices` explains why (it becomes the HTTP interceptor). `step-up-required` is answered by verifying and resending (§1), not shown as an error. |
 | 404 | `not-found` | A "couldn't find" empty state |
 | 409 / 412 | `conflict` | "Someone else changed it — reload and try again" |
+| 503 with a `title` | `unavailable` | A service the API needs is down for now (the virus scanner, say): the API's own message is shown |
 | 0 / 5xx | `network` / `server` | Error state with **Try again** |
 
 Use ProblemDetails, with a `code` for policy errors and an `errors` map keyed by field name. The field names match the command's input (`title`, `location`, `unit`, `amount`, `completeBy`…).

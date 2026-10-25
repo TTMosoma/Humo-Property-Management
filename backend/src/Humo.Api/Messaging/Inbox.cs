@@ -210,6 +210,7 @@ public static class InboxEndpoints
                     var account = unit is null ? null : await db.LevyAccounts.FirstOrDefaultAsync(x => x.UnitId == unit.Id, ct);
                     var (message, now) = await comms.SendToAsync("reply", c.SchemeId, new Addressee(person, unit, account), channel!, $"Re: {c.Subject}", text,
                         $"{person.DisplayName} · {c.Ref}", by, new SentSourceDto($"Conversation {c.Ref}", $"/inbox?c={c.Id}"), ct);
+                    message.SenderUserId = actor.Human.Id;
                     inbox.Append(c, new ConversationMessage(Inbox.NewId(), clock.GetUtcNow().ToString("O"), "us", by, text, channel!, message.Id.ToString()));
                     c.Status = a.Close == true ? "closed" : "waiting";
                     await inbox.CloseWorkAsync(c, by, ct);

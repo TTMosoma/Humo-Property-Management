@@ -12,13 +12,15 @@ public sealed record AgencyDetailsDto(string Name, string ShortName, string Regi
     string Email, string Phone);
 public sealed record BillingSettingsDto(decimal InterestRate, int BillingDay, int DueDay, int StepDays, int AgmMonths);
 public sealed record NotificationRuleDto(string Event, bool Enabled, List<string> Channels);
-public sealed record AgencySettingsDto(string OrganisationId, int Version, AgencyDetailsDto Details, BillingSettingsDto Billing, List<NotificationRuleDto> Notifications);
+public sealed record AgencySettingsDto(string OrganisationId, int Version, AgencyDetailsDto Details, BillingSettingsDto Billing, List<NotificationRuleDto> Notifications, string EmailSignature);
+public sealed record EmailSignatureRequest(string? Signature, int? ExpectedVersion);
 public sealed record DetailsRequest(AgencyDetailsDto Details, int? ExpectedVersion);
 public sealed record BillingRequest(BillingSettingsDto Billing, int? ExpectedVersion);
 public sealed record NotificationsRequest(List<NotificationRuleDto> Rules, int? ExpectedVersion);
 public sealed record TrustAccountDto(string Bank, string AccountName, string AccountNumber, string BranchCode);
 public sealed record SchemeTrustAccountDto(SchemeDto Scheme, TrustAccountDto Account, bool Verified);
-public sealed record PreferencesDto(string IdentityId, int Version, List<string> Work, string Digest, string? QuietFrom, string? QuietTo);
+public sealed record PreferencesDto(string IdentityId, int Version, List<string> Work, string Digest, string? QuietFrom, string? QuietTo, string EmailSignOff);
+public sealed record SignOffRequest(string? SignOff, int? ExpectedVersion);
 public sealed record PreferencesRequest(List<string> Work, string Digest, string? QuietFrom, string? QuietTo, int? ExpectedVersion);
 
 /// <summary>
@@ -53,11 +55,13 @@ public static partial class SettingsEndpoints
         g.MapPut("/agency/details", UpdateDetails);
         g.MapPut("/agency/billing", UpdateBilling);
         g.MapPut("/agency/notifications", UpdateNotifications);
+        g.MapPut("/agency/email-signature", UpdateEmailSignature);
         g.MapGet("/trust-accounts", TrustAccounts);
         g.MapPut("/trust-accounts/{schemeId:guid}", UpdateTrustAccount);
         var me = api.MapGroup("/me").RequireAuthorization();
         me.MapGet("/preferences", Preferences);
         me.MapPut("/preferences", UpdatePreferences);
+        me.MapPut("/email-sign-off", UpdateSignOff);
     }
 
     private static async Task<IResult> Agency(CurrentActor current, HumoDbContext db, CancellationToken ct)
@@ -73,7 +77,8 @@ public static partial class SettingsEndpoints
         new AgencyDetailsDto(org.Name, org.ShortName, s?.RegistrationNumber ?? "", s?.VatNumber, s?.FfcNumber, s?.Address ?? "", org.City, org.Province, s?.Email ?? "", s?.Phone ?? ""),
         new BillingSettingsDto(org.InterestPercentPerMonth, s?.BillingDay ?? 25, s?.DueDay ?? 7, s?.StepDays ?? 14, s?.AgmMonths ?? 4),
         // No rules saved: the app fills in Humo's defaults from its event table.
-        s?.NotificationsJson is { } json ? JsonSerializer.Deserialize<List<NotificationRuleDto>>(json, Json.Options) ?? [] : []);
+        s?.NotificationsJson is { } json ? JsonSerializer.Deserialize<List<NotificationRuleDto>>(json, Json.Options) ?? [] : [],
+        s?.EmailSignature ?? "");
 
     private static async Task<IResult> UpdateDetails(DetailsRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, TimeProvider clock, CancellationToken ct)
     {
@@ -187,6 +192,27 @@ public static partial class SettingsEndpoints
         }, ct);
     }
 
+    /// <summary>The agency's email signature, under every email it sends to owners and tenants.</summary>
+    private static async Task<IResult> UpdateEmailSignature(EmailSignatureRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, TimeProvider clock, CancellationToken ct)
+    {
+        if (await current.GetAsync(ct) is not { OrganisationId: { } orgId }) return Problems.NotFound();
+        var row = await db.AgencySettings.FirstOrDefaultAsync(s => s.OrganisationId == orgId, ct);
+        return await commands.RunAsync(new CommandSpec("Changed the agency’s email signature", "Organisation.Manage")
+        {
+            Resource = "Organisation",
+            ResourceId = orgId.ToString(),
+            ExpectedVersion = body.ExpectedVersion,
+            CurrentVersion = row?.Version ?? 0,
+            Validate = () => Messaging.EmailSignatures.Check(body.Signature, Messaging.EmailSignatures.MaxSignature) is { } why ? new() { ["signature"] = why } : [],
+        }, actor =>
+        {
+            if (row is null) db.AgencySettings.Add(row = new AgencySetting { OrganisationId = orgId, Version = 0 });
+            row.EmailSignature = Messaging.EmailSignatures.Clean(body.Signature);
+            Touch(row, actor, clock);
+            return Task.FromResult(Results.NoContent());
+        }, ct);
+    }
+
     internal static Dictionary<string, string> CheckRules(List<NotificationRuleDto> rules)
     {
         if (rules.Select(r => r.Event).Distinct().Count() != rules.Count) return new() { ["rules"] = "Each notification appears once." };
@@ -265,7 +291,8 @@ public static partial class SettingsEndpoints
     }
 
     private static PreferencesDto ToDto(Guid userId, PersonalPreference? p) =>
-        new(userId.ToString(), p?.Version ?? 0, (p?.Work ?? "email,portal").Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(), p?.Digest ?? "daily", p?.QuietFrom, p?.QuietTo);
+        new(userId.ToString(), p?.Version ?? 0, (p?.Work ?? "email,portal").Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(), p?.Digest ?? "daily", p?.QuietFrom, p?.QuietTo,
+            p?.EmailSignOff ?? "");
 
     private static async Task<IResult> UpdatePreferences(PreferencesRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, CancellationToken ct)
     {
@@ -296,6 +323,28 @@ public static partial class SettingsEndpoints
             row.Digest = body.Digest;
             row.QuietFrom = string.IsNullOrWhiteSpace(body.QuietFrom) ? null : body.QuietFrom;
             row.QuietTo = string.IsNullOrWhiteSpace(body.QuietTo) ? null : body.QuietTo;
+            row.Version++;
+            return Task.FromResult(Results.NoContent());
+        }, ct);
+    }
+
+    /// <summary>Their own sign-off on the emails they send (messages and Inbox replies).</summary>
+    private static async Task<IResult> UpdateSignOff(SignOffRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, CancellationToken ct)
+    {
+        if (await current.GetAsync(ct) is not { } me) return Results.Unauthorized();
+        var row = await db.PersonalPreferences.FirstOrDefaultAsync(p => p.UserId == me.Human.Id, ct);
+        return await commands.RunAsync(new CommandSpec("Changed own email sign-off", "Security.ManageOwn")
+        {
+            Resource = "Identity",
+            ResourceId = me.Human.Id.ToString(),
+            StepUp = false,
+            ExpectedVersion = body.ExpectedVersion,
+            CurrentVersion = row?.Version ?? 0,
+            Validate = () => Messaging.EmailSignatures.Check(body.SignOff, Messaging.EmailSignatures.MaxSignOff) is { } why ? new() { ["signOff"] = why } : [],
+        }, actor =>
+        {
+            if (row is null) db.PersonalPreferences.Add(row = new PersonalPreference { UserId = actor.Human.Id, Version = 0 });
+            row.EmailSignOff = Messaging.EmailSignatures.Clean(body.SignOff);
             row.Version++;
             return Task.FromResult(Results.NoContent());
         }, ct);

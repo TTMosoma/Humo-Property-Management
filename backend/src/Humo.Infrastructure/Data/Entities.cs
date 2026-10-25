@@ -670,6 +670,8 @@ public sealed class AgencySetting
     public int StepDays { get; set; } = 14;
     public int AgmMonths { get; set; } = 4;
     /// <summary>The agency's notification rules as JSON; null: Humo's defaults.</summary>
+    /// <summary>The agency's email signature: under every email it sends to owners and tenants (plain text, a few lines).</summary>
+    public string? EmailSignature { get; set; }
     public string? NotificationsJson { get; set; }
     public string? UpdatedBy { get; set; }
     public DateTimeOffset? UpdatedAt { get; set; }
@@ -745,6 +747,8 @@ public sealed class PersonalPreference
     public string Work { get; set; } = "email,portal";
     /// <summary>none, daily or weekly.</summary>
     public string Digest { get; set; } = "daily";
+    /// <summary>Their own sign-off (name, role, direct line) on emails they send themselves: messages and Inbox replies.</summary>
+    public string? EmailSignOff { get; set; }
     public string? QuietFrom { get; set; }
     public string? QuietTo { get; set; }
 }
@@ -807,6 +811,8 @@ public sealed class SentMessageRow
     public string AudienceLabel { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; }
     public string SentBy { get; set; } = "";
+    /// <summary>The person who sent it, when a person did (messages, Inbox replies): their sign-off goes under the email.</summary>
+    public Guid? SenderUserId { get; set; }
     public DateTimeOffset SendAt { get; set; }
     public string? SourceLabel { get; set; }
     public string? SourceRoute { get; set; }

@@ -106,6 +106,41 @@ public sealed class CommunicationsTests : IDisposable
     }
 
     [Fact]
+    public async Task Emails_carry_the_agency_signature_and_the_senders_own_sign_off()
+    {
+        var s = await Scheme();
+        var tooLong = string.Join('\n', Enumerable.Range(1, 9).Select(i => $"Line {i}"));
+        Assert.True((await (await s.Admin.PutAsJsonAsync("/api/settings/agency/email-signature", new { signature = tooLong, expectedVersion = 0 })).FieldErrors()).TryGetProperty("signature", out _));
+        await NoContent(await s.Admin.PutAsJsonAsync("/api/settings/agency/email-signature", new { signature = "Acacia Property Management\n011 555 0100 · https://acacia.example\n\n", expectedVersion = 0 }));
+        Assert.Equal("Acacia Property Management\n011 555 0100 · https://acacia.example", (await Ok(await s.Admin.GetAsync("/api/settings/agency"))).GetProperty("emailSignature").GetString());
+        await NoContent(await s.Admin.PutAsJsonAsync("/api/me/email-sign-off", new { signOff = "Thandeka Nkosi\nAgency Administrator", expectedVersion = 0 }));
+        Assert.Equal("Thandeka Nkosi\nAgency Administrator", (await Ok(await s.Admin.GetAsync("/api/me/preferences"))).GetProperty("emailSignOff").GetString());
+        await NoContent(await s.Admin.PutAsJsonAsync("/api/documents/settings/branding", new
+        {
+            contact = new { email = "accounts@acacia.example", phone = "011 555 0100" },
+            branding = new { logo = new { kind = "wordmark", text = "ACACIA" }, palette = new { primary = "#0a3d62", accent = "#1d7a52" }, font = "outfit" },
+            statementDelivery = "link", expectedVersion = 0,
+        }));
+
+        // A message a person wrote: their sign-off, then the agency's signature under its wordmark.
+        await Id(await s.Admin.PostAsJsonAsync("/api/communications/messages", new { audience = Owners(s.Kc), subject = "Gate remotes", body = "Dear {person.name},\n\nNew gate remotes are ready.", channels = new[] { "email" } }));
+        await Settled();
+        var email = Assert.Single(api.Email.Sent);
+        Assert.EndsWith("New gate remotes are ready.\n\nThandeka Nkosi\nAgency Administrator\n\n-- \nACACIA\nAcacia Property Management\n011 555 0100 · https://acacia.example", email.Text);
+        Assert.Contains("color:#0a3d62\">ACACIA</div>", email.Html);
+        Assert.Contains("Thandeka Nkosi<br>Agency Administrator", email.Html);
+        Assert.Contains("<a href=\"https://acacia.example\"", email.Html);
+
+        // A notice speaks for the agency: its signature, no personal sign-off.
+        api.Email.Sent.Clear();
+        await Id(await s.Admin.PostAsJsonAsync("/api/notices", new { schemeId = s.Kc.ToString(), title = "Water off on Thursday", body = "The plumber replaces the main valve on Thursday.", audience = "owners", category = "maintenance", pinned = false }));
+        await HumoApiFactory.Until(() => !api.Email.Sent.IsEmpty);
+        var notice = Assert.Single(api.Email.Sent);
+        Assert.Contains("-- \nACACIA\nAcacia Property Management", notice.Text);
+        Assert.DoesNotContain("Thandeka Nkosi", notice.Text);
+    }
+
+    [Fact]
     public async Task A_scheduled_message_waits_for_its_time_and_can_be_cancelled_until_then()
     {
         var s = await Scheme();
