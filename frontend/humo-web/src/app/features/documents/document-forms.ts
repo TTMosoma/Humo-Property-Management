@@ -173,7 +173,7 @@ export function setUpCustomTemplateForm(drawer: DrawerService, data: PlatformTem
   openForm(drawer, {
     eyebrow: 'Document templates',
     title: 'Set up a custom template',
-    intro: 'A paid Enterprise service (D12): Humo designs the template from the customer’s brief, and publishes each version once they approve a proof. It starts from Humo’s Standard design. The customer must be entitled to custom templates.',
+    intro: 'For Humo Enterprise customers only, with one custom template included (D23): Humo designs it from the customer’s brief, and publishes each version once they approve a proof. It starts from Humo’s Standard design. More templates or a redesign are quoted separately.',
     fields: [
       { key: 'organisationId', label: 'Customer', type: 'select', required: true, options: customers.map((c) => ({ value: c.id, label: c.name })) },
       { key: 'documentType', label: 'Document', type: 'select', required: true, options: [{ value: 'levy-statement', label: DOCUMENT_TYPE_META['levy-statement'].label }] },

@@ -48,7 +48,7 @@ The Finance role can prepare **and** release supplier payments, and can **change
 
 ### More document templates
 - Professional: **2** templates. Enterprise: **4**, plus **1** custom template made from the agency's designs.
-- This changes D12 (custom templates are a paid Enterprise service). Record it as a new decision when scheduled.
+- D23 (25 Oct 2026) already settles the custom part: Enterprise only, one custom template included, the separate add-on withdrawn. The ready-made choices are still to build.
 
 ### Humo Mobile
 More than a security key:

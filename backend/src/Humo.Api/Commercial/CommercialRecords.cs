@@ -54,9 +54,10 @@ public sealed class CommercialRecords(HumoDbContext db, TimeProvider clock)
 
     /// <summary>
     /// Add-ons taken out of the catalogue altogether: "Additional Storage" was never sold and the 10, 50 and 100 GB packs
-    /// replace it. An add-on any agreement ever included stays (retired), so history keeps its name.
+    /// replace it; "Custom Document Templates" sold what Humo Enterprise already includes (D23). An add-on any agreement
+    /// ever included stays (retired), so history keeps its name.
     /// </summary>
-    private static readonly string[] Withdrawn = ["storage"];
+    private static readonly string[] Withdrawn = ["storage", "custom-document-templates"];
 
     /// <summary>
     /// Add-ons new in Humo's starting catalogue (e.g. the SMS bundle) join a catalogue that's already stored. Nothing

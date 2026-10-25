@@ -38,6 +38,7 @@ Each entry records:
 | D20 | Storage limits: every uploaded file counts (1 GB = 1024³ bytes); the API refuses an upload past the limit before storing it; warnings at 80% as for units and people | Commercial slice |
 | D21 | Advanced finance add-on for Essentials at R400 a month (proposed): levies, billing runs, payment allocation, debtors and credit control. Price to be confirmed | Commercial slice |
 | D22 | Confirms D21: the Advanced finance add-on is R400 a month, with levies included | Commercial slice |
+| D23 | Custom document templates are Enterprise only: the separate add-on is withdrawn; Enterprise includes one custom template (refines D12) | Documents, commercial |
 
 ---
 
@@ -521,6 +522,22 @@ Approved on 18 October 2026 by Terry Mosoma (product owner). Options and reasons
 **Consequences:**
 - The catalogue seed shows the price as approved (`demo-data/commercial/catalogue.json`, `advanced-finance`).
 - A database seeded before this change keeps the add-on's price as *proposed* until someone marks it approved in Platform › Pricing & add-ons. The catalogue keeps the history of who approved it and when.
+
+---
+
+## D23 — Custom document templates: Enterprise only (25 October 2026)
+
+**Status:** approved by the product owner (Terry Mosoma). Refines D12; D12's way of building and approving templates stands.
+
+**Decision:**
+- Custom document templates are **only for Humo Enterprise**. The **"Custom Document Templates" add-on is withdrawn**: it sold the same feature (`document-templates-custom`) that Enterprise already includes, so Essentials and Professional agencies could have bought it outside Enterprise.
+- **Enterprise includes one custom template**, designed and built by Humo from the agency's brief (D12). More templates, or redesigning one, are quoted per engagement.
+- Later versions add ready-made template choices by package (docs/28): 2 for Professional, 4 for Enterprise, plus Enterprise's custom one.
+
+**Consequences:**
+- The add-on is gone from the starting catalogue. At start-up, a stored catalogue drops it too, unless an agreement ever included it (then it stays, retired, so history keeps its name).
+- An agency on Essentials or Professional that wants its own design moves to Enterprise.
+- D12's open question on pricing is answered for the first template (included); further engagements are quoted.
 
 ---
 

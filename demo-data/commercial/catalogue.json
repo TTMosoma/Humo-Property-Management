@@ -460,29 +460,6 @@
         }
       ],
       "storageGb": 100
-    },
-    {
-      "id": "custom-document-templates",
-      "name": "Custom Document Templates",
-      "description": "Your organisation’s own document templates, built by Humo from your designs. Included in Enterprise.",
-      "kind": "feature",
-      "features": [
-        "document-templates-custom"
-      ],
-      "allowQuantity": false,
-      "status": "active",
-      "terms": [
-        {
-          "version": 1,
-          "effectiveFrom": "2026-10-19",
-          "price": null,
-          "frequency": "monthly",
-          "priceStatus": "awaiting",
-          "changedBy": "Terry Mosoma (product owner)",
-          "changedAt": "2026-10-19T18:00:00+02:00",
-          "reason": "A paid add-on for Essentials and Professional (doc 17, D15). Price not decided."
-        }
-      ]
     }
   ]
 }
