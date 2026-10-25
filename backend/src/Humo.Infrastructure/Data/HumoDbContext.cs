@@ -287,6 +287,7 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.Property(x => x.RegistrationNumber).HasMaxLength(20);
             e.Property(x => x.VatNumber).HasMaxLength(10);
             e.Property(x => x.FfcNumber).HasMaxLength(30);
+            e.Property(x => x.EmailSignature).HasMaxLength(600);
             e.Property(x => x.Address).HasMaxLength(200);
             e.Property(x => x.Email).HasMaxLength(254);
             e.Property(x => x.Phone).HasMaxLength(30);
@@ -341,6 +342,7 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.Property(x => x.Work).HasMaxLength(60);
             e.Property(x => x.Digest).HasMaxLength(10);
             e.Property(x => x.QuietFrom).HasMaxLength(5);
+            e.Property(x => x.EmailSignOff).HasMaxLength(300);
             e.Property(x => x.QuietTo).HasMaxLength(5);
             e.Property(x => x.Version).IsConcurrencyToken();
         });

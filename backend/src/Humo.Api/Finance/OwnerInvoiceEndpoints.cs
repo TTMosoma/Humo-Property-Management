@@ -141,7 +141,8 @@ public static class OwnerInvoiceEndpoints
     }
 
     /// <summary>Emails the invoice to the owner on record for the unit (the current owner's email address).</summary>
-    private static async Task<IResult> Send(Guid id, CurrentActor current, CommandRunner commands, HumoDbContext db, IEmailSender email, TimeProvider clock, CancellationToken ct)
+    private static async Task<IResult> Send(Guid id, CurrentActor current, CommandRunner commands, HumoDbContext db, IEmailSender email, Messaging.EmailSignatures signatures, TimeProvider clock,
+        CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         var invoice = await db.OwnerInvoices.FirstOrDefaultAsync(i => i.Id == id && i.OrganisationId == actor.OrganisationId, ct);
@@ -169,7 +170,7 @@ public static class OwnerInvoiceEndpoints
             Feature = Feature,
         }, async _ =>
         {
-            await email.SendAsync(new EmailMessage(owner.Email, $"Invoice {invoice.Number}", text), ct);
+            await email.SendAsync(await signatures.SignAsync(new EmailMessage(owner.Email, $"Invoice {invoice.Number}", text), invoice.OrganisationId, null, ct), ct);
             invoice.EmailedAt = clock.GetUtcNow();
             return Results.NoContent();
         }, ct);

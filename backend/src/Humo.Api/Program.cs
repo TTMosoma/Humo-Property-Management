@@ -53,6 +53,7 @@ builder.Services.AddScoped<Humo.Api.Work.IApprovalHandler, Humo.Api.Maintenance.
 builder.Services.AddScoped<Humo.Api.Work.IApprovalHandler, Humo.Api.Maintenance.InvoiceApprovalHandler>();
 builder.Services.AddScoped<Humo.Api.Messaging.MessageUsage>();
 builder.Services.AddScoped<Humo.Api.Work.SoleAuthority>();
+builder.Services.AddScoped<Humo.Api.Messaging.EmailSignatures>();
 builder.Services.AddScoped<Humo.Api.Messaging.Communications>();
 builder.Services.AddScoped<Humo.Api.Messaging.Inbox>();
 builder.Services.AddSingleton<Humo.Api.Finance.DeliveryQueue>();

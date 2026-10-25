@@ -1,12 +1,14 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { CHANNEL_LABELS, Channel, PersonalPreferences, ROLE_LABELS, SettingsDataSource, activeAssignments, describeFailure, fieldErrorsOf } from '../../domain';
+import { CHANNEL_LABELS, Channel, EMAIL_SIGNATURE_LINES, PersonalPreferences, ROLE_LABELS, SettingsDataSource, activeAssignments, describeFailure, fieldErrorsOf } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
 import { PageHeader } from '../../ui/page-header/page-header';
 import { ErrorState } from '../../ui/states/error-state';
 import { Skeleton } from '../../ui/states/skeleton';
+import { DrawerService } from '../../ui/drawer/drawer.service';
+import { openForm } from '../shared/form-drawer';
 
 const WORK_CHANNELS: Channel[] = ['email', 'push', 'sms'];
 
@@ -41,6 +43,18 @@ const WORK_CHANNELS: Channel[] = ['email', 'push', 'sms'];
     } @else if (prefs.failed()) {
       <div class="surface"><ui-error-state title="We couldn’t load your preferences" (retry)="prefs.retry()" /></div>
     } @else {
+      @if (canSign()) {
+        <section class="surface panel">
+          <div class="panel-head">
+            <h2 class="section-title">Email sign-off</h2>
+            <button type="button" class="btn btn-secondary btn-sm" (click)="editSignOff()">{{ prefs.value()?.emailSignOff ? 'Edit' : 'Add' }}</button>
+          </div>
+          <p class="muted">Under the messages and Inbox replies you send, above the agency’s signature. For example your name, role and direct line.</p>
+          @if (prefs.value()?.emailSignOff; as s) {
+            <pre class="signature">{{ s }}</pre>
+          }
+        </section>
+      }
       <section class="surface panel">
         <h2 class="section-title">Notifications</h2>
         <form class="form" (submit)="$event.preventDefault(); save()">
@@ -99,11 +113,15 @@ const WORK_CHANNELS: Channel[] = ['email', 'push', 'sms'];
     .field > span:first-child { font-weight: var(--fw-medium); color: var(--c-text-2); }
     .row { display: flex; flex-wrap: wrap; gap: var(--s-4); }
     .err { font-size: var(--fs-xs); color: var(--c-danger); }
+    .panel-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
+    .muted { color: var(--c-text-muted); font-size: var(--fs-sm); }
+    .signature { margin: var(--s-3) 0 0; padding: var(--s-3) var(--s-4); font: inherit; font-size: var(--fs-sm); white-space: pre-wrap; background: var(--c-surface-2); border-radius: var(--r); }
   `,
 })
 export class ProfilePage {
   private readonly data = inject(SettingsDataSource);
   private readonly feedback = inject(FeedbackService);
+  private readonly drawer = inject(DrawerService);
   protected readonly session = inject(SessionService);
 
   protected readonly me = this.session.identity;
@@ -116,6 +134,8 @@ export class ProfilePage {
   );
 
   protected readonly prefs = loadable(() => this.data.preferences());
+  /** Staff who write to owners and tenants: messages and Inbox replies. */
+  protected readonly canSign = computed(() => this.session.can('Messages.Reply') && !this.session.readOnly());
   protected readonly draft = signal<Omit<PersonalPreferences, 'identityId'>>({ version: 0, work: [], digest: 'daily' });
   protected readonly busy = signal(false);
   protected readonly errors = signal<Record<string, string>>({});
@@ -131,6 +151,22 @@ export class ProfilePage {
     effect(() => {
       const p = this.prefs.value();
       if (p) this.draft.set({ version: p.version, work: [...p.work], digest: p.digest, quietFrom: p.quietFrom, quietTo: p.quietTo });
+    });
+  }
+
+  protected editSignOff(): void {
+    const p = this.prefs.value()!;
+    const role = this.roles()[0]?.label ?? '';
+    openForm(this.drawer, {
+      eyebrow: 'My profile · Email',
+      title: 'Email sign-off',
+      intro: `Your name, role and direct line, under the messages and Inbox replies you send. Up to ${EMAIL_SIGNATURE_LINES} lines.`,
+      fields: [{ key: 'signOff', label: 'Sign-off', type: 'textarea', placeholder: [this.me()?.name, role].filter(Boolean).join('\n') }],
+      initial: { signOff: p.emailSignOff ?? '' },
+      submitLabel: 'Save',
+      submit: (f) => this.data.updateSignOff(f['signOff'] ?? '', p.version),
+      success: (_r, f) => ((f['signOff'] ?? '').trim() ? 'Your sign-off is saved.' : 'Your sign-off was removed.'),
+      failure: 'Your sign-off wasn’t saved',
     });
   }
 

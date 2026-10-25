@@ -6,6 +6,9 @@ import {
   ApiError,
   BillingSettings,
   ComplianceProfile,
+  EMAIL_SIGNATURE_LINES,
+  EMAIL_SIGNATURE_MAX,
+  EMAIL_SIGN_OFF_MAX,
   FieldErrors,
   NotificationRule,
   PersonalPreferences,
@@ -16,7 +19,7 @@ import {
 } from '../../domain';
 import { ComplianceStore } from '../db/compliance-store';
 import { MockDb } from '../db/mock-db';
-import { SettingsStore } from '../db/settings-store';
+import { SettingsStore, checkSignature, cleanSignature } from '../db/settings-store';
 import { mockResponder } from '../mock-latency';
 import { MockAuthSession } from '../server/mock-auth-session';
 import { MockGateway } from '../server/mock-gateway';
@@ -104,6 +107,25 @@ export class InMemorySettingsDataSource extends SettingsDataSource {
     return throwError(() => new ApiError('server', 'The trustees’ permission is only on Humo’s API'));
   }
 
+  updateEmailSignature(signature: string, expectedVersion?: number): Observable<void> {
+    return this.gateway
+      .command(
+        {
+          action: 'Changed the agency’s email signature',
+          resource: 'Organisation',
+          resourceId: this.orgId,
+          permission: 'Organisation.Manage',
+          version: { expected: expectedVersion, current: this.store.agency(this.orgId).version },
+          validate: () => {
+            const why = checkSignature(signature, EMAIL_SIGNATURE_MAX, EMAIL_SIGNATURE_LINES);
+            return why ? { signature: why } : null;
+          },
+        },
+        () => this.store.updateEmailSignature(this.orgId, signature),
+      )
+      .pipe(map(() => undefined));
+  }
+
   trustAccounts(schemeIds: string[]): Observable<SchemeTrustAccount[]> {
     return this.db.changes$.pipe(
       switchMap(() =>
@@ -158,7 +180,28 @@ export class InMemorySettingsDataSource extends SettingsDataSource {
     return this.db.changes$.pipe(switchMap(() => this.respond(this.store.preferencesOf(this.auth.current.identity.id))));
   }
 
-  updatePreferences(prefs: Omit<PersonalPreferences, 'identityId' | 'version'>, expectedVersion?: number): Observable<void> {
+  updateSignOff(signOff: string, expectedVersion?: number): Observable<void> {
+    const id = this.auth.current.identity.id;
+    return this.gateway
+      .command(
+        {
+          action: 'Changed own email sign-off',
+          resource: 'Identity',
+          resourceId: id,
+          permission: 'Security.ManageOwn',
+          stepUp: false,
+          version: { expected: expectedVersion, current: this.store.preferencesOf(id).version },
+          validate: () => {
+            const why = checkSignature(signOff, EMAIL_SIGN_OFF_MAX, EMAIL_SIGNATURE_LINES);
+            return why ? { signOff: why } : null;
+          },
+        },
+        () => this.store.updatePreferences(id, { emailSignOff: cleanSignature(signOff) }),
+      )
+      .pipe(map(() => undefined));
+  }
+
+  updatePreferences(prefs: Omit<PersonalPreferences, 'identityId' | 'version' | 'emailSignOff'>, expectedVersion?: number): Observable<void> {
     const id = this.auth.current.identity.id;
     return this.gateway
       .command(

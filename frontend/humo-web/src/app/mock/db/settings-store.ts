@@ -148,9 +148,16 @@ export class SettingsStore {
     this.commit();
   }
 
-  updatePreferences(identityId: string, prefs: Omit<PersonalPreferences, 'identityId' | 'version'>): void {
+  updatePreferences(identityId: string, prefs: Partial<Omit<PersonalPreferences, 'identityId' | 'version'>>): void {
     const current = this.preferencesOf(identityId);
-    this.preferences = [...this.preferences.filter((p) => p.identityId !== identityId), { ...prefs, identityId, version: current.version + 1 }];
+    this.preferences = [...this.preferences.filter((p) => p.identityId !== identityId), { ...current, ...prefs, identityId, version: current.version + 1 }];
+    this.commit();
+  }
+
+  updateEmailSignature(organisationId: string, signature: string): void {
+    const a = this.mutable(organisationId);
+    a.emailSignature = cleanSignature(signature);
+    a.version++;
     this.commit();
   }
 
@@ -188,4 +195,21 @@ export class SettingsStore {
     simulationStorage.save('settings', (): SettingsSnapshot => ({ agencies: this.agencies, preferences: this.preferences }));
     this.db.touch();
   }
+}
+
+/** Trimmed, with blank lines and trailing spaces gone (as the API keeps it). */
+export function cleanSignature(s: string): string {
+  return s
+    .replace(/\r/g, '')
+    .split('\n')
+    .map((l) => l.trimEnd())
+    .filter((l) => l.length > 0)
+    .join('\n');
+}
+
+/** Why a signature or sign-off can't be saved, or null (the API's rule). */
+export function checkSignature(s: string, max: number, lines: number): string | null {
+  if (s.length > max) return `Keep it under ${max} characters.`;
+  const clean = cleanSignature(s);
+  return clean && clean.split('\n').length > lines ? `Keep it to ${lines} lines or fewer.` : null;
 }

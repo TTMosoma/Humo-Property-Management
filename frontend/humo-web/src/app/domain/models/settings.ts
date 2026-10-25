@@ -100,7 +100,14 @@ export interface AgencySettings {
   details: AgencyDetails;
   billing: BillingSettings;
   notifications: NotificationRule[];
+  /** Under every email the agency sends to owners and tenants (a few plain lines). */
+  emailSignature?: string;
 }
+
+/** Email signatures: limits shared with the API. */
+export const EMAIL_SIGNATURE_MAX = 600;
+export const EMAIL_SIGN_OFF_MAX = 300;
+export const EMAIL_SIGNATURE_LINES = 8;
 
 /** Each scheme's trust bank account, as statements and letters show it. */
 export interface SchemeTrustAccount {
@@ -121,6 +128,8 @@ export interface PersonalPreferences {
   /** Quiet hours: no SMS or push between these times (24h "HH:MM"). */
   quietFrom?: string;
   quietTo?: string;
+  /** Their own sign-off (name, role, direct line) on emails they send themselves: messages and Inbox replies. */
+  emailSignOff?: string;
 }
 
 /**

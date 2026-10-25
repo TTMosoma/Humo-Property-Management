@@ -37,7 +37,7 @@ public sealed record StatementSnapshot(StatementViewDto View, TemplateDesign Des
 /// resident portal by default; the PDF attached when the agency chooses that.
 /// </summary>
 public sealed class StatementService(HumoDbContext db, Commercial.CommercialRecords commercial, DocumentPrinter printer, IEmailSender email, Messaging.SentRecords sent,
-    DocumentLinks links, IOptions<AppOptions> app, TimeProvider clock, ILogger<StatementService> logger)
+    DocumentLinks links, Messaging.EmailSignatures signatures, IOptions<AppOptions> app, TimeProvider clock, ILogger<StatementService> logger)
 {
     private DateOnly Today => DateOnly.FromDateTime(clock.GetUtcNow().ToOffset(TimeSpan.FromHours(2)).DateTime);
 
@@ -173,7 +173,7 @@ public sealed class StatementService(HumoDbContext db, Commercial.CommercialReco
                 }
                 try
                 {
-                    await email.SendAsync(Message(snapshot, holder.Email, attach ? pdf : null, secureLink), ct);
+                    await email.SendAsync(await signatures.SignAsync(Message(snapshot, holder.Email, attach ? pdf : null, secureLink), issued.OrganisationId, null, ct), ct);
                 }
                 catch (Exception e) when (e is not OperationCanceledException)
                 {

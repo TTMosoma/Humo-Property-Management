@@ -23,6 +23,8 @@ export abstract class SettingsDataSource {
   abstract updateDetails(details: AgencyDetails, expectedVersion?: number): Observable<void>;
   abstract updateBilling(billing: BillingSettings, expectedVersion?: number): Observable<void>;
   abstract updateNotifications(rules: NotificationRule[], expectedVersion?: number): Observable<void>;
+  /** The agency's email signature (Organisation.Manage). */
+  abstract updateEmailSignature(signature: string, expectedVersion?: number): Observable<void>;
   abstract trustAccounts(schemeIds: string[]): Observable<SchemeTrustAccount[]>;
   /** D24: each scheme's trustees on Humo and the trustees' permission to approve alone. */
   abstract trusteePermissions(): Observable<SchemeAuthority[]>;
@@ -32,7 +34,9 @@ export abstract class SettingsDataSource {
   abstract updateTrustAccount(schemeId: string, account: TrustAccount): Observable<void>;
   abstract updateComplianceProfile(profile: ComplianceProfile): Observable<void>;
   abstract preferences(): Observable<PersonalPreferences>;
-  abstract updatePreferences(prefs: Omit<PersonalPreferences, 'identityId' | 'version'>, expectedVersion?: number): Observable<void>;
+  abstract updatePreferences(prefs: Omit<PersonalPreferences, 'identityId' | 'version' | 'emailSignOff'>, expectedVersion?: number): Observable<void>;
+  /** The signed-in person's own email sign-off. */
+  abstract updateSignOff(signOff: string, expectedVersion?: number): Observable<void>;
 }
 
 /**

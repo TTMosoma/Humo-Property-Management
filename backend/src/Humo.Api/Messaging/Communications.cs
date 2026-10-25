@@ -38,7 +38,8 @@ public sealed record Addressee(Person Person, Unit? Unit, LevyAccount? Account);
 /// scheduled), message templates, and notices. Everything sent is one record in Sent, delivered in the
 /// background with each person's merge values, and its result is recorded as the mail server or SMS network reports it.
 /// </summary>
-public sealed partial class Communications(HumoDbContext db, SentRecords sent, IEmailSender email, SmsGateway sms, MessageUsage usage, TimeProvider clock, ILogger<Communications> logger)
+public sealed partial class Communications(HumoDbContext db, SentRecords sent, IEmailSender email, SmsGateway sms, MessageUsage usage, EmailSignatures signatures, TimeProvider clock,
+    ILogger<Communications> logger)
 {
     public const string Feature = "communications";
     public const string Permission = "Messages.Reply";
@@ -218,7 +219,10 @@ public sealed partial class Communications(HumoDbContext db, SentRecords sent, I
                     case "email":
                         try
                         {
-                            var providerId = await email.SendAsync(new EmailMessage(d.Address, Render(m.Subject, values), text), ct);
+                            // The agency's signature on everything; the sender's own sign-off on what a person wrote (messages, replies).
+                            var signed = await signatures.SignAsync(new EmailMessage(d.Address, Render(m.Subject, values), text), m.OrganisationId,
+                                m.Kind is "message" or "reply" ? m.SenderUserId : null, ct);
+                            var providerId = await email.SendAsync(signed, ct);
                             // Accepted by the mail server: queued until the provider reports it delivered or bounced (MailWebhookEndpoints).
                             sent.Mark(d, "queued", null, providerId);
                         }
@@ -492,6 +496,7 @@ public static class CommunicationsEndpoints
         }, async actor =>
         {
             var (message, now) = await comms.SendAsync("message", body.Audience! with { SchemeId = scheme!.Id.ToString() }, subject, text, channels, sendAt, templateId, actor.Human.Name, null, ct);
+            message.SenderUserId = actor.Human.Id;
             commands.AfterCommit(() =>
             {
                 queue.Enqueue(DeliveryQueue.Messages, now);

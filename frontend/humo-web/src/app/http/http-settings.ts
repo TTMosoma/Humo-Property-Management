@@ -45,6 +45,10 @@ export class HttpSettingsDataSource extends HttpPort implements SettingsDataSour
     return this.command('PUT', '/settings/agency/notifications', { rules, expectedVersion }, ['settings']);
   }
 
+  updateEmailSignature(signature: string, expectedVersion?: number): Observable<void> {
+    return this.command('PUT', '/settings/agency/email-signature', { signature, expectedVersion }, ['settings']);
+  }
+
   trustAccounts(schemeIds: string[]): Observable<SchemeTrustAccount[]> {
     return this.live<SchemeTrustAccount[]>('/settings/trust-accounts', ['settings', 'schemes'], { schemeIds });
   }
@@ -80,8 +84,12 @@ export class HttpSettingsDataSource extends HttpPort implements SettingsDataSour
     return this.live<PersonalPreferences>('/me/preferences', ['settings', 'session']);
   }
 
-  updatePreferences(prefs: Omit<PersonalPreferences, 'identityId' | 'version'>, expectedVersion?: number): Observable<void> {
+  updatePreferences(prefs: Omit<PersonalPreferences, 'identityId' | 'version' | 'emailSignOff'>, expectedVersion?: number): Observable<void> {
     return this.command('PUT', '/me/preferences', { ...prefs, expectedVersion }, ['settings']);
+  }
+
+  updateSignOff(signOff: string, expectedVersion?: number): Observable<void> {
+    return this.command('PUT', '/me/email-sign-off', { signOff, expectedVersion }, ['settings']);
   }
 }
 
