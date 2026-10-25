@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { LARGE_APPROVAL_AMOUNT, OrganisationDataSource, SchemeTrustAccount, SettingsDataSource } from '../../domain';
+import { EMAIL_SIGNATURE_LINES, LARGE_APPROVAL_AMOUNT, OrganisationDataSource, SchemeTrustAccount, SettingsDataSource } from '../../domain';
 import { loadable } from '../../core/data/loadable';
 import { ScopeService } from '../../core/scope/scope.service';
 import { SessionService } from '../../core/session/session.service';
@@ -61,6 +61,21 @@ import { agencyDetailsForm, trustAccountForm } from './settings-forms';
       </section>
 
       <section class="surface panel">
+        <div class="panel-head">
+          <h2 class="section-title">Email signature</h2>
+          @if (canManage()) {
+            <button type="button" class="btn btn-secondary btn-sm" (click)="editSignature()">{{ a.emailSignature ? 'Edit' : 'Add' }}</button>
+          }
+        </div>
+        <p class="muted">Under every email to owners and tenants: messages, notices, statements, letters and invoices, below your wordmark from Documents & templates. Staff add their own sign-off in their profile.</p>
+        @if (a.emailSignature) {
+          <pre class="signature">{{ a.emailSignature }}</pre>
+        } @else {
+          <p class="muted">No signature yet.</p>
+        }
+      </section>
+
+      <section class="surface panel">
         <h2 class="section-title">Trust accounts</h2>
         <p class="muted">Each scheme’s levies are paid into its own trust account. Statements and collection letters show these details. Changing one needs a fresh passkey or Humo Mobile approval and stays unverified until the bank’s letter is on file.</p>
         @if (accounts.loading()) {
@@ -89,6 +104,7 @@ import { agencyDetailsForm, trustAccountForm } from './settings-forms';
     .panel { padding: var(--s-4) var(--s-5); }
     .panel-head { display: flex; align-items: center; justify-content: space-between; }
     .section-title { margin: 0 0 var(--s-2); font-size: var(--fs-md); }
+    .signature { margin: var(--s-3) 0 0; padding: var(--s-3) var(--s-4); font: inherit; font-size: var(--fs-sm); white-space: pre-wrap; background: var(--c-surface-2); border-radius: var(--r); }
     .facts { display: grid; grid-template-columns: 200px 1fr; gap: var(--s-2) var(--s-4); margin: var(--s-2) 0 var(--s-3); font-size: var(--fs-sm); }
     .facts dt { color: var(--c-text-muted); }
     .facts dd { margin: 0; }
@@ -140,6 +156,21 @@ export class AgencySettingsPage {
       submit: (f) => this.organisations.setApprovalStepUpAmount(org.id, Number(f['amount']), f['reason'], org.version),
       success: (_r, f) => `Approvals of ${this.rand(Number(f['amount']))} or more now need a passkey.`,
       failure: 'The threshold wasn’t changed',
+    });
+  }
+
+  protected editSignature(): void {
+    const a = this.agency.value()!;
+    openForm(this.drawer, {
+      eyebrow: 'Agency · Email',
+      title: 'Email signature',
+      intro: `A few lines under every email to owners and tenants, for example your trading name, phone, website and registration numbers. Up to ${EMAIL_SIGNATURE_LINES} lines.`,
+      fields: [{ key: 'signature', label: 'Signature', type: 'textarea', placeholder: `${a.details.shortName}\n${a.details.phone || 'Phone'} · ${a.details.email || 'email'}` }],
+      initial: { signature: a.emailSignature ?? '' },
+      submitLabel: 'Save',
+      submit: (f) => this.data.updateEmailSignature(f['signature'] ?? '', a.version),
+      success: (_r, f) => ((f['signature'] ?? '').trim() ? 'Emails now carry the new signature.' : 'The signature was removed.'),
+      failure: 'The signature wasn’t saved',
     });
   }
 

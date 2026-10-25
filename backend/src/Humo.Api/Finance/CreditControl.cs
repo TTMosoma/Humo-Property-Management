@@ -32,7 +32,7 @@ public sealed record LetterSnapshot(CollectionViewDto View, CollectionStep Step,
 /// prints it). A letter of demand needs the trustees' approval in My work; every active case has one follow-up Task.
 /// </summary>
 public sealed class CreditControl(HumoDbContext db, Commercial.CommercialRecords commercial, DocumentPrinter printer, IEmailSender email, SmsGateway sms, Messaging.SentRecords sent,
-    Messaging.MessageUsage usage,
+    Messaging.MessageUsage usage, Messaging.EmailSignatures signatures,
     TimeProvider clock, ILogger<CreditControl> logger) : IApprovalHandler
 {
     public const string Feature = "credit-control";
@@ -369,7 +369,7 @@ public sealed class CreditControl(HumoDbContext db, Commercial.CommercialRecords
                 {
                     try
                     {
-                        var providerId = await email.SendAsync(Email(s, holder.Email, pdf), ct);
+                        var providerId = await email.SendAsync(await signatures.SignAsync(Email(s, holder.Email, pdf), letter.OrganisationId, null, ct), ct);
                         // Accepted by the mail server: queued until the provider reports it delivered or bounced (MailWebhookEndpoints).
                         if (delivery is not null) sent.Mark(delivery, "queued", null, providerId);
                     }
