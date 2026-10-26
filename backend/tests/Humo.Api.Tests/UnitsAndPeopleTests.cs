@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Humo.Domain.Access;
 using Humo.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -162,6 +163,74 @@ public sealed class UnitsAndPeopleTests : IDisposable
         var owners = await api.Db(db => db.Relationships.Where(r => r.UnitId == u42 && r.Type == "owner").OrderBy(r => r.Since).Select(r => new { r.PersonId, r.Until }).ToListAsync());
         Assert.Equal([new DateOnly(2026, 7, 31), new DateOnly(2026, 7, 31), (DateOnly?)null], owners.Select(o => o.Until));
         Assert.Equal(buyer, await api.Db(db => db.LevyAccounts.Where(a => a.UnitId == u42).Select(a => a.HolderPersonId).SingleAsync()));
+    }
+
+    [Fact]
+    public async Task Owners_and_tenants_are_ended_corrected_and_removed_from_the_unit()
+    {
+        var s = await Agency();
+        var u42 = await Id(await s.Admin.PostAsJsonAsync($"/api/schemes/{s.Kc}/units", Unit("42")));
+        var anele = await Id(await s.Admin.PostAsJsonAsync("/api/people", new { details = Person(), link = new { type = "owner", schemeId = s.Kc.ToString(), unitId = u42.ToString(), since = "2021-03-01" } }));
+        var zodwa = await Id(await s.Admin.PostAsJsonAsync("/api/people", new
+        {
+            details = Person("Zodwa", "Mthembu", "zodwa@mail.example"),
+            link = new { type = "owner", schemeId = s.Kc.ToString(), unitId = u42.ToString(), since = "2021-03-01", ownership = "joint" },
+        }));
+        var tenant = await Id(await s.Admin.PostAsJsonAsync("/api/people", new
+        {
+            details = Person("Lebo", "Dube", "lebo@mail.example"),
+            link = new { type = "tenant", schemeId = s.Kc.ToString(), unitId = u42.ToString(), since = "2026-02-01", until = "2027-01-31" },
+        }));
+        async Task<JsonElement> UnitView() => await (await s.Admin.GetAsync($"/api/units/{u42}")).Json();
+        string RoleId(JsonElement unit, Guid person) =>
+            unit.GetProperty("roles").EnumerateArray().First(r => r.GetProperty("person").GetProperty("id").GetString() == person.ToString()).GetProperty("relationship").GetProperty("id").GetString()!;
+
+        // The unit lists its roles with who and whether they're current.
+        var unit = await UnitView();
+        Assert.Equal(3, unit.GetProperty("roles").GetArrayLength());
+
+        // Ending: "Ended on" today means off the unit today; the joint owner then holds the account.
+        var today = DateOnly.FromDateTime(api.Clock.GetUtcNow().ToOffset(TimeSpan.FromHours(2)).DateTime).ToString("yyyy-MM-dd");
+        Assert.True((await (await s.Admin.PostAsJsonAsync($"/api/relationships/{RoleId(unit, anele)}/end", new { endedOn = "2021-03-01" })).FieldErrors()).TryGetProperty("endedOn", out _));
+        Assert.Equal(HttpStatusCode.NoContent, (await s.Admin.PostAsJsonAsync($"/api/relationships/{RoleId(unit, anele)}/end", new { endedOn = today })).StatusCode);
+        unit = await UnitView();
+        Assert.Equal(["Zodwa Mthembu"], unit.GetProperty("owners").EnumerateArray().Select(o => o.GetProperty("displayName").GetString()));
+        Assert.Equal(zodwa, await api.Db(db => db.LevyAccounts.Where(a => a.UnitId == u42).Select(a => a.HolderPersonId).SingleAsync()));
+        Assert.Equal("It has already ended.", (await (await s.Admin.PostAsJsonAsync($"/api/relationships/{RoleId(unit, anele)}/end", new { endedOn = today })).FieldErrors()).GetProperty("endedOn").GetString());
+
+        // Correcting: the tenant's lease runs a month longer.
+        Assert.Equal(HttpStatusCode.NoContent, (await s.Admin.PutAsJsonAsync($"/api/relationships/{RoleId(unit, tenant)}", new { since = "2026-02-01", until = "2027-02-28" })).StatusCode);
+        Assert.Equal(new DateOnly(2027, 2, 28), await api.Db(db => db.Relationships.Where(r => r.PersonId == tenant).Select(r => r.Until).SingleAsync()));
+        Assert.True((await (await s.Admin.PutAsJsonAsync($"/api/relationships/{RoleId(unit, zodwa)}", new { since = "2021-03-01", until = "2026-01-01" })).FieldErrors()).TryGetProperty("until", out _));
+
+        // Removing: added by mistake, nothing sent while on the unit.
+        Assert.Equal(HttpStatusCode.NoContent, (await s.Admin.PostAsJsonAsync($"/api/relationships/{RoleId(unit, tenant)}/delete", new { reason = "Wrong unit" })).StatusCode);
+        Assert.False(await api.Db(db => db.Relationships.AnyAsync(r => r.PersonId == tenant)));
+
+        // Once a statement has gone out, the owner is ended, not removed.
+        await api.Db(async db =>
+        {
+            var account = await db.LevyAccounts.SingleAsync(a => a.UnitId == u42);
+            db.IssuedStatements.Add(new IssuedStatement { Id = Guid.CreateVersion7(), AccountId = account.Id, SchemeId = s.Kc, OrganisationId = s.Org, Period = "2026-09", IssuedAt = api.Clock.GetUtcNow(), IssuedBy = "Test" });
+            return await db.SaveChangesAsync();
+        });
+        var refused = await s.Admin.PostAsJsonAsync($"/api/relationships/{RoleId(unit, zodwa)}/delete", new { reason = "Added twice" });
+        Assert.StartsWith("Statements, letters or invoices have gone out", (await refused.FieldErrors()).GetProperty("relationship").GetString());
+    }
+
+    [Fact]
+    public async Task Removing_the_only_owner_added_by_mistake_leaves_the_account_without_a_holder()
+    {
+        var s = await Agency();
+        var u29 = await Id(await s.Admin.PostAsJsonAsync($"/api/schemes/{s.Kc}/units", Unit("29")));
+        await Id(await s.Admin.PostAsJsonAsync("/api/people", new { details = Person(), link = new { type = "owner", schemeId = s.Kc.ToString(), unitId = u29.ToString(), since = "2026-10-19" } }));
+        var unit = await (await s.Admin.GetAsync($"/api/units/{u29}")).Json();
+        var role = unit.GetProperty("roles")[0].GetProperty("relationship").GetProperty("id").GetString();
+
+        // Ending on the day it started would mean it never was: that's a removal.
+        Assert.Contains("Remove it instead", (await (await s.Admin.PostAsJsonAsync($"/api/relationships/{role}/end", new { endedOn = "2026-10-19" })).FieldErrors()).GetProperty("endedOn").GetString());
+        Assert.Equal(HttpStatusCode.NoContent, (await s.Admin.PostAsJsonAsync($"/api/relationships/{role}/delete", new { reason = "Never owned this unit" })).StatusCode);
+        Assert.Null(await api.Db(db => db.LevyAccounts.Where(a => a.UnitId == u29).Select(a => a.HolderPersonId).SingleAsync()));
     }
 
     [Fact]

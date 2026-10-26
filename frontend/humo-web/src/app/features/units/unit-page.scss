@@ -226,3 +226,46 @@
 .invite {
   margin: calc(-1 * var(--s-1)) 0 var(--s-2) 52px;
 }
+
+.panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  align-items: center;
+  justify-content: space-between;
+
+  .section-title { margin-bottom: 0; }
+}
+
+.head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.role-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+  align-items: center;
+  margin: calc(-1 * var(--s-1)) 0 var(--s-2) calc(36px + var(--s-3));
+
+  .muted { margin-right: auto; }
+}
+
+.past {
+  margin-top: var(--s-3);
+  font-size: var(--fs-sm);
+
+  summary { cursor: pointer; color: var(--c-text-2); }
+
+  ul { margin: var(--s-2) 0 0; padding: 0; list-style: none; }
+
+  li {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2);
+    align-items: center;
+    padding: var(--s-1) 0;
+  }
+}

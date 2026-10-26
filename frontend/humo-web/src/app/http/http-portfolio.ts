@@ -170,8 +170,16 @@ export class HttpPersonDataSource extends HttpPort implements PersonDataSource {
     return this.command('POST', `/people/${personId}/relationships`, link, ['people', 'units']);
   }
 
-  endRelationship(relationshipId: string, until: string): Observable<void> {
-    return this.command('POST', `/relationships/${relationshipId}/end`, { until }, ['people', 'units']);
+  endRelationship(relationshipId: string, endedOn: string): Observable<void> {
+    return this.command('POST', `/relationships/${relationshipId}/end`, { endedOn }, ['people', 'units', 'accounts']);
+  }
+
+  updateRelationship(relationshipId: string, since: string, until?: string): Observable<void> {
+    return this.command('PUT', `/relationships/${relationshipId}`, { since, until: until || null }, ['people', 'units']);
+  }
+
+  removeRelationship(relationshipId: string, reason: string): Observable<void> {
+    return this.command('POST', `/relationships/${relationshipId}/delete`, { reason }, ['people', 'units', 'accounts']);
   }
 
   get(personId: string): Observable<PersonSummary | undefined> {

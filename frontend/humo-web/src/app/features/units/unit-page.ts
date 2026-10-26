@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { EMPTY, catchError, combineLatest, map, of, switchMap } from 'rxjs';
+import { EMPTY, catchError, combineLatest, map, of, switchMap, take } from 'rxjs';
 import {
   AccessDataSource,
   AccountDataSource,
@@ -12,6 +12,7 @@ import {
   TimelineDataSource,
   TimelineEvent,
   UnitDataSource,
+  UnitRole,
   UnitSummary,
   WorkItem,
   periodLabel,
@@ -37,6 +38,7 @@ import { LogNote } from '../shared/log-note';
 import { AttachmentsPanel } from '../library/attachments-panel';
 import { ScopeService } from '../../core/scope/scope.service';
 import { inviteResidentForm } from '../access/user-forms';
+import { addToUnitForm, editRelationshipForm, endRelationshipForm, newPersonForm, removeRelationshipForm } from '../people/person-forms';
 
 /**
  * Unit record (Record page pattern P1). The middle of the most common journey:
@@ -65,6 +67,47 @@ export class UnitPage {
 
   protected canEdit(s: UnitSummary): boolean {
     return this.sessionService.can('Units.Manage') && !this.sessionService.readOnly() && s.scheme.status !== 'closed' && s.scheme.status !== 'archived';
+  }
+
+  /** Owners and tenants are added, corrected, ended and removed from the unit (People.Manage), unless the scheme has left the agency. */
+  protected canManagePeople(s: UnitSummary): boolean {
+    return this.sessionService.can('People.Manage') && !this.sessionService.readOnly() && s.scheme.status !== 'closed' && s.scheme.status !== 'archived';
+  }
+
+  protected roleOf(s: UnitSummary, personId: string, type: 'owner' | 'tenant'): UnitRole | undefined {
+    return s.roles?.find((r) => r.current && r.person.id === personId && r.relationship.type === type);
+  }
+
+  protected pastRoles(s: UnitSummary): UnitRole[] {
+    return (s.roles ?? []).filter((r) => !r.current);
+  }
+
+  private where(s: UnitSummary): string {
+    return `Unit ${s.unit.number}, ${s.scheme.name}`;
+  }
+
+  /** Someone already in People: everyone in the schemes this person can see. */
+  protected addExisting(s: UnitSummary): void {
+    this.people
+      .list(this.scope.accessible().map((x) => x.id), { page: 1, pageSize: 1000 })
+      .pipe(take(1))
+      .subscribe((page) => addToUnitForm(this.drawer, this.people, s, page.items.map((x) => x.person).sort((a, b) => a.displayName.localeCompare(b.displayName))));
+  }
+
+  protected addNew(s: UnitSummary): void {
+    newPersonForm(this.drawer, this.people, this.units, this.scope.accessible(), this.router, s.scheme.id, s.unit.number);
+  }
+
+  protected endRole(s: UnitSummary, r: UnitRole): void {
+    endRelationshipForm(this.drawer, this.people, r.person, { relationship: r.relationship, scheme: s.scheme, unit: s.unit });
+  }
+
+  protected editRole(s: UnitSummary, r: UnitRole): void {
+    editRelationshipForm(this.drawer, this.people, r.person, r.relationship, this.where(s));
+  }
+
+  protected removeRole(s: UnitSummary, r: UnitRole): void {
+    removeRelationshipForm(this.drawer, this.people, r.person, r.relationship, this.where(s));
   }
 
   /** D3: owners and tenants without a Humo sign-in can be invited from here, for schemes the inviter covers. */
