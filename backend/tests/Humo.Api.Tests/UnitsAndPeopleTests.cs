@@ -119,6 +119,25 @@ public sealed class UnitsAndPeopleTests : IDisposable
     }
 
     [Fact]
+    public async Task One_owner_owns_several_units_and_holds_each_account()
+    {
+        var s = await Agency();
+        var u42 = await Id(await s.Admin.PostAsJsonAsync($"/api/schemes/{s.Kc}/units", Unit("42")));
+        var u43 = await Id(await s.Admin.PostAsJsonAsync($"/api/schemes/{s.Kc}/units", Unit("43")));
+        var anele = await Id(await s.Admin.PostAsJsonAsync("/api/people", new { details = Person(), link = new { type = "owner", schemeId = s.Kc.ToString(), unitId = u42.ToString(), since = "2021-03-01" } }));
+
+        var second = await s.Admin.PostAsJsonAsync($"/api/people/{anele}/relationships", new { type = "owner", schemeId = s.Kc.ToString(), unitId = u43.ToString(), since = "2024-07-01" });
+        Assert.Equal(HttpStatusCode.NoContent, second.StatusCode);
+        var person = await (await s.Admin.GetAsync($"/api/people/{anele}")).Json();
+        Assert.Equal(["KC-042", "KC-043"], person.GetProperty("relationships").EnumerateArray().Select(r => r.GetProperty("account").GetProperty("accountNo").GetString()).Order());
+        Assert.Equal(2, await api.Db(db => db.LevyAccounts.CountAsync(a => a.HolderPersonId == anele)));
+
+        // Linking the same unit twice is refused.
+        var again = await s.Admin.PostAsJsonAsync($"/api/people/{anele}/relationships", new { type = "owner", schemeId = s.Kc.ToString(), unitId = u43.ToString(), since = "2024-07-01" });
+        Assert.Equal("They already own this unit.", (await again.FieldErrors()).GetProperty("unitId").GetString());
+    }
+
+    [Fact]
     public async Task Contact_details_are_validated_and_emails_unique_in_the_directory()
     {
         var s = await Agency();
@@ -127,7 +146,9 @@ public sealed class UnitsAndPeopleTests : IDisposable
         await Id(await s.Admin.PostAsJsonAsync("/api/people", new { details = Person(), link }));
 
         var dup = await s.Admin.PostAsJsonAsync("/api/people", new { details = Person("Other", "Person", "ANELE@mail.example"), link });
-        Assert.Equal("Someone else in the directory already has this email.", (await dup.FieldErrors()).GetProperty("email").GetString());
+        // The message names the existing record and says how to give them another unit.
+        Assert.Equal("Anele Mthembu is already in People with this email. To give them another unit, open Anele Mthembu and use “Add a role”.",
+            (await dup.FieldErrors()).GetProperty("email").GetString());
         var none = await s.Admin.PostAsJsonAsync("/api/people", new { details = new { firstName = "No", lastName = "Contact", kind = "individual", email = "", phone = "", preferredChannel = "email" } });
         var errors = await none.FieldErrors();
         Assert.True(errors.TryGetProperty("phone", out _));

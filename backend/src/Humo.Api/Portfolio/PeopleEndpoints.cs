@@ -67,7 +67,7 @@ public static partial class PeopleEndpoints
         var d = body.Details;
         var link = body.Link;
         var linkScheme = link is not null && Guid.TryParse(link.SchemeId, out var linkSchemeId) ? await SchemeEndpoints.Visible(actor, db).FirstOrDefaultAsync(s => s.Id == linkSchemeId, ct) : null;
-        var emailTaken = await EmailTaken(db, actor.OrganisationId, d.Email, null, ct);
+        var emailTaken = await EmailOwner(db, actor.OrganisationId, d.Email, null, ct);
         var linkErrors = link is null ? [] : await CheckLink(db, reads, link, linkScheme, null, ct);
         var id = Guid.CreateVersion7();
 
@@ -95,7 +95,7 @@ public static partial class PeopleEndpoints
         var visible = await reads.People(await reads.ReadableSchemes(actor, null, ct), q => q.Where(p => p.Id == id), ct);
         var person = visible.Count == 0 ? null : await db.People.FirstAsync(p => p.Id == id, ct);
         if (person is null) return Problems.NotFound();
-        var emailTaken = await EmailTaken(db, person.OrganisationId, body.Email, id, ct);
+        var emailTaken = await EmailOwner(db, person.OrganisationId, body.Email, id, ct);
 
         return await commands.RunAsync(new CommandSpec($"Updated contact details for {body.FirstName?.Trim()} {body.LastName?.Trim()}", "People.Manage")
         {
@@ -158,7 +158,8 @@ public static partial class PeopleEndpoints
 
     // ---- Rules ----
 
-    private static Dictionary<string, string> CheckPerson(PersonDetailsRequest d, bool emailTaken)
+    /// <param name="emailTaken">Who in the directory already has this email, if anyone.</param>
+    private static Dictionary<string, string> CheckPerson(PersonDetailsRequest d, string? emailTaken)
     {
         var e = new Dictionary<string, string>();
         var email = (d.Email ?? "").Trim();
@@ -167,7 +168,8 @@ public static partial class PeopleEndpoints
         if (kind == "individual" && (d.FirstName ?? "").Trim().Length < 1) e["firstName"] = "Enter their first name.";
         if ((d.LastName ?? "").Trim().Length < 2) e["lastName"] = kind == "individual" ? "Enter their surname." : "Enter the registered name.";
         if (email.Length > 0 && !EmailPattern().IsMatch(email)) e["email"] = "That doesn’t look like an email address.";
-        else if (emailTaken) e["email"] = "Someone else in the directory already has this email.";
+        // One record per person, however many units they own: point to the existing one rather than refuse.
+        else if (emailTaken is not null) e["email"] = $"{emailTaken} is already in People with this email. To give them another unit, open {emailTaken} and use “Add a role”.";
         if (email.Length == 0 && (d.Phone ?? "").Trim().Length == 0) e["phone"] = "Give at least a phone number or an email address.";
         if (d.PreferredChannel == "email" && email.Length == 0) e["preferredChannel"] = "Email is preferred, but there’s no email address.";
         return e;
@@ -201,10 +203,12 @@ public static partial class PeopleEndpoints
         return e;
     }
 
-    private static async Task<bool> EmailTaken(HumoDbContext db, Guid? organisationId, string? email, Guid? except, CancellationToken ct)
+    private static async Task<string?> EmailOwner(HumoDbContext db, Guid? organisationId, string? email, Guid? except, CancellationToken ct)
     {
         var e = (email ?? "").Trim().ToLower();
-        return e.Length > 0 && organisationId is { } org && await db.People.AnyAsync(p => p.OrganisationId == org && p.Id != except && p.Email.ToLower() == e, ct);
+        return e.Length > 0 && organisationId is { } org
+            ? await db.People.Where(p => p.OrganisationId == org && p.Id != except && p.Email.ToLower() == e).Select(p => p.DisplayName).FirstOrDefaultAsync(ct)
+            : null;
     }
 
     private static void Apply(Person p, PersonDetailsRequest d)

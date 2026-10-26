@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { IonIcon } from '@ionic/angular/standalone';
-import { Observable, catchError, throwError } from 'rxjs';
+import { Observable, catchError, take, throwError } from 'rxjs';
 import { FieldErrors, PolicyError, StepUpRequest, describeFailure, fieldErrorsOf, todaySA } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { StepUpService } from '../../core/security/step-up.service';
@@ -232,10 +232,13 @@ export class FormDrawer {
     const stepUp = typeof this.spec.stepUp === 'function' ? this.spec.stepUp(values) : this.spec.stepUp;
     // Send first: the API validates before it asks for step-up, so field errors arrive without a
     // passkey prompt. A "step-up required" answer is a challenge: verify, then send again.
+    // One answer per submit. A submit that looks something up first (e.g. a unit by its number) reads it live, and a live
+    // read fetches again once the save changes the data: without take(1) that second read would save a second time.
     const request$ = run().pipe(
       catchError((e: unknown) =>
         stepUp && e instanceof PolicyError && e.code === 'step-up-required' ? this.stepUpService.guard(stepUp, run) : throwError(() => e),
       ),
+      take(1),
     );
     let sent = false;
     request$.subscribe({
