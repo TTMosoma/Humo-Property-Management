@@ -20,7 +20,11 @@ public sealed record AppointmentDto(string How, string? ResolutionRef);
 public sealed record RelationshipDto(string Id, string PersonId, string Type, string SchemeId, string? UnitId, string? Portfolio, string Since,
     string? Until, AppointmentDto? Appointment, string? EndReason);
 
-public sealed record UnitSummaryDto(UnitDto Unit, SchemeDto Scheme, IReadOnlyList<PersonDto> Owners, PersonDto? Tenant, AccountDto Account);
+/// <summary>An owner or tenant of a unit, now or before: the unit page lists, edits, ends and removes them.</summary>
+public sealed record UnitRoleDto(RelationshipDto Relationship, PersonDto Person, bool Current);
+
+public sealed record UnitSummaryDto(UnitDto Unit, SchemeDto Scheme, IReadOnlyList<PersonDto> Owners, PersonDto? Tenant, AccountDto Account,
+    IReadOnlyList<UnitRoleDto>? Roles = null);
 
 public sealed record RelationshipViewDto(RelationshipDto Relationship, SchemeDto Scheme, UnitDto? Unit, AccountDto? Account);
 
@@ -70,7 +74,10 @@ public sealed class PortfolioReads(HumoDbContext db, TimeProvider clock)
                 var current = rels.Where(r => r.UnitId == u.Id && IsCurrent(r)).ToList();
                 var owners = current.Where(r => r.Type == "owner").OrderBy(r => r.Since).Select(r => people[r.PersonId]).ToList();
                 var tenant = current.Where(r => r.Type == "tenant").Select(r => people[r.PersonId]).FirstOrDefault();
-                return new UnitSummaryDto(ToDto(u), schemeDtos[u.SchemeId.ToString()], owners, tenant, ToDto(accounts[u.Id]));
+                var roles = rels.Where(r => r.UnitId == u.Id && r.Type is "owner" or "tenant")
+                    .Select(r => new UnitRoleDto(ToDto(r), people[r.PersonId], IsCurrent(r)))
+                    .OrderByDescending(r => r.Current).ThenBy(r => r.Relationship.Type).ThenByDescending(r => r.Relationship.Since).ToList();
+                return new UnitSummaryDto(ToDto(u), schemeDtos[u.SchemeId.ToString()], owners, tenant, ToDto(accounts[u.Id]), roles);
             }).ToList();
     }
 

@@ -202,6 +202,9 @@ export class MockDb {
       owners: this.owners(unit.id),
       tenant: this.tenant(unit.id),
       account: this.accountByUnit.get(unit.id)!,
+      roles: (this.relsByUnit.get(unit.id) ?? [])
+        .filter((r) => r.type === 'owner' || r.type === 'tenant')
+        .map((r) => ({ relationship: r, person: this.persons.get(r.personId)!, current: this.current(r) })),
     };
   }
 
@@ -678,6 +681,23 @@ export class MockDb {
     if (rel) rel.until = until;
     this.touch();
     return rel;
+  }
+
+  /** Corrects a relationship's dates. */
+  updateRelationship(id: string, since: string, until?: string): void {
+    const rel = this.relationship(id);
+    if (rel) {
+      rel.since = since;
+      rel.until = until || undefined;
+    }
+    this.touch();
+  }
+
+  /** Removes a relationship added by mistake, from the person and the unit. */
+  removeRelationship(id: string): void {
+    for (const map of [this.relsByPerson, this.relsByUnit])
+      for (const [key, list] of map) map.set(key, list.filter((r) => r.id !== id));
+    this.touch();
   }
 
   relationship(id: string): Relationship | undefined {

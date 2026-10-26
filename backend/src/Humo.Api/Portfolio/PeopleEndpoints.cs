@@ -10,7 +10,12 @@ public sealed record PersonDetailsRequest(string FirstName, string LastName, str
 /// the current owners' ownership ends the day before, and the new owner holds the account).</param>
 public sealed record NewRelationshipRequest(string Type, string SchemeId, string? UnitId, string? Portfolio, string Since, string? Until, string? Ownership = null);
 public sealed record CreatePersonRequest(PersonDetailsRequest Details, NewRelationshipRequest? Link);
-public sealed record EndRelationshipRequest(string Until);
+/// <param name="EndedOn">The day it ended (the sale or move-out date): they're no longer on the unit from that day.
+/// <paramref name="Until"/> is the last day instead, kept for callers that send it.</param>
+public sealed record EndRelationshipRequest(string? Until, string? EndedOn = null);
+/// <param name="Until">A tenant's lease end (their last day), or an ended role's last day.</param>
+public sealed record UpdateRelationshipRequest(string Since, string? Until);
+public sealed record RemoveRelationshipRequest(string? Reason);
 
 /// <summary>
 /// The people directory and their relationships (doc 24 §6). Owner and tenant only:
@@ -30,6 +35,8 @@ public static partial class PeopleEndpoints
         g.MapPut("/people/{id:guid}", Update);
         g.MapPost("/people/{id:guid}/relationships", AddRelationship);
         g.MapPost("/relationships/{id:guid}/end", EndRelationship);
+        g.MapPut("/relationships/{id:guid}", UpdateRelationship);
+        g.MapPost("/relationships/{id:guid}/delete", RemoveRelationship);
     }
 
     private static async Task<IResult> List(string[]? schemeIds, int? page, int? pageSize, CurrentActor current, PortfolioReads reads, CancellationToken ct)
@@ -136,26 +143,117 @@ public static partial class PeopleEndpoints
         }, ct);
     }
 
-    private static async Task<IResult> EndRelationship(Guid id, EndRelationshipRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, CancellationToken ct)
+    private static async Task<IResult> EndRelationship(Guid id, EndRelationshipRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, PortfolioReads reads,
+        CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         var rel = await db.Relationships.FirstOrDefaultAsync(r => r.Id == id, ct);
         var scheme = rel is null ? null : await SchemeEndpoints.Visible(actor, db).FirstOrDefaultAsync(s => s.Id == rel.SchemeId, ct);
         if (rel is null || scheme is null) return Problems.NotFound();
         var person = await db.People.FirstAsync(p => p.Id == rel.PersonId, ct);
-        var until = ParseDate(body.Until);
+        // "Ended on" is the first day they're no longer on the unit, so ending today takes effect today.
+        var endedOn = ParseDate(body.EndedOn);
+        var until = endedOn?.AddDays(-1) ?? ParseDate(body.Until);
+        var ended = rel.Until is { } u && u < reads.Today;
 
-        return await commands.RunAsync(new CommandSpec($"Ended {rel.Type} of {person.DisplayName} ({body.Until?[..Math.Min(10, body.Until.Length)]})", "People.Manage")
+        return await commands.RunAsync(new CommandSpec($"Ended {rel.Type} of {person.DisplayName}: last day {until:d MMMM yyyy}", "People.Manage")
         {
             Resource = "Relationship",
             ResourceId = id.ToString(),
             SchemeId = rel.SchemeId,
-            Validate = () => until is null || until < rel.Since ? new() { ["until"] = "Choose a date on or after it started." } : [],
+            Validate = () => ended ? new() { ["endedOn"] = "It has already ended." }
+                : endedOn is { } e && e <= rel.Since ? new() { ["endedOn"] = $"It started on {rel.Since:d MMMM yyyy}: choose a later day. Added by mistake? Remove it instead." }
+                : until is null || until < rel.Since ? new() { [body.EndedOn is null ? "until" : "endedOn"] = "Choose a date after it started." } : [],
+        }, async _ =>
+        {
+            rel.Until = until;
+            await HandOverAccountAsync(db, reads, rel, ct);
+            return Results.NoContent();
+        }, ct);
+    }
+
+    /// <summary>Corrects an owner's or tenant's dates: when it started, and a tenant's lease end (or an ended role's last day).</summary>
+    private static async Task<IResult> UpdateRelationship(Guid id, UpdateRelationshipRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, CancellationToken ct)
+    {
+        if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
+        var rel = await db.Relationships.FirstOrDefaultAsync(r => r.Id == id, ct);
+        var scheme = rel is null ? null : await SchemeEndpoints.Visible(actor, db).FirstOrDefaultAsync(s => s.Id == rel.SchemeId, ct);
+        if (rel is null || scheme is null) return Problems.NotFound();
+        var person = await db.People.FirstAsync(p => p.Id == rel.PersonId, ct);
+        var since = ParseDate(body.Since);
+        var until = ParseDate(body.Until);
+
+        return await commands.RunAsync(new CommandSpec($"Corrected the dates of {person.DisplayName} as {rel.Type}: from {since:d MMMM yyyy}{(until is null ? "" : $" to {until:d MMMM yyyy}")}", "People.Manage")
+        {
+            Resource = "Relationship",
+            ResourceId = id.ToString(),
+            SchemeId = rel.SchemeId,
+            Validate = () => rel.Type is not ("owner" or "tenant") ? new() { ["type"] = "Trustees’ terms are kept on the scheme’s board." }
+                : since is null ? new() { ["since"] = "Choose the date it started." }
+                : until is { } x && x < since ? new() { ["until"] = "Choose a date on or after it started." }
+                : rel.Type == "owner" && rel.Until is null && until is not null ? new() { ["until"] = "To end an ownership, use End (sold or transferred)." } : [],
         }, _ =>
         {
+            rel.Since = since!.Value;
             rel.Until = until;
             return Task.FromResult(Results.NoContent());
         }, ct);
+    }
+
+    /// <summary>
+    /// Removes an owner or tenant added by mistake: never a role anything was sent under. Once a statement, letter or invoice
+    /// has gone out for the unit while they were on it, or they sign in to its portal, it's ended instead, so the history stays.
+    /// </summary>
+    private static async Task<IResult> RemoveRelationship(Guid id, RemoveRelationshipRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db,
+        PortfolioReads reads, CancellationToken ct)
+    {
+        if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
+        var rel = await db.Relationships.FirstOrDefaultAsync(r => r.Id == id, ct);
+        var scheme = rel is null ? null : await SchemeEndpoints.Visible(actor, db).FirstOrDefaultAsync(s => s.Id == rel.SchemeId, ct);
+        if (rel is null || scheme is null) return Problems.NotFound();
+        var person = await db.People.FirstAsync(p => p.Id == rel.PersonId, ct);
+        var history = rel.UnitId is { } unitId ? await RoleHistoryAsync(db, rel, unitId, ct) : null;
+
+        return await commands.RunAsync(new CommandSpec($"Removed {person.DisplayName} as {rel.Type}, added by mistake — {body.Reason?.Trim()}", "People.Manage")
+        {
+            Resource = "Relationship",
+            ResourceId = id.ToString(),
+            SchemeId = rel.SchemeId,
+            Validate = () => rel.Type is not ("owner" or "tenant") ? new() { ["type"] = "Trustees are removed on the scheme’s board." }
+                : history is not null ? new() { ["relationship"] = history }
+                : (body.Reason ?? "").Trim().Length < 5 ? new() { ["reason"] = PortfolioRules.ReasonMessage } : [],
+        }, async _ =>
+        {
+            db.Relationships.Remove(rel);
+            rel.Until = DateOnly.MinValue;
+            await HandOverAccountAsync(db, reads, rel, ct);
+            return Results.NoContent();
+        }, ct);
+    }
+
+    /// <summary>Why this role must be ended rather than removed, or null.</summary>
+    private static async Task<string?> RoleHistoryAsync(HumoDbContext db, Relationship rel, Guid unitId, CancellationToken ct)
+    {
+        var account = await db.LevyAccounts.AsNoTracking().Where(a => a.UnitId == unitId).Select(a => (Guid?)a.Id).FirstOrDefaultAsync(ct) ?? Guid.Empty;
+        var from = new DateTimeOffset(rel.Since.ToDateTime(TimeOnly.MinValue), TimeSpan.FromHours(2));
+        var sent = (await db.IssuedStatements.Where(s => s.AccountId == account).Select(s => s.IssuedAt).ToListAsync(ct)).Any(t => t >= from)
+            || (await db.IssuedLetters.Where(l => l.AccountId == account).Select(l => l.IssuedAt).ToListAsync(ct)).Any(t => t >= from)
+            || (await db.OwnerInvoices.Where(i => i.AccountId == account).Select(i => i.Date).ToListAsync(ct)).Any(d => d >= rel.Since);
+        if (sent) return "Statements, letters or invoices have gone out for this unit since they joined it, so the record stays. Use End instead (sold, transferred or moved out).";
+        var signsIn = await db.Users.Where(u => u.PersonId == rel.PersonId.ToString()).Select(u => u.Id).ToListAsync(ct);
+        if (signsIn.Count > 0 && await db.RoleAssignments.AnyAsync(a => signsIn.Contains(a.UserId) && a.UnitId == unitId.ToString() && a.Status == Humo.Domain.Access.AssignmentStatuses.Active, ct))
+            return "They sign in to this unit’s portal. Use End instead, which also ends their access.";
+        return null;
+    }
+
+    /// <summary>When the account holder stops owning the unit, another current owner holds the account.</summary>
+    private static async Task HandOverAccountAsync(HumoDbContext db, PortfolioReads reads, Relationship ended, CancellationToken ct)
+    {
+        if (ended.Type != "owner" || ended.UnitId is not { } unitId || (ended.Until is { } u && u >= reads.Today)) return;
+        var account = await db.LevyAccounts.FirstOrDefaultAsync(a => a.UnitId == unitId, ct);
+        if (account is null || account.HolderPersonId != ended.PersonId) return;
+        var next = (await db.Relationships.Where(r => r.UnitId == unitId && r.Type == "owner" && r.Id != ended.Id).ToListAsync(ct)).Where(reads.IsCurrent).OrderBy(r => r.Since).FirstOrDefault();
+        if (next is not null) account.HolderPersonId = next.PersonId;
     }
 
     // ---- Rules ----

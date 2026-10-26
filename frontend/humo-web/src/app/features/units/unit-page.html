@@ -76,7 +76,15 @@
 
       <!-- People -->
       <section class="surface panel">
-        <h2 class="section-title">People</h2>
+        <div class="panel-head">
+          <h2 class="section-title">People</h2>
+          @if (canManagePeople(s)) {
+            <div class="head-actions">
+              <button type="button" class="btn btn-secondary btn-sm" (click)="addExisting(s)"><ion-icon name="person-add-outline" aria-hidden="true" /> Add owner or tenant</button>
+              <button type="button" class="btn btn-ghost btn-sm" (click)="addNew(s)">New person</button>
+            </div>
+          }
+        </div>
         @for (o of s.owners; track o.id) {
           <a class="person" [routerLink]="links.person(o)">
             <span class="avatar">{{ o.initials }}</span>
@@ -89,6 +97,14 @@
             </span>
             <ion-icon name="chevron-forward-outline" aria-hidden="true" />
           </a>
+          @if (canManagePeople(s) && roleOf(s, o.id, 'owner'); as r) {
+            <div class="role-actions">
+              <span class="muted small">Owner since {{ formatDate(r.relationship.since) }}</span>
+              <button type="button" class="btn btn-ghost btn-sm" (click)="endRole(s, r)">End</button>
+              <button type="button" class="btn btn-ghost btn-sm" (click)="editRole(s, r)">Edit dates</button>
+              <button type="button" class="btn btn-ghost btn-sm" (click)="removeRole(s, r)">Remove</button>
+            </div>
+          }
           @if (canInvite(s, o)) {
             <button type="button" class="btn btn-ghost btn-sm invite" (click)="invite(s, o, 'owner')"><ion-icon name="mail-outline" aria-hidden="true" /> Invite {{ o.firstName || o.displayName }} to Humo PM</button>
           }
@@ -102,11 +118,37 @@
             </span>
             <ion-icon name="chevron-forward-outline" aria-hidden="true" />
           </a>
+          @if (canManagePeople(s) && roleOf(s, t.id, 'tenant'); as r) {
+            <div class="role-actions">
+              <span class="muted small">Tenant since {{ formatDate(r.relationship.since) }}{{ r.relationship.until ? ' · lease ends ' + formatDate(r.relationship.until) : '' }}</span>
+              <button type="button" class="btn btn-ghost btn-sm" (click)="endRole(s, r)">End</button>
+              <button type="button" class="btn btn-ghost btn-sm" (click)="editRole(s, r)">Edit dates</button>
+              <button type="button" class="btn btn-ghost btn-sm" (click)="removeRole(s, r)">Remove</button>
+            </div>
+          }
           @if (canInvite(s, t)) {
             <button type="button" class="btn btn-ghost btn-sm invite" (click)="invite(s, t, 'tenant')"><ion-icon name="mail-outline" aria-hidden="true" /> Invite {{ t.firstName || t.displayName }} to Humo PM</button>
           }
         } @else if (s.unit.occupancy === 'vacant') {
           <p class="muted small">The unit is currently vacant.</p>
+        }
+        @if (pastRoles(s); as past) {
+          @if (past.length) {
+            <details class="past">
+              <summary>Earlier owners and tenants ({{ past.length }})</summary>
+              <ul>
+                @for (r of past; track r.relationship.id) {
+                  <li>
+                    <a [routerLink]="links.person(r.person)">{{ r.person.displayName }}</a>
+                    <span class="muted small">{{ r.relationship.type === 'owner' ? 'Owner' : 'Tenant' }} · {{ formatDate(r.relationship.since) }} – {{ r.relationship.until ? formatDate(r.relationship.until) : '' }}</span>
+                    @if (canManagePeople(s)) {
+                      <button type="button" class="btn btn-ghost btn-sm" (click)="editRole(s, r)">Edit dates</button>
+                    }
+                  </li>
+                }
+              </ul>
+            </details>
+          }
         }
       </section>
 

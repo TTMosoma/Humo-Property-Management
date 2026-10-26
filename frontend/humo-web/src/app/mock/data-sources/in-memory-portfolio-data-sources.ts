@@ -213,7 +213,11 @@ export class InMemoryPersonDataSource extends PersonDataSource {
       .pipe(map(() => undefined));
   }
 
-  endRelationship(relationshipId: string, until: string): Observable<void> {
+  endRelationship(relationshipId: string, endedOn: string): Observable<void> {
+    // Off the unit from the day it ended: their last day is the day before (the API's rule).
+    const day = new Date(`${endedOn.slice(0, 10)}T12:00:00Z`);
+    day.setUTCDate(day.getUTCDate() - 1);
+    const until = day.toISOString().slice(0, 10);
     const r = this.db.relationship(relationshipId);
     return this.gateway
       .command(
@@ -225,11 +229,50 @@ export class InMemoryPersonDataSource extends PersonDataSource {
           permission: 'People.Manage',
           validate: (): FieldErrors | null => {
             if (!r) return { until: 'That relationship no longer exists.' };
-            if (!/^\d{4}-\d{2}-\d{2}/.test(until) || until.slice(0, 10) < r.since.slice(0, 10)) return { until: 'Choose a date on or after it started.' };
+            if (!/^\d{4}-\d{2}-\d{2}/.test(endedOn) || endedOn.slice(0, 10) <= r.since.slice(0, 10)) return { endedOn: 'Choose a day after it started. Added by mistake? Remove it instead.' };
             return null;
           },
         },
         () => void this.db.endRelationship(relationshipId, until),
+      )
+      .pipe(map(() => undefined));
+  }
+
+  updateRelationship(relationshipId: string, since: string, until?: string): Observable<void> {
+    const r = this.db.relationship(relationshipId);
+    return this.gateway
+      .command(
+        {
+          action: `Corrected the dates of ${r ? this.db.persons.get(r.personId)?.displayName : relationshipId} as ${r?.type ?? 'relationship'}`,
+          resource: 'Relationship',
+          resourceId: relationshipId,
+          schemeId: r?.schemeId,
+          permission: 'People.Manage',
+          validate: (): FieldErrors | null => {
+            if (!r) return { since: 'That relationship no longer exists.' };
+            if (until && until < since) return { until: 'Choose a date on or after it started.' };
+            return null;
+          },
+        },
+        () => this.db.updateRelationship(relationshipId, since, until),
+      )
+      .pipe(map(() => undefined));
+  }
+
+  /** The simulation has no issued statements to check, so it removes what it's asked to. */
+  removeRelationship(relationshipId: string, reason: string): Observable<void> {
+    const r = this.db.relationship(relationshipId);
+    return this.gateway
+      .command(
+        {
+          action: `Removed ${r ? this.db.persons.get(r.personId)?.displayName : relationshipId} as ${r?.type ?? 'relationship'}, added by mistake — ${reason}`,
+          resource: 'Relationship',
+          resourceId: relationshipId,
+          schemeId: r?.schemeId,
+          permission: 'People.Manage',
+          validate: (): FieldErrors | null => (!r ? { relationship: 'That relationship no longer exists.' } : reason.trim().length < 5 ? { reason: 'Say why, in a few words.' } : null),
+        },
+        () => this.db.removeRelationship(relationshipId),
       )
       .pipe(map(() => undefined));
   }

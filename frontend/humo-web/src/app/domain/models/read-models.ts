@@ -16,6 +16,14 @@ export interface UnitSummary {
   owners: Person[];
   tenant?: Person;
   account: Account;
+  /** Its owners and tenants, now and before, to edit, end or remove on the unit page. */
+  roles?: UnitRole[];
+}
+
+export interface UnitRole {
+  relationship: Relationship;
+  person: Person;
+  current: boolean;
 }
 
 export interface RelationshipView {

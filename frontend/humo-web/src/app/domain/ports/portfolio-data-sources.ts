@@ -59,7 +59,12 @@ export abstract class PersonDataSource {
   /** Owner or tenant of a unit, or trustee of a scheme. */
   abstract addRelationship(personId: string, link: NewRelationship): Observable<void>;
   /** Ends it on a date (sold, moved out, stepped down). The history stays. */
-  abstract endRelationship(relationshipId: string, until: string): Observable<void>;
+  /** `endedOn`: the sale, transfer or move-out date. They're off the unit from that day (their last day is the day before). */
+  abstract endRelationship(relationshipId: string, endedOn: string): Observable<void>;
+  /** Corrects an owner's or tenant's start date, or a tenant's lease end. */
+  abstract updateRelationship(relationshipId: string, since: string, until?: string): Observable<void>;
+  /** Removes an owner or tenant added by mistake: refused once anything was sent to them for the unit. */
+  abstract removeRelationship(relationshipId: string, reason: string): Observable<void>;
   abstract get(personId: string): Observable<PersonSummary | undefined>;
   abstract search(query: string, schemeIds: string[], limit?: number): Observable<PersonSummary[]>;
 }
