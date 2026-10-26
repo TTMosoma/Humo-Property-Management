@@ -111,9 +111,15 @@ public static class AuthEndpoints
         if (link is null || link.UsedAt is not null || link.ExpiresAt <= now) return Failure("link-expired", "The sign-in link was used already or is too old.");
         if (link.CodeAttempts >= MaxCodeAttempts) return Failure("link-expired", "Too many wrong codes. Ask for a new sign-in link.");
 
-        // The code shown on the requesting screen binds the link to that browser: a forwarded link can't be used without it.
+        // An invitation has no requesting screen, so no code: it went only to the invitee's own mailbox, works once, and
+        // accepting it leads straight to setting up a passkey. It only works while they're still invited.
+        var invitation = link.CodeHash.Length == 0;
+        if (invitation && await db.Users.Where(u => u.Id == link.UserId).Select(u => u.Status).FirstAsync(ct) != IdentityStatuses.Invited)
+            return Failure("link-expired", "This invitation was accepted already. Sign in with your passkey, or ask for a sign-in link.");
+
+        // A sign-in link: the code shown on the requesting screen binds it to that browser, so a forwarded link can't be used without it.
         var given = (body.Code ?? "").Trim();
-        if (!CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(CodeHash(link.Id, given)), Encoding.ASCII.GetBytes(link.CodeHash)))
+        if (!invitation && !CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(CodeHash(link.Id, given)), Encoding.ASCII.GetBytes(link.CodeHash)))
         {
             link.CodeAttempts++;
             var wrongUser = await db.Users.FirstAsync(u => u.Id == link.UserId, ct);

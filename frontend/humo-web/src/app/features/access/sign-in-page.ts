@@ -51,8 +51,8 @@ export class SignInPage {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
-  private readonly params = toSignal(this.route.queryParamMap.pipe(map((p) => ({ name: p.get('name'), returnUrl: p.get('returnUrl'), token: p.get('token') }))), {
-    initialValue: { name: null, returnUrl: null, token: null },
+  private readonly params = toSignal(this.route.queryParamMap.pipe(map((p) => ({ name: p.get('name'), returnUrl: p.get('returnUrl'), token: p.get('token'), invite: p.get('invite') === '1' }))), {
+    initialValue: { name: null, returnUrl: null, token: null, invite: false },
   });
   private readonly mode = (this.route.snapshot.data['mode'] as 'sign-in' | 'signed-out' | 'link' | undefined) ?? 'sign-in';
 
@@ -193,11 +193,18 @@ export class SignInPage {
 
   // ---------------------------------------------------------------- Helpers
 
-  /** A sign-in link opened: nothing is signed in until the code from the asking screen is entered here. */
+  /**
+   * A sign-in link opened: nothing is signed in until the code from the asking screen is entered here. An invitation
+   * (`invite=1`) has no asking screen and no code: it's accepted straight away, then the newcomer sets up a passkey.
+   */
   private openLink(token: string | null): void {
     this.pending?.unsubscribe();
     this.linkCode.set('');
     this.codeError.set('');
+    if (token && this.params().invite) {
+      this.redeem(token, '');
+      return;
+    }
     this.step.set(token ? 'enter-code' : 'link-failed');
   }
 
@@ -212,6 +219,10 @@ export class SignInPage {
       this.codeError.set('Enter the six-digit code shown on the screen where you asked for the link.');
       return;
     }
+    this.redeem(token, code);
+  }
+
+  private redeem(token: string, code: string): void {
     this.pending?.unsubscribe();
     this.step.set('redeeming');
     this.pending = this.sessions.completeSignInLink(token, code).subscribe({

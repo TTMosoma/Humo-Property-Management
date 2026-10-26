@@ -404,7 +404,8 @@ public static partial class AccessEndpoints
         var token = WebEncoders.Base64UrlEncode(RandomNumberGenerator.GetBytes(32));
         var now = clock.GetUtcNow();
         db.SignInLinks.Add(new SignInLink { Id = Guid.CreateVersion7(), UserId = user.Id, TokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token))), CreatedAt = now, ExpiresAt = now + InvitationLifetime });
-        var url = $"{app.PublicUrl.TrimEnd('/')}/sign-in/link?token={token}";
+        // No code: an invitation isn't asked for on a screen (AuthEndpoints.CompleteLink accepts it while they're invited).
+        var url = $"{app.PublicUrl.TrimEnd('/')}/sign-in/link?token={token}&invite=1";
         try
         {
             await email.SendAsync(new EmailMessage(user.Email!, $"You’re invited to {organisation} on Humo Property Management",
