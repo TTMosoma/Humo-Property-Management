@@ -15,3 +15,6 @@ TestResults/
 # Local uploaded files (backend Files:Root in development)
 storage/
 backend/src/Humo.Api/storage/
+
+# Local launchers (.bat): each developer keeps their own
+*.bat
