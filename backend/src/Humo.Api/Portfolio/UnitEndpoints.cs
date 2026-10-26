@@ -8,6 +8,8 @@ namespace Humo.Api.Portfolio;
 public sealed record UnitDetailsRequest(string Number, string? Block, string Description, decimal SizeM2, decimal ParticipationQuota, decimal MonthlyLevy, string Occupancy, int? ExpectedVersion);
 
 /// <summary>Units and their levy accounts (doc 24 §5). Reads limited to schemes the caller may read; changes by C4.</summary>
+public sealed record DeleteUnitRequest(string? Reason);
+
 public static partial class UnitEndpoints
 {
     private static readonly string[] Occupancies = ["owner-occupied", "tenanted", "vacant"];
@@ -21,6 +23,7 @@ public static partial class UnitEndpoints
         g.MapGet("/schemes/{schemeId:guid}/units/{number}", ByNumber);
         g.MapPost("/schemes/{schemeId:guid}/units", Create);
         g.MapPut("/units/{id:guid}", Update);
+        g.MapPost("/units/{id:guid}/delete", Delete);
     }
 
     private static async Task<IResult> List(string[]? schemeIds, int? page, int? pageSize, CurrentActor current, PortfolioReads reads, CancellationToken ct)
@@ -125,6 +128,59 @@ public static partial class UnitEndpoints
             unit.Version++;
             return Task.FromResult(Results.NoContent());
         }, ct);
+    }
+
+    /// <summary>
+    /// Deletes a unit added by mistake. Only a unit with no history: its records must otherwise stay for the audit, so a
+    /// sold unit changes owner and a scheme that leaves the agency is closed instead. Its owner and tenant links, payer
+    /// rules and empty levy account go with it.
+    /// </summary>
+    private static async Task<IResult> Delete(Guid id, DeleteUnitRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, CancellationToken ct)
+    {
+        if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
+        var unit = await db.Units.FirstOrDefaultAsync(u => u.Id == id, ct);
+        var scheme = unit is null ? null : await SchemeEndpoints.Visible(actor, db).FirstOrDefaultAsync(s => s.Id == unit.SchemeId, ct);
+        if (unit is null || scheme is null) return Problems.NotFound();
+        var history = await HistoryAsync(db, unit, ct);
+
+        return await commands.RunAsync(new CommandSpec($"Deleted unit {unit.Number} ({unit.AccountNo}) from {scheme.Name}, added by mistake — {body.Reason?.Trim()}", "Units.Manage")
+        {
+            Resource = "Unit",
+            ResourceId = id.ToString(),
+            SchemeId = unit.SchemeId,
+            Validate = () => history is not null ? new() { ["unit"] = history }
+                : (body.Reason ?? "").Trim().Length < 5 ? new() { ["reason"] = PortfolioRules.ReasonMessage } : [],
+        }, async _ =>
+        {
+            var account = await db.LevyAccounts.FirstOrDefaultAsync(a => a.UnitId == id, ct);
+            if (account is not null)
+            {
+                db.PayerRules.RemoveRange(await db.PayerRules.Where(r => r.AccountId == account.Id).ToListAsync(ct));
+                db.LevyAccounts.Remove(account);
+            }
+            db.Relationships.RemoveRange(await db.Relationships.Where(r => r.UnitId == id).ToListAsync(ct));
+            db.Units.Remove(unit);
+            return Results.NoContent();
+        }, ct);
+    }
+
+    /// <summary>Why the unit can't be deleted: anything that happened on it. Null when nothing has.</summary>
+    private static async Task<string?> HistoryAsync(HumoDbContext db, Unit unit, CancellationToken ct)
+    {
+        var account = await db.LevyAccounts.AsNoTracking().Where(a => a.UnitId == unit.Id).Select(a => (Guid?)a.Id).FirstOrDefaultAsync(ct);
+        var a = account ?? Guid.Empty;
+        var what = new List<string>();
+        if (await db.Ledger.AnyAsync(e => e.AccountId == a, ct) || await db.ReceiptAllocations.AnyAsync(r => r.AccountId == a, ct)) what.Add("charges or payments");
+        if (await db.IssuedStatements.AnyAsync(s => s.AccountId == a, ct)) what.Add("statements");
+        if (await db.IssuedLetters.AnyAsync(l => l.AccountId == a, ct) || await db.CollectionCases.AnyAsync(c => c.AccountId == a, ct)) what.Add("collection letters");
+        if (await db.OwnerInvoices.AnyAsync(i => i.AccountId == a, ct)) what.Add("invoices");
+        if (await db.MeterReadings.AnyAsync(m => m.UnitId == unit.Id, ct)) what.Add("meter readings");
+        if (await db.Jobs.AnyAsync(j => j.UnitId == unit.Id, ct)) what.Add("maintenance jobs");
+        if (await db.Conversations.AnyAsync(c => c.UnitId == unit.Id, ct)) what.Add("messages");
+        if (await db.LibraryDocuments.AnyAsync(d => d.RecordKind == "unit" && d.RecordId == unit.Id, ct)) what.Add("documents");
+        if (await db.RoleAssignments.AnyAsync(r => r.UnitId == unit.Id.ToString(), ct)) what.Add("a resident’s sign-in to the portal");
+        return what.Count == 0 ? null
+            : $"Unit {unit.Number} has {string.Join(", ", what)}, so its records stay. If it was sold, add the new owner (they replace the old one). If the scheme left the agency, close the scheme.";
     }
 
     private static Dictionary<string, string> Check(Scheme scheme, UnitDetailsRequest d)

@@ -53,7 +53,8 @@ public sealed class PackageLimits(HumoDbContext db, Commercial.CommercialRecords
     {
         if (await PackageAsync(organisationId, ct) is not { } package) return null;
         var terms = package.Terms;
-        var schemeIds = await db.Schemes.AsNoTracking().Where(s => s.OrganisationId == organisationId).Select(s => s.Id).ToListAsync(ct);
+        // A scheme that left the agency (closed or archived) no longer uses the allowance: its records stay, read-only.
+        var schemeIds = await db.Schemes.AsNoTracking().Where(s => s.OrganisationId == organisationId && s.Status != "closed" && s.Status != "archived").Select(s => s.Id).ToListAsync(ct);
         var units = await db.Units.AsNoTracking().CountAsync(u => schemeIds.Contains(u.SchemeId), ct) + extraUnits;
         var users = await db.Memberships.AsNoTracking().CountAsync(m => m.OrganisationId == organisationId && m.Status == MembershipStatuses.Active, ct) + extraUsers;
         var storedBytes = await StoredBytesAsync(organisationId, ct) + extraBytes;
@@ -114,6 +115,15 @@ public sealed class PackageLimits(HumoDbContext db, Commercial.CommercialRecords
         var usage = await UsageAsync(organisationId, ct);
         if (usage is null || usage.Units.Included is not { } limit || usage.Units.Used < limit) return null;
         return $"The {usage.Package} package includes {limit:N0} units, and you have {usage.Units.Used:N0}. Upgrade to add more.";
+    }
+
+    /// <summary>Why a closed scheme can't come back (its units would take the agency past its limit), or null when it can.</summary>
+    public async Task<string?> RefuseReopenAsync(Guid organisationId, Guid schemeId, CancellationToken ct)
+    {
+        var units = await db.Units.AsNoTracking().CountAsync(u => u.SchemeId == schemeId, ct);
+        var usage = await UsageAsync(organisationId, ct, extraUnits: units);
+        if (usage is null || usage.Units.Included is not { } limit || usage.Units.Used <= limit) return null;
+        return $"Reopening it brings back {units:N0} units: {usage.Units.Used:N0} in all, over the {limit:N0} the {usage.Package} package includes. Upgrade first.";
     }
 
     /// <summary>Why one more person can't be given a sign-in to this organisation, or null when they can.</summary>

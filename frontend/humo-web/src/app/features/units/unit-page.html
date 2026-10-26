@@ -21,6 +21,7 @@
     <ng-container recordActions>
       @if (canEdit(s)) {
         <button type="button" class="btn btn-secondary" (click)="editUnit(s)"><ion-icon name="create-outline" aria-hidden="true" /> Edit unit</button>
+        <button type="button" class="btn btn-ghost" (click)="deleteUnit(s)"><ion-icon name="trash-outline" aria-hidden="true" /> Delete unit</button>
       }
       @if (s.owners.length) {
         <a class="btn btn-primary" [routerLink]="links.account(s.scheme, s.unit)">

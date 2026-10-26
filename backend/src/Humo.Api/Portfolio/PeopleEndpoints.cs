@@ -6,7 +6,9 @@ using Microsoft.EntityFrameworkCore;
 namespace Humo.Api.Portfolio;
 
 public sealed record PersonDetailsRequest(string FirstName, string LastName, string Kind, string? Email, string? Phone, string PreferredChannel, string? PostalAddress, int? ExpectedVersion);
-public sealed record NewRelationshipRequest(string Type, string SchemeId, string? UnitId, string? Portfolio, string Since, string? Until);
+/// <param name="Ownership">When the unit already has an owner: "joint" (they own it together) or "replaces" (sold or transferred:
+/// the current owners' ownership ends the day before, and the new owner holds the account).</param>
+public sealed record NewRelationshipRequest(string Type, string SchemeId, string? UnitId, string? Portfolio, string Since, string? Until, string? Ownership = null);
 public sealed record CreatePersonRequest(PersonDetailsRequest Details, NewRelationshipRequest? Link);
 public sealed record EndRelationshipRequest(string Until);
 
@@ -196,6 +198,17 @@ public static partial class PeopleEndpoints
             if (unit is null || unit.SchemeId != scheme.Id) e["unitId"] = "Choose the unit.";
             else if (l.Type == "tenant" && current.Count > 0) e["unitId"] = $"Unit {unit.Number} already has a tenant. End that lease first.";
             else if (l.Type == "owner" && personId is { } pid && current.Any(r => r.PersonId == pid)) e["unitId"] = "They already own this unit.";
+            else if (l.Type == "owner" && current.Count > 0)
+            {
+                // Someone else owns it: ask, never assume. Partners own it together; a sale replaces the owner.
+                var names = await db.People.Where(p => current.Select(r => r.PersonId).Contains(p.Id)).Select(p => p.DisplayName).ToListAsync(ct);
+                var who = string.Join(" and ", names);
+                var takesOver = ParseDate(l.Since);
+                if (l.Ownership is not ("joint" or "replaces"))
+                    e["ownership"] = $"Unit {unit.Number} is owned by {who}. Do they own it together (for example partners or spouses), or does the new owner replace {who} because it was sold or transferred?";
+                else if (l.Ownership == "replaces" && takesOver is { } s && current.Any(r => r.Since >= s))
+                    e["since"] = $"{who} became the owner on {current.Max(r => r.Since):d MMMM yyyy}: the new owner takes over after that.";
+            }
         }
         var since = ParseDate(l.Since);
         if (since is null) e["since"] = "Choose the date it started.";
@@ -238,7 +251,14 @@ public static partial class PeopleEndpoints
         if (rel.Type == "owner" && rel.UnitId is { } unitId)
         {
             var account = db.LevyAccounts.Local.FirstOrDefault(a => a.UnitId == unitId) ?? db.LevyAccounts.First(a => a.UnitId == unitId);
-            if (account.HolderPersonId is null) account.HolderPersonId = personId;
+            if (l.Ownership == "replaces")
+            {
+                // Sold or transferred: the previous owners' ownership ends the day before; the account and its history stay with the unit.
+                foreach (var old in db.Relationships.Where(r => r.UnitId == unitId && r.Type == "owner" && r.PersonId != personId && (r.Until == null || r.Until >= rel.Since)).ToList())
+                    old.Until = rel.Since.AddDays(-1);
+                account.HolderPersonId = personId;
+            }
+            else if (account.HolderPersonId is null) account.HolderPersonId = personId;
         }
     }
 

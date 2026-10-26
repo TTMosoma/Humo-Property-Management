@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { EMPTY, catchError, combineLatest, map, of, switchMap } from 'rxjs';
 import {
@@ -22,6 +22,7 @@ import { AgeingBar } from '../../ui/ageing/ageing-bar';
 import { SessionService } from '../../core/session/session.service';
 import { DrawerService } from '../../ui/drawer/drawer.service';
 import { editUnitForm } from '../schemes/scheme-forms';
+import { REASON_FIELD, openForm } from '../shared/form-drawer';
 import { RandPipe, formatDate, formatRand } from '../../ui/format/money';
 import { KeyFact, RecordHeader } from '../../ui/record/record-header';
 import { EmptyState } from '../../ui/states/empty-state';
@@ -57,6 +58,7 @@ export class UnitPage {
   private readonly timelineData = inject(TimelineDataSource);
   private readonly attention = inject(AttentionService);
   private readonly drawer = inject(DrawerService);
+  private readonly router = inject(Router);
   private readonly sessionService = inject(SessionService);
   private readonly scope = inject(ScopeService);
   private readonly access = inject(AccessDataSource);
@@ -78,6 +80,21 @@ export class UnitPage {
   protected invite(s: UnitSummary, p: Person, role: 'owner' | 'tenant'): void {
     const org = this.sessionService.organisation();
     if (org) inviteResidentForm(this.drawer, this.access, org.id, org.shortName, p, [{ role, scheme: s.scheme, unit: s.unit }]);
+  }
+
+  /** Only a unit added by mistake: the API refuses one with history and says what to do instead. */
+  protected deleteUnit(s: UnitSummary): void {
+    openForm(this.drawer, {
+      eyebrow: `${s.scheme.name} · Unit ${s.unit.number}`,
+      title: 'Delete this unit',
+      intro: 'Only for a unit added by mistake. A unit with any history (charges, payments, statements, jobs, messages or documents) stays on record. If it was sold, add the new owner on their People record (they replace the old owner). If the whole scheme left the agency, close the scheme.',
+      fields: [REASON_FIELD],
+      submitLabel: 'Delete unit',
+      submit: (f) => this.units.remove(s.unit.id, f['reason']),
+      success: () => `Unit ${s.unit.number} was deleted.`,
+      done: () => void this.router.navigate(['/schemes', s.scheme.id, 'units']),
+      failure: 'The unit wasn’t deleted',
+    });
   }
 
   protected editUnit(s: UnitSummary): void {
