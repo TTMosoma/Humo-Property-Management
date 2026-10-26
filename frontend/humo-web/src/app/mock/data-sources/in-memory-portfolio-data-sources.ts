@@ -60,6 +60,24 @@ export class InMemoryUnitDataSource extends UnitDataSource {
     );
   }
 
+  /** The demo's units all have history, so none can be deleted (the API's rule). */
+  remove(unitId: string): Observable<void> {
+    const unit = this.db.unitById.get(unitId);
+    return this.gateway
+      .command(
+        {
+          action: `Tried to delete unit ${unit?.number ?? unitId}`,
+          resource: 'Unit',
+          resourceId: unitId,
+          schemeId: unit?.schemeId,
+          permission: 'Units.Manage',
+          validate: (): FieldErrors | null => ({ unit: `Unit ${unit?.number ?? ''} has history, so its records stay. If it was sold, add the new owner (they replace the old one). If the scheme left the agency, close the scheme.` }),
+        },
+        () => undefined,
+      )
+      .pipe(map(() => undefined));
+  }
+
   update(unitId: string, details: UnitDetails, expectedVersion?: number): Observable<void> {
     const unit = this.db.unitById.get(unitId);
     return this.gateway

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Humo.Domain.Access;
+using Humo.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace Humo.Api.Tests;
@@ -135,6 +136,56 @@ public sealed class UnitsAndPeopleTests : IDisposable
         // Linking the same unit twice is refused.
         var again = await s.Admin.PostAsJsonAsync($"/api/people/{anele}/relationships", new { type = "owner", schemeId = s.Kc.ToString(), unitId = u43.ToString(), since = "2024-07-01" });
         Assert.Equal("They already own this unit.", (await again.FieldErrors()).GetProperty("unitId").GetString());
+    }
+
+    [Fact]
+    public async Task A_second_owner_is_asked_whether_they_own_it_jointly_or_replace_the_owner()
+    {
+        var s = await Agency();
+        var u42 = await Id(await s.Admin.PostAsJsonAsync($"/api/schemes/{s.Kc}/units", Unit("42")));
+        var anele = await Id(await s.Admin.PostAsJsonAsync("/api/people", new { details = Person(), link = new { type = "owner", schemeId = s.Kc.ToString(), unitId = u42.ToString(), since = "2021-03-01" } }));
+        var spouse = await Id(await s.Admin.PostAsJsonAsync("/api/people", new { details = Person("Zodwa", "Mthembu", "zodwa@mail.example") }));
+        var buyer = await Id(await s.Admin.PostAsJsonAsync("/api/people", new { details = Person("Pieter", "Botha", "pieter@mail.example") }));
+        object Owner(string since, string? ownership = null) => new { type = "owner", schemeId = s.Kc.ToString(), unitId = u42.ToString(), since, ownership };
+
+        // Never assumed: the API asks.
+        var ask = await s.Admin.PostAsJsonAsync($"/api/people/{spouse}/relationships", Owner("2022-01-01"));
+        Assert.StartsWith("Unit 42 is owned by Anele Mthembu. Do they own it together", (await ask.FieldErrors()).GetProperty("ownership").GetString());
+
+        // Joint owners: both own it; Anele stays the account holder.
+        Assert.Equal(HttpStatusCode.NoContent, (await s.Admin.PostAsJsonAsync($"/api/people/{spouse}/relationships", Owner("2022-01-01", "joint"))).StatusCode);
+        Assert.Equal(anele, await api.Db(db => db.LevyAccounts.Where(a => a.UnitId == u42).Select(a => a.HolderPersonId).SingleAsync()));
+
+        // Sold: the new owner can't take over before the current owners became owners.
+        Assert.True((await (await s.Admin.PostAsJsonAsync($"/api/people/{buyer}/relationships", Owner("2021-12-31", "replaces"))).FieldErrors()).TryGetProperty("since", out _));
+        Assert.Equal(HttpStatusCode.NoContent, (await s.Admin.PostAsJsonAsync($"/api/people/{buyer}/relationships", Owner("2026-08-01", "replaces"))).StatusCode);
+        var owners = await api.Db(db => db.Relationships.Where(r => r.UnitId == u42 && r.Type == "owner").OrderBy(r => r.Since).Select(r => new { r.PersonId, r.Until }).ToListAsync());
+        Assert.Equal([new DateOnly(2026, 7, 31), new DateOnly(2026, 7, 31), (DateOnly?)null], owners.Select(o => o.Until));
+        Assert.Equal(buyer, await api.Db(db => db.LevyAccounts.Where(a => a.UnitId == u42).Select(a => a.HolderPersonId).SingleAsync()));
+    }
+
+    [Fact]
+    public async Task A_unit_added_by_mistake_can_be_deleted_but_not_one_with_history()
+    {
+        var s = await Agency();
+        var mistake = await Id(await s.Admin.PostAsJsonAsync($"/api/schemes/{s.Kc}/units", Unit("99")));
+        await Id(await s.Admin.PostAsJsonAsync("/api/people", new { details = Person(), link = new { type = "owner", schemeId = s.Kc.ToString(), unitId = mistake.ToString(), since = "2021-03-01" } }));
+        var billed = await Id(await s.Admin.PostAsJsonAsync($"/api/schemes/{s.Kc}/units", Unit("42")));
+        await api.Db(async db =>
+        {
+            var account = await db.LevyAccounts.SingleAsync(a => a.UnitId == billed);
+            db.Ledger.Add(new LedgerEntry { Id = Guid.CreateVersion7(), AccountId = account.Id, Date = new DateOnly(2026, 10, 1), Type = "levy", Description = "October levy", Amount = 1850, CreatedAt = DateTimeOffset.UtcNow, CreatedBy = "Test" });
+            return await db.SaveChangesAsync();
+        });
+
+        Assert.True((await (await s.Admin.PostAsJsonAsync($"/api/units/{mistake}/delete", new { reason = "" })).FieldErrors()).TryGetProperty("reason", out _));
+        Assert.Equal(HttpStatusCode.NoContent, (await s.Admin.PostAsJsonAsync($"/api/units/{mistake}/delete", new { reason = "Typed 99 instead of 9" })).StatusCode);
+        Assert.False(await api.Db(db => db.Units.AnyAsync(u => u.Id == mistake)));
+        Assert.False(await api.Db(db => db.Relationships.AnyAsync(r => r.UnitId == mistake)));
+        Assert.False(await api.Db(db => db.LevyAccounts.AnyAsync(a => a.UnitId == mistake)));
+
+        var refused = await s.Admin.PostAsJsonAsync($"/api/units/{billed}/delete", new { reason = "Sold last month" });
+        Assert.StartsWith("Unit 42 has charges or payments, so its records stay.", (await refused.FieldErrors()).GetProperty("unit").GetString());
     }
 
     [Fact]

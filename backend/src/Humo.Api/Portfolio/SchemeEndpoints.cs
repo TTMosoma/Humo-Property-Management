@@ -121,7 +121,8 @@ public static partial class SchemeEndpoints
         }, ct);
     }
 
-    private static async Task<IResult> SetStatus(Guid id, StatusRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, CancellationToken ct)
+    private static async Task<IResult> SetStatus(Guid id, StatusRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, Commercial.PackageLimits limits,
+        CancellationToken ct)
     {
         var actor = await current.GetAsync(ct);
         if (actor is null) return Results.Unauthorized();
@@ -129,6 +130,8 @@ public static partial class SchemeEndpoints
         if (scheme is null) return Problems.NotFound();
         var from = PortfolioRules.SchemeStatusLabels.GetValueOrDefault(scheme.Status, scheme.Status);
         var to = PortfolioRules.SchemeStatusLabels.GetValueOrDefault(body.Status ?? "", body.Status ?? "");
+        // Closed schemes don't count towards the unit limit, so coming back counts them again.
+        var overLimit = scheme.Status is "closed" or "archived" && body.Status is not ("closed" or "archived") ? await limits.RefuseReopenAsync(scheme.OrganisationId, id, ct) : null;
 
         return await commands.RunAsync(new CommandSpec($"{scheme.Name}: {from} → {to} — {body.Reason}", "Schemes.Manage")
         {
@@ -141,6 +144,7 @@ public static partial class SchemeEndpoints
             {
                 if (!PortfolioRules.SchemeMoves.TryGetValue(scheme.Status, out var moves) || !moves.Contains(body.Status))
                     return new() { ["status"] = $"A {scheme.Status} scheme can’t be moved to {body.Status}." };
+                if (overLimit is not null) return new() { ["status"] = overLimit };
                 // Archiving with money owed is refused once levy accounts exist (billing slice).
                 return (body.Reason ?? "").Trim().Length < 5 ? new() { ["reason"] = PortfolioRules.ReasonMessage } : [];
             },

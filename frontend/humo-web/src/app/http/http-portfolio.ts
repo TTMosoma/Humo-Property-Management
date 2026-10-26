@@ -140,6 +140,10 @@ export class HttpUnitDataSource extends HttpPort implements UnitDataSource {
     return this.command('PUT', `/units/${unitId}`, { ...details, expectedVersion }, ['units', 'schemes']);
   }
 
+  remove(unitId: string, reason: string): Observable<void> {
+    return this.command('POST', `/units/${unitId}/delete`, { reason }, ['units', 'schemes', 'people', 'accounts']);
+  }
+
   search(query: string, schemeIds: string[], limit?: number): Observable<UnitSummary[]> {
     return this.http
       .get<UnitSummary[]>(`${this.base}/units/search`, { withCredentials: true, params: { q: query, schemeIds, ...(limit ? { limit: String(limit) } : {}) } })

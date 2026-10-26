@@ -212,6 +212,26 @@ public sealed class PackageLimitTests : IDisposable
     }
 
     [Fact]
+    public async Task A_closed_scheme_stops_counting_towards_the_unit_limit_until_it_reopens()
+    {
+        var s = await Essentials();
+        for (var n = 1; n <= 40; n++) Assert.Equal(HttpStatusCode.Created, (await AddUnit(s, n)).StatusCode);
+        Assert.Equal(40, (await Limits(s.Admin)).GetProperty("units").GetProperty("used").GetInt32());
+
+        Assert.Equal(HttpStatusCode.NoContent, (await s.Admin.PostAsJsonAsync($"/api/schemes/{s.Kc}/status", new { status = "active", reason = "Handed over", expectedVersion = 1 })).StatusCode);
+        var close = await s.Admin.PostAsJsonAsync($"/api/schemes/{s.Kc}/status", new { status = "closed", reason = "Left the agency", expectedVersion = 2 });
+        Assert.Equal(HttpStatusCode.NoContent, close.StatusCode);
+        Assert.Equal(0, (await Limits(s.Admin)).GetProperty("units").GetProperty("used").GetInt32());
+
+        // A new scheme uses the freed allowance; reopening the old one would go past 50, so it's refused.
+        var res = await s.Admin.PostAsJsonAsync("/api/schemes", new { name = "Heron Place", code = "HP", type = "Sectional Title", suburb = "Rivonia", city = "Sandton", province = "Gauteng" });
+        var hp = Guid.Parse((await res.Json()).GetProperty("id").GetString()!);
+        for (var n = 1; n <= 20; n++) Assert.Equal(HttpStatusCode.Created, (await s.Admin.PostAsJsonAsync($"/api/schemes/{hp}/units", UnitBody(n))).StatusCode);
+        var reopen = await s.Admin.PostAsJsonAsync($"/api/schemes/{s.Kc}/status", new { status = "active", reason = "Back with us", expectedVersion = 3 });
+        Assert.Contains("over the 50", (await reopen.FieldErrors()).GetProperty("status").GetString());
+    }
+
+    [Fact]
     public async Task The_plan_page_shows_the_storage_the_agency_uses()
     {
         var s = await Essentials();

@@ -31,6 +31,8 @@ export interface NewRelationship {
   unitId?: string;
   /** Trustees: Chairperson, Treasurer, Trustee. */
   portfolio?: string;
+  /** Owners of a unit someone already owns: own it together, or replace them (sold or transferred). The API asks when it's missing. */
+  ownership?: 'joint' | 'replaces';
   since: string;
   /** Tenants: lease end. */
   until?: string;
@@ -43,6 +45,8 @@ export abstract class UnitDataSource {
   /** Adds a unit (and its levy account) to a scheme. Returns the unit id. */
   abstract create(schemeId: string, details: UnitDetails): Observable<string>;
   abstract update(unitId: string, details: UnitDetails, expectedVersion?: number): Observable<void>;
+  /** Deletes a unit added by mistake: only one with no history (charges, statements, jobs, documents…). */
+  abstract remove(unitId: string, reason: string): Observable<void>;
   /** "KC 42", "kingfisher 42", "KC-042", "unit 42" … */
   abstract search(query: string, schemeIds: string[], limit?: number): Observable<UnitSummary[]>;
 }

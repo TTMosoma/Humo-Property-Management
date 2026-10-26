@@ -49,6 +49,14 @@ function linkFields(schemes: Scheme[]): FormField[] {
     },
     { key: 'schemeId', label: 'Scheme', type: 'select', required: true, half: true, options: schemes.map((s) => ({ value: s.id, label: s.name })) },
     { key: 'unitNumber', label: 'Unit', type: 'text', required: true, half: true, placeholder: 'e.g. 42' },
+    {
+      key: 'ownership', label: 'If the unit already has an owner', type: 'select', showIf: (v) => v['type'] === 'owner',
+      options: [
+        { value: 'joint', label: 'They own it together (partners, spouses)' },
+        { value: 'replaces', label: 'They replace the owner (sold or transferred)' },
+      ],
+      help: 'Replacing ends the current owner’s ownership the day before “Since”. The new owner holds the account; its history stays with the unit.',
+    },
     { key: 'since', label: 'Since', type: 'date', required: true, half: true },
     { key: 'until', label: 'Lease ends', type: 'date', half: true, showIf: (v) => v['type'] === 'tenant' },
   ];
@@ -56,7 +64,13 @@ function linkFields(schemes: Scheme[]): FormField[] {
 
 /** The relationship as the API expects it; a unit is looked up by its number, as people say it. */
 function linkFrom(v: FormValues, units: UnitDataSource, schemes: Scheme[]): Observable<NewRelationship> {
-  const base = { type: v['type'] as NewRelationship['type'], schemeId: v['schemeId'], since: v['since'], until: v['type'] === 'tenant' && v['until'] ? v['until'] : undefined };
+  const base = {
+    type: v['type'] as NewRelationship['type'],
+    schemeId: v['schemeId'],
+    since: v['since'],
+    until: v['type'] === 'tenant' && v['until'] ? v['until'] : undefined,
+    ownership: v['type'] === 'owner' && v['ownership'] ? (v['ownership'] as NewRelationship['ownership']) : undefined,
+  };
   const number = (v['unitNumber'] ?? '').replace(/^unit\s*/i, '').trim();
   const scheme = schemes.find((s) => s.id === base.schemeId)?.name ?? 'that scheme';
   return units.get(base.schemeId, number).pipe(
