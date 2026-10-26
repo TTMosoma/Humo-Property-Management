@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { firstValueFrom } from 'rxjs';
-import { AccessDataSource, ApiError, JobDataSource, MeetingDataSource, PayablesDataSource, PolicyError, SchemeDataSource, SessionDataSource, SignInError, SupplierDataSource } from '../domain';
+import { AccessDataSource, ApiError, JobDataSource, describeFailure, MeetingDataSource, PayablesDataSource, PolicyError, SchemeDataSource, SessionDataSource, SignInError, SupplierDataSource } from '../domain';
 import { provideHttpData } from './provide-http-data';
 
 /**
@@ -77,6 +77,14 @@ describe('Production data layer (provideHttpData)', () => {
     http.expectOne('/api/schemes/s-1/status').flush({ title: 'Outside', code: 'out-of-scope' }, { status: 403, statusText: 'Forbidden' });
     await expect(outOfScope).rejects.toBeInstanceOf(PolicyError);
     await expect(outOfScope).rejects.toMatchObject({ code: 'out-of-scope' });
+
+    // A sensitive action whose passkey confirmation is stale says what to do, not the policy's name.
+    const noPasskey = firstValueFrom(schemes.setStatus('s-1', 'active', 'Handover complete'));
+    http.expectOne('/api/schemes/s-1/status').flush({ title: 'Confirm it’s you with your passkey first', code: 'step-up-required' }, { status: 403, statusText: 'Forbidden' });
+    const failure = await noPasskey.catch((e: unknown) => e);
+    expect(describeFailure(failure, 'The invitation wasn’t sent')).toBe(
+      'The invitation wasn’t sent: it needs your passkey, and your last confirmation was more than 5 minutes ago. Try again and confirm when your device asks.',
+    );
 
     const invalid = firstValueFrom(schemes.update('s-1', { name: 'X', code: 'K1', type: 'Sectional Title', suburb: 'a', city: 'b', province: 'Gauteng' }, 1));
     http.expectOne('/api/schemes/s-1').flush({ title: 'Some details need attention', errors: { code: 'Use 2–4 letters' } }, { status: 422, statusText: 'Unprocessable' });

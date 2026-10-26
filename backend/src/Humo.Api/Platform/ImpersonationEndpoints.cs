@@ -62,7 +62,7 @@ public static class ImpersonationEndpoints
             return Problems.Policy("forbidden", refusal);
         }
         // Act needs a fresh proof: a challenge, answered by verifying and starting again.
-        if (mode == "act" && !stepUpFresh) return Problems.Policy("step-up-required", "Step-up verification was not fresh");
+        if (mode == "act" && !stepUpFresh) return Problems.Policy("step-up-required", CommandRunner.StepUpTitle);
 
         var session = new ImpersonationSession
         {

@@ -43,6 +43,9 @@ public sealed class CommandRunner(CurrentActor current, HumoDbContext db, AuditL
     /// <summary>A fresh step-up proof lasts 5 minutes (STEP_UP_FRESH_MS in the frontend).</summary>
     public static readonly TimeSpan StepUpFresh = TimeSpan.FromMinutes(5);
 
+    /// <summary>What the person reads when a sensitive action needs their passkey again.</summary>
+    public const string StepUpTitle = "Confirm it’s you with your passkey first: your last confirmation was more than 5 minutes ago.";
+
     private readonly List<Func<Task>> afterCommit = [];
 
     /// <summary>Work that must happen only once the change is saved, e.g. emailing an invoice. A failure there never undoes the change.</summary>
@@ -65,7 +68,7 @@ public sealed class CommandRunner(CurrentActor current, HumoDbContext db, AuditL
         if (errors is { Count: > 0 }) return Problems.Validation(errors);
 
         var needsProof = spec.StepUp ?? (AccessCatalogue.Permissions.TryGetValue(spec.Permission, out var p) && p.StepUp);
-        if (needsProof && !(actor.StepUpAt is { } at && clock.GetUtcNow() - at < StepUpFresh)) return Problems.Policy("step-up-required", "Step-up verification was not fresh");
+        if (needsProof && !(actor.StepUpAt is { } at && clock.GetUtcNow() - at < StepUpFresh)) return Problems.Policy("step-up-required", StepUpTitle);
 
         IResult result;
         try

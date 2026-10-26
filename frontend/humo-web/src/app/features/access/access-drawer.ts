@@ -81,7 +81,8 @@ export class AccessDrawer {
   protected resend(): void {
     const who = this.identity();
     if (!who) return;
-    this.access.resendInvite(who.id).subscribe({
+    // Resending changes access (Users.Manage): the API wants a fresh passkey, as for the invitation itself.
+    this.stepUp.guard({ action: 'change-roles', detail: `Resend the invitation to ${who.email}` }, () => this.access.resendInvite(who.id)).subscribe({
       next: () => this.feedback.success(`Invitation sent to ${who.email} again.`),
       error: (e) => this.feedback.error(describeFailure(e, 'The invitation wasn’t sent')),
     });

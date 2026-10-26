@@ -70,7 +70,10 @@ export function describeFailure(error: unknown, action: string): string {
     case 'not-found':
       return `${action}: it no longer exists.`;
     case 'policy':
-      return `${action}. ${e.message}.`;
+      // A sensitive action whose passkey confirmation is older than 5 minutes: say what to do, not the policy's name.
+      if (e instanceof PolicyError && e.code === 'step-up-required')
+        return `${action}: it needs your passkey, and your last confirmation was more than 5 minutes ago. Try again and confirm when your device asks.`;
+      return `${action}. ${e.message.replace(/\.$/, '')}.`;
     case 'unavailable':
       return `${action}. ${e.message}`;
     case 'server':
