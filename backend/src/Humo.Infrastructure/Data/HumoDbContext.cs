@@ -71,6 +71,7 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
     public DbSet<LibraryDocument> LibraryDocuments => Set<LibraryDocument>();
     public DbSet<OwnerInvoice> OwnerInvoices => Set<OwnerInvoice>();
     public DbSet<DocumentLink> DocumentLinks => Set<DocumentLink>();
+    public DbSet<TrusteePermission> TrusteePermissions => Set<TrusteePermission>();
     public DbSet<ImpersonationSession> ImpersonationSessions => Set<ImpersonationSession>();
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
@@ -677,6 +678,16 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.Property(t => t.Trusted).HasDefaultValue(true);
             e.Property(t => t.TokenHash).HasMaxLength(64);
             e.Property(t => t.Label).HasMaxLength(120);
+        });
+
+        builder.Entity<TrusteePermission>(e =>
+        {
+            e.ToTable("TrusteePermissions");
+            e.HasIndex(x => x.SchemeId);
+            e.Property(x => x.Summary).HasMaxLength(300);
+            e.Property(x => x.AddedBy).HasMaxLength(200);
+            e.Property(x => x.WithdrawnBy).HasMaxLength(200);
+            e.Property(x => x.WithdrawnReason).HasMaxLength(500);
         });
 
         builder.Entity<DocumentLink>(e =>

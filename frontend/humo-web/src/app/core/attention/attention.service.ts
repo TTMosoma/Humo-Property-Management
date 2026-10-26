@@ -136,7 +136,11 @@ export class AttentionService {
     return this.source.assign(ids, assigneeId);
   }
 
-  decide(id: string, decision: 'approved' | 'rejected', comment?: string): Observable<void> {
-    return this.source.decide(id, decision, this.session.identity().name, comment);
+  decide(id: string, decision: 'approved' | 'rejected', comment?: string, alone?: boolean): Observable<void> {
+    return this.source.decide(id, decision, this.session.identity().name, comment, alone);
+  }
+
+  cancelHold(id: string): Observable<void> {
+    return this.source.cancelHold(id);
   }
 }

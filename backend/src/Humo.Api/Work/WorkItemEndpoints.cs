@@ -8,10 +8,12 @@ using Microsoft.EntityFrameworkCore;
 namespace Humo.Api.Work;
 
 public sealed record WorkItemDto(string Id, string Ref, string Kind, string Type, string Title, string Detail, string SchemeId, decimal? Amount, int? Count, string CreatedAt, string DueAt,
-    string? AssigneeId, IReadOnlyList<string> ApproverRoles, IReadOnlyList<string> Evidence, string Status, string? DecidedBy, string? DecidedAt, string? Comment, string Route);
+    string? AssigneeId, IReadOnlyList<string> ApproverRoles, IReadOnlyList<string> Evidence, string Status, string? DecidedBy, string? DecidedAt, string? Comment, string Route,
+    string? HeldUntil = null, string? HeldBy = null, SecondAuthoriserDto? SecondAuthoriser = null);
 public sealed record WorkIdsRequest(List<string> Ids);
 public sealed record AssignRequest(List<string> Ids, string? AssigneeId);
-public sealed record DecisionRequest(string Decision, string? Comment);
+/// <param name="Alone">Approve alone under the trustees' permission (D24), when that's the only way.</param>
+public sealed record DecisionRequest(string Decision, string? Comment, bool? Alone = null);
 
 /// <summary>What happens to the record an approval is about once it's decided (e.g. a billing run moves on).</summary>
 public interface IApprovalHandler
@@ -37,15 +39,30 @@ public static class WorkItemEndpoints
         g.MapPost("/reopen", Reopen);
         g.MapPost("/assign", Assign);
         g.MapPost("/{id:guid}/decision", Decide);
+        g.MapPost("/{id:guid}/cancel-hold", CancelHold);
     }
 
-    private static async Task<IResult> List(CurrentActor current, HumoDbContext db, CancellationToken ct)
+    private static async Task<IResult> List(CurrentActor current, HumoDbContext db, IEnumerable<IApprovalHandler> handlers, SoleAuthority sole, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         if (actor.OrganisationId is not { } org || !actor.Can("Work.View")) return Results.Ok(Array.Empty<WorkItemDto>());
         var schemes = await SchemeEndpoints.Visible(actor, db).Select(s => s.Id).ToListAsync(ct);
         var items = await db.WorkItems.Where(w => w.OrganisationId == org && (w.SchemeId == null || schemes.Contains(w.SchemeId.Value))).ToListAsync(ct);
-        return Results.Ok(items.OrderBy(w => w.DueAt).Select(ToDto));
+        var list = new List<WorkItemDto>();
+        foreach (var w in items.OrderBy(w => w.DueAt))
+        {
+            // An approval this person can't approve (they prepared it): who can, when the agency has nobody else (D24).
+            SecondAuthoriserDto? second = null;
+            if (w.Kind == "approval" && w.Status == "open" && handlers.FirstOrDefault(h => h.Type == w.Type) is { } handler && await handler.RefuseAsync(w, actor, true, ct) is not null)
+                second = await sole.SecondAuthoriserAsync(w, actor.Human.Id, ct);
+            var dto = ToDto(w) with { SecondAuthoriser = second };
+            // With one authoriser at the agency, the scheme's trustees decide it too (D24).
+            if (w.Kind == "approval" && w.Status == "open" && w.SchemeId is not null && !dto.ApproverRoles.Contains(Domain.Access.Roles.Trustee)
+                && (await sole.StaffApproversAsync(w, ct)).Count <= 1)
+                dto = dto with { ApproverRoles = [.. dto.ApproverRoles, Domain.Access.Roles.Trustee] };
+            list.Add(dto);
+        }
+        return Results.Ok(list);
     }
 
     private static Task<IResult> Complete(WorkIdsRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, CancellationToken ct) =>
@@ -76,7 +93,8 @@ public static class WorkItemEndpoints
         }, ct);
     }
 
-    private static async Task<IResult> Decide(Guid id, DecisionRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, IEnumerable<IApprovalHandler> handlers, CancellationToken ct)
+    private static async Task<IResult> Decide(Guid id, DecisionRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, IEnumerable<IApprovalHandler> handlers,
+        SoleAuthority sole, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } me) return Results.Unauthorized();
         var item = await db.WorkItems.FirstOrDefaultAsync(w => w.Id == id && w.OrganisationId == me.OrganisationId, ct);
@@ -86,22 +104,36 @@ public static class WorkItemEndpoints
         var roles = JsonSerializer.Deserialize<List<string>>(item.ApproverRoles) ?? [];
         var handler = handlers.FirstOrDefault(h => h.Type == item.Type);
         var refused = handler is null ? null : await handler.RefuseAsync(item, me, approve, ct);
+        // D24: the preparer is the agency's only approver. A trustee on Humo approves instead; failing that, approving
+        // alone under the trustees' permission, held for the cooling-off.
+        var second = refused is not null ? await sole.SecondAuthoriserAsync(item, me.Human.Id, ct) : null;
+        if (second is not null) refused = second.Note;
+        var permission = second?.Mode == "alone" && body.Alone == true && item.SchemeId is { } scheme ? await sole.InForceAsync(scheme, ct) : null;
+        var alone = permission is not null;
+        var trusteeMay = await sole.TrusteeMayDecideAsync(item, me, ct);
 
-        return await commands.RunAsync(new CommandSpec($"{(approve ? "Approved" : "Rejected")} {item.Ref}: {item.Title}{(string.IsNullOrWhiteSpace(body.Comment) ? "" : $" — {body.Comment.Trim()}")}", "Approvals.Decide")
+        var verb = alone ? "Approved alone under the trustees’ permission (D24), in effect after the 24-hour cooling-off:" : approve ? "Approved" : "Rejected";
+        return await commands.RunAsync(new CommandSpec($"{verb} {item.Ref}: {item.Title}{(string.IsNullOrWhiteSpace(body.Comment) ? "" : $" — {body.Comment.Trim()}")}", "Approvals.Decide")
         {
             Resource = "Approval",
             ResourceId = id.ToString(),
             SchemeId = item.SchemeId,
             Category = "security",
             // Approving a large amount needs a fresh passkey; rejecting never does.
-            StepUp = approve && item.Amount >= org.ApprovalStepUpAmount,
+            // Approving alone always does (D24).
+            StepUp = approve && (alone || item.Amount >= org.ApprovalStepUpAmount),
             Validate = () =>
                 body.Decision is not ("approved" or "rejected") ? new() { ["decision"] = "Approve or reject." }
                 : item.Kind != "approval" || item.Status != "open" ? new() { ["status"] = "This isn’t waiting for a decision." }
                 : !approve && (body.Comment ?? "").Trim().Length < 5 ? new() { ["comment"] = "Say why, so it can be put right." } : [],
         }, async actor =>
         {
-            if (!roles.Contains(actor.Assignment.Role)) throw new CommandRefused("forbidden", "Your role doesn’t decide this approval");
+            if (!roles.Contains(actor.Assignment.Role) && !trusteeMay) throw new CommandRefused("forbidden", "Your role doesn’t decide this approval");
+            if (alone)
+            {
+                sole.Hold(item, actor, permission!, body.Comment);
+                return Results.NoContent();
+            }
             if (refused is not null) throw new CommandRefused("conflict-of-interest", refused);
             item.Status = approve ? "approved" : "rejected";
             item.DecidedBy = actor.Human.Name;
@@ -113,9 +145,32 @@ public static class WorkItemEndpoints
         }, ct);
     }
 
+    /// <summary>Stops an approval in its cooling-off (D24): it's waiting for a decision again. The approver, or another approver.</summary>
+    private static async Task<IResult> CancelHold(Guid id, CurrentActor current, CommandRunner commands, HumoDbContext db, CancellationToken ct)
+    {
+        if (await current.GetAsync(ct) is not { } me) return Results.Unauthorized();
+        var item = await db.WorkItems.FirstOrDefaultAsync(w => w.Id == id && w.OrganisationId == me.OrganisationId, ct);
+        if (item is null) return Problems.NotFound();
+        var roles = JsonSerializer.Deserialize<List<string>>(item.ApproverRoles) ?? [];
+        return await commands.RunAsync(new CommandSpec($"Stopped {item.Ref} in its cooling-off: it waits for a decision again", "Approvals.Decide")
+        {
+            Resource = "Approval",
+            ResourceId = id.ToString(),
+            SchemeId = item.SchemeId,
+            Category = "security",
+            Validate = () => item.Status != SoleAuthority.HeldStatus ? new() { ["status"] = "This isn’t in its cooling-off." } : [],
+        }, actor =>
+        {
+            if (item.HeldById != actor.Human.Id && !roles.Contains(actor.Assignment.Role) && actor.Assignment.Role != Domain.Access.Roles.Trustee)
+                throw new CommandRefused("forbidden", "Only an approver can stop it");
+            SoleAuthority.CancelHold(item);
+            return Task.FromResult(Results.NoContent());
+        }, ct);
+    }
+
     internal static WorkItemDto ToDto(WorkItemRow w) => new(w.Id.ToString(), w.Ref, w.Kind, w.Type, w.Title, w.Detail, w.SchemeId?.ToString() ?? "", w.Amount, w.Count,
         w.CreatedAt.ToString("O"), w.DueAt.ToString("O"), w.AssigneeId, JsonSerializer.Deserialize<List<string>>(w.ApproverRoles) ?? [], JsonSerializer.Deserialize<List<string>>(w.Evidence) ?? [],
-        w.Status, w.DecidedBy, w.DecidedAt?.ToString("O"), w.Comment, w.Route);
+        w.Status, w.DecidedBy, w.DecidedAt?.ToString("O"), w.Comment, w.Route, w.HeldUntil?.ToString("O"), w.HeldBy);
 
     public static string Roles(params string[] roles) => JsonSerializer.Serialize(roles, Json.Options);
 }

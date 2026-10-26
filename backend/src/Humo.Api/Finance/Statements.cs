@@ -318,6 +318,8 @@ public sealed class DeliveryHost(DeliveryQueue queue, IServiceScopeFactory scope
                 {
                     await using var scope = scopes.CreateAsyncScope();
                     await scope.ServiceProvider.GetRequiredService<Messaging.Communications>().SendDueAsync(stoppingToken);
+                    // Approvals made alone take effect when their cooling-off ends (D24).
+                    await scope.ServiceProvider.GetRequiredService<Work.SoleAuthority>().ReleaseDueAsync(stoppingToken);
                 }
                 catch (Exception e) when (e is not OperationCanceledException)
                 {

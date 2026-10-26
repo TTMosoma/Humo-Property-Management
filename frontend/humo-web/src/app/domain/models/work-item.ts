@@ -25,7 +25,17 @@ export type WorkItemType =
   | 'owner-message'
   | 'follow-up';
 
-export type WorkItemStatus = 'open' | 'done' | 'approved' | 'rejected';
+/** 'cooling-off': approved alone under the trustees' permission, in effect after 24 hours (D24). */
+export type WorkItemStatus = 'open' | 'done' | 'approved' | 'rejected' | 'cooling-off';
+
+/**
+ * Who approves an approval its preparer can't, when the agency has nobody else (D24): a trustee on Humo; the preparer
+ * alone under the trustees' permission; or nobody until the permission is added.
+ */
+export interface SecondAuthoriser {
+  mode: 'trustees' | 'alone' | 'permission-needed';
+  note: string;
+}
 
 export type Urgency = 'overdue' | 'today' | 'week' | 'later';
 
@@ -59,6 +69,11 @@ export interface WorkItem {
   decidedBy?: string;
   decidedAt?: string;
   comment?: string;
+  /** Approved alone (D24): who, and when it takes effect after the cooling-off. */
+  heldBy?: string;
+  heldUntil?: string;
+  /** Set when the person looking prepared it and the agency has nobody else to approve it (D24). */
+  secondAuthoriser?: SecondAuthoriser;
   /** Deep link to the record where the work is done. */
   route: string;
 }

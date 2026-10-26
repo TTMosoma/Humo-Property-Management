@@ -62,7 +62,17 @@
   </ul>
 }
 
-@if (w.status !== 'open') {
+@if (w.status === 'cooling-off') {
+  <div class="outcome held">
+    <ion-icon name="hourglass-outline" aria-hidden="true" />
+    <span>
+      <strong>Approved alone</strong> by {{ w.heldBy }} under the trustees’ permission. It takes effect {{ formatDate(w.heldUntil) }}, after the 24-hour cooling-off, and the trustees are told.
+    </span>
+    @if (canDecide() || w.heldBy === session.identity().name) {
+      <button type="button" class="btn btn-ghost btn-sm" [disabled]="busy()" (click)="stopHold()">Stop it</button>
+    }
+  </div>
+} @else if (w.status !== 'open') {
   <div class="outcome" [class.rejected]="w.status === 'rejected'">
     <ion-icon [name]="w.status === 'approved' ? 'checkmark-circle-outline' : 'close-circle-outline'" aria-hidden="true" />
     <span>
@@ -95,8 +105,24 @@
         You also work for the managing agency, which arranged this, so another trustee must approve it. You can still reject it.
       </p>
     }
+    @if (w.secondAuthoriser; as second) {
+      <p class="waiting conflict">
+        <ion-icon name="information-circle-outline" aria-hidden="true" />
+        <span>
+          You prepared this. {{ second.note }}
+          @if (second.mode === 'permission-needed' && session.can('Organisation.Manage')) {
+            <a routerLink="/settings/agency">Add the trustees’ permission</a>
+          }
+        </span>
+      </p>
+    }
     <div class="actions">
-      @if (!conflicted()) {
+      @if (w.secondAuthoriser?.mode === 'alone') {
+        <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="approveAlone()">
+          <ion-icon name="finger-print-outline" aria-hidden="true" /> Verify and approve alone
+        </button>
+      }
+      @if (!conflicted() && !w.secondAuthoriser) {
       <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="approve()">
         <ion-icon [name]="needsStepUp() ? 'finger-print-outline' : 'checkmark-outline'" aria-hidden="true" /> {{ needsStepUp() ? 'Verify and approve' : 'Approve' }}@if (w.amount !== undefined) { {{ w.amount | rand }} }
       </button>

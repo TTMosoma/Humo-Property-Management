@@ -2639,6 +2639,61 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.ToTable("TrustedBrowsers", (string)null);
                 });
 
+            modelBuilder.Entity("Humo.Infrastructure.Data.TrusteePermission", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AddedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("AddedBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("AddedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("GrantedOn")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SchemeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateOnly>("Until")
+                        .HasColumnType("date");
+
+                    b.Property<DateTimeOffset?>("WithdrawnAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("WithdrawnBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("WithdrawnReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SchemeId");
+
+                    b.ToTable("TrusteePermissions", (string)null);
+                });
+
             modelBuilder.Entity("Humo.Infrastructure.Data.Unit", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2930,6 +2985,18 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.Property<string>("Evidence")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("HeldBy")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("HeldById")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("HeldPermissionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("HeldUntil")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Kind")
                         .IsRequired()

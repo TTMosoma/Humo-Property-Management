@@ -131,3 +131,42 @@ export interface PersonalPreferences {
   /** Their own sign-off (name, role, direct line) on emails they send themselves: messages and Inbox replies. */
   emailSignOff?: string;
 }
+
+/**
+ * The trustees' written permission for the agency to approve alone on a scheme with no trustee on Humo (D24):
+ * a signed resolution, letter or email (PDF), for up to 12 months or until withdrawn.
+ */
+export interface TrusteePermission {
+  id: string;
+  schemeId: string;
+  fileId: string;
+  /** What it is and who signed it. */
+  summary: string;
+  grantedOn: string;
+  until: string;
+  addedBy: string;
+  addedAt: string;
+  withdrawnAt?: string;
+  withdrawnBy?: string;
+  withdrawnReason?: string;
+  inForce: boolean;
+}
+
+/** A scheme's way to a second authoriser (D24): its trustees on Humo, or the trustees' permission. */
+export interface SchemeAuthority {
+  schemeId: string;
+  schemeName: string;
+  trusteesOnHumo: number;
+  permission?: TrusteePermission;
+  history: TrusteePermission[];
+}
+
+export interface NewTrusteePermission {
+  schemeId: string;
+  summary: string;
+  grantedOn: string;
+  until?: string;
+}
+
+/** The longest a trustees' permission lasts (D24). */
+export const TRUSTEE_PERMISSION_MONTHS = 12;
