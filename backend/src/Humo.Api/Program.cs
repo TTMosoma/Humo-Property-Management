@@ -188,6 +188,7 @@ Humo.Api.Messaging.InboxEndpoints.MapInbox(api);
 Humo.Api.Maintenance.MaintenanceEndpoints.MapMaintenance(api);
 Humo.Api.Settings.SettingsEndpoints.MapSettings(api);
 Humo.Api.Documents.DocumentEndpoints.MapDocuments(api);
+Humo.Api.Documents.TemplateRegistry.MapPlatformTemplates(api);
 Notices.MapNotifications(api);
 
 // Operator check (doc 26): `send-test-sms <mobile number>` sends one SMS through the configured provider, then exits.

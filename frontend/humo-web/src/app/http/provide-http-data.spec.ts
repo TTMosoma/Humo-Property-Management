@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { firstValueFrom } from 'rxjs';
-import { AccessDataSource, ApiError, JobDataSource, describeFailure, MeetingDataSource, PayablesDataSource, PolicyError, SchemeDataSource, SessionDataSource, SignInError, SupplierDataSource } from '../domain';
+import { AccessDataSource, ApiError, JobDataSource, describeFailure, MeetingDataSource, PayablesDataSource, PlatformTemplateDataSource, PolicyError, SchemeDataSource, SessionDataSource, SignInError, SupplierDataSource } from '../domain';
 import { provideHttpData } from './provide-http-data';
 
 /**
@@ -51,6 +51,20 @@ describe('Production data layer (provideHttpData)', () => {
     await expect(firstValueFrom(TestBed.inject(MeetingDataSource).list(['s-1']))).rejects.toBeInstanceOf(ApiError);
     await expect(firstValueFrom(TestBed.inject(PayablesDataSource).batches(['s-1']))).rejects.toMatchObject({ kind: 'server' });
   });
+  it('sets up and publishes a customer’s custom template over HTTP (D12, D23)', async () => {
+    const templates = TestBed.inject(PlatformTemplateDataSource);
+    const created = firstValueFrom(templates.createCustomTemplate('org-1', 'levy-statement'));
+    const post = http.expectOne({ method: 'POST', url: '/api/platform/customers/org-1/document-templates' });
+    expect(post.request.body).toEqual({ documentType: 'levy-statement' });
+    post.flush({ id: 'org-1.levy-statement' }, { status: 201, statusText: 'Created' });
+    expect(await created).toBe('org-1.levy-statement');
+
+    const design = { layout: 'levy-statement/branded' as const, brandingMode: 'template' as const, sections: ['summary' as const, 'transactions' as const] };
+    const published = firstValueFrom(templates.publishCustomVersion('org-1.levy-statement', design, 'Colours', { approvedBy: 'Thandeka', approvedOn: '2026-10-18' }, 1));
+    http.expectOne({ method: 'POST', url: '/api/platform/document-templates/org-1.levy-statement/versions' }).flush({ version: 2 });
+    expect(await published).toBe(2);
+  });
+
   it('reads jobs and suppliers from the API', async () => {
     const jobs = firstValueFrom(TestBed.inject(JobDataSource).list(['s-1']));
     http.expectOne('/api/jobs?schemeIds=s-1').flush({ items: [], total: 0, page: 1, pageSize: 25 });

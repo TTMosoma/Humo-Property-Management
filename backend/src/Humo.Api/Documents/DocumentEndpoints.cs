@@ -32,9 +32,10 @@ public static class DocumentEndpoints
         g.MapPut("/settings/branding", UpdateBranding);
     }
 
-    /// <summary>Humo's catalogue. Enterprise custom templates (D12) are added per organisation when Humo builds them.</summary>
-    private static async Task<IResult> Templates(CurrentActor current, CancellationToken ct) =>
-        await current.GetAsync(ct) is null ? Results.Unauthorized() : Results.Ok(DocumentCatalogue.Platform);
+    /// <summary>Humo's catalogue, with the organisation's own custom templates (D12, D23) once Humo has built them.</summary>
+    private static async Task<IResult> Templates(CurrentActor current, HumoDbContext db, CancellationToken ct) =>
+        await current.GetAsync(ct) is not { } actor ? Results.Unauthorized()
+        : Results.Ok(actor.OrganisationId is { } org ? await TemplateRegistry.ForOrganisationAsync(db, org, ct) : await TemplateRegistry.PlatformAsync(db, ct));
 
     private static async Task<IResult> GetSettings(CurrentActor current, HumoDbContext db, CancellationToken ct)
     {
@@ -68,7 +69,7 @@ public static class DocumentEndpoints
     {
         if (await current.GetAsync(ct) is not { OrganisationId: { } orgId }) return Problems.NotFound();
         var row = await db.DocumentSettings.FirstOrDefaultAsync(s => s.OrganisationId == orgId, ct);
-        var template = DocumentCatalogue.Get(body.TemplateId ?? "");
+        var template = (await TemplateRegistry.ForOrganisationAsync(db, orgId, ct)).FirstOrDefault(t => t.Id == body.TemplateId);
         var entitled = await EntitledAsync(commercial, orgId, ct);
         var label = type.Replace('-', ' ');
         return await commands.RunAsync(new CommandSpec($"Set the default {label} template to {template?.Name ?? body.TemplateId}", "Documents.Configure")

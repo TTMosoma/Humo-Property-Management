@@ -106,11 +106,44 @@ public static partial class DocumentCatalogue
         };
 
     /// <summary>The organisation's default for a type if it may still use it; otherwise Humo's default.</summary>
-    public static DocumentTemplate? DefaultFor(string type, string? chosen, Func<string, bool> entitled)
+    public static DocumentTemplate? DefaultFor(string type, string? chosen, Func<string, bool> entitled) => DefaultFor(Platform, type, chosen, entitled);
+
+    /// <summary>The same rule over a registry that also holds the organisation's custom templates.</summary>
+    public static DocumentTemplate? DefaultFor(IEnumerable<DocumentTemplate> registry, string type, string? chosen, Func<string, bool> entitled)
     {
-        var options = Platform.Where(t => t.DocumentType == type).ToList();
+        var options = registry.Where(t => t.DocumentType == type).ToList();
         return options.FirstOrDefault(t => t.Id == chosen && Availability(t, entitled) == "available") ?? options.FirstOrDefault(t => t.IsDefault);
     }
+
+    /// <summary>Planned → preview → active → deprecated (and back where it makes sense), as the app's TEMPLATE_STATUS_MOVES.</summary>
+    public static readonly IReadOnlyDictionary<string, string[]> StatusMoves = new Dictionary<string, string[]>
+    {
+        ["planned"] = ["preview"],
+        ["preview"] = ["active", "planned"],
+        ["active"] = ["deprecated"],
+        ["deprecated"] = ["active"],
+    };
+
+    public const int MaxText = 400;
+
+    /// <summary>What's wrong with a design, field by field (the app's validateDesign, rule for rule).</summary>
+    public static Dictionary<string, string> ValidateDesign(TemplateDesign d)
+    {
+        var e = new Dictionary<string, string>();
+        if (d.Palette is { } p && !IsHexColour(p.Primary)) e["primary"] = "Use a colour like #0a3d62.";
+        if (d.Palette is { } q && !IsHexColour(q.Accent)) e["accent"] = "Use a colour like #1d7a52.";
+        if (d.Font is { } f && !Fonts.Contains(f)) e["font"] = "Choose one of the listed fonts.";
+        if (d.Layout.StartsWith("levy-statement/", StringComparison.Ordinal) && !d.Sections.Contains("transactions")) e["transactions"] = "A statement always shows its transactions.";
+        foreach (var (key, value) in new[] { ("title", d.Title), ("footerText", d.FooterText), ("legalText", d.LegalText) })
+            if ((value?.Length ?? 0) > MaxText) e[key] = $"Keep this under {MaxText} characters.";
+        if (d.Title is { } t && t.Trim().Length > 60) e["title"] = "Keep the title under 60 characters.";
+        if (d.NumberPrefix is { Length: > 0 } n && !NumberPrefix().IsMatch(n)) e["numberPrefix"] = "2–8 capital letters or digits.";
+        if (!Platform.SelectMany(x => x.Versions).Any(v => v.Design.Layout == d.Layout)) e["layout"] = "Choose one of Humo’s layouts.";
+        return e;
+    }
+
+    [GeneratedRegex("^[A-Z0-9]{2,8}$")]
+    private static partial Regex NumberPrefix();
 
     /// <summary>Humo defaults → agency branding (if the template uses it and the agency is entitled) → the template's own design.</summary>
     public static ResolvedBranding Branding(TemplateDesign design, AgencyBranding? agency, Func<string, bool> entitled)

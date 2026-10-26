@@ -605,6 +605,46 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.ToTable("DocumentSettings", (string)null);
                 });
 
+            modelBuilder.Entity("Humo.Infrastructure.Data.DocumentTemplateRow", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("DocumentType")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("Json")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganisationId");
+
+                    b.ToTable("DocumentTemplates", (string)null);
+                });
+
             modelBuilder.Entity("Humo.Infrastructure.Data.HumoUser", b =>
                 {
                     b.Property<Guid>("Id")

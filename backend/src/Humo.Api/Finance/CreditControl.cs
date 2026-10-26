@@ -218,7 +218,8 @@ public sealed class CreditControl(HumoDbContext db, Commercial.CommercialRecords
         var scheme = await db.Schemes.FirstAsync(s => s.Id == a.SchemeId, ct);
         var settings = await DocumentEndpoints.ReadAsync(db, scheme.OrganisationId, ct);
         var entitled = await DocumentEndpoints.EntitledAsync(commercial, scheme.OrganisationId, ct);
-        var template = DocumentCatalogue.DefaultFor("payment-notice", settings.Defaults.GetValueOrDefault("payment-notice"), entitled)
+        var template = DocumentCatalogue.DefaultFor(await Documents.TemplateRegistry.ForOrganisationAsync(db, scheme.OrganisationId, ct), "payment-notice",
+            settings.Defaults.GetValueOrDefault("payment-notice"), entitled)
             ?? throw new InvalidOperationException("Humo has no default payment notice template.");
         var version = template.At()!;
         var dueBy = new DateTimeOffset(Now.ToOffset(CreditControlRules.Sa).Date.AddDays(kind == CollectionStages.Reminder ? 7 : 14).AddHours(17), CreditControlRules.Sa);

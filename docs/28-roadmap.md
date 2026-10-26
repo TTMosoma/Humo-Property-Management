@@ -6,7 +6,7 @@
 
 ## 1. Version 1: the live system as complete as the prototype
 
-The prototype (`npm start`) runs every screen on simulated data. The live system (`npm run start:api`) runs only what's on Humo's API. Thirteen data sources aren't on the API yet. Screens that read them fail rather than fall back to simulated data, by design (docs/18 R-6).
+The prototype (`npm start`) runs every screen on simulated data. The live system (`npm run start:api`) runs only what's on Humo's API. Twelve data sources aren't on the API yet (Platform › Document templates joined it on 26 October 2026). Screens that read them fail rather than fall back to simulated data, by design (docs/18 R-6).
 
 | Not on the API yet | Screens it breaks | Slice |
 |---|---|---|
@@ -19,7 +19,6 @@ The prototype (`npm start`) runs every screen on simulated data. The live system
 | `ComplianceDataSource` | Compliance | Compliance |
 | `RulesDataSource` | Scheme rules and breaches | Governance |
 | `OpsDataSource` | Platform operations | Platform |
-| `PlatformTemplateDataSource` | Platform document templates | Documents |
 | `ContractorNetwork` | Quotes from the Humo Contractor network | Contractor |
 | `PaymentGateway` | Paying Humo invoices online (Payfast) | R-14 |
 
