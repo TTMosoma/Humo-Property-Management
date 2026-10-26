@@ -1,5 +1,6 @@
 using Humo.Api.Commands;
 using Humo.Api.Session;
+using Humo.Domain.Access;
 using Humo.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -82,6 +83,9 @@ public static class OrganisationEndpoints
         var org = await db.Organisations.FirstOrDefaultAsync(o => o.Id == id, ct);
         if (org is null) return Problems.NotFound();
         var verb = PortfolioRules.OrganisationVerbs.GetValueOrDefault(body.Status ?? "", body.Status ?? "");
+        // An agency only goes live with someone to run it: an administrator who has accepted their invitation (doc 21).
+        var hasAdmin = body.Status != "active" || await db.RoleAssignments.AnyAsync(a => a.OrganisationId == id && a.Role == Roles.AgencyAdmin && a.Status == AssignmentStatuses.Active
+            && db.Users.Any(u => u.Id == a.UserId && u.Status == IdentityStatuses.Active), ct);
 
         return await commands.RunAsync(new CommandSpec($"{verb} {org.ShortName} — {body.Reason}", "Platform.Customers.Manage")
         {
@@ -97,6 +101,8 @@ public static class OrganisationEndpoints
             {
                 if (!PortfolioRules.OrganisationMoves.TryGetValue(org.Status, out var moves) || !moves.Contains(body.Status))
                     return new() { ["status"] = $"A {org.Status} organisation can’t be moved to {body.Status}." };
+                if (!hasAdmin)
+                    return new() { ["status"] = $"{org.ShortName} has no Agency Administrator who has accepted their invitation yet. Invite one, and activate it once they’ve signed in." };
                 return (body.Reason ?? "").Trim().Length < 5 ? new() { ["reason"] = PortfolioRules.ReasonMessage } : [];
             },
         }, _ =>

@@ -212,6 +212,17 @@ public sealed class PackageLimitTests : IDisposable
     }
 
     [Fact]
+    public async Task The_plan_page_shows_the_storage_the_agency_uses()
+    {
+        var s = await Essentials();
+        await StoreBytes(s, PackageLimits.BytesPerGb / 2);
+        var storage = (await (await s.Admin.GetAsync($"/api/organisations/{s.Org}/plan")).Json()).GetProperty("storage");
+        Assert.Equal((PackageLimits.BytesPerGb / 2, 10m, "measured"), (storage.GetProperty("usedBytes").GetInt64(), storage.GetProperty("percent").GetDecimal(),
+            storage.GetProperty("measurement").GetProperty("source").GetString()));
+        Assert.NotEmpty(storage.GetProperty("measurement").GetProperty("measuredAt").GetString()!);
+    }
+
+    [Fact]
     public async Task A_file_that_would_take_the_agency_past_its_storage_limit_is_refused()
     {
         var s = await Essentials();

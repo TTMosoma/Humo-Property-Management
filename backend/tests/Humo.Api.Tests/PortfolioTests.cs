@@ -142,6 +142,10 @@ public sealed class PortfolioTests : IDisposable
         var rename = await humo.PutAsJsonAsync($"/api/organisations/{acacia}", new { name = "Acacia Managing Agents", shortName = "marula", city = "Sandton", province = "Gauteng", expectedVersion = 1 });
         Assert.Equal("Another customer already uses this name.", (await rename.FieldErrors()).GetProperty("shortName").GetString());
 
+        // Nobody to run it yet: an agency goes live only with an administrator who has accepted (doc 21).
+        var early = await humo.PostAsJsonAsync($"/api/organisations/{acacia}/status", new { status = "active", reason = "Onboarding complete" });
+        Assert.Contains("no Agency Administrator", (await early.FieldErrors()).GetProperty("status").GetString());
+        await api.Person("thandeka@acacia.example", Roles.AgencyAdmin, acacia);
         Assert.Equal(HttpStatusCode.NoContent, (await humo.PostAsJsonAsync($"/api/organisations/{acacia}/status", new { status = "active", reason = "Onboarding complete" })).StatusCode);
         var suspend = await humo.PostAsJsonAsync($"/api/organisations/{acacia}/status", new { status = "suspended", reason = "Account unpaid for 90 days" });
         Assert.Equal("step-up-required", await suspend.ProblemCode());
