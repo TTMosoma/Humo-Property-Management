@@ -5,6 +5,7 @@ import {
   AgencySettings,
   ApiError,
   BillingSettings,
+  ClientApproval,
   DocumentBrandingDetails,
   DocumentTemplate,
   DocumentTemplateDataSource,
@@ -13,9 +14,13 @@ import {
   NotificationRule,
   OrganisationDocumentSettings,
   PersonalPreferences,
+  PlatformTemplateDataSource,
   SchemeAuthority,
   SchemeTrustAccount,
   SettingsDataSource,
+  TemplateAdoption,
+  TemplateDesign,
+  TemplateStatus,
   TrustAccount,
   withDefaultRules,
 } from '../domain';
@@ -110,5 +115,30 @@ export class HttpDocumentTemplateDataSource extends HttpPort implements Document
 
   updateBranding(details: DocumentBrandingDetails, expectedVersion: number): Observable<void> {
     return this.command('PUT', '/documents/settings/branding', { ...details, expectedVersion }, ['documents']);
+  }
+}
+
+/**
+ * Humo's side of the template registry over HTTP (D12, D23): every template with its adoption, Humo's own templates'
+ * statuses, and Enterprise customers' custom templates, built by Humo and published once the client approves a proof.
+ */
+@Injectable()
+export class HttpPlatformTemplateDataSource extends HttpPort implements PlatformTemplateDataSource {
+  adoption(): Observable<TemplateAdoption> {
+    return this.live<TemplateAdoption>('/platform/document-templates', ['documents', 'organisations', 'subscriptions']);
+  }
+
+  setStatus(templateId: string, status: TemplateStatus, reason: string, expectedVersion: number): Observable<void> {
+    return this.command('PUT', `/platform/document-templates/${templateId}/status`, { status, reason, expectedVersion }, ['documents']);
+  }
+
+  createCustomTemplate(organisationId: string, documentType: DocumentType): Observable<string> {
+    return this.createId(`/platform/customers/${organisationId}/document-templates`, { documentType }, ['documents']);
+  }
+
+  publishCustomVersion(templateId: string, design: TemplateDesign, notes: string, clientApproval: ClientApproval, expectedVersion: number): Observable<number> {
+    return this.command<{ version: number }>('POST', `/platform/document-templates/${templateId}/versions`, { design, notes, clientApproval, expectedVersion }, ['documents']).pipe(
+      map((r) => r.version),
+    );
   }
 }

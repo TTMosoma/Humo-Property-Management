@@ -218,6 +218,23 @@ public sealed class StatementTests : IDisposable
     }
 
     [Fact]
+    public async Task An_Enterprise_agencys_custom_template_is_used_for_its_statements()
+    {
+        var s = await Scheme("enterprise");
+        await PostedRun(s);
+        var humo = await api.SignedIn(HumoApiFactory.AdminEmail);
+        var created = await humo.PostAsJsonAsync($"/api/platform/customers/{await api.Db(db => db.Schemes.Where(x => x.Id == s.Kc).Select(x => x.OrganisationId).SingleAsync())}/document-templates",
+            new { documentType = "levy-statement" });
+        var id = (await created.Json()).GetProperty("id").GetString();
+        await NoContent(await s.Admin.PutAsJsonAsync("/api/documents/settings/defaults/levy-statement", new { templateId = id, expectedVersion = 0 }));
+
+        Assert.Equal(HttpStatusCode.OK, (await s.Finance.PostAsync($"/api/accounts/{s.Account42}/statements/2026-11/send", null)).StatusCode);
+        var issued = await api.Db(db => db.IssuedStatements.SingleAsync());
+        Assert.Equal((id, 1), (issued.TemplateId, issued.TemplateVersion));
+        Assert.Equal("template", JsonDocument.Parse(issued.Snapshot).RootElement.GetProperty("branding").GetProperty("source").GetString());
+    }
+
+    [Fact]
     public async Task An_owner_opens_their_statement_from_the_email_with_a_code_and_no_account()
     {
         var s = await Scheme();

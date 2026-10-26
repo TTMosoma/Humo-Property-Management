@@ -63,7 +63,7 @@ import { HttpSessionDataSource } from './http-session-data-source';
 import { HttpLibraryDataSource } from './http-library';
 import { HttpPackageLimitsDataSource } from './http-package-limits';
 import { HttpOwnerInvoiceDataSource } from './http-owner-invoices';
-import { HttpDocumentTemplateDataSource, HttpSettingsDataSource } from './http-settings';
+import { HttpDocumentTemplateDataSource, HttpPlatformTemplateDataSource, HttpSettingsDataSource } from './http-settings';
 import { notConnected } from './not-connected';
 
 /** Ports whose HTTP adapters come with later backend slices. Remove each from this list as its adapter lands. */
@@ -71,7 +71,6 @@ const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
   [TimelineDataSource, 'TimelineDataSource'],
   [PayablesDataSource, 'PayablesDataSource'],
   [PaymentGateway, 'PaymentGateway'],
-  [PlatformTemplateDataSource, 'PlatformTemplateDataSource'],
   [MeetingDataSource, 'MeetingDataSource'],
   [ResolutionDataSource, 'ResolutionDataSource'],
   [ComplianceDataSource, 'ComplianceDataSource'],
@@ -131,6 +130,7 @@ export function provideHttpData(): EnvironmentProviders {
     // Slice 2c: settings, document templates and statements.
     { provide: SettingsDataSource, useClass: HttpSettingsDataSource },
     { provide: DocumentTemplateDataSource, useClass: HttpDocumentTemplateDataSource },
+    { provide: PlatformTemplateDataSource, useClass: HttpPlatformTemplateDataSource },
     // Slice 2d: credit control.
     { provide: CollectionDataSource, useClass: HttpCollectionDataSource },
     // R-5: Communications: Sent with delivery results, Compose, templates and notices.

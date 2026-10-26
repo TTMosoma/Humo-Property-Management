@@ -80,7 +80,7 @@ public sealed class StatementService(HumoDbContext db, Commercial.CommercialReco
         var trust = await db.TrustAccounts.AsNoTracking().FirstOrDefaultAsync(t => t.SchemeId == scheme.Id, ct);
         var settings = await DocumentEndpoints.ReadAsync(db, org.Id, ct);
         var entitled = await DocumentEndpoints.EntitledAsync(commercial, org.Id, ct);
-        var template = DocumentCatalogue.DefaultFor("levy-statement", settings.Defaults.GetValueOrDefault("levy-statement"), entitled)
+        var template = DocumentCatalogue.DefaultFor(await TemplateRegistry.ForOrganisationAsync(db, org.Id, ct), "levy-statement", settings.Defaults.GetValueOrDefault("levy-statement"), entitled)
             ?? throw new InvalidOperationException("Humo has no default levy statement template.");
         var version = template.At()!;
         var view = new StatementViewDto(statement, PortfolioReads.ToDto(account), PortfolioReads.ToDto(unit), (await SchemeEndpoints.ToDtos([scheme], db, ct))[0], PortfolioReads.ToDto(holder),

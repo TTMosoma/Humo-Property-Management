@@ -349,6 +349,23 @@ public sealed class DocumentLink
 /// The trustees' written permission for the agency to approve alone on a scheme with no trustee on Humo (D24):
 /// a signed resolution, letter or email as a PDF, valid for up to 12 months or until withdrawn.
 /// </summary>
+/// <summary>
+/// The document template registry's stored part (D12, D23). Humo's own templates come from the contract file; a row here
+/// with no organisation only records Humo moving one through its statuses. A row with an organisation is that customer's
+/// custom template, with its versions, as JSON (Humo.Domain.Documents.DocumentTemplate).
+/// </summary>
+public sealed class DocumentTemplateRow
+{
+    public string Id { get; set; } = "";
+    public Guid? OrganisationId { get; set; }
+    public string DocumentType { get; set; } = "";
+    public string Status { get; set; } = "active";
+    public int Version { get; set; } = 1;
+    public string? Json { get; set; }
+    public string UpdatedBy { get; set; } = "";
+    public DateTimeOffset UpdatedAt { get; set; }
+}
+
 public sealed class TrusteePermission
 {
     public Guid Id { get; set; }
