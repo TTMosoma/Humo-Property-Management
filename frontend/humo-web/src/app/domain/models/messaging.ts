@@ -84,7 +84,8 @@ export type DeliveryStatus = 'scheduled' | 'queued' | 'delivered' | 'read' | 'fa
 
 export const DELIVERY_STATUS_LABELS: Record<DeliveryStatus, string> = {
   scheduled: 'Scheduled',
-  queued: 'Queued',
+  // Handed to the mail server or SMS provider; the delivery report (D-5, D-6 webhooks) hasn't come back yet.
+  queued: 'Awaiting report',
   delivered: 'Delivered',
   read: 'Read',
   failed: 'Failed',

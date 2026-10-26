@@ -142,6 +142,7 @@ export class SentMessagePage {
       { label: v.state === 'scheduled' ? 'Sends' : 'Sent', value: formatDate(v.message.sendAt, true), hint: v.message.sentBy },
       { label: 'Recipients', value: String(total), hint: v.message.skipped.length ? `${v.message.skipped.length} unreachable` : undefined },
       { label: 'Arrived', value: String(v.counts.delivered + v.counts.read), tone: 'success' },
+      { label: 'Waiting', value: String(v.counts.queued), hint: v.counts.queued ? 'for the delivery report' : undefined },
       { label: 'Not delivered', value: String(v.counts.failed + v.counts.bounced), tone: v.counts.failed + v.counts.bounced ? 'danger' : 'default' },
     ];
   });

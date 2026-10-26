@@ -138,6 +138,9 @@ builder.Services.Configure<ForwardedHeadersOptions>(o =>
         o.KnownProxies.Add(System.Net.IPAddress.Parse(proxy));
 });
 
+// Go-live safety (docs/18 D-4, D-17, D-18): in Production, nothing switched off or in test mode.
+Humo.Api.Startup.ProductionSettings.Check(builder.Environment, builder.Configuration);
+
 var app = builder.Build();
 
 app.UseForwardedHeaders();
