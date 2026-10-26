@@ -89,7 +89,21 @@ public sealed class AccessTests : IDisposable
         await humo.StepUp();
         var pm = await humo.PostAsJsonAsync("/api/access/invitations", Invitation(org, Roles.PortfolioManager, "pm@marula.example"));
         Assert.Contains("first Agency Administrator", (await pm.FieldErrors()).GetProperty("role").GetString());
+        api.Email.Sent.Clear();
         Assert.Equal(HttpStatusCode.Created, (await humo.PostAsJsonAsync("/api/access/invitations", Invitation(org, Roles.AgencyAdmin, "admin@marula.example"))).StatusCode);
+
+        // The invitee opens the emailed link as it is: no screen asked for it, so there's no code to enter.
+        var link = new Uri(System.Text.RegularExpressions.Regex.Match(Assert.Single(api.Email.Sent).Text, @"https?://\S+").Value);
+        Assert.Contains("invite=1", link.Query);
+        var token = System.Web.HttpUtility.ParseQueryString(link.Query)["token"]!;
+        var invitee = api.Client();
+        Assert.Equal(HttpStatusCode.OK, (await invitee.PostAsJsonAsync("/api/auth/link/complete", new { token })).StatusCode);
+        var me = await (await invitee.GetAsync("/api/me")).Json();
+        Assert.Equal(("admin@marula.example", "agency-admin"), (me.GetProperty("identity").GetProperty("email").GetString(), me.GetProperty("assignments")[0].GetProperty("role").GetString()));
+        Assert.Equal(IdentityStatuses.Active, await api.Db(db => db.Users.Where(u => u.Email == "admin@marula.example").Select(u => u.Status).SingleAsync()));
+
+        // It works once.
+        Assert.Equal("link-expired", await (await api.Client().PostAsJsonAsync("/api/auth/link/complete", new { token })).ProblemCode());
     }
 
     [Fact]
