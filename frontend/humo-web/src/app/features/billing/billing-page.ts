@@ -27,7 +27,7 @@ const STATUS_TONE: Record<InvoiceStatus, 'info' | 'danger' | 'success' | 'neutra
   imports: [PageHeader, StatusPill, EmptyState, ErrorState, Skeleton, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <ui-page-header eyebrow="Settings" title="Billing & invoices" [subtitle]="'Humo’s invoices to ' + (session.organisation()?.shortName ?? 'your agency') + ', and how you pay.'" />
+    <ui-page-header eyebrow="Settings" title="Humo billing & invoices" [subtitle]="'Humo’s invoices to ' + (session.organisation()?.shortName ?? 'your agency') + ', and how you pay.'" />
 
     @if (invoices() === undefined) {
       <ui-skeleton [count]="4" />

@@ -4,7 +4,7 @@ Status: **implemented in the frontend simulation** (October 2026).
 
 **On the API (slice 2b, 20 October 2026):** the billing run in full, except sending statements (slice 2c) and special levies (no setup screen yet). The rules are ported in `backend/src/Humo.Domain/Finance/BillingRuns.cs`; tests in `LevyBillingTests`. Approval is a work item in My work › Approvals on the API, and **the person who prepared a run can't approve it** (the segregation-of-duties gap in §8 is closed). Interest on arrears is 2% a month on what's 30 days and older by default (common sectional-title practice), kept per agency (`InterestPercentPerMonth`); its settings screen arrives with Settings on the API. Posted charges are ledger lines dated the 1st of the period. Ageing is refreshed every morning.
 
-**On the API (slice 2c, 20 October 2026):** *Send statements* issues each billed account's statement and sends it by the account's channel (email, portal or post); a run can't send before the scheme's trust account is on record. An issued statement is frozen (D7): the data snapshot and its SHA-256 are stored with the template version, and the PDF is rendered from that snapshot by headless Chromium through the app's print route (D8) and stored with its own hash. Emails carry a secure link to the resident portal by default, or the PDF attached when the agency chooses that in Documents & templates (D9). No statement numbers (D10). The interest rate, billing day, due day, step days and AGM months are in Settings › Billing configuration on the API; statements take their due date from it. Code: `backend/src/Humo.Api/Finance/Statements.cs`; tests in `StatementTests`.
+**On the API (slice 2c, 20 October 2026):** *Send statements* issues each billed account's statement and sends it by the account's channel (email, portal or post); a run can't send before the scheme's trust account is on record. An issued statement is frozen (D7): the data snapshot and its SHA-256 are stored with the template version, and the PDF is rendered from that snapshot by headless Chromium through the app's print route (D8) and stored with its own hash. Emails carry a secure link to the resident portal by default, or the PDF attached when the agency chooses that in Documents & templates (D9). No statement numbers (D10). The interest rate, billing day, due day, step days and AGM months are in Settings › Levy billing rules on the API; statements take their due date from it. Code: `backend/src/Humo.Api/Finance/Statements.cs`; tests in `StatementTests`.
 
 **Two flows.**
 - **The billing run** (review finding F15): Scope & period → Charges preview → Exceptions → Approval (in Approvals) → Post (locked) → Send statements.
@@ -76,7 +76,7 @@ Everything is behind `Collections.Manage` (Agency Administrator, Portfolio Manag
 - **Letters of demand** are approved by the scheme's trustees or an agency administrator in My work › Approvals.
 - **Follow-up Tasks:** each active case has one. It goes to a Finance person whose title mentions credit control, or else stays unassigned for the team.
 - **Delivery runs in the background**, for one letter or for bulk reminders, so the screen doesn't wait for the PDF.
-- **Days between letters** come from Settings › Billing configuration.
+- **Days between letters** come from Settings › Levy billing rules.
 
 ## 3. How the pieces connect
 
@@ -134,6 +134,6 @@ Everything is behind `Collections.Manage` (Agency Administrator, Portfolio Manag
 ## 8. Known gaps (for the backend)
 
 - **Ageing** (done on the API, slice 2a): ages the actual transactions. Payments settle the oldest charges first; what's left of each charge is current under 30 days, then 30, 60, 90 and 120+. Balance, ageing and status are stored on the account, recalculated on every ledger write.
-- **Charge rules** (on the API, slice 2c): interest rate, due day and step days are in Settings › Billing configuration. The estimate method is still a constant.
+- **Charge rules** (on the API, slice 2c): interest rate, due day and step days are in Settings › Levy billing rules. The estimate method is still a constant.
 - **Segregation of duties** (done on the API, slice 2b): the person who prepared a run can't approve it.
 - **Delivery.** Statements and collection letters are delivered for real on the API (slices 2c and 2d) and recorded in Communications › Sent with each delivery's result. Failed ones can be retried from there (register R-5). Bounces and "opened" aren't tracked yet.

@@ -110,7 +110,7 @@ export interface CollectionView {
   /** For the letters: where to pay, and who is writing. */
   payTo: TrustAccount;
   agencyName: string;
-  /** Days between letters (Settings › Billing configuration). */
+  /** Days between letters (Settings › Levy billing rules). */
   stepDays: number;
 }
 

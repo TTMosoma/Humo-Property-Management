@@ -107,6 +107,15 @@ public sealed class SmsTests
         Assert.Throws<InvalidOperationException>(() => new SmsGateway(senders, Options.Create(new SmsOptions { Provider = "Carrier pigeon" })).Current);
     }
 
+    [Fact]
+    public async Task With_SMS_switched_off_nothing_counts_as_sent()
+    {
+        // The default provider only logs: it must not report an SMS as accepted, or it's counted and shown as sent.
+        var receipt = await new LogSmsSender(NullLogger<LogSmsSender>.Instance).SendAsync(new SmsMessage("27821234567", "Hello"));
+        Assert.False(receipt.Accepted);
+        Assert.Contains("switched off", receipt.Error);
+    }
+
     // ---- Webhook signatures ----
 
     private static readonly string Secret = Convert.ToBase64String(Encoding.UTF8.GetBytes("humo-test-webhook-secret"));

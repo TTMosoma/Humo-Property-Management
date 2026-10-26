@@ -9,7 +9,7 @@ import {
   CommercialDataSource,
   CustomerCommercialView,
   CustomerInvoice,
-  GB,
+  formatBytes,
   InvoiceStatus,
   PAYMENT_STATUS_LABELS,
   PRICE_STATUS_LABELS,
@@ -350,7 +350,8 @@ export class CustomerCommercial {
   protected readonly isAddOn = (l: { kind: string }) => l.kind === 'add-on';
   protected readonly date = (d: string) => formatDate(d);
   protected readonly rand = (n: number) => formatRand(n, { cents: false });
-  protected readonly gb = (bytes: number) => `${(bytes / GB).toFixed(1)} GB`;
+  /** Storage used: MB until it reaches a GB, so a few uploads don't read as 0.0 GB. */
+  protected readonly gb = (bytes: number) => formatBytes(bytes);
   protected readonly dayBefore = (d: string) => new Date(new Date(`${d}T00:00:00`).getTime() - 86_400_000).toISOString();
 
   protected change(s: ScheduledItem): string {

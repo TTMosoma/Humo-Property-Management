@@ -20,7 +20,7 @@ interface YearRow {
 const ordinal = (n: number) => `${n}${n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th'}`;
 
 /**
- * Settings › Billing configuration: the rules billing, credit control and
+ * Settings › Levy billing rules: the rules billing, credit control and
  * compliance follow (interest, billing day, letter steps, AGM deadline) and
  * each scheme's financial year-end and lifts.
  */
@@ -29,7 +29,7 @@ const ordinal = (n: number) => `${n}${n % 10 === 1 && n !== 11 ? 'st' : n % 10 =
   imports: [DesktopHint, PageHeader, DataTable, CellDef, ErrorState, Skeleton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <ui-page-header eyebrow="Settings" title="Billing configuration" subtitle="The rules billing runs, credit control and compliance follow, and each scheme’s financial year." />
+    <ui-page-header eyebrow="Settings" title="Levy billing rules" subtitle="How the agency bills owners: the rules billing runs, credit control and compliance follow, and each scheme’s financial year. What the agency pays Humo is in Humo billing & invoices." />
     <ui-desktop-hint what="Changing billing configuration" />
 
     @if (result.loading()) {
