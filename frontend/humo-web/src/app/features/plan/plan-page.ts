@@ -4,7 +4,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { map } from 'rxjs';
-import { AddOnId, BILLING_PREFERENCE_LABELS, Feature, GB, PlanDataSource, UpgradeRequest, entitlementSet } from '../../domain';
+import { AddOnId, BILLING_PREFERENCE_LABELS, Feature, PlanDataSource, UpgradeRequest, entitlementSet, formatBytes } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
@@ -66,7 +66,8 @@ export class PlanPage {
   protected readonly prefLabel = BILLING_PREFERENCE_LABELS;
   protected readonly min = Math.min;
   protected readonly rand = (n: number) => formatRand(n, { cents: false });
-  protected readonly gb = (bytes: number) => `${(bytes / GB).toFixed(1)} GB`;
+  /** Storage used: MB until it reaches a GB, so a few uploads don't read as 0.0 GB. */
+  protected readonly gb = (bytes: number) => formatBytes(bytes);
 
   /** Customers ask; their account manager agrees a storage pack with them. Nothing is bought here. */
   protected askStorage(): void {

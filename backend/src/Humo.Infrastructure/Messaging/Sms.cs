@@ -57,6 +57,7 @@ public sealed class LogSmsSender(ILogger<LogSmsSender> logger) : ISmsSender
     public Task<SmsReceipt> SendAsync(SmsMessage message, CancellationToken ct = default)
     {
         logger.LogWarning("SMS NOT SENT (Sms:Provider=Log) to {To}: {Text}", message.To, message.Text);
-        return Task.FromResult(new SmsReceipt(Name, null, Accepted: true));
+        // Not accepted: nothing left this machine, so it isn't counted against the agency's SMS or shown as sent.
+        return Task.FromResult(new SmsReceipt(Name, null, Accepted: false, Error: "SMS is switched off on this server (Sms:Provider=Log): nothing was sent."));
     }
 }

@@ -58,7 +58,7 @@ export function trustAccountForm(drawer: DrawerService, data: SettingsDataSource
 export function billingSettingsForm(drawer: DrawerService, data: SettingsDataSource, a: AgencySettings): void {
   const b = a.billing;
   openForm(drawer, {
-    eyebrow: 'Billing configuration',
+    eyebrow: 'Levy billing rules',
     title: 'Billing and collection rules',
     intro: 'These apply to every scheme from the next billing run, letter or compliance check. Runs already prepared keep the rules they were prepared with.',
     fields: [

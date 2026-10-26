@@ -105,10 +105,12 @@ export function expiryState(d: Pick<LibraryDocument, 'expiresAt'>, now = new Dat
   return days < 0 ? 'expired' : days < 30 ? 'expiring' : 'valid';
 }
 
+/** A size people read: B, KB, MB, then GB (1 GB = 1024³ bytes, as storage is measured, D20). */
 export function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
   if (n < 1024 * 1024) return `${Math.round(n / 1024)} KB`;
-  return `${(n / 1024 / 1024).toFixed(1)} MB`;
+  if (n < 1024 * 1024 * 1024) return `${(n / 1024 / 1024).toFixed(1)} MB`;
+  return `${(n / 1024 / 1024 / 1024).toFixed(1)} GB`;
 }
 
 export interface NewDocument {

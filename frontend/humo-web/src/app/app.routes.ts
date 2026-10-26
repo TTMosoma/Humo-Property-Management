@@ -600,9 +600,9 @@ export const routes: Routes = [
           {
             // The agency's own Humo invoices: administrators only (the API checks the organisation).
             path: 'billing',
-            data: { breadcrumb: 'Billing & invoices' },
+            data: { breadcrumb: 'Humo billing & invoices' },
             children: [
-              { path: '', title: 'Billing & invoices', data: { permission: 'Subscription.Request' }, loadComponent: () => import('./features/billing/billing-page').then((m) => m.BillingPage) },
+              { path: '', title: 'Humo billing & invoices', data: { permission: 'Subscription.Request' }, loadComponent: () => import('./features/billing/billing-page').then((m) => m.BillingPage) },
               {
                 path: ':invoiceId',
                 title: 'Invoice',
@@ -637,9 +637,10 @@ export const routes: Routes = [
             loadComponent: () => import('./features/settings/notification-settings-page').then((m) => m.NotificationSettingsPage),
           },
           {
-            path: 'billing',
-            title: 'Billing configuration',
-            data: { permission: 'Billing.View', breadcrumb: 'Billing configuration' },
+            // The agency's rules for billing owners. Its own address: /settings/billing is Humo's invoices to the agency.
+            path: 'billing-rules',
+            title: 'Levy billing rules',
+            data: { permission: 'Billing.View', breadcrumb: 'Levy billing rules' },
             loadComponent: () => import('./features/settings/billing-settings-page').then((m) => m.BillingSettingsPage),
           },
           {
