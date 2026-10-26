@@ -226,7 +226,7 @@ public static partial class PeopleEndpoints
         {
             db.Relationships.Remove(rel);
             rel.Until = DateOnly.MinValue;
-            await HandOverAccountAsync(db, reads, rel, ct);
+            await HandOverAccountAsync(db, reads, rel, ct, removed: true);
             return Results.NoContent();
         }, ct);
     }
@@ -246,14 +246,18 @@ public static partial class PeopleEndpoints
         return null;
     }
 
-    /// <summary>When the account holder stops owning the unit, another current owner holds the account.</summary>
-    private static async Task HandOverAccountAsync(HumoDbContext db, PortfolioReads reads, Relationship ended, CancellationToken ct)
+    /// <summary>
+    /// When the account holder stops owning the unit, another current owner holds the account. A link removed as a
+    /// mistake was never true, so with no other owner the account has no holder (rather than the wrong one).
+    /// </summary>
+    private static async Task HandOverAccountAsync(HumoDbContext db, PortfolioReads reads, Relationship ended, CancellationToken ct, bool removed = false)
     {
         if (ended.Type != "owner" || ended.UnitId is not { } unitId || (ended.Until is { } u && u >= reads.Today)) return;
         var account = await db.LevyAccounts.FirstOrDefaultAsync(a => a.UnitId == unitId, ct);
         if (account is null || account.HolderPersonId != ended.PersonId) return;
         var next = (await db.Relationships.Where(r => r.UnitId == unitId && r.Type == "owner" && r.Id != ended.Id).ToListAsync(ct)).Where(reads.IsCurrent).OrderBy(r => r.Since).FirstOrDefault();
         if (next is not null) account.HolderPersonId = next.PersonId;
+        else if (removed) account.HolderPersonId = null;
     }
 
     // ---- Rules ----

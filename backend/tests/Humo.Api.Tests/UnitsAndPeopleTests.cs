@@ -219,6 +219,21 @@ public sealed class UnitsAndPeopleTests : IDisposable
     }
 
     [Fact]
+    public async Task Removing_the_only_owner_added_by_mistake_leaves_the_account_without_a_holder()
+    {
+        var s = await Agency();
+        var u29 = await Id(await s.Admin.PostAsJsonAsync($"/api/schemes/{s.Kc}/units", Unit("29")));
+        await Id(await s.Admin.PostAsJsonAsync("/api/people", new { details = Person(), link = new { type = "owner", schemeId = s.Kc.ToString(), unitId = u29.ToString(), since = "2026-10-19" } }));
+        var unit = await (await s.Admin.GetAsync($"/api/units/{u29}")).Json();
+        var role = unit.GetProperty("roles")[0].GetProperty("relationship").GetProperty("id").GetString();
+
+        // Ending on the day it started would mean it never was: that's a removal.
+        Assert.Contains("Remove it instead", (await (await s.Admin.PostAsJsonAsync($"/api/relationships/{role}/end", new { endedOn = "2026-10-19" })).FieldErrors()).GetProperty("endedOn").GetString());
+        Assert.Equal(HttpStatusCode.NoContent, (await s.Admin.PostAsJsonAsync($"/api/relationships/{role}/delete", new { reason = "Never owned this unit" })).StatusCode);
+        Assert.Null(await api.Db(db => db.LevyAccounts.Where(a => a.UnitId == u29).Select(a => a.HolderPersonId).SingleAsync()));
+    }
+
+    [Fact]
     public async Task A_unit_added_by_mistake_can_be_deleted_but_not_one_with_history()
     {
         var s = await Agency();
