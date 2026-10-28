@@ -15,7 +15,8 @@ export interface FormField {
   key: string;
   label: string;
   /** `checks`: several options; the value is the chosen values joined with commas. */
-  type: 'text' | 'email' | 'tel' | 'number' | 'date' | 'textarea' | 'select' | 'color' | 'file' | 'checks' | 'datetime-local';
+  /** `password`: a secret, typed hidden (e.g. a payment provider's passphrase). */
+  type: 'text' | 'email' | 'tel' | 'number' | 'date' | 'textarea' | 'select' | 'color' | 'file' | 'checks' | 'datetime-local' | 'password';
   /** File fields: what the picker offers, e.g. ".pdf,.jpg". */
   accept?: string;
   required?: boolean;

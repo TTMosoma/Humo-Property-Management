@@ -3,6 +3,8 @@ import { ListQuery, Page } from './list-query';
 import { Person, RelationshipType } from '../models/person';
 import { Note, TimelineEvent } from '../models/timeline';
 import { Unit } from '../models/unit';
+import { PaymentOptions } from '../models/account';
+import { CheckoutSession } from './commercial-data-sources';
 import { NewReceipt, StatementImportBatch, StatementImportResult, StatementMapping, StatementPreview } from '../models/bank-statement';
 import {
   AccountDetail,
@@ -82,6 +84,10 @@ export abstract class AccountDataSource {
   pdfUrl(_accountId: string, _period: string): string | undefined {
     return undefined;
   }
+  /** How the holder can pay: the trust account and reference for EFT, and whether card payment is on (D25). */
+  abstract paymentOptions(accountId: string): Observable<PaymentOptions>;
+  /** The holder starts paying the balance by card on Payfast's page, into the scheme's own merchant (D25). Not a payment until Payfast confirms it. */
+  abstract startCardPayment(accountId: string): Observable<CheckoutSession>;
 }
 
 export abstract class ReceiptDataSource {

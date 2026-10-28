@@ -54,6 +54,21 @@ export interface TrustAccount {
   branchCode: string;
 }
 
+/** How an account's holder can pay (D25): EFT to the scheme's trust account, and by card when the scheme has a Payfast merchant. */
+export interface PaymentOptions {
+  /** Null until the agency adds the scheme's trust account. */
+  trustAccount: TrustAccount | null;
+  /** The EFT reference: the account number. */
+  reference: string;
+  due: number;
+  /** The latest charges' due date, or null when nothing is owed. */
+  dueBy: string | null;
+  /** Card payment is on for the scheme and this person holds the account. */
+  card: boolean;
+  /** Payfast's sandbox: a test card is charged, not a real one. */
+  sandbox: boolean;
+}
+
 export interface Statement {
   accountId: string;
   /** "2026-10". */

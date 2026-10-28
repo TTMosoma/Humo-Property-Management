@@ -18,7 +18,8 @@ export interface Receipt {
   /** True when a remembered payer rule matched it on import. */
   autoMatched?: boolean;
   /** How it got here (docs/22 §1). Seeded receipts stand for the bank feed. */
-  source?: 'bank-feed' | 'statement-import' | 'captured';
+  /** payfast: an owner's card payment, confirmed by Payfast (D25). */
+  source?: 'bank-feed' | 'statement-import' | 'captured' | 'payfast';
   /** The statement import it came from. */
   importBatchId?: string;
   /** Who captured or imported it. */

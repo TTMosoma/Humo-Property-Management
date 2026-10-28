@@ -78,6 +78,10 @@ import { agencyDetailsForm, trustAccountForm } from './settings-forms';
       <section class="surface panel">
         <h2 class="section-title">Trust accounts</h2>
         <p class="muted">Each scheme’s levies are paid into its own trust account. Statements and collection letters show these details. Changing one needs a fresh passkey or Humo Mobile approval and stays unverified until the bank’s letter is on file.</p>
+        <p class="muted">
+          Online payments: link a scheme’s own Payfast account and owners can pay by card or Instant EFT from the owner portal. Payfast pays out to the trust account; Payfast’s fee is the
+          scheme’s bank charge, and the owner is credited in full.
+        </p>
         @if (accounts.loading()) {
           <ui-skeleton [count]="5" />
         } @else {
@@ -89,9 +93,24 @@ import { agencyDetailsForm, trustAccountForm } from './settings-forms';
             </ng-template>
             <ng-template uiCell="number" let-t><span class="num">{{ t.account.accountNumber }}</span></ng-template>
             <ng-template uiCell="verified" let-t><ui-status-pill [label]="t.verified ? 'Verified' : 'Awaiting bank letter'" [tone]="t.verified ? 'success' : 'warning'" /></ng-template>
+            <ng-template uiCell="online" let-t>
+              @if (t.payfast; as p) {
+                <div>Payfast {{ p.merchantId }}</div>
+                @if (p.linkedBy) {
+                  <div class="muted">Linked by {{ p.linkedBy }}</div>
+                }
+              } @else {
+                <span class="muted">Off</span>
+              }
+            </ng-template>
             <ng-template uiCell="action" let-t>
               @if (canManage()) {
                 <button type="button" class="btn btn-ghost btn-sm" (click)="change(t)"><ion-icon name="finger-print-outline" aria-hidden="true" /> Change</button>
+                @if (t.payfast) {
+                  <button type="button" class="btn btn-ghost btn-sm" (click)="unlinkPayfast(t)">Turn off online payments</button>
+                } @else if (t.account.accountNumber) {
+                  <button type="button" class="btn btn-ghost btn-sm" (click)="linkPayfast(t)"><ion-icon name="card-outline" aria-hidden="true" /> Set up Payfast</button>
+                }
               }
             </ng-template>
           </ui-data-table>
@@ -174,7 +193,8 @@ export class AgencySettingsPage {
     { key: 'bank', header: 'Bank', width: '30%' },
     { key: 'number', header: 'Account number', width: '170px' },
     { key: 'verified', header: '', width: '170px', sort: (t) => (t.verified ? 1 : 0) },
-    { key: 'action', header: '', align: 'end', width: '110px' },
+    { key: 'online', header: 'Online payments', width: '170px' },
+    { key: 'action', header: '', align: 'end', width: '200px' },
   ];
   protected readonly rowId = (t: SchemeTrustAccount) => t.scheme.id;
 
@@ -262,5 +282,40 @@ export class AgencySettingsPage {
 
   protected change(t: SchemeTrustAccount): void {
     trustAccountForm(this.drawer, this.data, t);
+  }
+
+  /** D25: the scheme's own Payfast account, so owners can pay online. A fresh passkey, like the trust account. */
+  protected linkPayfast(t: SchemeTrustAccount): void {
+    openForm(this.drawer, {
+      eyebrow: `${t.scheme.name} · Online payments`,
+      title: 'Set up Payfast',
+      intro:
+        `Use the scheme’s own Payfast account, set to pay out to its trust account (${t.account.bank} ····${t.account.accountNumber.slice(-4)}). ` +
+        'Find these in Payfast under Settings › Integration. Set a salt passphrase there first. Payfast confirms each payment to Humo PM, which credits the owner’s account.',
+      fields: [
+        { key: 'merchantId', label: 'Merchant ID', type: 'text', required: true, half: true },
+        { key: 'merchantKey', label: 'Merchant key', type: 'text', required: true, half: true },
+        { key: 'passphrase', label: 'Salt passphrase', type: 'password', required: true, help: 'Kept encrypted. Humo PM never shows it again.' },
+      ],
+      submitLabel: 'Verify and link',
+      stepUp: { action: 'change-bank-details', detail: `Link a Payfast account for owners of ${t.scheme.name} to pay into` },
+      submit: (f) => this.data.linkPayfast(t.scheme.id, { merchantId: f['merchantId'].trim(), merchantKey: f['merchantKey'].trim(), passphrase: f['passphrase'] }),
+      success: () => `Online payments are on for ${t.scheme.name}. Owners see “Pay with Payfast” on their account.`,
+      failure: 'Payfast wasn’t linked',
+    });
+  }
+
+  protected unlinkPayfast(t: SchemeTrustAccount): void {
+    openForm(this.drawer, {
+      eyebrow: `${t.scheme.name} · Online payments`,
+      title: 'Turn off online payments',
+      intro: 'Owners pay by EFT again. Payments already started on Payfast still count when Payfast confirms them.',
+      fields: [REASON_FIELD],
+      submitLabel: 'Turn off',
+      stepUp: { action: 'change-bank-details', detail: `Turn off online payments for ${t.scheme.name}` },
+      submit: (f) => this.data.unlinkPayfast(t.scheme.id, f['reason']),
+      success: () => `Online payments are off for ${t.scheme.name}.`,
+      failure: 'Online payments weren’t turned off',
+    });
   }
 }

@@ -13,6 +13,7 @@ import {
   NewTrusteePermission,
   NotificationRule,
   OrganisationDocumentSettings,
+  PayfastMerchantDetails,
   PersonalPreferences,
   PlatformTemplateDataSource,
   SchemeAuthority,
@@ -79,6 +80,14 @@ export class HttpSettingsDataSource extends HttpPort implements SettingsDataSour
 
   updateTrustAccount(schemeId: string, account: TrustAccount): Observable<void> {
     return this.command('PUT', `/settings/trust-accounts/${schemeId}`, account, ['settings', 'accounts']);
+  }
+
+  linkPayfast(schemeId: string, merchant: PayfastMerchantDetails): Observable<void> {
+    return this.command('PUT', `/settings/trust-accounts/${schemeId}/payfast`, merchant, ['settings', 'accounts']);
+  }
+
+  unlinkPayfast(schemeId: string, reason: string): Observable<void> {
+    return this.command('POST', `/settings/trust-accounts/${schemeId}/payfast/remove`, { reason }, ['settings', 'accounts']);
   }
 
   updateComplianceProfile(): Observable<void> {

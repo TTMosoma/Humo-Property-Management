@@ -15,15 +15,18 @@ using Microsoft.Extensions.Options;
 
 namespace Humo.Api.Documents;
 
-public sealed record DocumentLinkDto(string Kind, string Title, string SchemeName, string AgencyName, string? CodeChannel, string? CodeSentTo, string ExpiresAt);
+/// <summary>CodeChannel and CodeSentTo: where the code goes by default. Channels: every way a code can go, the default first.</summary>
+public sealed record DocumentLinkDto(string Kind, string Title, string SchemeName, string AgencyName, string? CodeChannel, string? CodeSentTo, IReadOnlyList<CodeSentDto> Channels, string ExpiresAt);
 public sealed record CodeSentDto(string Channel, string SentTo);
+public sealed record SendCodeRequest(string? Channel);
 public sealed record VerifyCodeRequest(string? Code);
 public sealed record GrantDto(string Grant, string ExpiresAt);
 
 /// <summary>
 /// Secure links to issued statements (docs/18 R-1): an owner opens their statement from the email without a
 /// Humo PM account. The link alone shows nothing personal: a one-time code goes to the mobile on record (SMS,
-/// counted in the agency's monthly SMS), or to their email when there's no mobile. A correct code gives a
+/// counted in the agency's monthly SMS), or to their email when there's no mobile; with both on record they can
+/// ask for it by email instead. A correct code gives a
 /// 30-minute viewing grant. Links last 90 days.
 /// </summary>
 public sealed class DocumentLinks(HumoDbContext db, ISmsSender sms, IEmailSender email, MessageUsage usage, SentRecords sent, AuditLog audit,
@@ -62,11 +65,14 @@ public sealed class DocumentLinks(HumoDbContext db, ISmsSender sms, IEmailSender
 
     public bool Expired(DocumentLink link) => link.RevokedAt is not null || link.ExpiresAt <= Now;
 
-    /// <summary>Where a code would go: the mobile on record, else the email address. Null when there's neither.</summary>
-    public static (string Channel, string Address)? Destination(Person p) =>
-        MobileNumber.TryNormalise(p.Phone, out var msisdn) ? ("sms", msisdn)
-        : SettingsEndpoints.IsEmail(p.Email) ? ("email", p.Email.Trim())
-        : null;
+    /// <summary>Where a code can go: the mobile on record, then the email address. Empty when there's neither.</summary>
+    public static List<(string Channel, string Address)> Destinations(Person p)
+    {
+        var to = new List<(string Channel, string Address)>();
+        if (MobileNumber.TryNormalise(p.Phone, out var msisdn)) to.Add(("sms", msisdn));
+        if (SettingsEndpoints.IsEmail(p.Email)) to.Add(("email", p.Email.Trim()));
+        return to;
+    }
 
     /// <summary>"the number ending 0274" or "s•••@mail.example": enough to recognise, not enough to learn.</summary>
     public static string Masked(string channel, string address)
@@ -82,24 +88,30 @@ public sealed class DocumentLinks(HumoDbContext db, ISmsSender sms, IEmailSender
         var scheme = await db.Schemes.AsNoTracking().FirstAsync(s => s.Id == link.SchemeId, ct);
         var org = await db.Organisations.AsNoTracking().FirstAsync(o => o.Id == link.OrganisationId, ct);
         var person = await db.People.AsNoTracking().FirstAsync(p => p.Id == link.PersonId, ct);
-        var to = Destination(person);
-        return new DocumentLinkDto(link.Kind, $"Levy statement · {StatementService.PeriodLabel(statement)}", scheme.Name, org.Name, to?.Channel,
-            to is { } d ? Masked(d.Channel, d.Address) : null, link.ExpiresAt.ToString("O"));
+        var channels = Destinations(person).Select(d => new CodeSentDto(d.Channel, Masked(d.Channel, d.Address))).ToList();
+        return new DocumentLinkDto(link.Kind, $"Levy statement · {StatementService.PeriodLabel(statement)}", scheme.Name, org.Name, channels.FirstOrDefault()?.Channel,
+            channels.FirstOrDefault()?.SentTo, channels, link.ExpiresAt.ToString("O"));
     }
 
-    /// <summary>Sends a new one-time code. Refused (a policy reason) when asked again too soon, too often in a day, or when there's nowhere to send it.</summary>
-    public async Task<(CodeSentDto? Sent, string? Refused)> SendCodeAsync(DocumentLink link, CancellationToken ct)
+    /// <summary>
+    /// Sends a new one-time code, by the channel asked for when it's on record (else the default). Refused (a policy
+    /// reason) when asked again too soon, too often in a day, or when there's nowhere to send it.
+    /// </summary>
+    public async Task<(CodeSentDto? Sent, string? Refused)> SendCodeAsync(DocumentLink link, string? channel, CancellationToken ct)
     {
         if (link.CodeSentAt is { } last && Now - last < ResendAfter) return (null, "Wait a minute before asking for another code.");
         if (link.CodesDay == Today && link.CodesToday >= MaxCodesPerDay) return (null, "That’s the most codes for today. Try again tomorrow, or contact your managing agent.");
         var person = await db.People.AsNoTracking().FirstAsync(p => p.Id == link.PersonId, ct);
-        if (Destination(person) is not { } to) return (null, "There’s no mobile number or email address on record to send a code to. Contact your managing agent.");
+        var destinations = Destinations(person);
+        if (destinations.Count == 0) return (null, "There’s no mobile number or email address on record to send a code to. Contact your managing agent.");
+        var to = destinations.Find(d => d.Channel == channel);
+        if (to.Channel is null) to = destinations[0];
         var scheme = await db.Schemes.AsNoTracking().FirstAsync(s => s.Id == link.SchemeId, ct);
         var org = await db.Organisations.AsNoTracking().FirstAsync(o => o.Id == link.OrganisationId, ct);
 
         var code = RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6", CultureInfo.InvariantCulture);
         var text = $"{code} is your code to open your {scheme.Name} levy statement from {org.ShortName}. It expires in 10 minutes. Never share it.";
-        var channel = to.Channel;
+        channel = to.Channel;
         if (channel == "sms")
         {
             var receipt = await sms.SendAsync(new SmsMessage(to.Address, text, link.Id.ToString("N")), ct);
@@ -216,11 +228,11 @@ public static class DocumentLinkEndpoints
         return links.Expired(link) ? Gone() : Results.Json(await links.ViewAsync(link, ct), Json.Options);
     }
 
-    private static async Task<IResult> SendCode(string token, DocumentLinks links, CancellationToken ct)
+    private static async Task<IResult> SendCode(string token, [Microsoft.AspNetCore.Mvc.FromBody] SendCodeRequest? body, DocumentLinks links, CancellationToken ct)
     {
         if (await links.FindAsync(token, ct) is not { } link) return Problems.NotFound();
         if (links.Expired(link)) return Gone();
-        var (sent, refused) = await links.SendCodeAsync(link, ct);
+        var (sent, refused) = await links.SendCodeAsync(link, body?.Channel, ct);
         return sent is not null ? Results.Json(sent, Json.Options) : Failure("code-refused", refused!, StatusCodes.Status429TooManyRequests);
     }
 

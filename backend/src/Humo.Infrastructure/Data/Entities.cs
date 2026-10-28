@@ -560,7 +560,7 @@ public sealed class Receipt
     public string Status { get; set; } = "unallocated";
     public string? AllocatedBy { get; set; }
     public bool AutoMatched { get; set; }
-    /// <summary>captured, statement-import or bank-feed.</summary>
+    /// <summary>captured, statement-import, bank-feed or payfast (an owner's card payment, D25).</summary>
     public string Source { get; set; } = "captured";
     public Guid? ImportBatchId { get; set; }
     public string CapturedBy { get; set; } = "";
@@ -753,6 +753,38 @@ public sealed class TrustAccountRow
     public bool Verified { get; set; }
     public string? UpdatedBy { get; set; }
     public DateTimeOffset? UpdatedAt { get; set; }
+    /// <summary>
+    /// The scheme's own Payfast merchant (D25): owners pay levies by card straight into it, and Payfast pays out to
+    /// this trust account. Merchant ID null: card payments are off for the scheme. The passphrase is encrypted (data
+    /// protection), and kept after card payments are turned off so checkouts already started can still be confirmed.
+    /// </summary>
+    public string? PayfastMerchantId { get; set; }
+    public string? PayfastMerchantKey { get; set; }
+    public string? PayfastPassphrase { get; set; }
+    public string? PayfastLinkedBy { get; set; }
+    public DateTimeOffset? PayfastLinkedAt { get; set; }
+}
+
+/// <summary>
+/// An owner's card payment of their levy through the scheme's Payfast merchant (D25). Starting one is not a payment:
+/// only Payfast's verified notification makes it <c>complete</c>, which adds an allocated receipt and the payment line.
+/// </summary>
+public sealed class LevyCardPayment
+{
+    public Guid Id { get; set; }
+    public Guid OrganisationId { get; set; }
+    public Guid SchemeId { get; set; }
+    public Guid AccountId { get; set; }
+    /// <summary>The scheme's merchant the checkout went to: its notification must be for it.</summary>
+    public string MerchantId { get; set; } = "";
+    public decimal Amount { get; set; }
+    /// <summary>initiated, complete, failed or cancelled.</summary>
+    public string Status { get; set; } = "initiated";
+    public string StartedBy { get; set; } = "";
+    public DateTimeOffset CreatedAt { get; set; }
+    public string? ProviderReference { get; set; }
+    public DateTimeOffset? CompletedAt { get; set; }
+    public Guid? ReceiptId { get; set; }
 }
 
 /// <summary>

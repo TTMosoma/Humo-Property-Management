@@ -17,10 +17,19 @@
     </div>
   }
 
+  @let o = options()!;
+  @if (returned() === 'returned') {
+    <p class="note" role="status">
+      <ion-icon name="time-outline" aria-hidden="true" /> Thank you. Payfast is confirming your payment: it shows here as soon as it does, usually within a few minutes.
+    </p>
+  } @else if (returned() === 'cancelled') {
+    <p class="note" role="status"><ion-icon name="information-circle-outline" aria-hidden="true" /> The online payment was cancelled. Nothing was charged.</p>
+  }
+
   <section class="due surface" [class.clear]="d.account.balance <= 0">
     @if (d.account.balance > 0) {
       <div>
-        <div class="label">Amount due by {{ dueDate() }}</div>
+        <div class="label">{{ o.dueBy ? 'Amount due by ' + formatDate(o.dueBy) : 'Amount due' }}</div>
         <div class="amount money">{{ d.account.balance | rand }}</div>
         @if (current(); as c) {
           <ul class="breakdown">
@@ -31,11 +40,24 @@
         }
       </div>
       <div class="pay">
-        <div class="label">Pay by EFT</div>
-        <div><strong>{{ s.scheme.name }} — Trust Account</strong></div>
-        <div>FNB · 62 000 000 000 · branch 250 655</div>
-        <div class="ref">Reference: <strong>{{ d.account.accountNo }}</strong></div>
-        <p class="hint">Using this exact reference means your payment is matched automatically.</p>
+        @if (o.card) {
+          <div class="label">Pay online</div>
+          <button type="button" class="btn btn-primary" [disabled]="paying()" (click)="payOnline()">
+            <ion-icon name="card-outline" aria-hidden="true" /> {{ paying() ? 'Opening Payfast…' : 'Pay ' + (o.due | rand) + ' with Payfast' }}
+          </button>
+          <p class="hint">Card, Instant EFT and more, on Payfast’s secure page. It goes straight to the scheme’s trust account.{{ o.sandbox ? ' Test mode: no real money moves.' : '' }}</p>
+          <div class="label">Or pay by EFT</div>
+        } @else {
+          <div class="label">Pay by EFT</div>
+        }
+        @if (o.trustAccount; as t) {
+          <div><strong>{{ t.accountName }}</strong></div>
+          <div>{{ t.bank }} · {{ t.accountNumber }} · branch {{ t.branchCode }}</div>
+          <div class="ref">Reference: <strong>{{ o.reference }}</strong></div>
+          <p class="hint">Using this exact reference means your payment is matched automatically.</p>
+        } @else {
+          <p class="hint">Your managing agent hasn’t added the scheme’s bank details yet. Your statement shows where to pay, with reference <strong>{{ o.reference }}</strong>.</p>
+        }
         <button type="button" class="btn btn-secondary btn-sm" (click)="paidOpen.set(!paidOpen())">I’ve already paid</button>
       </div>
     } @else {
