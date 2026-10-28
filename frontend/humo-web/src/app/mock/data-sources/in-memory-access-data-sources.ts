@@ -1,7 +1,7 @@
 import { Injectable, Injector, inject } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Observable, delay, map, of, switchMap, throwError, timer } from 'rxjs';
-import { AccessDataSource, AuditDataSource, AuditEvent, AuditQuery, CurrentSession, FieldErrors, HUMO_EMAIL_DOMAIN, IMPERSONATION_REASONS, Identity, ImpersonationSession, ListQuery, NewAssignment, Page, PolicyError, ROLE_LABELS, SENSITIVE_ACTION_LABELS, SecurityDataSource, SecurityProfile, SessionDataSource, SignInError, StepUpAuthenticator, StepUpMethod, StepUpRequest, StepUpResult, activeAssignments, isHumoRole, AGENCY_STAFF, RESIDENT_INVITES, todaySA } from '../../domain';
+import { AccessDataSource, ApiError, AuditDataSource, MobileStatus, AuditEvent, AuditQuery, CurrentSession, FieldErrors, HUMO_EMAIL_DOMAIN, IMPERSONATION_REASONS, Identity, ImpersonationSession, ListQuery, NewAssignment, Page, PolicyError, ROLE_LABELS, SENSITIVE_ACTION_LABELS, SecurityDataSource, SecurityProfile, SessionDataSource, SignInError, StepUpAuthenticator, StepUpMethod, StepUpRequest, StepUpResult, activeAssignments, isHumoRole, AGENCY_STAFF, RESIDENT_INVITES, todaySA } from '../../domain';
 import { PrototypeStateService } from '../../core/prototype/prototype-state.service';
 import { AccessStore } from '../db/access-store';
 import { MockDb } from '../db/mock-db';
@@ -432,6 +432,23 @@ export class InMemorySecurityDataSource extends SecurityDataSource {
   private readonly respond = mockResponder();
   private readonly security$ = toObservable(this.store.security);
 
+  /** The demo sends no SMS (D26): no mobile, and setting one says so. */
+  mobile(): Observable<MobileStatus> {
+    return this.respond({ mobile: null, verified: false, hasPasskey: true });
+  }
+
+  sendMobileCode(): Observable<string> {
+    return throwError(() => new ApiError('server', 'SMS codes work on Humo’s API, not in the demo.'));
+  }
+
+  confirmMobile(): Observable<void> {
+    return throwError(() => new ApiError('server', 'SMS codes work on Humo’s API, not in the demo.'));
+  }
+
+  removeMobile(): Observable<void> {
+    return throwError(() => new ApiError('server', 'SMS codes work on Humo’s API, not in the demo.'));
+  }
+
   profile(identityId: string): Observable<SecurityProfile> {
     return this.security$.pipe(switchMap((all) => this.respond(all[identityId])));
   }
@@ -487,6 +504,15 @@ export class InMemoryStepUpAuthenticator extends StepUpAuthenticator {
       ...(passkey ? [{ method: 'passkey' as const, device: `${passkey.provider} · ${passkey.name}` }] : []),
       ...(phone ? [{ method: 'mobile' as const, device: `Humo Mobile · ${phone.name}` }] : []),
     ]);
+  }
+
+  /** SMS codes need Humo's API (D26): not in the demo. */
+  sendSmsCode(): Observable<string> {
+    return throwError(() => new ApiError('server', 'SMS codes work on Humo’s API, not in the demo.'));
+  }
+
+  verifySmsCode(): Observable<StepUpResult> {
+    return throwError(() => new ApiError('server', 'SMS codes work on Humo’s API, not in the demo.'));
   }
 
   verify(method: StepUpMethod, request: StepUpRequest): Observable<StepUpResult> {

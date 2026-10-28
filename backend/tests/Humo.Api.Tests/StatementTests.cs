@@ -415,6 +415,60 @@ public sealed class StatementTests : IDisposable
     }
 
     [Fact]
+    public async Task Without_a_passkey_to_hand_an_SMS_code_confirms_an_approval_and_nothing_else()
+    {
+        var s = await Scheme();
+        // Every approval of this agency needs a confirmation.
+        await api.Db(async db =>
+        {
+            foreach (var o in await db.Organisations.ToListAsync()) o.ApprovalStepUpAmount = 0;
+            return await db.SaveChangesAsync();
+        });
+        var run = await Id(await s.Finance.PostAsJsonAsync("/api/billing/runs", new { schemeId = s.Kc.ToString(), period = "2026-11" }));
+        var v = 1;
+        foreach (var e in (await Ok(await s.Finance.GetAsync($"/api/billing/runs/{run}"))).GetProperty("run").GetProperty("exceptions").EnumerateArray())
+            await NoContent(await Act(s.Finance, run, new { type = "decide", exceptionId = e.GetProperty("id").GetString(), decision = e.GetProperty("options")[0].GetString() }, v++));
+        await NoContent(await Act(s.Finance, run, new { type = "send-for-approval" }, v++));
+        var approval = (await Ok(await s.Admin.GetAsync("/api/work-items")))[0].GetProperty("id").GetString();
+        var approve = () => s.Admin.PostAsJsonAsync($"/api/work-items/{approval}/decision", new { decision = "approved" });
+        Assert.Equal("step-up-required", await (await approve()).ProblemCode());
+
+        // No confirmed mobile yet: no SMS code.
+        Assert.Equal("no-mobile", await (await s.Admin.PostAsync("/api/me/step-up/sms", null)).ProblemCode());
+
+        // The administrator confirms their own mobile with a code to it.
+        var sent = await Ok(await s.Admin.PostAsJsonAsync("/api/me/mobile/code", new { mobile = "082 555 0101" }));
+        Assert.Equal("the number ending 0101", sent.GetProperty("sentTo").GetString());
+        var code = System.Text.RegularExpressions.Regex.Match(api.Sms.Sent.Last().Text, "\\b\\d{6}\\b").Value;
+        Assert.Equal(HttpStatusCode.OK, (await s.Admin.PostAsJsonAsync("/api/me/mobile/verify", new { code })).StatusCode);
+        Assert.True((await Ok(await s.Admin.GetAsync("/api/me/mobile"))).GetProperty("verified").GetBoolean());
+
+        // On a public computer: a code by SMS instead of the passkey.
+        api.Clock.Advance(TimeSpan.FromMinutes(2));
+        Assert.Equal(HttpStatusCode.OK, (await s.Admin.PostAsync("/api/me/step-up/sms", null)).StatusCode);
+        Assert.Equal("27825550101", api.Sms.Sent.Last().To);
+        Assert.Equal("wrong-code", await (await s.Admin.PostAsJsonAsync("/api/me/step-up/sms/verify", new { code = "000000" })).ProblemCode());
+        code = System.Text.RegularExpressions.Regex.Match(api.Sms.Sent.Last().Text, "\\b\\d{6}\\b").Value;
+        var verified = await Ok(await s.Admin.PostAsJsonAsync("/api/me/step-up/sms/verify", new { code }));
+        Assert.Equal("sms", verified.GetProperty("method").GetString());
+
+        // It covers the approval, recorded as confirmed by SMS ...
+        await NoContent(await approve());
+        Assert.Equal("sms", await api.Db(db => db.Audit.Where(a => a.Action.StartsWith("Approved")).Select(a => a.StepUpMethod).SingleAsync()));
+        // ... but never bank details: those need the passkey.
+        var bank = new { bank = "FNB", accountName = "Kingfisher Court Body Corporate", accountNumber = "62345678901", branchCode = "250655" };
+        var refused = await s.Admin.PutAsJsonAsync($"/api/settings/trust-accounts/{s.Kc}", bank);
+        var problem = await refused.Json();
+        Assert.Equal("step-up-required", problem.GetProperty("code").GetString());
+        Assert.Contains("approvals only", problem.GetProperty("title").GetString());
+
+        // Flagged in the audit log; the person and the agency's administrators are told.
+        Assert.True(await api.Db(db => db.Audit.AnyAsync(a => a.Action.StartsWith("FLAGGED: confirmed it’s them with an SMS code"))));
+        Assert.True(await api.Db(db => db.Notices.AnyAsync(n => n.ToRole == Roles.AgencyAdmin && n.Title.Contains("confirmed an approval by SMS code"))));
+        await HumoApiFactory.Until(() => api.Email.Sent.Any(m => m.To == "thandeka@acacia.example" && m.Subject.Contains("SMS code")));
+    }
+
+    [Fact]
     public async Task A_PDF_that_failed_to_render_is_rendered_on_first_download()
     {
         var s = await Scheme();

@@ -170,6 +170,7 @@ api.MapAccountRequests();
 api.MapHumoTeam();
 api.MapImpersonation();
 Humo.Api.Platform.PasskeyResetEndpoints.MapPasskeyReset(api);
+Humo.Api.Auth.SmsStepUp.MapSmsStepUp(api);
 api.MapAudit();
 api.MapSecurity();
 Humo.Api.Commercial.CustomerEndpoints.MapCustomers(api);

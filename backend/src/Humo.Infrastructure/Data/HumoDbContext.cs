@@ -41,6 +41,7 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
     public DbSet<DocumentSetting> DocumentSettings => Set<DocumentSetting>();
     public DbSet<TrustAccountRow> TrustAccounts => Set<TrustAccountRow>();
     public DbSet<LevyCardPayment> LevyCardPayments => Set<LevyCardPayment>();
+    public DbSet<SmsCode> SmsCodes => Set<SmsCode>();
     public DbSet<IssuedStatement> IssuedStatements => Set<IssuedStatement>();
     public DbSet<PersonalPreference> PersonalPreferences => Set<PersonalPreference>();
     public DbSet<CollectionCaseRow> CollectionCases => Set<CollectionCaseRow>();
@@ -323,6 +324,17 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.Property(x => x.PayfastLinkedBy).HasMaxLength(200);
             e.Property(x => x.Version).IsConcurrencyToken();
             e.HasOne<Scheme>().WithOne().HasForeignKey<TrustAccountRow>(x => x.SchemeId);
+        });
+
+        builder.Entity<SmsCode>(e =>
+        {
+            e.ToTable("SmsCodes");
+            e.HasKey(x => new { x.UserId, x.Purpose });
+            e.Property(x => x.Purpose).HasMaxLength(12);
+            e.Property(x => x.Pending).HasMaxLength(20);
+            e.Property(x => x.CodeHash).HasMaxLength(64);
+            e.Property(x => x.CodesDay).HasMaxLength(10);
+            e.HasOne<HumoUser>().WithMany().HasForeignKey(x => x.UserId);
         });
 
         builder.Entity<LevyCardPayment>(e =>

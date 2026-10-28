@@ -39,15 +39,22 @@
       <div class="methods">
         @for (m of methods(); track m.method; let first = $first) {
           <button type="button" class="method" [class.primary]="first" (click)="start(m.method)">
-            <span class="m-icon"><ion-icon [name]="m.method === 'passkey' ? 'finger-print-outline' : 'phone-portrait-outline'" aria-hidden="true" /></span>
+            <span class="m-icon"><ion-icon [name]="m.method === 'passkey' ? 'finger-print-outline' : m.method === 'sms' ? 'chatbox-outline' : 'phone-portrait-outline'" aria-hidden="true" /></span>
             <span class="m-text">
-              <span class="m-name">{{ m.method === 'passkey' ? 'Use passkey' : 'Approve in Humo Mobile' }}</span>
+              <span class="m-name">{{ m.method === 'passkey' ? 'Use passkey' : m.method === 'sms' ? 'Text me a code' : 'Approve in Humo Mobile' }}</span>
               <span class="m-device">{{ m.device }}</span>
             </span>
             <ion-icon class="m-go" name="chevron-forward-outline" aria-hidden="true" />
           </button>
         }
       </div>
+      @if (smsError()) {
+        <p class="sms-error" role="alert">{{ smsError() }}</p>
+      }
+      <p class="hint">
+        <ion-icon name="phone-portrait-outline" aria-hidden="true" />
+        On someone else’s computer? Choose <strong>Use passkey</strong>, then <strong>Use a phone or tablet</strong>, and scan the QR code with your phone.
+      </p>
     } @else {
       <div class="none">
         <p>You don’t have a passkey or Humo Mobile set up yet, so Humo can’t verify you for this action.</p>
@@ -71,6 +78,21 @@
         </div>
       }
     </div>
+  }
+  @case ('sms') {
+    <form class="sms" novalidate (submit)="$event.preventDefault(); verifySms()">
+      <label class="sms-field">
+        <span>Enter the 6-digit code we sent to {{ smsSentTo() }}. It confirms approvals only.</span>
+        <input type="text" inputmode="numeric" autocomplete="one-time-code" [value]="smsCode()" (input)="setSmsCode($event)" [attr.aria-invalid]="!!smsError()" />
+      </label>
+      @if (smsError()) {
+        <p class="sms-error" role="alert">{{ smsError() }}</p>
+      }
+      <div class="sms-actions">
+        <button type="submit" class="btn btn-primary" [disabled]="smsBusy()">{{ smsBusy() ? 'Checking…' : 'Confirm' }}</button>
+        <button type="button" class="btn btn-ghost" [disabled]="smsBusy()" (click)="sendSms()">Send a new code</button>
+      </div>
+    </form>
   }
   @case ('verified') {
     <div class="waiting ok" role="status">

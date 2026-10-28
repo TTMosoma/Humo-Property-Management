@@ -41,6 +41,7 @@ Each entry records:
 | D23 | Custom document templates are Enterprise only: the separate add-on is withdrawn; Enterprise includes one custom template (refines D12) | Documents, commercial |
 | D24 | Approving with one authoriser: a trustee on Humo approves; with none on Humo, the agency approves alone under the trustees’ written permission, with a passkey, after a 24-hour cooling-off | Approvals |
 | D25 | Owners pay levies online through each scheme’s own Payfast account, paid out to its trust account; the scheme pays Payfast’s fee | Finance, owner portal |
+| D26 | Confirming without a passkey to hand (e.g. a public computer): your phone’s passkey by QR code first; a code by SMS to your own confirmed mobile as a fallback, for approvals only | Identity, approvals |
 
 ---
 
@@ -582,6 +583,25 @@ Approved on 18 October 2026 by Terry Mosoma (product owner). Options and reasons
 - API: `PUT /settings/trust-accounts/{schemeId}/payfast`, `POST …/payfast/remove`, `GET /accounts/{id}/payment-options`, `POST /accounts/{id}/card-checkout`, and the notification `POST /payments/notifications/payfast/levies`.
 - My account shows the scheme’s real trust account and due date (they were placeholders before).
 - **Bank reconciliation:** Payfast’s payout reaches the trust account as one deposit, net of fees, for payments already credited. When the bank statement is imported, finance moves that line to suspense with a note, not onto an account. Matching payouts automatically is future work.
+
+---
+
+## D26 — Confirming it’s you without your passkey to hand (28 October 2026)
+
+**Status:** approved by the product owner (Terry Mosoma).
+
+**The problem:** someone has to confirm an urgent approval from a public or borrowed computer. It has no passkey of theirs, and they have no trusted device with them.
+
+**Decision:**
+1. **Your phone first.** A passkey on your phone confirms on any computer: choose *Use passkey*, then *Use a phone or tablet*, and scan the QR code. Or open Humo PM on the phone and approve in My work. The confirmation dialog says so, and My profile suggests adding a passkey on your phone.
+2. **An SMS code as the fallback, for approvals only.** A 6-digit code by SMS to the person’s own confirmed mobile stands in for the passkey when approving in My work. It never covers bank details, trust accounts, Payfast, users and access, or security settings: those always need a passkey. It never applies while impersonating, and not when approving alone under D24.
+3. **The mobile is the person’s own**, added in My profile and confirmed by a code to it. Once they have a passkey, adding, changing or removing it needs that passkey, so someone who gets into their email can’t add their own number.
+4. **Every use is visible.** It is flagged in the audit log (“FLAGGED: confirmed it’s them with an SMS code”), and the approval’s audit entry records *sms* as the method. The person is told by email and in the app, and the agency’s administrators in the app and by email.
+5. **Limits:** codes last 10 minutes with 5 tries, at most one a minute and 5 a day. The confirmation lasts 5 minutes, like a passkey’s. Codes count in the agency’s SMS.
+
+**Consequences:**
+- API: `GET /me/mobile`, `POST /me/mobile/code`, `/me/mobile/verify`, `/me/mobile/remove`, `POST /me/step-up/sms`, `/me/step-up/sms/verify`. The SMS confirmation is a separate session claim, so nothing that checks the passkey mistakes it for one. Commands accept it only with `SmsStepUpAllowed`.
+- Supplier payments (slice 3b) decide when they arrive whether releasing a payment may use it. The default is no.
 
 ---
 

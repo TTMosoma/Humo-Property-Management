@@ -20,7 +20,8 @@ export class StepUpService {
 
   /** Emits true once verified (or already fresh), false if cancelled or failed. */
   require(request: StepUpRequest): Observable<boolean> {
-    if (this.session.stepUpFresh()) return of(true);
+    // An SMS-code proof (D26) covers approvals only: anything else asks for the passkey.
+    if (this.session.stepUpFresh() && (this.session.stepUpProof()?.method !== 'sms' || request.smsAllowed)) return of(true);
     return defer(() => {
       const ref = this.dialog.open<StepUpResult, StepUpRequest>(StepUpDialog, {
         data: request,

@@ -740,6 +740,24 @@ public sealed class DocumentSetting
     public string StatementDelivery { get; set; } = "link";
 }
 
+/// <summary>
+/// A one-time code sent by SMS to a Humo PM user (D26): to confirm their own mobile number (<c>mobile</c>), or to confirm
+/// it's them for an approval when they have no passkey to hand (<c>step-up</c>). Only the hash is kept.
+/// </summary>
+public sealed class SmsCode
+{
+    public Guid UserId { get; set; }
+    public string Purpose { get; set; } = "";
+    /// <summary>The number being confirmed (purpose <c>mobile</c>), normalised.</summary>
+    public string? Pending { get; set; }
+    public string? CodeHash { get; set; }
+    public DateTimeOffset? ExpiresAt { get; set; }
+    public int Attempts { get; set; }
+    public DateTimeOffset? SentAt { get; set; }
+    public string CodesDay { get; set; } = "";
+    public int CodesToday { get; set; }
+}
+
 /// <summary>A scheme's trust bank account, as statements and letters show it. Changing it needs a fresh passkey.</summary>
 public sealed class TrustAccountRow
 {

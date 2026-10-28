@@ -119,7 +119,7 @@ export class ApprovalCard {
     const decide$ = () => this.attention.decide(item.id, decision, comment);
     const run$ =
       decision === 'approved' && this.needsStepUp()
-        ? this.stepUp.guard({ action: 'approve-large-amount', detail: `Approve ${item.ref} · ${formatRand(item.amount)} — ${item.title}` }, decide$)
+        ? this.stepUp.guard({ action: 'approve-large-amount', detail: `Approve ${item.ref} · ${formatRand(item.amount)} — ${item.title}`, smsAllowed: true }, decide$)
         : decide$();
     run$.subscribe({
       complete: () => this.busy.set(false),

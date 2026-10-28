@@ -24,6 +24,12 @@ public sealed record Actor(HumoUser User, RoleAssignment Assignment, IReadOnlySe
     /// <summary>The person at the keyboard.</summary>
     public HumoUser Human => ImpersonatedBy ?? User;
 
+    /// <summary>
+    /// D26: when they last confirmed it's them with an SMS code instead of a passkey. It counts only for commands that
+    /// allow it (<see cref="CommandSpec.SmsStepUpAllowed"/>: approvals), and never while impersonating.
+    /// </summary>
+    public DateTimeOffset? SmsStepUpAt { get; init; }
+
     /// <summary>Observe impersonation: read-only (doc 24 C1).</summary>
     public bool Observing => Impersonation?.Mode == "observe";
 
@@ -46,6 +52,8 @@ public sealed record Actor(HumoUser User, RoleAssignment Assignment, IReadOnlySe
 public sealed class CurrentActor(IHttpContextAccessor http, SessionBuilder sessions, UserManager<HumoUser> users, HumoDbContext db)
 {
     public const string StepUpClaim = "humo:stepup";
+    /// <summary>D26: an SMS-code confirmation, kept apart from the passkey's so nothing else mistakes it for one.</summary>
+    public const string SmsStepUpClaim = "humo:stepup-sms";
     public const string ImpersonationClaim = "humo:impersonation";
     private Actor? actor;
     private bool loaded;
@@ -64,7 +72,8 @@ public sealed class CurrentActor(IHttpContextAccessor http, SessionBuilder sessi
         if (!session.SignedIn) return null;
         var assignment = user.Assignments.First(a => a.Id.ToString() == session.ActiveAssignmentId);
         var stepUp = long.TryParse(principal.FindFirstValue(StepUpClaim), NumberStyles.None, CultureInfo.InvariantCulture, out var s) ? DateTimeOffset.FromUnixTimeSeconds(s) : (DateTimeOffset?)null;
-        actor = new Actor(user, assignment, session.Permissions.ToHashSet(), stepUp);
+        var smsStepUp = long.TryParse(principal.FindFirstValue(SmsStepUpClaim), NumberStyles.None, CultureInfo.InvariantCulture, out var t) ? DateTimeOffset.FromUnixTimeSeconds(t) : (DateTimeOffset?)null;
+        actor = new Actor(user, assignment, session.Permissions.ToHashSet(), stepUp) { SmsStepUpAt = smsStepUp };
 
         // Impersonating: act as the customer's role, recorded as the staff member (doc 24 section 8).
         if (await ActiveImpersonation(db, principal, user.Id, ct) is { } imp && await sessions.LoadUserAsync(imp.TargetId, ct) is { } target)

@@ -16,6 +16,8 @@ public sealed record CommandSpec(string Action, string Permission)
     public Guid? OrganisationId { get; init; }
     /// <summary>Force (true) or waive (false) step-up; null: the permission's default (C7).</summary>
     public bool? StepUp { get; init; }
+    /// <summary>D26: an SMS code may stand in for the passkey (approvals only). Everything else needs the passkey.</summary>
+    public bool SmsStepUpAllowed { get; init; }
     public int? ExpectedVersion { get; init; }
     public int? CurrentVersion { get; init; }
     /// <summary>Field → message, after authorisation (C6).</summary>
@@ -46,6 +48,9 @@ public sealed class CommandRunner(CurrentActor current, HumoDbContext db, AuditL
     /// <summary>What the person reads when a sensitive action needs their passkey again.</summary>
     public const string StepUpTitle = "Confirm it’s you with your passkey first: your last confirmation was more than 5 minutes ago.";
 
+    /// <summary>D26: they confirmed with an SMS code, which covers approvals only.</summary>
+    public const string PasskeyOnlyTitle = "This needs your passkey: a code by SMS confirms approvals only. Use your passkey, or your phone’s.";
+
     private readonly List<Func<Task>> afterCommit = [];
 
     /// <summary>Work that must happen only once the change is saved, e.g. emailing an invoice. A failure there never undoes the change.</summary>
@@ -68,7 +73,12 @@ public sealed class CommandRunner(CurrentActor current, HumoDbContext db, AuditL
         if (errors is { Count: > 0 }) return Problems.Validation(errors);
 
         var needsProof = spec.StepUp ?? (AccessCatalogue.Permissions.TryGetValue(spec.Permission, out var p) && p.StepUp);
-        if (needsProof && !(actor.StepUpAt is { } at && clock.GetUtcNow() - at < StepUpFresh)) return Problems.Policy("step-up-required", StepUpTitle);
+        var passkeyFresh = actor.StepUpAt is { } at && clock.GetUtcNow() - at < StepUpFresh;
+        var smsFresh = spec.SmsStepUpAllowed && actor.Impersonation is null && actor.SmsStepUpAt is { } sAt && clock.GetUtcNow() - sAt < StepUpFresh;
+        if (needsProof && !passkeyFresh && !smsFresh)
+            return actor.SmsStepUpAt is { } sms && clock.GetUtcNow() - sms < StepUpFresh
+                ? Problems.Policy("step-up-required", PasskeyOnlyTitle)
+                : Problems.Policy("step-up-required", StepUpTitle);
 
         IResult result;
         try
@@ -81,7 +91,7 @@ public sealed class CommandRunner(CurrentActor current, HumoDbContext db, AuditL
         }
 
         audit.Record(spec.Action, "success", actor.Human, category: spec.Category, role: actor.Assignment.Role, organisationId: spec.OrganisationId ?? actor.OrganisationId,
-            resource: spec.Resource, resourceId: spec.ResourceId, stepUpMethod: needsProof ? "passkey" : null,
+            resource: spec.Resource, resourceId: spec.ResourceId, stepUpMethod: !needsProof ? null : passkeyFresh ? "passkey" : "sms",
             actingAs: actor.Impersonation is null ? null : actor.User, impersonation: actor.Impersonation, schemeId: spec.SchemeId);
         try
         {

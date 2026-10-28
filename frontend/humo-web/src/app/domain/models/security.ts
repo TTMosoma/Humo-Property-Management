@@ -7,7 +7,7 @@
  * The backend will implement these with WebAuthn and a signed push challenge;
  * the frontend only asks for "a fresh proof for this action".
  */
-export type StepUpMethod = 'passkey' | 'mobile';
+export type StepUpMethod = 'passkey' | 'mobile' | 'sms';
 
 /** The sensitive actions that ask for step-up. The API re-checks the proof's freshness. */
 export type SensitiveAction =
@@ -51,6 +51,17 @@ export interface StepUpRequest {
   action: SensitiveAction;
   /** Shown in the dialog, e.g. "Release R 58 940.20 from Kingfisher Court’s trust account". */
   detail: string;
+  /** D26: a code by SMS may confirm it, for someone without their passkey (e.g. on a public computer). Approvals only. */
+  smsAllowed?: boolean;
+}
+
+/** D26: the person's own mobile for SMS codes (My profile). */
+export interface MobileStatus {
+  /** "the number ending 0101", or null when none is confirmed. */
+  mobile: string | null;
+  verified: boolean;
+  /** Changing it needs the passkey once they have one. */
+  hasPasskey: boolean;
 }
 
 export interface StepUpResult {

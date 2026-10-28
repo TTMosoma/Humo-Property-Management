@@ -77,7 +77,15 @@ Needs a Payfast **sandbox** merchant (register at sandbox.payfast.co.za, set a s
 - [ ] Cancel on Payfast's page instead. **Expect:** "The online payment was cancelled. Nothing was charged."
 - [ ] **Turn off online payments** on the scheme. **Expect:** owners see EFT only.
 
-## 8. Notices (UTC fix)
+## 8. Confirming without your passkey (D26)
+
+- [ ] My profile › **Mobile number › Add**. **Expect:** a passkey prompt if you have one, then an SMS code; entering it shows "Codes go to the number ending …". An email tells you the number was set.
+- [ ] Set *Passkey approval threshold* low (Settings › Agency) and send something for approval. In a **private window** (as on a public computer), sign in with an email code and approve it in My work. **Expect:** the dialog offers *Use passkey*, *Text me a code*, and the tip about your phone's QR code.
+- [ ] **Text me a code**, then enter it. **Expect:** approved; an email and a notice that you confirmed by SMS code; the administrator gets a notice; Audit shows the *FLAGGED* entry.
+- [ ] Within 5 minutes, change a trust account. **Expect:** it asks for your passkey: "a code by SMS confirms approvals only".
+- [ ] **Use passkey › Use a phone or tablet** on a computer with Bluetooth. **Expect:** a QR code; scanning it with your phone confirms.
+
+## 9. Notices (UTC fix)
 
 - [ ] Publish a notice with an end date. **Expect:** it publishes (this failed before 20 October) and shows in the resident portal until the end date.
 

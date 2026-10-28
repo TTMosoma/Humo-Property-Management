@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { firstValueFrom } from 'rxjs';
-import { AccessDataSource, AccountDataSource, ApiError, JobDataSource, describeFailure, MeetingDataSource, PayablesDataSource, PlatformTemplateDataSource, PolicyError, SchemeDataSource, SessionDataSource, SettingsDataSource, SignInError, SupplierDataSource } from '../domain';
+import { AccessDataSource, AccountDataSource, ApiError, JobDataSource, describeFailure, MeetingDataSource, PayablesDataSource, PlatformTemplateDataSource, PolicyError, SchemeDataSource, SessionDataSource, SettingsDataSource, SignInError, StepUpAuthenticator, SupplierDataSource } from '../domain';
 import { provideHttpData } from './provide-http-data';
 
 /**
@@ -79,6 +79,19 @@ describe('Production data layer (provideHttpData)', () => {
     expect(put.request.body).toEqual({ merchantId: '10004321', merchantKey: 'kc4merchantkey', passphrase: 'salt-salt' });
     put.flush(null, { status: 204, statusText: 'No Content' });
     await linked;
+  });
+
+  it('offers an SMS code for approvals once the mobile is confirmed (D26)', async () => {
+    const auth = TestBed.inject(StepUpAuthenticator);
+    const methods = firstValueFrom(auth.methods('me'));
+    http.expectOne('/api/me/mobile').flush({ mobile: 'the number ending 0101', verified: true, hasPasskey: true });
+    expect((await methods).map((m) => m.method)).toEqual(['passkey', 'sms']);
+    const sent = firstValueFrom(auth.sendSmsCode());
+    http.expectOne({ method: 'POST', url: '/api/me/step-up/sms' }).flush({ sentTo: 'the number ending 0101' });
+    expect(await sent).toBe('the number ending 0101');
+    const verified = firstValueFrom(auth.verifySmsCode('123456'));
+    http.expectOne({ method: 'POST', url: '/api/me/step-up/sms/verify' }).flush({ method: 'sms', device: 'SMS to the number ending 0101', at: '2026-10-28T10:00:00Z' });
+    expect(await verified).toMatchObject({ verified: true, method: 'sms' });
   });
 
   it('reads jobs and suppliers from the API', async () => {
