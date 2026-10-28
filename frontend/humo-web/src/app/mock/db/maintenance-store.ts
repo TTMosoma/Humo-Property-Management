@@ -12,6 +12,7 @@ import {
   JobSummary,
   NewJobInput,
   PaymentBatch,
+  BankDetailsInput,
   Role,
   Supplier,
   SupplierDetail,
@@ -497,7 +498,7 @@ export class MaintenanceStore {
       i.status = 'in-batch';
       i.batchId = id;
     });
-    this.batches = [{ version: 1, id, schemeId, invoiceIds: invoices.map((i) => i.id), total, createdAt: new Date().toISOString(), createdBy: by, status: 'awaiting-approval', approvalWorkItemId: workId }, ...this.batches];
+    this.batches = [{ version: 1, id, ref: id, schemeId, invoiceIds: invoices.map((i) => i.id), total, createdAt: new Date().toISOString(), createdBy: by, status: 'awaiting-approval', approvalWorkItemId: workId }, ...this.batches];
     this.db.addWork({
       id: workId,
       ref: id,
@@ -529,6 +530,7 @@ export class MaintenanceStore {
     batch.version++;
     batch.status = 'released';
     batch.releasedAt = new Date().toISOString();
+    batch.releasedBy = by;
     for (const id of batch.invoiceIds) {
       const inv = this.invoices.find((i) => i.id === id)!;
       inv.version++;
@@ -541,6 +543,63 @@ export class MaintenanceStore {
       }
     }
     this.batches = [...this.batches];
+    this.db.touch();
+  }
+
+  cancelBatch(batchId: string, reason: string, by: string): void {
+    const batch = this.batches.find((b) => b.id === batchId);
+    if (!batch || (batch.status !== 'awaiting-approval' && batch.status !== 'approved')) throw new Error('Only a batch that isn’t released can be cancelled');
+    batch.version++;
+    batch.status = 'cancelled';
+    batch.cancelledAt = new Date().toISOString();
+    batch.cancelledBy = by;
+    batch.cancelReason = reason;
+    this.freeInvoices(batch);
+    if (batch.approvalWorkItemId) this.db.resolveWork(batch.ref, [], by);
+    this.batches = [...this.batches];
+    this.db.touch();
+  }
+
+  private freeInvoices(batch: PaymentBatch): void {
+    for (const id of batch.invoiceIds) {
+      const inv = this.invoices.find((i) => i.id === id);
+      if (!inv) continue;
+      inv.version++;
+      inv.status = 'approved';
+      inv.batchId = undefined;
+    }
+  }
+
+  /** New bank details: held until someone other than the person who entered them verifies them in My work (D27). */
+  changeBank(supplierId: string, d: BankDetailsInput, by: string, byId: string): void {
+    const s = this.supplier(supplierId);
+    if (!s) throw new Error('No such supplier');
+    const at = new Date().toISOString();
+    const workId = `w-bank-${supplierId}-${Date.now()}`;
+    s.version++;
+    s.bankAccount = `${d.bankName} ····${d.accountNumber.slice(-4)}`;
+    s.bankVerified = false;
+    s.bankVerifiedBy = undefined;
+    s.bankVerifiedAt = undefined;
+    s.bankChange = { by, byId, at, workItemId: workId };
+    this.db.addWork({
+      id: workId,
+      ref: `Bank ${s.bankAccount}`,
+      kind: 'approval',
+      type: 'bank-details-verification',
+      title: `Verify bank details — ${s.name}`,
+      detail: `New account: ${d.bankName}, account ${d.accountNumber}, branch ${d.branchCode}, ${d.accountType}, in the name of ${d.accountHolder}. Call ${s.contactName} on ${s.phone} and confirm it before you verify.`,
+      schemeId: s.schemeIds[0] ?? '',
+      supplierName: s.name,
+      createdAt: at,
+      dueAt: new Date(Date.now() + 2 * 86_400_000).toISOString(),
+      assigneeId: null,
+      approverRoles: PAYMENT_APPROVERS,
+      evidence: [`Entered by ${by}`, `Call back: ${s.contactName}, ${s.phone}`],
+      status: 'open',
+      route: `/suppliers/${s.id}`,
+    });
+    this.suppliers = [...this.suppliers];
     this.db.touch();
   }
 
@@ -585,14 +644,22 @@ export class MaintenanceStore {
       if (after.status === 'approved') batch.status = 'approved';
       else if (after.status === 'open') batch.status = 'awaiting-approval';
       else if (after.status === 'rejected') {
-        batch.status = 'awaiting-approval';
-        for (const id of batch.invoiceIds) {
-          const inv = this.invoices.find((i) => i.id === id)!;
-          inv.status = 'approved';
-          inv.batchId = undefined;
-        }
-        this.batches = this.batches.filter((b) => b.id !== batch.id);
+        batch.status = 'rejected';
+        this.freeInvoices(batch);
+        this.batches = [...this.batches];
       }
+    }
+
+    if (after.type === 'bank-details-verification') {
+      const s = this.suppliers.find((x) => x.bankChange?.workItemId === after.id);
+      if (!s || after.status === 'open') return;
+      s.version++;
+      s.bankVerified = after.status === 'approved';
+      s.bankVerifiedBy = s.bankVerified ? by : undefined;
+      s.bankVerifiedAt = s.bankVerified ? after.decidedAt : undefined;
+      if (!s.bankVerified) s.bankAccount = 'Rejected: enter the details again';
+      s.bankChange = undefined;
+      this.suppliers = [...this.suppliers];
     }
     void before;
   }

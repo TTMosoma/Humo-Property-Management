@@ -75,6 +75,20 @@
   }
 }
 
+.batch.closed {
+  padding-block: var(--s-4);
+  opacity: 0.85;
+}
+
+.paid-into {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+  align-items: center;
+  margin: 0 0 var(--s-3);
+  color: var(--c-text-2);
+}
+
 .release {
   display: flex;
   flex-wrap: wrap;

@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, map, switchMap } from 'rxjs';
 import {
+  BankDetailsInput,
   BatchView,
   FieldErrors,
   InvoiceView,
@@ -241,11 +242,11 @@ export class InMemorySupplierDataSource extends Live implements SupplierDataSour
     return e;
   }
 
-  changeBankDetails(supplierId: string): Observable<void> {
+  changeBankDetails(supplierId: string, details: BankDetailsInput): Observable<void> {
     const name = this.store.supplierDetail(supplierId)?.supplier.name;
     return this.command(
-      { action: `Changed banking details for ${name} (payments held until verified)`, resource: 'Supplier', resourceId: supplierId, permission: 'Suppliers.ChangeBankDetails', category: 'security' },
-      () => undefined,
+      { action: `Entered new bank details for ${name} (payments held until someone else verifies them)`, resource: 'Supplier', resourceId: supplierId, permission: 'Suppliers.ChangeBankDetails', category: 'security' },
+      () => this.store.changeBank(supplierId, details, this.by, this.session.current.identity.id),
     );
   }
 }
@@ -277,7 +278,7 @@ export class InMemoryPayablesDataSource extends Live implements PayablesDataSour
     return this.command(spec, () => this.store.createBatch(invoiceIds, this.by));
   }
 
-  releaseBatch(batchId: string, expectedVersion?: number): Observable<void> {
+  releaseBatch(batchId: string, expectedVersion?: number): Observable<string> {
     const b = this.store.batchesIn(this.allSchemes()).find((x) => x.batch.id === batchId);
     const spec: CommandSpec = {
       action: 'Released payment batch',
@@ -289,6 +290,33 @@ export class InMemoryPayablesDataSource extends Live implements PayablesDataSour
       feature: 'payables',
       version: { expected: expectedVersion, current: b?.batch.version },
     };
-    return this.command(spec, () => this.store.releaseBatch(batchId, this.by));
+    // SIMULATED (docs/18 R-15): no payment file is downloaded and no remittance is emailed.
+    return this.command(spec, () => {
+      this.store.releaseBatch(batchId, this.by);
+      return `${b?.batch.ref ?? batchId} payments.csv`;
+    });
+  }
+
+  paymentFile(batchId: string): Observable<string> {
+    const b = this.store.batchesIn(this.allSchemes()).find((x) => x.batch.id === batchId);
+    // SIMULATED (docs/18 R-15): the prototype has no payment file to download.
+    return this.command(
+      { action: `Downloaded the payment file for ${b?.batch.ref ?? batchId}`, resource: 'Export', resourceId: batchId, schemeId: b?.scheme.id, permission: 'Payables.Release', feature: 'payables', category: 'security' },
+      () => `${b?.batch.ref ?? batchId} payments.csv`,
+    );
+  }
+
+  cancelBatch(batchId: string, reason: string, expectedVersion?: number): Observable<void> {
+    const b = this.store.batchesIn(this.allSchemes()).find((x) => x.batch.id === batchId);
+    const spec: CommandSpec = {
+      action: `Cancelled payment batch ${b?.batch.ref ?? batchId}: ${reason}`,
+      resource: 'Payment batch',
+      resourceId: batchId,
+      schemeId: b?.scheme.id,
+      permission: 'Payables.Prepare',
+      feature: 'payables',
+      version: { expected: expectedVersion, current: b?.batch.version },
+    };
+    return this.command(spec, () => this.store.cancelBatch(batchId, reason, this.by));
   }
 }

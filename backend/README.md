@@ -51,7 +51,7 @@ The rest of slice 1 follows port by port: organisations, schemes, units, people,
    2. Choose **Email me a sign-in link**.
    3. Open the link from Mailpit.
    4. Create a passkey when asked. Next time, use **Sign in with a passkey**.
-5. **Load the demo agencies (optional).** Without them the live system starts empty. This adds Acacia (two schemes, staff, owners, tenants, trustees and three months of levies, some in arrears) and Fynbos (a small second agency), then exits. Development only; running it again changes nothing.
+5. **Load the demo agencies (optional).** Without them the live system starts empty. This adds Acacia (two schemes, staff, owners, tenants, trustees, three months of levies with some in arrears, and suppliers with approved invoices to pay, one waiting for its bank details to be verified) and Fynbos (a small second agency), then exits. Development only; running it again changes nothing, except adding the suppliers to an Acacia seeded before they existed.
    ```bash
    dotnet run --project backend/src/Humo.Api -- seed-demo
    ```

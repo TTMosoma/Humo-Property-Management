@@ -2,7 +2,7 @@ import { Observable } from 'rxjs';
 import { ListQuery, Page } from './list-query';
 import { Invoice, Job, PaymentBatch, Priority } from '../models/job';
 import { Scheme } from '../models/scheme';
-import { DocStatus, Supplier, SupplierStatus, Trade } from '../models/supplier';
+import { BankDetailsInput, DocStatus, Supplier, SupplierStatus, Trade } from '../models/supplier';
 import { Unit } from '../models/unit';
 import { WorkItem } from '../models/work-item';
 
@@ -115,8 +115,12 @@ export abstract class SupplierDataSource {
   abstract update(id: string, details: SupplierDetails, expectedVersion?: number): Observable<void>;
   /** On hold: no new work orders. Archived: no longer used. Restore by setting active. */
   abstract setStatus(id: string, status: SupplierStatus, reason: string, expectedVersion?: number): Observable<void>;
-  /** Sensitive: needs step-up; payments to the supplier are held until the new account is verified. */
-  abstract changeBankDetails(supplierId: string): Observable<void>;
+  /**
+   * Sensitive: needs step-up. Payments to the supplier are held until someone other than the person who entered the
+   * account verifies it in My work (D27).
+   * PRODUCTION: the API stores the account, opens the verification in My work and refuses payments until it's verified.
+   */
+  abstract changeBankDetails(supplierId: string, details: BankDetailsInput): Observable<void>;
   /**
    * Start (or find) the agency's supplier relationship with a Humo Contractor
    * business — e.g. when awarding work to a contractor invited by email. The
@@ -128,8 +132,16 @@ export abstract class SupplierDataSource {
 export abstract class PayablesDataSource {
   abstract invoices(schemeIds: string[]): Observable<InvoiceView[]>;
   abstract batches(schemeIds: string[]): Observable<BatchView[]>;
-  /** Groups approved invoices of one scheme into a batch and sends it for (dual) approval. */
+  /** Groups approved invoices of one scheme into a batch and sends it for approval by someone other than the preparer. */
   abstract createBatch(invoiceIds: string[]): Observable<string>;
-  /** After approval: the EFT batch is released to the bank. */
-  abstract releaseBatch(batchId: string, expectedVersion?: number): Observable<void>;
+  /**
+   * After approval, by someone other than the preparer, with a fresh passkey: downloads the payment file for internet
+   * banking and returns its name; the invoices are paid and the suppliers emailed remittances (D27).
+   * PRODUCTION: the API builds the file from the verified accounts the batch was made with and sends the remittances.
+   */
+  abstract releaseBatch(batchId: string, expectedVersion?: number): Observable<string>;
+  /** A released batch's payment file again (step-up; audited). Returns its name. */
+  abstract paymentFile(batchId: string): Observable<string>;
+  /** Before release: the batch is withdrawn and its invoices are ready to pay again. */
+  abstract cancelBatch(batchId: string, reason: string, expectedVersion?: number): Observable<void>;
 }

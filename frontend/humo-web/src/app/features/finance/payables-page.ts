@@ -2,7 +2,9 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { combineLatest, map } from 'rxjs';
-import { BatchView, InvoiceView, PayablesDataSource, sumRands } from '../../domain';
+import { BatchView, InvoiceView, PayablesDataSource, describeFailure, fieldErrorsOf, sumRands } from '../../domain';
+import { DrawerService } from '../../ui/drawer/drawer.service';
+import { REASON_FIELD, openForm } from '../shared/form-drawer';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { StepUpService } from '../../core/security/step-up.service';
 import { loadable } from '../../core/data/loadable';
@@ -23,8 +25,8 @@ import { ApprovalCard } from '../my-work/approval-card';
 
 /**
  * Finance › Payables. Job: pay suppliers correctly — only approved, matched
- * invoices; in batches from each scheme's trust account; with a second
- * authoriser before money leaves.
+ * invoices, to verified bank accounts; in batches from each scheme's trust
+ * account; approved and released by someone other than the preparer (D27).
  */
 import { SmartNudge } from '../shared/smart-nudge';
 @Component({
@@ -38,6 +40,7 @@ export class PayablesPage {
   private readonly data = inject(PayablesDataSource);
   private readonly feedback = inject(FeedbackService);
   private readonly stepUp = inject(StepUpService);
+  private readonly drawer = inject(DrawerService);
   protected readonly scope = inject(ScopeService);
   protected readonly session = inject(SessionService);
 
@@ -53,9 +56,36 @@ export class PayablesPage {
   protected readonly loading = this.result.loading;
   protected readonly failed = this.result.failed;
   private readonly invoices = computed(() => ((this.result.value()?.invoices ?? [])));
-  protected readonly batches = computed(() =>
-    ((this.result.value()?.batches ?? [])).filter((b) => b.batch.status !== 'released' || this.state().view === 'paid'),
-  );
+  /** Open batches first (waiting for approval, then to release), then the most recent closed ones. */
+  protected readonly batches = computed(() => {
+    const all = this.result.value()?.batches ?? [];
+    const open = all.filter((b) => this.isOpen(b)).sort((a, b) => a.batch.createdAt.localeCompare(b.batch.createdAt));
+    const closed = all.filter((b) => !this.isOpen(b)).sort((a, b) => (b.batch.releasedAt ?? b.batch.cancelledAt ?? b.batch.createdAt).localeCompare(a.batch.releasedAt ?? a.batch.cancelledAt ?? a.batch.createdAt));
+    return [...open, ...closed.slice(0, 10)];
+  });
+
+  protected isOpen(b: BatchView): boolean {
+    return b.batch.status === 'awaiting-approval' || b.batch.status === 'approved';
+  }
+
+  protected preparedByMe(b: BatchView): boolean {
+    return !!b.batch.createdById && b.batch.createdById === this.session.identity().id;
+  }
+
+  protected statusOf(b: BatchView): { label: string; tone: 'success' | 'warning' | 'neutral' | 'danger' } {
+    switch (b.batch.status) {
+      case 'awaiting-approval':
+        return { label: 'Awaiting approval', tone: 'warning' };
+      case 'approved':
+        return { label: 'Approved — ready to release', tone: 'success' };
+      case 'released':
+        return { label: 'Released', tone: 'neutral' };
+      case 'rejected':
+        return { label: 'Rejected', tone: 'danger' };
+      default:
+        return { label: 'Cancelled', tone: 'neutral' };
+    }
+  }
 
   protected readonly rows = computed(() => {
     const v = this.state().view;
@@ -67,7 +97,7 @@ export class PayablesPage {
 
   protected readonly tabs = computed(() => {
     const inv = this.invoices();
-    const openBatches = (this.result.value()?.batches ?? []).filter((b) => b.batch.status !== 'released').length;
+    const openBatches = (this.result.value()?.batches ?? []).filter((b) => this.isOpen(b)).length;
     return [
       { id: 'approval', label: 'Awaiting approval', count: inv.filter((i) => i.invoice.status === 'awaiting-approval').length },
       { id: 'ready', label: 'Ready to pay', count: inv.filter((i) => i.invoice.status === 'approved').length },
@@ -110,33 +140,68 @@ export class PayablesPage {
     const ids = this.selected();
     this.busy.set(true);
     this.data.createBatch(ids).subscribe({
-      next: (id) => {
+      next: () => {
         this.busy.set(false);
         this.selected.set([]);
-        this.feedback.success(`Batch ${id} created — sent to a second authoriser`);
+        this.feedback.success('Batch created. Someone other than you approves it in My work.');
         this.setView('batches');
       },
-      error: () => {
+      error: (e: unknown) => {
         this.busy.set(false);
-        this.feedback.error('The batch couldn’t be created. Nothing was changed.');
+        this.feedback.error(failure(e, 'The batch wasn’t created'));
       },
     });
   }
 
-  /** Money leaves the trust account: always a fresh step-up (the API checks it too). */
+  /** Money leaves the trust account: always a fresh passkey, never an SMS code (the API checks it too). */
   protected release(b: BatchView): void {
     this.busy.set(true);
-    const detail = `Release ${formatRand(b.batch.total)} to ${b.invoices.length} suppliers from ${b.scheme.name}’s trust account`;
+    const suppliers = b.batch.payees?.length ?? b.invoices.length;
+    const detail = `Release ${formatRand(b.batch.total)} to ${suppliers} ${suppliers === 1 ? 'supplier' : 'suppliers'} from ${b.scheme.name}’s trust account`;
     this.stepUp.guard({ action: 'release-payment', detail }, () => this.data.releaseBatch(b.batch.id, b.batch.version)).subscribe({
       complete: () => this.busy.set(false),
-      next: () => {
+      next: (file) => {
         this.busy.set(false);
-        this.feedback.success(`Released ${formatRand(b.batch.total)} to ${b.invoices.length} suppliers from ${b.scheme.name}’s trust account`);
+        this.feedback.success(`Released ${b.batch.ref}. Import ${file} into ${b.scheme.name}’s trust account in internet banking; the suppliers have been sent remittances.`);
       },
-      error: () => {
+      error: (e: unknown) => {
         this.busy.set(false);
-        this.feedback.error('The batch couldn’t be released. Nothing was paid.');
+        this.feedback.error(failure(e, 'The batch wasn’t released'));
       },
     });
   }
+
+  protected downloadFile(b: BatchView): void {
+    this.busy.set(true);
+    this.stepUp.guard({ action: 'export-data', detail: `Download the payment file for ${b.batch.ref}` }, () => this.data.paymentFile(b.batch.id)).subscribe({
+      complete: () => this.busy.set(false),
+      next: (file) => {
+        this.busy.set(false);
+        this.feedback.success(`Downloaded ${file}.`);
+      },
+      error: () => {
+        this.busy.set(false);
+        this.feedback.error('The payment file couldn’t be downloaded.');
+      },
+    });
+  }
+
+  protected cancel(b: BatchView): void {
+    openForm(this.drawer, {
+      eyebrow: `${b.batch.ref} · ${formatRand(b.batch.total)}`,
+      title: 'Cancel payment batch',
+      intro: 'The batch is withdrawn before anything is paid, and its invoices are ready to pay again. Do this when a supplier’s bank details changed after the batch was made, or something in it is wrong.',
+      fields: [REASON_FIELD],
+      submitLabel: 'Cancel batch',
+      submit: (v) => this.data.cancelBatch(b.batch.id, v['reason'], b.batch.version),
+      success: () => `${b.batch.ref} cancelled. Its invoices are back under “Ready to pay”.`,
+      failure: 'The batch wasn’t cancelled',
+    });
+  }
+}
+
+/** The API's reason when it refused the request (e.g. a supplier's bank details aren't verified), or what went wrong. */
+function failure(e: unknown, action: string): string {
+  const reason = Object.values(fieldErrorsOf(e))[0];
+  return reason ? `${action}. ${reason}` : describeFailure(e, action);
 }

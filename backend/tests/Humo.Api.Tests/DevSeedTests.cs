@@ -40,6 +40,10 @@ public sealed class DevSeedTests : IDisposable
         var owner = await api.SignedIn("anele@mail.example");
         var kc42 = await api.Db(db => db.LevyAccounts.Where(a => a.AccountNo.StartsWith("KC") && a.AccountNo.EndsWith("42")).Select(a => a.Id).SingleAsync());
         Assert.Equal(HttpStatusCode.OK, (await owner.GetAsync($"/api/accounts/{kc42}")).StatusCode);
+        // Suppliers to pay (slice 3b): approved invoices, and one bank account waiting for someone else to verify it.
+        var invoices = await (await admin.GetAsync($"/api/payables/invoices?schemeIds={schemes[0].GetProperty("id").GetString()}&schemeIds={schemes[1].GetProperty("id").GetString()}")).Json();
+        Assert.Equal(4, invoices.GetArrayLength());
+        Assert.Equal(1, await api.Db(db => db.WorkItems.CountAsync(w => w.Type == "bank-details-verification" && w.Status == "open")));
         // Agencies don't see each other.
         var fynbos = await api.SignedIn("annette@fynbos.example");
         Assert.Equal(HttpStatusCode.NotFound, (await fynbos.GetAsync($"/api/accounts/{kc42}")).StatusCode);

@@ -20,7 +20,7 @@ import { WorkItemPreview } from './work-item-preview';
 const TYPE_FILTER: { value: string; label: string; types: WorkItemType[] }[] = [
   { value: 'quotes', label: 'Quotes', types: ['quote-approval'] },
   { value: 'invoices', label: 'Supplier invoices', types: ['invoice-approval'] },
-  { value: 'payments', label: 'Payment batches', types: ['payment-batch-approval'] },
+  { value: 'payments', label: 'Supplier payments', types: ['payment-batch-approval', 'bank-details-verification'] },
   { value: 'billing', label: 'Billing runs', types: ['billing-run-approval'] },
 ];
 

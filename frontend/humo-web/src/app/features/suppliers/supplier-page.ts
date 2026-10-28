@@ -4,14 +4,13 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, map, of, switchMap } from 'rxjs';
 import { LibraryDataSource, Supplier, SupplierDataSource, SupplierDocument, SupplierStatus, docStatus } from '../../domain';
-import { editSupplierForm, supplierStatusForm } from './supplier-forms';
+import { bankDetailsForm, editSupplierForm, supplierStatusForm } from './supplier-forms';
 import { DrawerService } from '../../ui/drawer/drawer.service';
 import { ScopeService } from '../../core/scope/scope.service';
 import { ContractorNetwork } from '../../domain/contractor';
 import { EndorsedBy, Reputation, VerificationBadge } from '../contractor-shared/contractor-ui';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { loadable } from '../../core/data/loadable';
-import { StepUpService } from '../../core/security/step-up.service';
 import { SessionService } from '../../core/session/session.service';
 import { RandPipe, formatDate, formatRand } from '../../ui/format/money';
 import { KeyFact, RecordHeader } from '../../ui/record/record-header';
@@ -36,7 +35,6 @@ export class SupplierPage {
   private readonly route = inject(ActivatedRoute);
   private readonly data = inject(SupplierDataSource);
   private readonly feedback = inject(FeedbackService);
-  private readonly stepUp = inject(StepUpService);
   private readonly contractors = inject(ContractorNetwork);
   protected readonly session = inject(SessionService);
   private readonly drawer = inject(DrawerService);
@@ -132,16 +130,12 @@ export class SupplierPage {
   }
 
   /**
-   * Bank-detail changes are the classic invoice-fraud route: step-up first, then
-   * payments are held until the new account is confirmed with the bank.
+   * Bank-detail changes are the classic invoice-fraud route: step-up first, then payments are held until someone
+   * else verifies the account in My work (D27).
    */
   protected changeBank(): void {
     const s = this.detail()?.supplier;
-    if (!s) return;
-    this.stepUp.guard({ action: 'change-bank-details', detail: `Change the bank account ${s.name} is paid into` }, () => this.data.changeBankDetails(s.id)).subscribe({
-      next: () => this.feedback.success(`Recorded. Payments to ${s.name} are on hold until the new account is confirmed with the bank and a call-back to ${s.contactName}.`),
-      error: () => this.feedback.error('The banking details weren’t changed.'),
-    });
+    if (s) bankDetailsForm(this.drawer, this.data, s);
   }
 
   /** A new vetting document: uploaded to the library, it updates the vetting record and Compliance. */

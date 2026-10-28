@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { firstValueFrom } from 'rxjs';
-import { AccessDataSource, AccountDataSource, ApiError, JobDataSource, describeFailure, MeetingDataSource, PayablesDataSource, PlatformTemplateDataSource, PolicyError, SchemeDataSource, SessionDataSource, SettingsDataSource, SignInError, StepUpAuthenticator, SupplierDataSource, TimelineDataSource } from '../domain';
+import { AccessDataSource, AccountDataSource, ApiError, BudgetDataSource, JobDataSource, describeFailure, MeetingDataSource, PayablesDataSource, PlatformTemplateDataSource, PolicyError, SchemeDataSource, SessionDataSource, SettingsDataSource, SignInError, StepUpAuthenticator, SupplierDataSource, TimelineDataSource } from '../domain';
 import { NOT_CONNECTED, notConnected } from '../core/availability/not-connected';
 import { provideHttpData } from './provide-http-data';
 
@@ -50,7 +50,7 @@ describe('Production data layer (provideHttpData)', () => {
 
   it('ports without an API yet say so', async () => {
     await expect(firstValueFrom(TestBed.inject(MeetingDataSource).list(['s-1']))).rejects.toBeInstanceOf(ApiError);
-    await expect(firstValueFrom(TestBed.inject(PayablesDataSource).batches(['s-1']))).rejects.toMatchObject({ kind: 'server' });
+    await expect(firstValueFrom(TestBed.inject(BudgetDataSource).list(['s-1']))).rejects.toMatchObject({ kind: 'server' });
   });
   it('sets up and publishes a customer’s custom template over HTTP (D12, D23)', async () => {
     const templates = TestBed.inject(PlatformTemplateDataSource);
@@ -105,7 +105,8 @@ describe('Production data layer (provideHttpData)', () => {
     await added;
 
     const routes = TestBed.inject(NOT_CONNECTED);
-    expect(notConnected(routes, '/finance/payables/batch-1')).toBe(true);
+    expect(notConnected(routes, '/finance/budgets/b-1')).toBe(true);
+    expect(notConnected(routes, '/finance/payables')).toBe(false);
     expect(notConnected(routes, '/finance/receipts')).toBe(false);
   });
 
@@ -116,6 +117,25 @@ describe('Production data layer (provideHttpData)', () => {
     const suppliers = firstValueFrom(TestBed.inject(SupplierDataSource).list(['s-1']));
     http.expectOne('/api/suppliers?schemeIds=s-1').flush([]);
     expect(await suppliers).toEqual([]);
+  });
+
+  it('pays suppliers over HTTP: bank details, batches, release with the payment file (D27)', async () => {
+    const entered = firstValueFrom(TestBed.inject(SupplierDataSource).changeBankDetails('sup-1', { bankName: 'FNB', branchCode: '250655', accountNumber: '62012345678', accountType: 'cheque', accountHolder: 'GreenLeaf' }));
+    http.expectOne({ method: 'POST', url: '/api/suppliers/sup-1/bank-details' }).flush(null, { status: 204, statusText: 'No Content' });
+    await entered;
+    const payables = TestBed.inject(PayablesDataSource);
+    const batch = firstValueFrom(payables.createBatch(['inv-1', 'inv-2']));
+    const post = http.expectOne({ method: 'POST', url: '/api/payables/batches' });
+    expect(post.request.body).toEqual({ invoiceIds: ['inv-1', 'inv-2'] });
+    post.flush({ id: 'b-1' }, { status: 201, statusText: 'Created' });
+    expect(await batch).toBe('b-1');
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:payments');
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    const released = firstValueFrom(payables.releaseBatch('b-1', 2));
+    const release = http.expectOne({ method: 'POST', url: '/api/payables/batches/b-1/release' });
+    expect(release.request.body).toEqual({ expectedVersion: 2 });
+    release.flush(new Blob(['csv']), { headers: { 'content-disposition': 'attachment; filename="PB-KC-0001 payments.csv"' } });
+    expect(await released).toBe('PB-KC-0001 payments.csv');
   });
   it('reads schemes from the API', async () => {
     const list = firstValueFrom(TestBed.inject(SchemeDataSource).list());

@@ -2,15 +2,14 @@
 
 **Purpose:** what's next, in order, and what the product owner has asked for in later versions. Approved decisions stay in [docs/17](17-decisions.md); items here become decisions when they're scheduled.
 
-**Last updated:** 22 October 2026.
+**Last updated:** 28 October 2026.
 
 ## 1. Version 1: the live system as complete as the prototype
 
-The prototype (`npm start`) runs every screen on simulated data. The live system (`npm run start:api`) runs only what's on Humo's API. Eleven data sources aren't on the API yet (Platform › Document templates joined it on 26 October 2026, timelines and notes on 28 October). Screens that read them fail rather than fall back to simulated data, by design (docs/18 R-6).
+The prototype (`npm start`) runs every screen on simulated data. The live system (`npm run start:api`) runs only what's on Humo's API. Ten data sources aren't on the API yet (Platform › Document templates joined it on 26 October 2026; timelines and notes, and payables (slice 3b, D27), on 28 October). Screens that read them fail rather than fall back to simulated data, by design (docs/18 R-6).
 
 | Not on the API yet | Screens it breaks | Slice |
 |---|---|---|
-| `PayablesDataSource` | Finance › Payables; the payables panel on the dashboard (since 22 Oct the dashboard shows without it) | 3b |
 | `StaffDataSource` | Staff | Staff |
 | `BudgetDataSource` | Finance › Budgets | Budgets |
 | `ReportDataSource` | Reports | Reporting |
@@ -31,10 +30,10 @@ The prototype (`npm start`) runs every screen on simulated data. The live system
 
 The Finance role can prepare **and** release supplier payments, and can **change a supplier's bank details**. Together, that lets one person redirect a payment to their own account and pay it. That's the most common fraud in property management.
 
-**Recommendation (to build with slice 3b):**
-- **Maker and checker:** whoever prepares a payment batch can't release it. Release needs a second person (another Finance user or the Agency Administrator).
-- **Bank details:** a changed bank account is held until someone else verifies it, and no payment to that supplier is released before then.
-- **Narrower reads:** Finance keeps what it needs to answer owners and pay suppliers (accounts, statements, suppliers, maintenance jobs as read-only). It doesn't need governance or compliance screens.
+**Recommendation:**
+- **Maker and checker** (built with slice 3b, D27): whoever prepares a payment batch neither approves nor releases it.
+- **Bank details** (built with slice 3b, D27): a changed bank account is held until someone else verifies it, and a batch made before the change can't be released.
+- **Narrower reads** (still open, its own decision): Finance keeps what it needs to answer owners and pay suppliers (accounts, statements, suppliers, maintenance jobs as read-only). It doesn't need governance or compliance screens.
 
 ## 3. Later versions (asked for by the product owner)
 

@@ -43,7 +43,10 @@ export class ApprovalCard {
   /** D6: acting as trustee while working for the managing agency. They may reject, but another trustee approves. */
   protected readonly conflicted = computed(() => AGENCY_WORK.includes(this.item().type) && agencyConflict(this.session.identity(), this.session.assignment()));
   /** Large amounts need a fresh proof of identity to approve (never to reject): the agency's own threshold, R50 000 by default. */
-  protected readonly needsStepUp = computed(() => (this.item().amount ?? 0) >= (this.session.organisation()?.approvalStepUpAmount ?? LARGE_APPROVAL_AMOUNT));
+  /** A large amount, or a supplier's bank details, which always need the passkey (D27). */
+  protected readonly needsStepUp = computed(
+    () => this.item().type === 'bank-details-verification' || (this.item().amount ?? 0) >= (this.session.organisation()?.approvalStepUpAmount ?? LARGE_APPROVAL_AMOUNT),
+  );
 
   protected readonly rejecting = signal(false);
   protected readonly comment = signal('');
@@ -117,17 +120,20 @@ export class ApprovalCard {
     const item = this.item();
     this.busy.set(true);
     const decide$ = () => this.attention.decide(item.id, decision, comment);
+    // A supplier's bank details always need the passkey, never an SMS code (D26, D27).
     const run$ =
-      decision === 'approved' && this.needsStepUp()
-        ? this.stepUp.guard({ action: 'approve-large-amount', detail: `Approve ${item.ref} · ${formatRand(item.amount)} — ${item.title}`, smsAllowed: true }, decide$)
-        : decide$();
+      decision === 'approved' && item.type === 'bank-details-verification'
+        ? this.stepUp.guard({ action: 'change-bank-details', detail: item.title }, decide$)
+        : decision === 'approved' && this.needsStepUp()
+          ? this.stepUp.guard({ action: 'approve-large-amount', detail: `Approve ${item.ref} · ${formatRand(item.amount)} — ${item.title}`, smsAllowed: true }, decide$)
+          : decide$();
     run$.subscribe({
       complete: () => this.busy.set(false),
       next: () => {
         this.busy.set(false);
         this.rejecting.set(false);
         const what = decision === 'approved' ? 'Approved' : 'Rejected';
-        this.feedback.success(`${what} ${item.ref}${item.amount !== undefined ? ` · ${formatRand(item.amount)}` : ''}`, () =>
+        this.feedback.success(`${what} ${item.ref}${item.amount != null ? ` · ${formatRand(item.amount)}` : ''}`, () =>
           this.attention.reopen([item.id]).subscribe(),
         );
       },

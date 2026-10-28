@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
 import {
+  BankDetailsInput,
   JobAction,
   JobDataSource,
   JobDetail,
@@ -85,8 +86,8 @@ export class HttpSupplierDataSource extends HttpPort implements SupplierDataSour
     return this.command('POST', `/suppliers/${id}/status`, { status, reason, expectedVersion }, ['suppliers', 'jobs']);
   }
 
-  changeBankDetails(supplierId: string): Observable<void> {
-    return this.command('POST', `/suppliers/${supplierId}/bank-details`, {}, ['suppliers']);
+  changeBankDetails(supplierId: string, details: BankDetailsInput): Observable<void> {
+    return this.command('POST', `/suppliers/${supplierId}/bank-details`, details, ['suppliers', 'work-items']);
   }
 
   linkParty(input: Parameters<SupplierDataSource['linkParty']>[0]): Observable<string> {

@@ -182,7 +182,7 @@ public sealed class MaintenanceTests : IDisposable
         await Act(s.Admin, reference, new { type = "record-quote", quoteId = quote, amount = 1_200 });
         await Act(s.Admin, reference, new { type = "approve-within-delegation", quoteId = quote });
         Assert.Contains("open jobs", (await (await s.Admin.PostAsJsonAsync($"/api/suppliers/{supplier}/status", new { status = "archived", reason = "No longer used", expectedVersion = 3 })).FieldErrors()).GetProperty("status").GetString());
-        Assert.Equal("step-up-required", await (await s.Admin.PostAsync($"/api/suppliers/{supplier}/bank-details", null)).ProblemCode());
+        Assert.Equal("step-up-required", await (await s.Admin.PostAsJsonAsync($"/api/suppliers/{supplier}/bank-details", new { bankName = "FNB", branchCode = "250655", accountNumber = "62012345678", accountType = "cheque", accountHolder = "Aqua Plumbing" })).ProblemCode());
 
         using var other = new HumoApiFactory();
         var org = await other.Customer("Small", "essentials");

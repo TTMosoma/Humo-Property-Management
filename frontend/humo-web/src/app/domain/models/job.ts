@@ -132,14 +132,25 @@ export interface PaymentBatch {
   id: string;
   /** Concurrency token: send it back with commands that change this record. The API answers 409 if someone changed it first. */
   version: number;
+  /** E.g. PB-KC-0001. */
+  ref: string;
   schemeId: string;
   invoiceIds: string[];
   total: number;
   createdAt: string;
   createdBy: string;
-  status: 'awaiting-approval' | 'approved' | 'released';
+  /** Who prepared it: they neither approve nor release it (maker and checker, D27). */
+  createdById?: string;
+  /** Rejected in My work or cancelled before release: its invoices are ready to pay again. */
+  status: 'awaiting-approval' | 'approved' | 'rejected' | 'released' | 'cancelled';
   approvalWorkItemId?: string;
   releasedAt?: string;
+  releasedBy?: string;
+  cancelledAt?: string;
+  cancelledBy?: string;
+  cancelReason?: string;
+  /** One payment per supplier, into the verified account the batch was made with (masked). */
+  payees?: { supplierId: string; name: string; account: string; amount: number; reference: string }[];
 }
 
 export function stageIndex(stage: JobStage): number {

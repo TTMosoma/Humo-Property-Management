@@ -138,7 +138,8 @@ Severity key: **P0** fix before building more screens · **P1** fix in the slice
   - the work order, start, completion, the resident's confirmation (or staff confirming on their behalf), and the supplier's invoice;
   - an invoice above the approved quote, or with no quote, goes back for approval;
   - one invoice number per supplier; comments and cancelling (not once invoiced).
-  - **Still to come:** paying invoices in batches with two approvers (slice 3b), and quotes from the Humo Contractor network.
+  - **Paying invoices** in batches, approved and released by someone other than the preparer, to bank accounts a second person verified (slice 3b, D27).
+  - **Still to come:** quotes from the Humo Contractor network.
 
 **F17 — Residents report problems but the follow-up loop is missing. (P1)**
 - Residents need: status updates pushed to them, a "Was this fixed?" confirmation that feeds *Verified*, and the ability to add photos later. Common-property issues must avoid duplicates ("3 residents have reported the gate motor" → *add yourself*).

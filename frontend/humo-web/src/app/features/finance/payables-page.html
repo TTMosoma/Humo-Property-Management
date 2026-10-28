@@ -1,4 +1,4 @@
-<ui-page-header eyebrow="Finance" title="Payables" subtitle="Approved, matched invoices are paid in batches from each scheme’s trust account — with a second authoriser before money leaves." />
+<ui-page-header eyebrow="Finance" title="Payables" subtitle="Approved invoices are paid in batches from each scheme’s trust account. Someone other than the person who prepares a batch approves and releases it." />
 <app-smart-nudge placement="payables" />
 <app-scope-notice />
 
@@ -10,37 +10,83 @@
   <div class="surface"><ui-error-state title="We couldn’t load payables" (retry)="result.retry()" /></div>
 } @else if (state().view === 'batches') {
   @for (b of batches(); track b.batch.id) {
-    <section class="batch surface">
+    <section class="batch surface" [class.closed]="!isOpen(b)">
       <header>
         <div>
-          <div class="label-caps">{{ b.scheme.name }} · created by {{ b.batch.createdBy }} {{ formatDate(b.batch.createdAt, true) }}</div>
-          <h2>{{ b.batch.id }} <span class="muted">· {{ b.invoices.length }} payments</span></h2>
+          <div class="label-caps">{{ b.scheme.name }} · prepared by {{ b.batch.createdBy }} {{ formatDate(b.batch.createdAt, true) }}</div>
+          <h2>{{ b.batch.ref }} <span class="muted">· {{ b.batch.payees?.length ?? b.invoices.length }} {{ (b.batch.payees?.length ?? b.invoices.length) === 1 ? 'payment' : 'payments' }}</span></h2>
         </div>
         <div class="b-right">
           <span class="money total">{{ b.batch.total | rand }}</span>
-          <ui-status-pill [label]="b.batch.status === 'approved' ? 'Approved — ready to release' : 'Awaiting second authoriser'" [tone]="b.batch.status === 'approved' ? 'success' : 'warning'" />
+          <ui-status-pill [label]="statusOf(b).label" [tone]="statusOf(b).tone" />
         </div>
       </header>
       <ul class="lines">
         @for (i of b.invoices; track i.invoice.id) {
-          <li><span>{{ i.supplier.name }} <span class="muted">· {{ i.invoice.description }}</span></span><span class="money">{{ i.invoice.amount | rand }}</span></li>
+          <li><span>{{ i.supplier.name }} <span class="muted">· {{ i.invoice.number ?? i.invoice.id }} · {{ i.invoice.description }}</span></span><span class="money">{{ i.invoice.amount | rand }}</span></li>
         }
       </ul>
-      @if (b.batch.status === 'awaiting-approval') {
-        @if (b.approvalItem; as item) {
-          <app-approval-card [item]="item" [compact]="true" />
+      @if (b.batch.payees?.length) {
+        <p class="paid-into small">
+          <ion-icon name="shield-checkmark-outline" aria-hidden="true" />
+          Paid into the verified accounts:
+          @for (p of b.batch.payees; track p.supplierId; let last = $last) {
+            {{ p.name }}, {{ p.account }}{{ last ? '.' : ';' }}
+          }
+        </p>
+      }
+      @switch (b.batch.status) {
+        @case ('awaiting-approval') {
+          @if (preparedByMe(b) && !b.approvalItem?.secondAuthoriser) {
+            <p class="small muted">You prepared this batch, so someone else approves it in My work.</p>
+          } @else if (b.approvalItem; as item) {
+            <app-approval-card [item]="item" [compact]="true" />
+          }
         }
-      } @else if (canRelease()) {
+        @case ('approved') {
+          <div class="release">
+            @if (canRelease()) {
+              <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="release(b)">
+                <ion-icon name="finger-print-outline" aria-hidden="true" /> Release and download the payment file
+              </button>
+            }
+            @if (canPay()) {
+              <button type="button" class="btn btn-ghost" [disabled]="busy()" (click)="cancel(b)">Cancel batch</button>
+            }
+            <span class="muted small">
+              @if (preparedByMe(b)) {
+                You prepared this batch, so someone else releases it.
+              } @else {
+                Import the file into the trust account’s internet banking. The invoices are marked paid and each supplier is emailed a remittance.
+              }
+            </span>
+          </div>
+        }
+        @case ('released') {
+          <div class="release">
+            <span class="small">Released by {{ b.batch.releasedBy }} {{ formatDate(b.batch.releasedAt, true) }}.</span>
+            @if (canRelease()) {
+              <button type="button" class="btn btn-secondary btn-sm" [disabled]="busy()" (click)="downloadFile(b)">
+                <ion-icon name="download-outline" aria-hidden="true" /> Payment file
+              </button>
+            }
+          </div>
+        }
+        @case ('cancelled') {
+          <p class="small muted">Cancelled by {{ b.batch.cancelledBy }} {{ formatDate(b.batch.cancelledAt, true) }}: {{ b.batch.cancelReason }}. Its invoices are ready to pay again.</p>
+        }
+        @case ('rejected') {
+          <p class="small muted">Rejected in My work{{ b.approvalItem?.comment ? ': ' + b.approvalItem?.comment : '' }}. Its invoices are ready to pay again.</p>
+        }
+      }
+      @if (b.batch.status === 'awaiting-approval' && canPay()) {
         <div class="release">
-          <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="release(b)">
-            <ion-icon name="finger-print-outline" aria-hidden="true" /> Verify and release EFT batch
-          </button>
-          <span class="muted small">Prototype: marks every invoice paid and moves linked jobs to “Paid”.</span>
+          <button type="button" class="btn btn-ghost btn-sm" [disabled]="busy()" (click)="cancel(b)">Cancel batch</button>
         </div>
       }
     </section>
   } @empty {
-    <div class="surface"><ui-empty-state kind="done" title="No batches waiting" message="Select approved invoices under “Ready to pay” to create the next batch." /></div>
+    <div class="surface"><ui-empty-state kind="done" title="No batches yet" message="Select approved invoices under “Ready to pay” to create the next batch." /></div>
   }
 } @else if (rows().length === 0) {
   <div class="surface">

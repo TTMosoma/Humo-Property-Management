@@ -14,8 +14,11 @@ namespace Humo.Api.Maintenance;
 
 // The shapes match the app's maintenance ports (maintenance-data-sources.ts, job.ts, supplier.ts).
 public sealed record PerformanceDto(int JobsCompleted, int OnTimeRate, decimal AvgVariance, int VerifiedRate);
+/// <param name="BankChange">A bank account waiting for verification (D27): who entered it, when, and the verification in My work.</param>
 public sealed record SupplierDto(string Id, int Version, string? PartyId, string Name, List<string> Trades, string ContactName, string Phone, string Email, string BankAccount,
-    bool BankVerified, int? BbbeeLevel, List<string> SchemeIds, List<SupplierDocument> Documents, PerformanceDto Performance, string Status);
+    bool BankVerified, int? BbbeeLevel, List<string> SchemeIds, List<SupplierDocument> Documents, PerformanceDto Performance, string Status,
+    BankChangeDto? BankChange = null, string? BankVerifiedBy = null, string? BankVerifiedAt = null);
+public sealed record BankChangeDto(string By, string ById, string At, string? WorkItemId);
 public sealed record SupplierSummaryDto(SupplierDto Supplier, List<SchemeDto> Schemes, string Compliance, int OpenJobs, decimal Spend12m);
 public sealed record JobSummaryDto(Job Job, SchemeDto Scheme, UnitDto? Unit, SupplierDto? Supplier, string AssigneeName);
 public sealed record SupplierInvoiceDto(string Id, int Version, string Number, string SupplierId, string SchemeId, string? JobId, string Description, decimal Amount, string ReceivedAt,
@@ -28,7 +31,7 @@ public sealed record JobDetailDto(Job Job, SchemeDto Scheme, UnitDto? Unit, Supp
 /// <summary>
 /// Maintenance on the API (slice 3a): jobs from report to invoice, and the agency's suppliers. Approvals land in My work:
 /// quotes above the delegated limit go to the trustees; an invoice over the approved quote (or with none) is re-approved.
-/// Payment batches follow with payables (3b); budgets aren't on the API yet, so approval cards carry no budget line.
+/// Approved invoices are paid in payment batches (slice 3b, Finance/Payables.cs); budgets aren't on the API yet, so approval cards carry no budget line.
 /// </summary>
 public sealed class MaintenanceService(HumoDbContext db, TimeProvider clock)
 {
@@ -68,7 +71,9 @@ public sealed class MaintenanceService(HumoDbContext db, TimeProvider clock)
     }
 
     public static SupplierDto ToDto(SupplierRow s, PerformanceDto? p) => new(s.Id.ToString(), s.Version, s.PartyId, s.Name, List<string>(s.Trades), s.ContactName, s.Phone, s.Email,
-        s.BankAccount, s.BankVerified, s.BbbeeLevel, List<string>(s.SchemeIds), List<SupplierDocument>(s.Documents), p ?? new PerformanceDto(0, 0, 0, 0), s.Status);
+        s.BankAccount, s.BankVerified, s.BbbeeLevel, List<string>(s.SchemeIds), List<SupplierDocument>(s.Documents), p ?? new PerformanceDto(0, 0, 0, 0), s.Status,
+        !s.BankVerified && s.BankChangedById is { } changer ? new BankChangeDto(s.BankChangedBy ?? "", changer.ToString(), s.BankChangedAt?.ToString("O") ?? "", s.BankWorkItemId?.ToString()) : null,
+        s.BankVerified ? s.BankVerifiedBy : null, s.BankVerified ? s.BankVerifiedAt?.ToString("O") : null);
 
     public async Task<List<SupplierSummaryDto>> SummariesAsync(List<SupplierRow> suppliers, CancellationToken ct)
     {

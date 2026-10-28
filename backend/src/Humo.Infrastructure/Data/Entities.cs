@@ -1063,6 +1063,20 @@ public sealed class SupplierRow
     /// <summary>Masked for display; changing it needs a fresh passkey and holds payments until verified.</summary>
     public string BankAccount { get; set; } = "To be confirmed";
     public bool BankVerified { get; set; }
+    /// <summary>The account suppliers are paid into (D27): entered with a passkey, verified by someone else in My work.</summary>
+    public string BankName { get; set; } = "";
+    public string BranchCode { get; set; } = "";
+    public string AccountNumber { get; set; } = "";
+    /// <summary>cheque, savings or transmission.</summary>
+    public string AccountType { get; set; } = "";
+    public string AccountHolder { get; set; } = "";
+    public Guid? BankChangedById { get; set; }
+    public string? BankChangedBy { get; set; }
+    public DateTimeOffset? BankChangedAt { get; set; }
+    /// <summary>The verification in My work while it's pending.</summary>
+    public Guid? BankWorkItemId { get; set; }
+    public string? BankVerifiedBy { get; set; }
+    public DateTimeOffset? BankVerifiedAt { get; set; }
     public int? BbbeeLevel { get; set; }
     /// <summary>JSON list of scheme ids.</summary>
     public string SchemeIds { get; set; } = "[]";
@@ -1113,6 +1127,34 @@ public sealed class SupplierInvoiceRow
     public Guid? BatchId { get; set; }
     public DateTimeOffset? PaidAt { get; set; }
     public int Version { get; set; } = 1;
+}
+
+/// <summary>
+/// Supplier payments from one scheme's trust account (slice 3b, D27): prepared by one person, approved in My work by
+/// another, released (the bank file, invoices paid, remittances) by someone other than the preparer. Payees holds each
+/// supplier's verified bank account as it was when the batch was made: release is refused if it has changed since.
+/// </summary>
+public sealed class PaymentBatchRow
+{
+    public Guid Id { get; set; }
+    public Guid OrganisationId { get; set; }
+    public Guid SchemeId { get; set; }
+    public int Version { get; set; } = 1;
+    public string Ref { get; set; } = "";
+    public decimal Total { get; set; }
+    /// <summary>awaiting-approval, approved, rejected, released or cancelled.</summary>
+    public string Status { get; set; } = "awaiting-approval";
+    /// <summary>JSON list of the batch's payees (Humo.Api.Finance.Payee).</summary>
+    public string Payees { get; set; } = "[]";
+    public DateTimeOffset CreatedAt { get; set; }
+    public Guid CreatedById { get; set; }
+    public string CreatedBy { get; set; } = "";
+    public Guid? ApprovalWorkItemId { get; set; }
+    public DateTimeOffset? ReleasedAt { get; set; }
+    public string? ReleasedBy { get; set; }
+    public DateTimeOffset? CancelledAt { get; set; }
+    public string? CancelledBy { get; set; }
+    public string? CancelReason { get; set; }
 }
 
 /// <summary>

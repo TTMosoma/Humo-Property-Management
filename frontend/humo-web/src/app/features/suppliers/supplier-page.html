@@ -26,7 +26,7 @@
       }
       @if (session.can('Suppliers.ChangeBankDetails') && d.supplier.status !== 'archived') {
         <button type="button" class="btn btn-secondary" (click)="changeBank()">
-          <ion-icon name="finger-print-outline" aria-hidden="true" /> Change banking details
+          <ion-icon name="finger-print-outline" aria-hidden="true" /> {{ d.supplier.bankVerified || d.supplier.bankChange ? 'Change bank details' : 'Enter bank details' }}
         </button>
       }
     </ng-container>
@@ -136,11 +136,19 @@
         <h2 class="section-title">Banking</h2>
         <p class="bank">{{ d.supplier.bankAccount }}</p>
         @if (d.supplier.bankVerified) {
-          <p class="ok"><ion-icon name="shield-checkmark-outline" aria-hidden="true" /> Verified against a bank confirmation letter</p>
+          <p class="ok">
+            <ion-icon name="shield-checkmark-outline" aria-hidden="true" />
+            Verified{{ d.supplier.bankVerifiedBy ? ' by ' + d.supplier.bankVerifiedBy : '' }}{{ d.supplier.bankVerifiedAt ? ' on ' + formatDate(d.supplier.bankVerifiedAt) : '' }}
+          </p>
+        } @else if (d.supplier.bankChange; as change) {
+          <p class="warn">
+            <ion-icon name="alert-circle-outline" aria-hidden="true" />
+            <span>Entered by {{ change.by }} on {{ formatDate(change.at) }}. Payments are held until someone else verifies the account in <a routerLink="/approvals">My work</a>.</span>
+          </p>
         } @else {
-          <p class="warn"><ion-icon name="alert-circle-outline" aria-hidden="true" /> Not verified — payments are held until a bank confirmation letter is on file.</p>
+          <p class="warn"><ion-icon name="alert-circle-outline" aria-hidden="true" /> No verified bank account: payments to them are held.</p>
         }
-        <p class="muted small">Changes to bank details are verified by phone with the supplier and approved by a second person before any payment — a common fraud route.</p>
+        <p class="muted small">Bank details are entered from the supplier’s bank confirmation letter and verified by a second person, who calls the supplier back on the number already on file, before any payment. A changed account is the most common payment fraud.</p>
       </section>
       <section class="surface panel">
         <h2 class="section-title">Schemes served</h2>

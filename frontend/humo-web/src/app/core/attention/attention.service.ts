@@ -24,7 +24,7 @@ const FINANCE_TYPES: WorkItemType[] = [
   'billing-run-approval',
 ];
 const OPERATIONS_TYPES: WorkItemType[] = ['maintenance-triage', 'maintenance-overdue', 'document-expiry'];
-const NOT_FOR_PORTFOLIO_MANAGERS: WorkItemType[] = ['receipt-allocation', 'payment-batch-approval', 'billing-run-approval'];
+const NOT_FOR_PORTFOLIO_MANAGERS: WorkItemType[] = ['receipt-allocation', 'payment-batch-approval', 'bank-details-verification', 'billing-run-approval'];
 
 /**
  * The Attention model, filtered for the current person.

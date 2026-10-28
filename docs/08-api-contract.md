@@ -110,8 +110,9 @@ Use ProblemDetails, with a `code` for policy errors and an `errors` map keyed by
   - When a list outgrows the browser, the screen passes its URL state through as the query.
 - **Optimistic concurrency.**
   - `Job`, `Invoice`, `PaymentBatch`, `Receipt`, `Subscription` and `RoleAssignment` carry a `version`.
-  - Commands that change them take `expectedVersion`: `JobDataSource.act`, receipt allocation, `releaseBatch`, `changeSubscription` and `endAssignment`. A stale version gets **409**, which the UI shows as "someone else changed it first".
+  - Commands that change them take `expectedVersion`: `JobDataSource.act`, receipt allocation, `releaseBatch`, `cancelBatch`, `changeSubscription` and `endAssignment`. A stale version gets **409**, which the UI shows as "someone else changed it first".
   - Only the first of a chain of job commands carries the version.
+- **Files from commands.** A command that produces a file answers with the file (`Content-Disposition` names it): the audit export, and releasing a payment batch, which returns the payment file for internet banking (`POST /payables/batches/{id}/release`, D27). The adapter saves it in the browser and returns its name. A refusal still comes back as ProblemDetails, so step-up works as usual.
 - **Money** is rands as JSON numbers with at most two decimals (`decimal` / `DECIMAL(18,2)` on the server).
   - The server computes every total that matters.
   - The browser adds amounts only for display, through `sumRands` (in cents) (`domain/models/money.ts`).

@@ -29,7 +29,11 @@ public static class DevSeed
     private sealed record StaffSeed(string Name, string Email, string Role, string? SchemeCode = null);
 
     private sealed record AgencySeed(string Name, string ShortName, string City, string Province, string Package, StaffSeed[] Staff, SchemeSeed[] Schemes,
-        (string Email, string[] Units)[] OwnerLogins);
+        (string Email, string[] Units)[] OwnerLogins, SupplierSeed[]? Suppliers = null);
+
+    /// <summary>Bank: verified, entered and waiting for someone else to verify it (D27), or none.</summary>
+    private sealed record SupplierSeed(string Name, string Trade, string Contact, string Phone, string Email, string[] Schemes, string Bank = "verified",
+        (string Scheme, string Number, string Description, decimal Amount)[]? Invoices = null);
 
     private static readonly AgencySeed[] Agencies =
     [
@@ -61,7 +65,15 @@ public static class DevSeed
                 ],
                 ["Marike du Toit", "Johanna Visser"]),
             ],
-            [("anele@mail.example", ["KC 42", "DE 7"])]),
+            [("anele@mail.example", ["KC 42", "DE 7"])],
+            [
+                new("AquaFix Plumbing", "Plumbing", "Peter Nel", "082 555 0142", "accounts@aquafix.example", ["KC", "DE"],
+                    Invoices: [("KC", "AF-2041", "Burst geyser, unit 21", 4_200m), ("DE", "AF-2055", "Blocked drain, block B", 1_350m)]),
+                new("GreenLeaf Gardens", "Gardens", "Precious Mabaso", "082 410 7781", "accounts@greenleaf.example", ["KC"],
+                    Invoices: [("KC", "GL-1093", "Garden service, this month", 3_450m)]),
+                new("SafeGuard Security", "Security", "Themba Dube", "071 300 4455", "billing@safeguard.example", ["KC"], Bank: "entered",
+                    Invoices: [("KC", "SG-551", "Guarding, this month", 6_900m)]),
+            ]),
         new("Fynbos Property Administrators (Pty) Ltd", "Fynbos", "Cape Town", "Western Cape", "essentials",
             [new("Annette Jacobs", "annette@fynbos.example", Roles.AgencyAdmin)],
             [
@@ -96,6 +108,7 @@ public static class DevSeed
             if (await db.Organisations.AnyAsync(o => o.ShortName == a.ShortName, ct))
             {
                 report.Add($"{a.ShortName}: already there, left as it is.");
+                if (await SuppliersAsync(db, a, (await db.Organisations.FirstAsync(o => o.ShortName == a.ShortName, ct)).Id, now, ct) is { } later) report.Add(later);
                 continue;
             }
             var org = new Organisation
@@ -200,8 +213,74 @@ public static class DevSeed
             });
             await db.SaveChangesAsync(ct);
             report.Add($"{a.ShortName}: {a.Schemes.Length} scheme(s), {a.Schemes.Sum(s => s.Units.Length)} units, {people.Count} people, three months of levies.");
+            if (await SuppliersAsync(db, a, org.Id, now, ct) is { } added) report.Add(added);
         }
         return string.Join(Environment.NewLine, report);
+    }
+
+    /// <summary>
+    /// Suppliers with approved invoices ready to pay (slice 3b), one with bank details waiting for verification in My
+    /// work. Also added to an agency seeded before they existed. Returns what it did, or null.
+    /// </summary>
+    private static async Task<string?> SuppliersAsync(HumoDbContext db, AgencySeed a, Guid orgId, DateTimeOffset now, CancellationToken ct)
+    {
+        if (a.Suppliers is not { Length: > 0 } seeds || await db.Suppliers.AnyAsync(s => s.OrganisationId == orgId, ct)) return null;
+        var schemes = await db.Schemes.Where(s => s.OrganisationId == orgId).ToDictionaryAsync(s => s.Code, ct);
+        var admin = await db.Users.FirstAsync(u => u.Email == a.Staff[0].Email, ct);
+        var invoices = 0;
+        foreach (var (s, i) in seeds.Select((s, i) => (s, i)))
+        {
+            var account = $"6205{i + 1:0000000}";
+            var row = new SupplierRow
+            {
+                Id = Guid.CreateVersion7(), OrganisationId = orgId, Name = s.Name, Trades = $"[\"{s.Trade}\"]", ContactName = s.Contact, Phone = s.Phone, Email = s.Email,
+                SchemeIds = System.Text.Json.JsonSerializer.Serialize(s.Schemes.Select(c => schemes[c].Id.ToString())), CreatedAt = now.AddMonths(-6),
+            };
+            if (s.Bank is "verified" or "entered")
+            {
+                row.BankName = "FNB";
+                row.BranchCode = "250655";
+                row.AccountNumber = account;
+                row.AccountType = "cheque";
+                row.AccountHolder = $"{s.Name} (Pty) Ltd";
+                row.BankAccount = Payables.Masked(row.BankName, account);
+                row.BankChangedById = admin.Id;
+                row.BankChangedBy = admin.Name;
+                row.BankChangedAt = now.AddDays(-1);
+            }
+            if (s.Bank == "verified")
+            {
+                row.BankVerified = true;
+                row.BankVerifiedBy = "Development seed";
+                row.BankVerifiedAt = now.AddMonths(-5);
+            }
+            else if (s.Bank == "entered")
+            {
+                var item = new WorkItemRow
+                {
+                    Id = Guid.CreateVersion7(), OrganisationId = orgId, SchemeId = schemes[s.Schemes[0]].Id, Ref = $"Bank {row.BankAccount}", Kind = "approval",
+                    Type = "bank-details-verification", Title = $"Verify bank details — {s.Name}",
+                    Detail = $"New account: FNB, account {account}, branch 250655, cheque, in the name of {row.AccountHolder}. Call {s.Contact} on {s.Phone} (the number already on file, not one from the change request) and confirm it before you verify.",
+                    CreatedAt = now.AddDays(-1), DueAt = now.AddDays(1), ApproverRoles = Work.WorkItemEndpoints.Roles([.. Payables.Approvers]),
+                    Evidence = System.Text.Json.JsonSerializer.Serialize(new[] { $"Entered by {admin.Name}", "Previous account: none", $"Call back: {s.Contact}, {s.Phone}" }),
+                    Route = $"/suppliers/{row.Id}", SourceId = row.Id,
+                };
+                db.WorkItems.Add(item);
+                row.BankWorkItemId = item.Id;
+            }
+            db.Suppliers.Add(row);
+            foreach (var (code, number, description, amount) in s.Invoices ?? [])
+            {
+                db.SupplierInvoices.Add(new SupplierInvoiceRow
+                {
+                    Id = Guid.CreateVersion7(), OrganisationId = orgId, SchemeId = schemes[code].Id, SupplierId = row.Id, Number = number, Description = description, Amount = amount,
+                    ReceivedAt = now.AddDays(-5), DueOn = DateOnly.FromDateTime(now.AddDays(25).DateTime), Status = "approved",
+                });
+                invoices++;
+            }
+        }
+        await db.SaveChangesAsync(ct);
+        return $"{a.ShortName}: {seeds.Length} suppliers and {invoices} approved invoices to pay (Finance › Payables); one supplier’s bank details wait for verification in My work.";
     }
 
     private static string RoleLabel(string role) => role switch
