@@ -60,12 +60,24 @@ Sections run in order: section 3 starts the Professional trial, which sections 4
 - [ ] Open the test owner's statement for this month and choose **Email to owner**. **Expect:** an email in Mailpit with a link to `/d/…`, no attachment.
 - [ ] **Open the link in a private window** (signed out). **Expect:** only the statement's name, the scheme and agency, and "the number ending …": no amounts.
 - [ ] **Send me a code.** **Expect:** an SMS to your phone within a minute (or, if the owner has no mobile, an email). Asking again straight away is refused for a minute.
+- [ ] **Email instead:** on a fresh link for an owner with both a mobile and an email, choose **Email it to s•••@… instead**. **Expect:** the code in Mailpit, no SMS, and no SMS counted. After an SMS, **No SMS? Email it** works once the minute is up.
 - [ ] Enter a **wrong** code. **Expect:** "That code isn’t right. 4 tries left."
 - [ ] Enter the **right** code. **Expect:** the statement shows, and **Download PDF** saves it.
 - [ ] **Sent shows it read:** Communications › Sent, the statement's delivery. **Expect:** *read*.
 - [ ] **On a phone:** open the same link on your phone. **Expect:** readable without zooming sideways.
 
-## 7. Notices (UTC fix)
+## 7. Paying levies online (D25)
+
+Needs a Payfast **sandbox** merchant (register at sandbox.payfast.co.za, set a salt passphrase there) and the API with `Payments:Payfast:Sandbox=true`. Payfast's notification needs a public address: run it on staging, or use a tunnel to your machine.
+
+- [ ] As the agency admin, Settings › Agency › Trust accounts: **Set up Payfast** on a scheme, with the sandbox merchant ID, key and passphrase. **Expect:** a passkey prompt; then *Online payments: Payfast …*.
+- [ ] As an owner in that scheme, My account. **Expect:** the scheme's real trust account under *Or pay by EFT*, and **Pay R … with Payfast**.
+- [ ] Pay with Payfast's sandbox test card. **Expect:** back on My account with "Payfast is confirming your payment"; within a few minutes the balance drops and Recent activity shows *Card payment received*.
+- [ ] Finance › Receipts. **Expect:** an allocated receipt from *Payfast (card)*.
+- [ ] Cancel on Payfast's page instead. **Expect:** "The online payment was cancelled. Nothing was charged."
+- [ ] **Turn off online payments** on the scheme. **Expect:** owners see EFT only.
+
+## 8. Notices (UTC fix)
 
 - [ ] Publish a notice with an end date. **Expect:** it publishes (this failed before 20 October) and shows in the resident portal until the end date.
 

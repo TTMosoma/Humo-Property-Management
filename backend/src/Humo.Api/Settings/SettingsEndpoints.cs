@@ -18,7 +18,8 @@ public sealed record DetailsRequest(AgencyDetailsDto Details, int? ExpectedVersi
 public sealed record BillingRequest(BillingSettingsDto Billing, int? ExpectedVersion);
 public sealed record NotificationsRequest(List<NotificationRuleDto> Rules, int? ExpectedVersion);
 public sealed record TrustAccountDto(string Bank, string AccountName, string AccountNumber, string BranchCode);
-public sealed record SchemeTrustAccountDto(SchemeDto Scheme, TrustAccountDto Account, bool Verified);
+/// <summary>Payfast: the scheme's merchant for owners' card payments (D25); null when card payments are off.</summary>
+public sealed record SchemeTrustAccountDto(SchemeDto Scheme, TrustAccountDto Account, bool Verified, Finance.SchemePayfastDto? Payfast);
 public sealed record PreferencesDto(string IdentityId, int Version, List<string> Work, string Digest, string? QuietFrom, string? QuietTo, string EmailSignOff);
 public sealed record SignOffRequest(string? SignOff, int? ExpectedVersion);
 public sealed record PreferencesRequest(List<string> Work, string Digest, string? QuietFrom, string? QuietTo, int? ExpectedVersion);
@@ -237,7 +238,7 @@ public static partial class SettingsEndpoints
         return Results.Ok(dtos.Select(s =>
         {
             var row = rows.GetValueOrDefault(Guid.Parse(s.Id));
-            return new SchemeTrustAccountDto(s, ToDto(row), row?.Verified ?? false);
+            return new SchemeTrustAccountDto(s, ToDto(row), row?.Verified ?? false, Finance.LevyCardPayments.ToDto(row));
         }).ToList());
     }
 

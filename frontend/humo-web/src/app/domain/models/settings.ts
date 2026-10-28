@@ -115,6 +115,21 @@ export interface SchemeTrustAccount {
   account: TrustAccount;
   /** The bank's confirmation is on file. */
   verified: boolean;
+  /** The scheme's Payfast merchant for owners' card payments (D25); null or absent when card payments are off. */
+  payfast?: SchemePayfast | null;
+}
+
+export interface SchemePayfast {
+  merchantId: string;
+  linkedBy?: string | null;
+  linkedAt?: string | null;
+}
+
+/** The scheme's own Payfast merchant details, from Payfast's Settings › Integration. */
+export interface PayfastMerchantDetails {
+  merchantId: string;
+  merchantKey: string;
+  passphrase: string;
 }
 
 /** A person's own notification preferences. */

@@ -21,10 +21,12 @@ import {
   WorkItem,
   WorkItemDataSource,
   AccountDetail,
+  CheckoutSession,
   ListQuery,
   MatchView,
   NewReceipt,
   Page,
+  PaymentOptions,
   ReceiptDataSource,
   ReceiptView,
   StatementImportBatch,
@@ -61,6 +63,14 @@ export class HttpAccountDataSource extends HttpPort implements AccountDataSource
   /** Where the issued statement's PDF downloads from (signed-in, same origin). */
   pdfUrl(accountId: string, period: string): string {
     return `${this.base}/accounts/${accountId}/statements/${period}/pdf`;
+  }
+
+  paymentOptions(accountId: string): Observable<PaymentOptions> {
+    return this.live<PaymentOptions>(`/accounts/${accountId}/payment-options`, ['accounts', 'settings']);
+  }
+
+  startCardPayment(accountId: string): Observable<CheckoutSession> {
+    return this.command<CheckoutSession>('POST', `/accounts/${accountId}/card-checkout`, {}, []);
   }
 
   /** A journal adjustment (Billing.Run): positive charges, negative credits. Part of BillingDataSource, connected ahead of the billing run. */

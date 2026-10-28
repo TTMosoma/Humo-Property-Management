@@ -38,6 +38,13 @@ public sealed class PayfastOptions
     public string? EffectivePassphrase => Sandbox ? SandboxPassphrase : Passphrase;
 }
 
+/// <summary>
+/// A Payfast merchant account. Humo's own (from configuration) takes agencies' payments for Humo invoices; a scheme's
+/// (linked by the agency, D25) takes owners' levy payments straight into that scheme's trust account. Sandbox or live
+/// follows the server's setting, so a staging server needs sandbox merchants.
+/// </summary>
+public sealed record PayfastMerchant(string MerchantId, string MerchantKey, string? Passphrase);
+
 /// <summary>Where the browser goes to pay: a form POST to Payfast with these fields (keeps the email address out of the URL).</summary>
 public sealed record PayfastCheckout(string Action, IReadOnlyList<KeyValuePair<string, string>> Fields);
 
@@ -66,6 +73,11 @@ public interface IPayfast
     /// (<c>/eng/query/validate</c>). The caller still checks the amount against the invoice.
     /// </summary>
     Task<string?> VerifyAsync(PayfastNotification n, IPAddress? from, CancellationToken ct);
+    /// <summary>A once-off checkout into another merchant's account (a scheme's, D25).</summary>
+    PayfastCheckout Checkout(PayfastMerchant merchant, string paymentId, decimal amount, string itemName, string? itemDescription, string? email, string returnUrl, string cancelUrl,
+        string notifyUrl, string reference);
+    /// <summary>As <see cref="VerifyAsync(PayfastNotification, IPAddress?, CancellationToken)"/>, for a notification to that merchant.</summary>
+    Task<string?> VerifyAsync(PayfastNotification n, IPAddress? from, PayfastMerchant merchant, CancellationToken ct);
 }
 
 /// <summary>Payfast's custom integration: signed checkout fields, and notification checks as their documentation sets out.</summary>
@@ -78,15 +90,26 @@ public sealed class PayfastClient(IOptions<PayfastOptions> options, IHttpClientF
     public bool Configured => !string.IsNullOrWhiteSpace(options.Value.EffectiveMerchantId) && !string.IsNullOrWhiteSpace(options.Value.EffectiveMerchantKey);
     public bool Sandbox => options.Value.Sandbox;
 
+    /// <summary>Humo's own merchant account (the sandbox merchant in sandbox mode).</summary>
+    private PayfastMerchant Humo => new(options.Value.EffectiveMerchantId ?? "", options.Value.EffectiveMerchantKey ?? "", options.Value.EffectivePassphrase);
+
     public PayfastCheckout Checkout(string paymentId, decimal amount, string itemName, string? itemDescription, string? email, string returnUrl, string cancelUrl, string notifyUrl, string invoiceId,
-        bool saveCard = false)
+        bool saveCard = false) =>
+        Checkout(Humo, paymentId, amount, itemName, itemDescription, email, returnUrl, cancelUrl, notifyUrl, invoiceId, saveCard);
+
+    public PayfastCheckout Checkout(PayfastMerchant merchant, string paymentId, decimal amount, string itemName, string? itemDescription, string? email, string returnUrl, string cancelUrl,
+        string notifyUrl, string reference) =>
+        Checkout(merchant, paymentId, amount, itemName, itemDescription, email, returnUrl, cancelUrl, notifyUrl, reference, false);
+
+    private PayfastCheckout Checkout(PayfastMerchant merchant, string paymentId, decimal amount, string itemName, string? itemDescription, string? email, string returnUrl, string cancelUrl,
+        string notifyUrl, string invoiceId, bool saveCard)
     {
         var o = options.Value;
         // Payfast's field order matters for the signature.
         var fields = new List<KeyValuePair<string, string>>
         {
-            new("merchant_id", o.EffectiveMerchantId!),
-            new("merchant_key", o.EffectiveMerchantKey!),
+            new("merchant_id", merchant.MerchantId),
+            new("merchant_key", merchant.MerchantKey),
             new("return_url", returnUrl),
             new("cancel_url", cancelUrl),
             new("notify_url", notifyUrl),
@@ -103,7 +126,7 @@ public sealed class PayfastClient(IOptions<PayfastOptions> options, IHttpClientF
             // Tokenization: Payfast keeps the card; Humo gets only a token to charge later invoices with.
             fields.Add(new("subscription_type", "2"));
         }
-        fields.Add(new("signature", Signature(fields, o.EffectivePassphrase)));
+        fields.Add(new("signature", Signature(fields, merchant.Passphrase)));
         return new PayfastCheckout($"{o.Host}/eng/process", fields);
     }
 
@@ -156,12 +179,14 @@ public sealed class PayfastClient(IOptions<PayfastOptions> options, IHttpClientF
         }
     }
 
-    public async Task<string?> VerifyAsync(PayfastNotification n, IPAddress? from, CancellationToken ct)
+    public Task<string?> VerifyAsync(PayfastNotification n, IPAddress? from, CancellationToken ct) => VerifyAsync(n, from, Humo, ct);
+
+    public async Task<string?> VerifyAsync(PayfastNotification n, IPAddress? from, PayfastMerchant merchant, CancellationToken ct)
     {
         var o = options.Value;
         var data = n.Fields.Where(f => f.Key != "signature").ToList();
-        if (!string.Equals(Signature(data, o.EffectivePassphrase), n["signature"], StringComparison.OrdinalIgnoreCase)) return "The signature doesn't match";
-        if (n["merchant_id"] != o.EffectiveMerchantId) return "Not for Humo's merchant account";
+        if (!string.Equals(Signature(data, merchant.Passphrase), n["signature"], StringComparison.OrdinalIgnoreCase)) return "The signature doesn't match";
+        if (n["merchant_id"] != merchant.MerchantId) return "Not for this merchant account";
         if (o.CheckNotificationSource && !await FromPayfast(from, ct)) return "Not sent from Payfast's servers";
         try
         {

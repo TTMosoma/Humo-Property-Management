@@ -164,6 +164,16 @@ public sealed class TestPayfast : Humo.Infrastructure.Payments.IPayfast
     public Task<string?> VerifyAsync(Humo.Infrastructure.Payments.PayfastNotification n, System.Net.IPAddress? from, CancellationToken ct) =>
         Task.FromResult(Humo.Infrastructure.Payments.PayfastClient.Signature(n.Fields.Where(f => f.Key != "signature"), null) == n["signature"]
             ? null : "The signature doesn't match");
+
+    public Humo.Infrastructure.Payments.PayfastCheckout Checkout(Humo.Infrastructure.Payments.PayfastMerchant merchant, string paymentId, decimal amount, string itemName,
+        string? itemDescription, string? email, string returnUrl, string cancelUrl, string notifyUrl, string reference) =>
+        real.Checkout(merchant, paymentId, amount, itemName, itemDescription, email, returnUrl, cancelUrl, notifyUrl, reference);
+
+    /// <summary>Genuine when signed with the merchant's own passphrase, for that merchant.</summary>
+    public Task<string?> VerifyAsync(Humo.Infrastructure.Payments.PayfastNotification n, System.Net.IPAddress? from, Humo.Infrastructure.Payments.PayfastMerchant merchant,
+        CancellationToken ct) =>
+        Task.FromResult(Humo.Infrastructure.Payments.PayfastClient.Signature(n.Fields.Where(f => f.Key != "signature"), merchant.Passphrase) != n["signature"] ? "The signature doesn't match"
+            : n["merchant_id"] != merchant.MerchantId ? "Not for this merchant account" : null);
 }
 
 public sealed class TestClock : TimeProvider

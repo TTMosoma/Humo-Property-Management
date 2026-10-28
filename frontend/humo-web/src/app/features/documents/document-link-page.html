@@ -34,6 +34,11 @@
           <button type="button" class="btn btn-primary big" [disabled]="busy()" (click)="sendCode()">
             <ion-icon [name]="info()!.codeChannel === 'sms' ? 'chatbox-outline' : 'mail-outline'" aria-hidden="true" /> {{ busy() ? 'Sending…' : 'Send me a code' }}
           </button>
+          @if (emailInstead(); as e) {
+            <button type="button" class="btn btn-ghost" [disabled]="busy()" (click)="sendCode('email')">
+              <ion-icon name="mail-outline" aria-hidden="true" /> Email it to {{ e.sentTo }} instead
+            </button>
+          }
           <p class="hint">Have a Humo Property Management account? <a routerLink="/sign-in">Sign in</a> to see every statement.</p>
         }
         @case ('code') {
@@ -60,9 +65,14 @@
             </label>
             <button type="submit" class="btn btn-primary big" [disabled]="busy()">{{ busy() ? 'Checking…' : 'Open my statement' }}</button>
           </form>
-          <button type="button" class="btn btn-ghost" [disabled]="busy() || resendIn() > 0" (click)="sendCode()">
+          <button type="button" class="btn btn-ghost" [disabled]="busy() || resendIn() > 0" (click)="sendCode(sentBy())">
             {{ resendIn() > 0 ? 'Send a new code in ' + resendIn() + 's' : 'Send a new code' }}
           </button>
+          @if (sentBy() === 'sms' && emailInstead(); as e) {
+            <button type="button" class="btn btn-ghost" [disabled]="busy() || resendIn() > 0" (click)="sendCode('email')">
+              <ion-icon name="mail-outline" aria-hidden="true" /> {{ resendIn() > 0 ? 'No SMS? Email it instead in ' + resendIn() + 's' : 'No SMS? Email it to ' + e.sentTo }}
+            </button>
+          }
         }
         @case ('expired') {
           <span class="icon muted" aria-hidden="true"><ion-icon name="time-outline" /></span>

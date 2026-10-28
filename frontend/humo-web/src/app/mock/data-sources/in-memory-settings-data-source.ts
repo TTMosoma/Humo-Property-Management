@@ -159,6 +159,15 @@ export class InMemorySettingsDataSource extends SettingsDataSource {
       .pipe(map(() => undefined));
   }
 
+  /** Card payments need the scheme's Payfast merchant on Humo's API (D25): not in the demo. */
+  linkPayfast(): Observable<void> {
+    return throwError(() => new ApiError('server', 'Card payments are set up on Humo’s API, not in the demo.'));
+  }
+
+  unlinkPayfast(): Observable<void> {
+    return throwError(() => new ApiError('server', 'Card payments are set up on Humo’s API, not in the demo.'));
+  }
+
   updateComplianceProfile(profile: ComplianceProfile): Observable<void> {
     const scheme = this.db.schemes.get(profile.schemeId);
     return this.gateway

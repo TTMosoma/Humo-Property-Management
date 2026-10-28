@@ -13,10 +13,14 @@ interface LinkInfo {
   title: string;
   schemeName: string;
   agencyName: string;
-  codeChannel: 'sms' | 'email' | null;
+  codeChannel: Channel | null;
   codeSentTo: string | null;
+  /** Every way a code can go, the default first. */
+  channels: { channel: Channel; sentTo: string }[];
   expiresAt: string;
 }
+
+type Channel = 'sms' | 'email';
 
 interface StatementSnapshot {
   view: StatementView;
@@ -32,8 +36,8 @@ const RESEND_AFTER_S = 60;
 
 /**
  * A secure document link (`/d/{token}`, docs/18 R-1): an owner opens the statement from their email without a
- * Humo PM account. The link shows only what it is; a one-time code (SMS to the mobile on record, else email)
- * opens it for 30 minutes. Only the production build talks to the API: the simulation sends no statement emails.
+ * Humo PM account. The link shows only what it is; a one-time code (SMS to the mobile on record, else email, or
+ * email when they ask for it) opens it for 30 minutes. Only the production build talks to the API: the simulation sends no statement emails.
  */
 @Component({
   selector: 'app-document-link-page',
@@ -52,7 +56,9 @@ export class DocumentLinkPage {
   protected readonly step = signal<Step>('loading');
   protected readonly info = signal<LinkInfo | null>(null);
   protected readonly sentTo = signal('');
-  protected readonly sentBy = signal<'sms' | 'email'>('sms');
+  protected readonly sentBy = signal<Channel>('sms');
+  /** Where an emailed code would go, when the default is SMS and there's an email address too. */
+  protected readonly emailInstead = computed(() => (this.info()?.codeChannel === 'sms' ? this.info()?.channels?.find((c) => c.channel === 'email') : undefined));
   protected readonly code = signal('');
   protected readonly error = signal('');
   protected readonly busy = signal(false);
@@ -87,11 +93,11 @@ export class DocumentLinkPage {
     return (e.error as { title?: string } | null)?.title ?? fallback;
   }
 
-  protected sendCode(): void {
+  protected sendCode(channel?: Channel): void {
     if (this.busy() || this.resendIn() > 0) return;
     this.busy.set(true);
     this.error.set('');
-    this.http!.post<{ channel: 'sms' | 'email'; sentTo: string }>(this.url('/code'), null).subscribe({
+    this.http!.post<{ channel: Channel; sentTo: string }>(this.url('/code'), { channel: channel ?? null }).subscribe({
       next: (r) => {
         this.busy.set(false);
         this.sentBy.set(r.channel);

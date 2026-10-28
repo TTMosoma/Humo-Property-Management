@@ -114,6 +114,8 @@ Customers pay a Humo invoice with **Pay now** (Settings › Billing & invoices).
 
 A repeated notification changes nothing. Payfast must be able to reach the API over HTTPS, so ITN can't be tested on `localhost`.
 
+**Owners' levy payments (D25)** use each scheme's own Payfast merchant, linked by the agency in Settings › Agency › Trust accounts, not the configured one above. The passphrase is stored encrypted with ASP.NET Core data protection (keys in the database). Their notifications go to `POST /api/payments/notifications/payfast/levies` and are checked the same way with that scheme's passphrase. A complete payment adds an allocated receipt. `Payments__Payfast__Sandbox` applies to them too: a staging server needs sandbox merchants.
+
 ## Billing run
 
 Every morning after `Billing__RunHour` (South African time; 06:00 by default) the API:

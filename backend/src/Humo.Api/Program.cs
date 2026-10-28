@@ -176,6 +176,7 @@ Humo.Api.Commercial.CustomerEndpoints.MapCustomers(api);
 Humo.Api.Commercial.CommercialEndpoints.MapCommercial(api);
 Humo.Api.Commercial.BillingEndpoints.MapBilling(api);
 Humo.Api.Commercial.PayfastEndpoints.MapPayfast(api);
+Humo.Api.Finance.LevyCardPayments.MapLevyCardPayments(api);
 Humo.Api.Finance.AccountEndpoints.MapAccounts(api);
 Humo.Api.Finance.ReceiptEndpoints.MapReceipts(api);
 Humo.Api.Finance.BillingRunEndpoints.MapBillingRuns(api);

@@ -1,8 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { map, switchMap, throwError } from 'rxjs';
-import { AccountDataSource, ApiError, TimelineDataSource, UnitDataSource, periodLabel, periodOf } from '../../domain';
+import { combineLatest, map, switchMap, throwError } from 'rxjs';
+import { AccountDataSource, ApiError, TimelineDataSource, UnitDataSource, describeFailure, periodLabel, periodOf } from '../../domain';
+import { goToCheckout } from '../billing/invoice-view-page';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { loadable } from '../../core/data/loadable';
 import { RoleSwitcher } from '../../core/session/role-switcher';
@@ -14,7 +16,9 @@ import { Skeleton } from '../../ui/states/skeleton';
 
 /**
  * Owner portal › My account. Job: "what do I owe, why, how do I pay, and did
- * you get my payment?" — answered without phoning the managing agent.
+ * you get my payment?" — answered without phoning the managing agent. They pay
+ * by EFT to the scheme's trust account, or online through the scheme's own
+ * Payfast merchant when the agency has set one up (D25).
  */
 @Component({
   selector: 'app-owner-account-page',
@@ -38,10 +42,10 @@ export class OwnerAccountPage {
     return this.units.byId(unitId).pipe(
       switchMap((summary) => {
         if (!summary) return throwError(() => new ApiError('not-found', 'Unit not found'));
-        return this.accounts.get(summary.account.id).pipe(
-          map((detail) => {
+        return combineLatest([this.accounts.get(summary.account.id), this.accounts.paymentOptions(summary.account.id)]).pipe(
+          map(([detail, options]) => {
             if (!detail) throw new ApiError('not-found', 'Account not found');
-            return { summary, detail };
+            return { summary, detail, options };
           }),
         );
       }),
@@ -49,6 +53,10 @@ export class OwnerAccountPage {
   });
   protected readonly summary = computed(() => this.result.value()?.summary);
   protected readonly detail = computed(() => this.result.value()?.detail);
+  protected readonly options = computed(() => this.result.value()?.options);
+  /** Back from Payfast: `?payment=returned` or `cancelled`. Only Payfast's own notification credits the account. */
+  protected readonly returned = toSignal(inject(ActivatedRoute).queryParamMap.pipe(map((q) => q.get('payment'))), { initialValue: null });
+  protected readonly paying = signal(false);
 
   protected readonly paidOpen = signal(false);
   protected readonly paidText = signal('');
@@ -68,10 +76,20 @@ export class OwnerAccountPage {
   protected readonly formatDate = formatDate;
   protected readonly periodLabel = periodLabel;
 
-  protected dueDate(): string {
-    const d = new Date();
-    d.setDate(7);
-    return formatDate(d.toISOString());
+  /** Pay online: the API signs a checkout for the scheme's Payfast merchant; the browser posts it to Payfast. */
+  protected payOnline(): void {
+    const id = this.detail()?.account.id;
+    if (!id || this.paying()) return;
+    this.paying.set(true);
+    this.accounts.startCardPayment(id).subscribe({
+      next: (s) => {
+        if (!goToCheckout(s)) this.paying.set(false);
+      },
+      error: (e) => {
+        this.paying.set(false);
+        this.feedback.error(describeFailure(e, 'The payment didn’t start'));
+      },
+    });
   }
 
   /** Each unit is its own assignment: switching unit is a role switch that stays on this page. */

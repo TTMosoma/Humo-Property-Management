@@ -313,6 +313,108 @@ public sealed class StatementTests : IDisposable
     }
 
     [Fact]
+    public async Task With_a_mobile_and_an_email_on_record_the_owner_can_ask_for_the_code_by_email()
+    {
+        var s = await Scheme();
+        await PostedRun(s);
+        Assert.Equal(HttpStatusCode.OK, (await s.Finance.PostAsync($"/api/accounts/{s.Account42}/statements/2026-11/send", null)).StatusCode);
+        await HumoApiFactory.Until(() => !api.Email.Sent.IsEmpty);
+        var token = System.Text.RegularExpressions.Regex.Match(Assert.Single(api.Email.Sent).Text, "/d/([0-9a-f]{64})").Groups[1].Value;
+
+        var anyone = api.Client();
+        var info = await Ok(await anyone.GetAsync($"/api/document-links/{token}"));
+        Assert.Equal(["sms", "email"], info.GetProperty("channels").EnumerateArray().Select(c => c.GetProperty("channel").GetString()));
+        var sent = await Ok(await anyone.PostAsJsonAsync($"/api/document-links/{token}/code", new { channel = "email" }));
+        Assert.Equal(("email", "s•••@mail.example"), (sent.GetProperty("channel").GetString(), sent.GetProperty("sentTo").GetString()));
+        Assert.Empty(api.Sms.Sent);
+        // An emailed code isn't an SMS: nothing is counted.
+        Assert.False(await api.Db(db => db.MessageUsage.AnyAsync(u => u.Channel == "sms")));
+        var code = System.Text.RegularExpressions.Regex.Match(api.Email.Sent.Last().Text, "\\b\\d{6}\\b").Value;
+        Assert.Equal(HttpStatusCode.OK, (await anyone.PostAsJsonAsync($"/api/document-links/{token}/verify", new { code })).StatusCode);
+    }
+
+    /// <summary>Sipho signs in to the owner portal.</summary>
+    private async Task<HttpClient> Owner(Setup s)
+    {
+        var org = await api.Db(db => db.Schemes.Where(x => x.Id == s.Kc).Select(x => x.OrganisationId).SingleAsync());
+        await api.Person("sipho@mail.example", Roles.Owner, org, [s.Kc]);
+        await api.Db(async db =>
+        {
+            var person = await db.People.SingleAsync(p => p.Email == "sipho@mail.example");
+            (await db.Users.SingleAsync(u => u.Email == "sipho@mail.example")).PersonId = person.Id.ToString();
+            return await db.SaveChangesAsync();
+        });
+        return await api.SignedIn("sipho@mail.example");
+    }
+
+    /// <summary>A notification from the scheme's Payfast merchant, signed with its passphrase.</summary>
+    private Task<HttpResponseMessage> NotifyLevy(string passphrase, params (string Key, string Value)[] fields)
+    {
+        var list = fields.Select(f => new KeyValuePair<string, string>(f.Key, f.Value)).ToList();
+        list.Add(new("signature", Humo.Infrastructure.Payments.PayfastClient.Signature(list, passphrase)));
+        var body = string.Join("&", list.Select(f => $"{f.Key}={Humo.Infrastructure.Payments.PayfastClient.Encode(f.Value)}"));
+        return api.Client().PostAsync("/api/payments/notifications/payfast/levies", new StringContent(body, System.Text.Encoding.UTF8, "application/x-www-form-urlencoded"));
+    }
+
+    [Fact]
+    public async Task An_owner_pays_their_levy_by_card_into_the_schemes_own_Payfast_account()
+    {
+        var s = await Scheme();
+        await PostedRun(s);
+        var owner = await Owner(s);
+
+        // EFT to the scheme's trust account, with the account number as the reference. No card until the agency links a merchant.
+        var options = await Ok(await owner.GetAsync($"/api/accounts/{s.Account42}/payment-options"));
+        Assert.Equal(("62345678901", false), (options.GetProperty("trustAccount").GetProperty("accountNumber").GetString(), options.GetProperty("card").GetBoolean()));
+        var due = options.GetProperty("due").GetDecimal();
+        Assert.True(due > 0);
+        Assert.Equal("2026-11-07", options.GetProperty("dueBy").GetString());
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, (await owner.PostAsync($"/api/accounts/{s.Account42}/card-checkout", null)).StatusCode);
+
+        // The agency links the scheme's Payfast merchant: a fresh passkey, and finance can't.
+        var merchant = new { merchantId = "10004321", merchantKey = "kc4merchantkey", passphrase = "kingfisher-salt" };
+        var link = $"/api/settings/trust-accounts/{s.Kc}/payfast";
+        Assert.Equal("step-up-required", await (await s.Admin.PutAsJsonAsync(link, merchant)).ProblemCode());
+        await s.Admin.StepUp();
+        Assert.True((await (await s.Admin.PutAsJsonAsync(link, merchant with { merchantId = "abc" })).FieldErrors()).TryGetProperty("merchantId", out _));
+        await NoContent(await s.Admin.PutAsJsonAsync(link, merchant));
+        Assert.Equal("forbidden", await (await s.Finance.PutAsJsonAsync(link, merchant)).ProblemCode());
+        var trust = Assert.Single((await Ok(await s.Admin.GetAsync($"/api/settings/trust-accounts?schemeIds={s.Kc}"))).EnumerateArray());
+        Assert.Equal("10004321", trust.GetProperty("payfast").GetProperty("merchantId").GetString());
+        // The passphrase is kept encrypted, never as given.
+        Assert.DoesNotContain("kingfisher-salt", await api.Db(db => db.TrustAccounts.Select(t => t.PayfastPassphrase!).SingleAsync()));
+
+        // The owner pays the balance on Payfast's page, into the scheme's merchant. Staff can't start it for them.
+        Assert.True((await Ok(await owner.GetAsync($"/api/accounts/{s.Account42}/payment-options"))).GetProperty("card").GetBoolean());
+        Assert.Equal(HttpStatusCode.NotFound, (await s.Finance.PostAsync($"/api/accounts/{s.Account42}/card-checkout", null)).StatusCode);
+        var checkout = await Ok(await owner.PostAsync($"/api/accounts/{s.Account42}/card-checkout", null));
+        var fields = checkout.GetProperty("form").GetProperty("fields").EnumerateArray().ToDictionary(f => f.GetProperty("key").GetString()!, f => f.GetProperty("value").GetString()!);
+        Assert.Equal(("10004321", due.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)), (fields["merchant_id"], fields["amount"]));
+        Assert.EndsWith("/api/payments/notifications/payfast/levies", fields["notify_url"]);
+        var paymentId = checkout.GetProperty("paymentId").GetString()!;
+        // Starting a checkout is not a payment.
+        Assert.Equal(due, await api.Db(db => db.LevyAccounts.Where(a => a.Id == s.Account42).Select(a => a.Balance).SingleAsync()));
+
+        (string, string)[] complete = [("m_payment_id", paymentId), ("pf_payment_id", "2981234"), ("payment_status", "COMPLETE"), ("amount_gross", fields["amount"]), ("merchant_id", "10004321")];
+        // Signed with Humo's passphrase (or none), or for the wrong amount: refused.
+        Assert.Equal(HttpStatusCode.BadRequest, (await NotifyLevy("", complete)).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await NotifyLevy("kingfisher-salt", [.. complete[..3], ("amount_gross", "1.00"), complete[4]])).StatusCode);
+
+        Assert.Equal(HttpStatusCode.OK, (await NotifyLevy("kingfisher-salt", complete)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await NotifyLevy("kingfisher-salt", complete)).StatusCode);
+        // Credited in full (Payfast's fee is the scheme's bank charge), once, with an allocated receipt finance can see.
+        Assert.Equal(0m, await api.Db(db => db.LevyAccounts.Where(a => a.Id == s.Account42).Select(a => a.Balance).SingleAsync()));
+        var receipt = await api.Db(db => db.Receipts.SingleAsync(r => r.Source == "payfast"));
+        Assert.Equal(("allocated", due), (receipt.Status, receipt.Amount));
+        Assert.Equal(1, await api.Db(db => db.Ledger.CountAsync(e => e.ReceiptId == receipt.Id)));
+        Assert.False((await Ok(await owner.GetAsync($"/api/accounts/{s.Account42}/payment-options"))).GetProperty("card").GetBoolean());
+
+        // Turning card payments off: owners pay by EFT again.
+        await NoContent(await s.Admin.PostAsJsonAsync($"{link}/remove", new { reason = "Moving to a new Payfast account" }));
+        Assert.Equal(JsonValueKind.Null, Assert.Single((await Ok(await s.Admin.GetAsync($"/api/settings/trust-accounts?schemeIds={s.Kc}"))).EnumerateArray()).GetProperty("payfast").ValueKind);
+    }
+
+    [Fact]
     public async Task A_PDF_that_failed_to_render_is_rendered_on_first_download()
     {
         var s = await Scheme();

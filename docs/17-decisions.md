@@ -40,6 +40,7 @@ Each entry records:
 | D22 | Confirms D21: the Advanced finance add-on is R400 a month, with levies included | Commercial slice |
 | D23 | Custom document templates are Enterprise only: the separate add-on is withdrawn; Enterprise includes one custom template (refines D12) | Documents, commercial |
 | D24 | Approving with one authoriser: a trustee on Humo approves; with none on Humo, the agency approves alone under the trustees’ written permission, with a passkey, after a 24-hour cooling-off | Approvals |
+| D25 | Owners pay levies online through each scheme’s own Payfast account, paid out to its trust account; the scheme pays Payfast’s fee | Finance, owner portal |
 
 ---
 
@@ -562,6 +563,25 @@ Approved on 18 October 2026 by Terry Mosoma (product owner). Options and reasons
 - API: `POST /work-items/{id}/decision` takes `alone`; `POST /work-items/{id}/cancel-hold`; `/trustee-permissions` (list, add with the PDF, withdraw). Approvals in their cooling-off have the status `cooling-off`; the minute loop releases them.
 - My work shows who can approve instead, "Verify and approve alone", and the cooling-off with "Stop it".
 - Supplier payments (slice 3b) use the same rules when they arrive.
+
+---
+
+## D25 — Owners pay levies online, into the scheme’s own Payfast account (28 October 2026)
+
+**Status:** approved by the product owner (Terry Mosoma).
+
+**The problem:** owners could only pay by EFT. Humo’s own Payfast account (D15) takes agencies’ payments for Humo invoices. It can’t take levies: levies are trust money and must reach the scheme’s trust account without passing through Humo.
+
+**Decision:**
+1. **One Payfast account per scheme.** In Settings › Agency › Trust accounts, the agency links the scheme’s own Payfast merchant (ID, key and salt passphrase), set at Payfast to pay out to that scheme’s trust account. Linking or turning it off needs a passkey, like the trust account itself. The passphrase is stored encrypted and never shown again.
+2. **The owner pays the balance** from My account (*Pay with Payfast*: card, Instant EFT and Payfast’s other methods). Only the account holder can start it.
+3. **Only Payfast’s notification counts**, checked with that scheme’s passphrase, against that merchant, for the right amount. It adds an allocated receipt (source *payfast*) and the payment line. Repeats change nothing.
+4. **The scheme pays Payfast’s fee.** The owner is credited the full amount; the fee is a bank charge on the scheme’s books.
+
+**Consequences:**
+- API: `PUT /settings/trust-accounts/{schemeId}/payfast`, `POST …/payfast/remove`, `GET /accounts/{id}/payment-options`, `POST /accounts/{id}/card-checkout`, and the notification `POST /payments/notifications/payfast/levies`.
+- My account shows the scheme’s real trust account and due date (they were placeholders before).
+- **Bank reconciliation:** Payfast’s payout reaches the trust account as one deposit, net of fees, for payments already credited. When the bank statement is imported, finance moves that line to suspense with a note, not onto an account. Matching payouts automatically is future work.
 
 ---
 

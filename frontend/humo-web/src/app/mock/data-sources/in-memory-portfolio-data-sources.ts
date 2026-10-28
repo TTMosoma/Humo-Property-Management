@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, defer, map, switchMap, throwError } from 'rxjs';
-import { AccountDataSource, ApiError, NewReceipt, StatementImportBatch, StatementImportResult, StatementLine, StatementMapping, StatementPreview, mappingProblems, parseCsv, readStatement, AccountDetail, FieldErrors, ListQuery, MatchView, NewRelationship, Note, Page, Person, PersonDataSource, PersonDetails, PersonSummary, ReceiptDataSource, ReceiptView, StatementView, TimelineDataSource, TimelineEvent, Unit, UnitDataSource, UnitDetails, UnitSummary, periodLabel, roundRands, todaySA, saDate } from '../../domain';
+import { AccountDataSource, ApiError, CheckoutSession, PaymentOptions, NewReceipt, StatementImportBatch, StatementImportResult, StatementLine, StatementMapping, StatementPreview, mappingProblems, parseCsv, readStatement, AccountDetail, FieldErrors, ListQuery, MatchView, NewRelationship, Note, Page, Person, PersonDataSource, PersonDetails, PersonSummary, ReceiptDataSource, ReceiptView, StatementView, TimelineDataSource, TimelineEvent, Unit, UnitDataSource, UnitDetails, UnitSummary, periodLabel, roundRands, todaySA, saDate } from '../../domain';
 import { CommsStore } from '../db/comms-store';
 import { ReceiptImportStore } from '../db/receipt-import-store';
 import { LevyStore } from '../db/levy-store';
@@ -345,6 +345,28 @@ export class InMemoryAccountDataSource extends AccountDataSource {
 
   statement(accountId: string, period: string): Observable<StatementView | undefined> {
     return live(this.db, this.respond, () => this.db.statement(accountId, period));
+  }
+
+  /** EFT only: the demo has no card payments (they need a scheme's Payfast merchant on Humo's API, D25). */
+  paymentOptions(accountId: string): Observable<PaymentOptions> {
+    return live(this.db, this.respond, () => {
+      const d = this.db.accountDetail(accountId);
+      if (!d) throw new ApiError('not-found', 'Account not found');
+      const due = roundRands(d.account.balance);
+      const latest = d.transactions.find((t) => t.amount > 0)?.date;
+      return {
+        trustAccount: this.db.trustAccount(d.scheme).account,
+        reference: d.account.accountNo,
+        due,
+        dueBy: due > 0 && latest ? `${latest.slice(0, 8)}07` : null,
+        card: false,
+        sandbox: false,
+      };
+    });
+  }
+
+  startCardPayment(): Observable<CheckoutSession> {
+    return throwError(() => new ApiError('server', 'Card payments aren’t available in the demo. Pay by EFT.'));
   }
 
   /** SIMULATED (docs/18 R-1): recorded in Sent with a simulated delivery; nothing leaves the browser. */

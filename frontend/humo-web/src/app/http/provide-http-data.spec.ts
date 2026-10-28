@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { firstValueFrom } from 'rxjs';
-import { AccessDataSource, ApiError, JobDataSource, describeFailure, MeetingDataSource, PayablesDataSource, PlatformTemplateDataSource, PolicyError, SchemeDataSource, SessionDataSource, SignInError, SupplierDataSource } from '../domain';
+import { AccessDataSource, AccountDataSource, ApiError, JobDataSource, describeFailure, MeetingDataSource, PayablesDataSource, PlatformTemplateDataSource, PolicyError, SchemeDataSource, SessionDataSource, SettingsDataSource, SignInError, SupplierDataSource } from '../domain';
 import { provideHttpData } from './provide-http-data';
 
 /**
@@ -63,6 +63,22 @@ describe('Production data layer (provideHttpData)', () => {
     const published = firstValueFrom(templates.publishCustomVersion('org-1.levy-statement', design, 'Colours', { approvedBy: 'Thandeka', approvedOn: '2026-10-18' }, 1));
     http.expectOne({ method: 'POST', url: '/api/platform/document-templates/org-1.levy-statement/versions' }).flush({ version: 2 });
     expect(await published).toBe(2);
+  });
+
+  it('owners pay online into the scheme’s own Payfast account; the agency links it (D25)', async () => {
+    const accounts = TestBed.inject(AccountDataSource);
+    const options = firstValueFrom(accounts.paymentOptions('acc-1'));
+    http.expectOne({ method: 'GET', url: '/api/accounts/acc-1/payment-options' }).flush({ trustAccount: null, reference: 'KC-042', due: 1850, dueBy: '2026-11-07', card: true, sandbox: false });
+    expect((await options).card).toBe(true);
+    const checkout = firstValueFrom(accounts.startCardPayment('acc-1'));
+    http.expectOne({ method: 'POST', url: '/api/accounts/acc-1/card-checkout' }).flush({ paymentId: 'p-1', providerReference: 'p-1', redirectUrl: null, simulated: false, form: { action: 'https://www.payfast.co.za/eng/process', fields: [] } });
+    expect((await checkout).form?.action).toContain('payfast');
+
+    const linked = firstValueFrom(TestBed.inject(SettingsDataSource).linkPayfast('s-1', { merchantId: '10004321', merchantKey: 'kc4merchantkey', passphrase: 'salt-salt' }));
+    const put = http.expectOne({ method: 'PUT', url: '/api/settings/trust-accounts/s-1/payfast' });
+    expect(put.request.body).toEqual({ merchantId: '10004321', merchantKey: 'kc4merchantkey', passphrase: 'salt-salt' });
+    put.flush(null, { status: 204, statusText: 'No Content' });
+    await linked;
   });
 
   it('reads jobs and suppliers from the API', async () => {

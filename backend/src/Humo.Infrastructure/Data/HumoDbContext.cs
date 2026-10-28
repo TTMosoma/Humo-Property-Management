@@ -40,6 +40,7 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
     public DbSet<AgencySetting> AgencySettings => Set<AgencySetting>();
     public DbSet<DocumentSetting> DocumentSettings => Set<DocumentSetting>();
     public DbSet<TrustAccountRow> TrustAccounts => Set<TrustAccountRow>();
+    public DbSet<LevyCardPayment> LevyCardPayments => Set<LevyCardPayment>();
     public DbSet<IssuedStatement> IssuedStatements => Set<IssuedStatement>();
     public DbSet<PersonalPreference> PersonalPreferences => Set<PersonalPreference>();
     public DbSet<CollectionCaseRow> CollectionCases => Set<CollectionCaseRow>();
@@ -316,8 +317,24 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.Property(x => x.AccountName).HasMaxLength(120);
             e.Property(x => x.AccountNumber).HasMaxLength(20);
             e.Property(x => x.BranchCode).HasMaxLength(10);
+            e.Property(x => x.PayfastMerchantId).HasMaxLength(20);
+            e.Property(x => x.PayfastMerchantKey).HasMaxLength(40);
+            e.Property(x => x.PayfastPassphrase).HasMaxLength(1000);
+            e.Property(x => x.PayfastLinkedBy).HasMaxLength(200);
             e.Property(x => x.Version).IsConcurrencyToken();
             e.HasOne<Scheme>().WithOne().HasForeignKey<TrustAccountRow>(x => x.SchemeId);
+        });
+
+        builder.Entity<LevyCardPayment>(e =>
+        {
+            e.ToTable("LevyCardPayments");
+            e.HasIndex(x => x.AccountId);
+            e.Property(x => x.Amount).HasPrecision(14, 2);
+            e.Property(x => x.Status).HasMaxLength(12);
+            e.Property(x => x.StartedBy).HasMaxLength(200);
+            e.Property(x => x.MerchantId).HasMaxLength(20);
+            e.Property(x => x.ProviderReference).HasMaxLength(40);
+            e.HasOne<LevyAccount>().WithMany().HasForeignKey(x => x.AccountId);
         });
 
         builder.Entity<IssuedStatement>(e =>

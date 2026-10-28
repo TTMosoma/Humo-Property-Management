@@ -1,6 +1,6 @@
 import { Observable } from 'rxjs';
 import { TrustAccount } from '../models/account';
-import { AgencyDetails, AgencySettings, BillingSettings, NewTrusteePermission, NotificationRule, PersonalPreferences, SchemeAuthority, SchemeTrustAccount } from '../models/settings';
+import { AgencyDetails, AgencySettings, BillingSettings, NewTrusteePermission, NotificationRule, PayfastMerchantDetails, PersonalPreferences, SchemeAuthority, SchemeTrustAccount } from '../models/settings';
 import { ComplianceProfile } from '../models/compliance';
 import { ReportDef, ReportId, ReportParams, ReportResult } from '../models/report';
 
@@ -32,6 +32,10 @@ export abstract class SettingsDataSource {
   abstract addTrusteePermission(input: NewTrusteePermission, file?: File): Observable<string>;
   abstract withdrawTrusteePermission(id: string, reason: string): Observable<void>;
   abstract updateTrustAccount(schemeId: string, account: TrustAccount): Observable<void>;
+  /** D25: links the scheme's own Payfast merchant so owners can pay by card. Needs a fresh passkey. */
+  abstract linkPayfast(schemeId: string, merchant: PayfastMerchantDetails): Observable<void>;
+  /** Card payments off for the scheme: owners pay by EFT. Needs a fresh passkey. */
+  abstract unlinkPayfast(schemeId: string, reason: string): Observable<void>;
   abstract updateComplianceProfile(profile: ComplianceProfile): Observable<void>;
   abstract preferences(): Observable<PersonalPreferences>;
   abstract updatePreferences(prefs: Omit<PersonalPreferences, 'identityId' | 'version' | 'emailSignOff'>, expectedVersion?: number): Observable<void>;
