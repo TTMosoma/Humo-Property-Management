@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, from, map, switchMap, tap, throwError } from 'rxjs';
-import { AuditDataSource, AuditEvent, AuditQuery, ListQuery, Page, SecurityDataSource, SecurityProfile, SessionDataSource } from '../domain';
+import { AuditDataSource, AuditEvent, AuditQuery, ListQuery, MobileStatus, Page, SecurityDataSource, SecurityProfile, SessionDataSource } from '../domain';
 import { HttpPort, toApiErrorFromHttp } from './http-port';
 import { HttpSessionDataSource } from './http-session-data-source';
 
@@ -66,6 +66,22 @@ export class HttpSecurityDataSource extends HttpPort implements SecurityDataSour
 
   addPasskey(): Observable<void> {
     return this.session.registerPasskey().pipe(tap(() => this.dataChanges.notify('session')));
+  }
+
+  mobile(): Observable<MobileStatus> {
+    return this.live<MobileStatus>('/me/mobile', ['session']);
+  }
+
+  sendMobileCode(mobile: string): Observable<string> {
+    return this.command<{ sentTo: string }>('POST', '/me/mobile/code', { mobile }, []).pipe(map((r) => r.sentTo));
+  }
+
+  confirmMobile(code: string): Observable<void> {
+    return this.command<unknown>('POST', '/me/mobile/verify', { code }, ['session']).pipe(map(() => undefined));
+  }
+
+  removeMobile(): Observable<void> {
+    return this.command('POST', '/me/mobile/remove', null, ['session']);
   }
 
   removePasskey(_identityId: string, passkeyId: string): Observable<void> {

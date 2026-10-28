@@ -4,7 +4,7 @@ import { ListQuery, Page } from './list-query';
 import { AuditEvent, AuditQuery, ImpersonationMode, ImpersonationReason, ImpersonationSession } from '../models/audit';
 import { AssignmentScope, Identity, RoleAssignment } from '../models/identity';
 import { HumoTeamAction, HumoTeamMember, NewHumoMember, PendingHumoGrant } from '../models/humo-team';
-import { Passkey, SecurityProfile, StepUpMethod, StepUpRequest, StepUpResult } from '../models/security';
+import { MobileStatus, Passkey, SecurityProfile, StepUpMethod, StepUpRequest, StepUpResult } from '../models/security';
 
 export interface NewAssignment {
   role: RoleAssignment['role'];
@@ -117,6 +117,12 @@ export abstract class SecurityDataSource {
   abstract removeDevice(identityId: string, deviceId: string): Observable<void>;
   abstract signOutSession(identityId: string, sessionId: string): Observable<void>;
   abstract signOutOtherSessions(identityId: string): Observable<void>;
+  /** D26: the person's own mobile for SMS codes. */
+  abstract mobile(): Observable<MobileStatus>;
+  /** Sends a code to the number to confirm it. Needs the passkey once they have one. Returns where it went. */
+  abstract sendMobileCode(mobile: string): Observable<string>;
+  abstract confirmMobile(code: string): Observable<void>;
+  abstract removeMobile(): Observable<void>;
 }
 
 /**
@@ -127,4 +133,8 @@ export abstract class SecurityDataSource {
 export abstract class StepUpAuthenticator {
   abstract methods(identityId: string): Observable<{ method: StepUpMethod; device: string }[]>;
   abstract verify(method: StepUpMethod, request: StepUpRequest): Observable<StepUpResult>;
+  /** D26: sends a code by SMS to the person's confirmed mobile. Returns where it went. */
+  abstract sendSmsCode(): Observable<string>;
+  /** D26: the code from the SMS. Confirms approvals only, for 5 minutes. */
+  abstract verifySmsCode(code: string): Observable<StepUpResult>;
 }

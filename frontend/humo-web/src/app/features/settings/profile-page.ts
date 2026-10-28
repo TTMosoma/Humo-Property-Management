@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { CHANNEL_LABELS, Channel, EMAIL_SIGNATURE_LINES, PersonalPreferences, ROLE_LABELS, SettingsDataSource, activeAssignments, describeFailure, fieldErrorsOf } from '../../domain';
+import { CHANNEL_LABELS, Channel, EMAIL_SIGNATURE_LINES, MobileStatus, PersonalPreferences, ROLE_LABELS, SecurityDataSource, SettingsDataSource, activeAssignments, describeFailure, fieldErrorsOf } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
@@ -37,6 +37,29 @@ const WORK_CHANNELS: Channel[] = ['email', 'push', 'sms'];
       </dl>
       <p class="muted">Your name, email and roles are managed by your agency administrator in Users & access. Passkeys and devices: <a routerLink="/settings/security">Security</a>.</p>
     </section>
+
+    @if (session.can('Approvals.Decide') && !session.isImpersonating()) {
+      <section class="surface panel">
+        <div class="panel-head">
+          <h2 class="section-title">Mobile number</h2>
+          @if (mobile.value(); as m) {
+            <div class="actions">
+              <button type="button" class="btn btn-secondary btn-sm" (click)="setMobile(m)">{{ m.verified ? 'Change' : 'Add' }}</button>
+              @if (m.verified) {
+                <button type="button" class="btn btn-ghost btn-sm" (click)="removeMobile(m)">Remove</button>
+              }
+            </div>
+          }
+        </div>
+        <p class="muted">
+          A backup for when your passkey isn’t with you, for example on a public computer: we text you a code to confirm an approval. It confirms approvals only; bank details, access and
+          security changes always need your passkey. Best of all, add a passkey on your phone in <a routerLink="/settings/security">Security</a>: it works on any computer.
+        </p>
+        @if (mobile.value()?.verified) {
+          <p class="mobile">Codes go to <strong>{{ mobile.value()!.mobile }}</strong>.</p>
+        }
+      </section>
+    }
 
     @if (prefs.loading()) {
       <ui-skeleton [count]="4" />
@@ -115,6 +138,8 @@ const WORK_CHANNELS: Channel[] = ['email', 'push', 'sms'];
     .err { font-size: var(--fs-xs); color: var(--c-danger); }
     .panel-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
     .muted { color: var(--c-text-muted); font-size: var(--fs-sm); }
+    .actions { display: flex; gap: var(--s-2); }
+    .mobile { margin: var(--s-3) 0 0; font-size: var(--fs-sm); }
     .signature { margin: var(--s-3) 0 0; padding: var(--s-3) var(--s-4); font: inherit; font-size: var(--fs-sm); white-space: pre-wrap; background: var(--c-surface-2); border-radius: var(--r); }
   `,
 })
@@ -134,6 +159,8 @@ export class ProfilePage {
   );
 
   protected readonly prefs = loadable(() => this.data.preferences());
+  private readonly security = inject(SecurityDataSource);
+  protected readonly mobile = loadable(() => this.security.mobile());
   /** Staff who write to owners and tenants: messages and Inbox replies. */
   protected readonly canSign = computed(() => this.session.can('Messages.Reply') && !this.session.readOnly());
   protected readonly draft = signal<Omit<PersonalPreferences, 'identityId'>>({ version: 0, work: [], digest: 'daily' });
@@ -167,6 +194,49 @@ export class ProfilePage {
       submit: (f) => this.data.updateSignOff(f['signOff'] ?? '', p.version),
       success: (_r, f) => ((f['signOff'] ?? '').trim() ? 'Your sign-off is saved.' : 'Your sign-off was removed.'),
       failure: 'Your sign-off wasn’t saved',
+    });
+  }
+
+  /** D26: a code to the number confirms it. Once they have a passkey, changing it needs that passkey. */
+  protected setMobile(m: MobileStatus): void {
+    openForm(this.drawer, {
+      eyebrow: 'My profile · Mobile number',
+      title: m.verified ? 'Change your mobile number' : 'Add your mobile number',
+      intro: 'We’ll text a code to it to check it’s yours.',
+      fields: [{ key: 'mobile', label: 'Mobile number', type: 'tel', required: true, placeholder: '082 123 4567' }],
+      submitLabel: 'Send a code',
+      stepUp: m.hasPasskey ? { action: 'change-security', detail: 'Change the mobile number for your SMS codes' } : undefined,
+      submit: (f) => this.security.sendMobileCode(f['mobile']),
+      success: (to) => `We texted a code to ${to}.`,
+      done: (to) => this.confirmMobile(to),
+      failure: 'The code wasn’t sent',
+    });
+  }
+
+  private confirmMobile(sentTo: string): void {
+    openForm(this.drawer, {
+      eyebrow: 'My profile · Mobile number',
+      title: 'Enter the code',
+      intro: `The 6-digit code we texted to ${sentTo}. It expires in 10 minutes.`,
+      fields: [{ key: 'code', label: 'Code', type: 'text', required: true }],
+      submitLabel: 'Confirm',
+      submit: (f) => this.security.confirmMobile(f['code']),
+      success: () => 'Your mobile number is confirmed. You can now confirm approvals with a code by SMS.',
+      failure: 'The number wasn’t confirmed',
+    });
+  }
+
+  protected removeMobile(m: MobileStatus): void {
+    openForm(this.drawer, {
+      eyebrow: 'My profile · Mobile number',
+      title: 'Remove your mobile number',
+      intro: 'You won’t be able to confirm approvals with a code by SMS: only with your passkey.',
+      fields: [],
+      submitLabel: 'Remove',
+      stepUp: m.hasPasskey ? { action: 'change-security', detail: 'Remove the mobile number for your SMS codes' } : undefined,
+      submit: () => this.security.removeMobile(),
+      success: () => 'Your mobile number was removed.',
+      failure: 'The number wasn’t removed',
     });
   }
 

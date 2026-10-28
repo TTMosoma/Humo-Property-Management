@@ -122,6 +122,8 @@ public static class WorkItemEndpoints
             // Approving a large amount needs a fresh passkey; rejecting never does.
             // Approving alone always does (D24).
             StepUp = approve && (alone || item.Amount >= org.ApprovalStepUpAmount),
+            // D26: an SMS code can confirm an approval, but approving alone (D24) always needs the passkey.
+            SmsStepUpAllowed = !alone,
             Validate = () =>
                 body.Decision is not ("approved" or "rejected") ? new() { ["decision"] = "Approve or reject." }
                 : item.Kind != "approval" || item.Status != "open" ? new() { ["status"] = "This isn’t waiting for a decision." }

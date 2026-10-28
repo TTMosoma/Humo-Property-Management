@@ -241,3 +241,53 @@
   font-size: var(--fs-xs);
   color: var(--c-text-faint);
 }
+
+.hint {
+  display: flex;
+  gap: var(--s-2);
+  align-items: flex-start;
+  margin: var(--s-3) 0 0;
+  font-size: var(--fs-xs);
+  color: var(--c-text-muted);
+
+  ion-icon {
+    flex: none;
+    margin-top: 2px;
+  }
+}
+
+.sms {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.sms-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  font-size: var(--fs-sm);
+
+  input {
+    height: 44px;
+    padding: 0 var(--s-3);
+    font: inherit;
+    font-size: var(--fs-lg);
+    letter-spacing: 0.3em;
+    color: var(--c-text);
+    background: var(--c-surface);
+    border: 1px solid var(--c-border-strong);
+    border-radius: var(--r);
+  }
+}
+
+.sms-actions {
+  display: flex;
+  gap: var(--s-2);
+}
+
+.sms-error {
+  margin: var(--s-2) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--c-danger);
+}

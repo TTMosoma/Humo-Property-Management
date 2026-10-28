@@ -89,8 +89,27 @@ export class HttpSchemeDataSource extends HttpPort implements SchemeDataSource {
  */
 @Injectable()
 export class HttpStepUpAuthenticator extends HttpPort implements StepUpAuthenticator {
+  /** A passkey (here, or on a phone by QR code); and, with a confirmed mobile, an SMS code for approvals (D26). */
   methods(): Observable<{ method: StepUpMethod; device: string }[]> {
-    return of([{ method: 'passkey' as const, device: 'A passkey on this device' }]);
+    const passkey = { method: 'passkey' as const, device: 'On this device, or your phone by QR code' };
+    return this.http.get<{ mobile: string | null; verified: boolean; hasPasskey: boolean }>(`${this.base}/me/mobile`, { withCredentials: true }).pipe(
+      map((m) => [...(m.hasPasskey ? [passkey] : []), ...(m.verified && m.mobile ? [{ method: 'sms' as const, device: `Approvals only · SMS to ${m.mobile}` }] : [])]),
+      catchError(() => of([passkey])),
+    );
+  }
+
+  sendSmsCode(): Observable<string> {
+    return this.http.post<{ sentTo: string }>(`${this.base}/me/step-up/sms`, null, { withCredentials: true }).pipe(
+      map((r) => r.sentTo),
+      catchError((e: unknown) => throwError(() => toApiErrorFromHttp(e))),
+    );
+  }
+
+  verifySmsCode(code: string): Observable<StepUpResult> {
+    return this.http.post<StepUpResult>(`${this.base}/me/step-up/sms/verify`, { code }, { withCredentials: true }).pipe(
+      map((r) => ({ ...r, verified: true })),
+      catchError((e: unknown) => throwError(() => toApiErrorFromHttp(e))),
+    );
   }
 
   verify(method: StepUpMethod, _request: StepUpRequest): Observable<StepUpResult> {
