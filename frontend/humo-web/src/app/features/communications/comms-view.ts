@@ -1,4 +1,4 @@
-import { DeliveryStatus, MERGE_FIELDS, SentView } from '../../domain';
+import { CHANNEL_LABELS, DeliveryStatus, MERGE_FIELDS, SentView } from '../../domain';
 import { formatDate } from '../../ui/format/money';
 import { Tone } from '../../ui/status-pill/status-pill';
 
@@ -19,10 +19,18 @@ export function deliverySummary(v: SentView): { label: string; tone: Tone; detai
   if (v.state === 'cancelled') return { label: 'Cancelled', tone: 'neutral', detail: `${total} not sent` };
   if (v.state === 'scheduled') return { label: 'Scheduled', tone: 'info', detail: `${total} people · ${formatDate(v.message.sendAt, true)}` };
   const ok = c.delivered + c.read;
+  // Email, SMS and (later) WhatsApp report back separately: show each channel's own result.
+  const byChannel = [...new Set(v.message.deliveries.map((d) => d.channel))].map((ch) => {
+    const ds = v.message.deliveries.filter((d) => d.channel === ch);
+    const arrived = ds.filter((d) => d.status === 'delivered' || d.status === 'read').length;
+    const waiting = ds.filter((d) => d.status === 'queued').length;
+    const notDelivered = ds.filter((d) => d.status === 'failed' || d.status === 'bounced').length;
+    return `${CHANNEL_LABELS[ch]} ${arrived} of ${ds.length}${waiting ? `, ${waiting} waiting` : ''}${notDelivered ? `, ${notDelivered} not delivered` : ''}`;
+  });
   return {
-    label: problems ? `${problems} not delivered` : 'Delivered',
-    tone: problems ? 'warning' : 'success',
-    detail: `${ok} of ${total} arrived${c.read ? ` · ${c.read} read` : ''}${v.message.skipped.length ? ` · ${v.message.skipped.length} unreachable` : ''}`,
+    label: problems ? `${problems} not delivered` : c.queued ? 'Waiting for delivery reports' : 'Delivered',
+    tone: problems ? 'warning' : c.queued ? 'info' : 'success',
+    detail: `${byChannel.join(' · ') || `${ok} of ${total} arrived`}${c.read ? ` · ${c.read} read` : ''}${v.message.skipped.length ? ` · ${v.message.skipped.length} unreachable` : ''}`,
   };
 }
 

@@ -109,7 +109,8 @@ jobs:
 
       - name: Start against PostgreSQL (migrations, bootstrap, sign-in answers)
         env:
-          ASPNETCORE_ENVIRONMENT: Production
+          # Staging: everything as in production except the go-live check, since CI sends no mail or SMS (docs/18 D-17).
+          ASPNETCORE_ENVIRONMENT: Staging
           ASPNETCORE_URLS: http://localhost:5080
           ConnectionStrings__Humo: Host=localhost;Port=5432;Database=humo;Username=humo;Password=humo-ci-only
           Bootstrap__AdminEmail: ci@humo.co.za
@@ -124,6 +125,17 @@ jobs:
           test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:5080/api/me)" = "401"
           test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' -d '{"email":"ci@humo.co.za"}' http://localhost:5080/api/auth/link)" = "202"
           grep -q "Sign in at https://pm.humo.co.za/sign-in" api.log || { cat api.log; exit 1; }
+
+      - name: Production refuses test settings (docs/18 D-4, D-17, D-18)
+        env:
+          ASPNETCORE_ENVIRONMENT: Production
+          ConnectionStrings__Humo: Host=localhost;Port=5432;Database=humo;Username=humo;Password=humo-ci-only
+          Mail__Provider: Log
+        run: |
+          # It must stop at start-up and name the settings, never start serving.
+          if timeout 120 dotnet run -c Release --no-build --no-launch-profile --project src/Humo.Api > production.log 2>&1; then cat production.log; exit 1; fi
+          grep -q "Production settings aren't live yet" production.log || { cat production.log; exit 1; }
+          grep -q "Sms:Provider is Log" production.log || { cat production.log; exit 1; }
 
       - name: Docker image
         working-directory: .
