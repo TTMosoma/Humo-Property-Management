@@ -6,10 +6,13 @@ import { AttentionService } from '../attention/attention.service';
 import { SessionService } from '../session/session.service';
 import { NAV } from './nav.config';
 import { NavGroup, NavLink, NavNode, NavSection, isGroup } from './nav.model';
+import { NOT_CONNECTED, notConnected } from '../availability/not-connected';
 
 @Injectable({ providedIn: 'root' })
 export class NavService {
   private readonly session = inject(SessionService);
+  /** Screens not on the API yet: left out of the menu (docs/28 §1). */
+  private readonly notConnected = inject(NOT_CONNECTED);
   private readonly router = inject(Router);
   private readonly attention = inject(AttentionService);
 
@@ -27,7 +30,8 @@ export class NavService {
     const ownScheme = this.session.assignment().scope.schemeIds[0];
     // Permission decides what's offered. The plan doesn't hide things silently: a feature the role
     // could use but the plan lacks stays visible, locked, and explains itself when opened.
-    const allowed = (l: NavLink) => this.session.canOpen(l.permission) && (!l.audience || l.audience.includes(role));
+    const allowed = (l: NavLink) =>
+      this.session.canOpen(l.permission) && (!l.audience || l.audience.includes(role)) && !notConnected(this.notConnected, l.route);
     const lock = (l: NavLink): NavLink => (l.feature && !this.session.hasFeature(l.feature) ? { ...l, locked: true } : l);
     return NAV.map((section) => ({
       ...section,

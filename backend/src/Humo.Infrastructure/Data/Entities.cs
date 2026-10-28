@@ -740,6 +740,21 @@ public sealed class DocumentSetting
     public string StatementDelivery { get; set; } = "link";
 }
 
+/// <summary>A note or a call logged on a unit or a person (pattern P4), or an owner's "I've already paid".</summary>
+public sealed class NoteRow
+{
+    public Guid Id { get; set; }
+    public Guid OrganisationId { get; set; }
+    public Guid? UnitId { get; set; }
+    public Guid? PersonId { get; set; }
+    /// <summary>note or call.</summary>
+    public string Kind { get; set; } = "note";
+    public string Text { get; set; } = "";
+    public string Author { get; set; } = "";
+    public Guid AuthorId { get; set; }
+    public DateTimeOffset At { get; set; }
+}
+
 /// <summary>
 /// A one-time code sent by SMS to a Humo PM user (D26): to confirm their own mobile number (<c>mobile</c>), or to confirm
 /// it's them for an approval when they have no passkey to hand (<c>step-up</c>). Only the hash is kept.

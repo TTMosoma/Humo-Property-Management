@@ -1,7 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { firstValueFrom } from 'rxjs';
-import { AccessDataSource, AccountDataSource, ApiError, JobDataSource, describeFailure, MeetingDataSource, PayablesDataSource, PlatformTemplateDataSource, PolicyError, SchemeDataSource, SessionDataSource, SettingsDataSource, SignInError, StepUpAuthenticator, SupplierDataSource } from '../domain';
+import { AccessDataSource, AccountDataSource, ApiError, JobDataSource, describeFailure, MeetingDataSource, PayablesDataSource, PlatformTemplateDataSource, PolicyError, SchemeDataSource, SessionDataSource, SettingsDataSource, SignInError, StepUpAuthenticator, SupplierDataSource, TimelineDataSource } from '../domain';
+import { NOT_CONNECTED, notConnected } from '../core/availability/not-connected';
 import { provideHttpData } from './provide-http-data';
 
 /**
@@ -92,6 +93,20 @@ describe('Production data layer (provideHttpData)', () => {
     const verified = firstValueFrom(auth.verifySmsCode('123456'));
     http.expectOne({ method: 'POST', url: '/api/me/step-up/sms/verify' }).flush({ method: 'sms', device: 'SMS to the number ending 0101', at: '2026-10-28T10:00:00Z' });
     expect(await verified).toMatchObject({ verified: true, method: 'sms' });
+  });
+
+  it('reads timelines and logs notes over HTTP; unfinished screens are listed as not connected', async () => {
+    const timeline = TestBed.inject(TimelineDataSource);
+    const events = firstValueFrom(timeline.forUnit('u-1'));
+    http.expectOne('/api/units/u-1/timeline').flush([{ id: 'n-1', at: '2026-10-28T10:00:00+02:00', kind: 'note', title: 'Note' }]);
+    expect((await events)[0].kind).toBe('note');
+    const added = firstValueFrom(timeline.addNote({ personId: 'p-1', kind: 'call', text: 'Called' }));
+    http.expectOne({ method: 'POST', url: '/api/notes' }).flush({ id: 'n-2' }, { status: 201, statusText: 'Created' });
+    await added;
+
+    const routes = TestBed.inject(NOT_CONNECTED);
+    expect(notConnected(routes, '/finance/payables/batch-1')).toBe(true);
+    expect(notConnected(routes, '/finance/receipts')).toBe(false);
   });
 
   it('reads jobs and suppliers from the API', async () => {

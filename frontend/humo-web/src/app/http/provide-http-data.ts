@@ -58,7 +58,8 @@ import { HttpBoardDataSource } from './http-board';
 import { HttpAccountDataSource, HttpBillingDataSource, HttpCollectionDataSource, HttpLevyDataSource, HttpMeterDataSource, HttpReceiptDataSource, HttpWorkItemDataSource } from './http-finance';
 import { HttpCatalogueDataSource, HttpCommercialDataSource, HttpNudgeDataSource, HttpPlanDataSource, HttpPlatformDataSource } from './http-commercial';
 import { HttpAccountRequestDataSource, HttpHumoTeamDataSource, HttpNotificationDataSource } from './http-platform';
-import { HttpOrganisationDataSource, HttpPersonDataSource, HttpSchemeDataSource, HttpStepUpAuthenticator, HttpUnitDataSource } from './http-portfolio';
+import { HttpOrganisationDataSource, HttpPersonDataSource, HttpSchemeDataSource, HttpStepUpAuthenticator, HttpUnitDataSource, HttpTimelineDataSource } from './http-portfolio';
+import { NOT_CONNECTED } from '../core/availability/not-connected';
 import { HttpSessionDataSource } from './http-session-data-source';
 import { HttpLibraryDataSource } from './http-library';
 import { HttpPackageLimitsDataSource } from './http-package-limits';
@@ -68,7 +69,6 @@ import { notConnected } from './not-connected';
 
 /** Ports whose HTTP adapters come with later backend slices. Remove each from this list as its adapter lands. */
 const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
-  [TimelineDataSource, 'TimelineDataSource'],
   [PayablesDataSource, 'PayablesDataSource'],
   [PaymentGateway, 'PaymentGateway'],
   [MeetingDataSource, 'MeetingDataSource'],
@@ -122,6 +122,24 @@ export function provideHttpData(): EnvironmentProviders {
     { provide: NudgeDataSource, useClass: HttpNudgeDataSource },
     // Slice 2: levy accounts and receipts (2a); billing runs, meter readings, levy settings and My work (2b).
     { provide: AccountDataSource, useClass: HttpAccountDataSource },
+    { provide: TimelineDataSource, useClass: HttpTimelineDataSource },
+    // Screens whose data isn't on the API yet: out of the menu, "coming soon" if opened (docs/28 §1).
+    {
+      provide: NOT_CONNECTED,
+      useValue: [
+        '/finance/payables',
+        '/finance/budgets',
+        '/staff',
+        '/reports',
+        '/governance/meetings',
+        '/governance/resolutions',
+        '/governance/rules',
+        '/compliance',
+        '/platform/flags',
+        '/platform/health',
+        '/settings/system',
+      ],
+    },
     { provide: ReceiptDataSource, useClass: HttpReceiptDataSource },
     { provide: BillingDataSource, useClass: HttpBillingDataSource },
     { provide: MeterDataSource, useClass: HttpMeterDataSource },

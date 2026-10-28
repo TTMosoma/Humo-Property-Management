@@ -1489,6 +1489,51 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.ToTable("MeterReadings", (string)null);
                 });
 
+            modelBuilder.Entity("Humo.Infrastructure.Data.NoteRow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("At")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Author")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("AuthorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(2100)
+                        .HasColumnType("character varying(2100)");
+
+                    b.Property<Guid?>("UnitId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PersonId");
+
+                    b.HasIndex("UnitId");
+
+                    b.ToTable("Notes", (string)null);
+                });
+
             modelBuilder.Entity("Humo.Infrastructure.Data.Notice", b =>
                 {
                     b.Property<Guid>("Id")

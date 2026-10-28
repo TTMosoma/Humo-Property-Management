@@ -469,6 +469,38 @@ public sealed class StatementTests : IDisposable
     }
 
     [Fact]
+    public async Task Timelines_show_a_units_history_and_notes_and_owners_report_payments()
+    {
+        var s = await Scheme();
+        await PostedRun(s);
+        var owner = await Owner(s);
+        var unit = await api.Db(db => db.LevyAccounts.Where(a => a.Id == s.Account42).Select(a => a.UnitId).SingleAsync());
+        var sipho = await api.Db(db => db.People.Where(p => p.Email == "sipho@mail.example").Select(p => p.Id).SingleAsync());
+
+        // "I've already paid": only the account holder, and it needs the details.
+        Assert.Equal(HttpStatusCode.NotFound, (await s.Finance.PostAsJsonAsync($"/api/accounts/{s.Account42}/payment-report", new { text = "Paid R1850" })).StatusCode);
+        Assert.True((await (await owner.PostAsJsonAsync($"/api/accounts/{s.Account42}/payment-report", new { text = "" })).FieldErrors()).TryGetProperty("text", out _));
+        await NoContent(await owner.PostAsJsonAsync($"/api/accounts/{s.Account42}/payment-report", new { text = "Paid R1 850 on 3 Nov from Capitec, ref KC-042" }));
+        Assert.True(await api.Db(db => db.Notices.AnyAsync(n => n.ToRole == Roles.Finance && n.Title.Contains("owner says they’ve paid"))));
+
+        // Staff log a call on the person; an owner can't log notes.
+        Assert.Equal(HttpStatusCode.Created, (await s.Admin.PostAsJsonAsync("/api/notes", new { personId = sipho.ToString(), kind = "call", text = "Called about the November levy" })).StatusCode);
+        Assert.NotEqual(HttpStatusCode.Created, (await owner.PostAsJsonAsync("/api/notes", new { unitId = unit.ToString(), kind = "note", text = "Hello" })).StatusCode);
+
+        // The unit: its charges, who owns it, and the owner's report, newest first.
+        var events = (await Ok(await s.Admin.GetAsync($"/api/units/{unit}/timeline"))).EnumerateArray().ToList();
+        var titles = events.Select(e => e.GetProperty("title").GetString()!).ToList();
+        Assert.Contains("November 2026 charges raised", titles);
+        Assert.Contains("Sipho Khumalo became the owner", titles);
+        Assert.Contains(events, e => e.GetProperty("title").GetString() == "Note" && e.GetProperty("detail").GetString()!.StartsWith("Owner reports payment: Paid R1 850"));
+
+        // The person: their unit's history, marked with the unit, and the call.
+        var person = (await Ok(await s.Admin.GetAsync($"/api/people/{sipho}/timeline"))).EnumerateArray().ToList();
+        Assert.Contains(person, e => e.GetProperty("title").GetString() == "KC 42 · November 2026 charges raised");
+        Assert.Contains(person, e => e.GetProperty("kind").GetString() == "call" && e.GetProperty("detail").GetString() == "Called about the November levy");
+    }
+
+    [Fact]
     public async Task A_PDF_that_failed_to_render_is_rendered_on_first_download()
     {
         var s = await Scheme();

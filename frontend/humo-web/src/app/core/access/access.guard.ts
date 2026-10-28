@@ -2,6 +2,7 @@ import { inject } from '@angular/core';
 import { CanActivateChildFn, RedirectCommand, Router } from '@angular/router';
 import { Feature, Permission } from '../../domain';
 import { SessionService } from '../session/session.service';
+import { NOT_CONNECTED, notConnected } from '../availability/not-connected';
 
 /**
  * Checks each route's own `data.permission` and `data.feature` (not inherited)
@@ -16,6 +17,10 @@ import { SessionService } from '../session/session.service';
  * entitlements on every request — hiding a page protects nothing by itself.
  */
 export const accessGuard: CanActivateChildFn = (child, state) => {
+  // A screen not on Humo's API yet says so, in place, rather than failing (docs/28 §1).
+  if (notConnected(inject(NOT_CONNECTED), state.url) && !state.url.startsWith('/coming-soon')) {
+    return new RedirectCommand(inject(Router).createUrlTree(['/coming-soon'], { queryParams: { from: state.url } }), { skipLocationChange: true });
+  }
   const session = inject(SessionService);
   const permission = child.routeConfig?.data?.['permission'] as Permission | undefined;
   const feature = child.routeConfig?.data?.['feature'] as Feature | undefined;
