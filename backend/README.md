@@ -51,6 +51,15 @@ The rest of slice 1 follows port by port: organisations, schemes, units, people,
    2. Choose **Email me a sign-in link**.
    3. Open the link from Mailpit.
    4. Create a passkey when asked. Next time, use **Sign in with a passkey**.
+5. **Load the demo agencies (optional).** Without them the live system starts empty. This adds Acacia (two schemes, staff, owners, tenants, trustees and three months of levies, some in arrears) and Fynbos (a small second agency), then exits. Development only; running it again changes nothing.
+   ```bash
+   dotnet run --project backend/src/Humo.Api -- seed-demo
+   ```
+   Sign in by email link (Mailpit) as `thandeka@acacia.example` (Agency Administrator), `priya@acacia.example` (Finance), `johan@acacia.example` (Portfolio Manager, Kingfisher Court), `anele@mail.example` (owner of KC 42 and DE 7) or `annette@fynbos.example` (Fynbos's administrator).
+6. **Install Chromium for PDFs, once** (and after updating the `Microsoft.Playwright` package). Statements and letters are printed to PDF by headless Chromium; without the version Playwright expects, no PDF can be made. After building the API:
+   ```bash
+   powershell -ExecutionPolicy Bypass -File backend/src/Humo.Api/bin/Debug/net10.0/playwright.ps1 install chromium
+   ```
 
 ## Tests
 

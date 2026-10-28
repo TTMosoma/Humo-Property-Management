@@ -174,13 +174,17 @@ export class DocumentLinkPage {
     const s = this.statement();
     if (!s || this.downloading()) return;
     this.downloading.set(true);
+    this.error.set('');
     this.http!.get(this.url('/pdf'), { headers: this.headers(), responseType: 'blob' }).subscribe({
       next: (blob) => {
         this.downloading.set(false);
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
         a.download = `${s.view.account.accountNo}-${s.view.statement.period}.pdf`;
+        // In the document, so every browser follows the click.
+        document.body.appendChild(a);
         a.click();
+        a.remove();
         setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
       },
       error: (e: HttpErrorResponse) => {
@@ -190,6 +194,9 @@ export class DocumentLinkPage {
           this.statement.set(null);
           this.error.set('Your viewing time is over. Ask for a new code to open it again.');
           this.step.set('start');
+        } else {
+          // The blob body of a failure has the API's reason in it; say something useful either way.
+          this.error.set(e.status === 503 ? 'The PDF can’t be made right now. Try again in a few minutes; the statement above is the same.' : 'The PDF didn’t download. Try again.');
         }
       },
     });

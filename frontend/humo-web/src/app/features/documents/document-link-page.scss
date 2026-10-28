@@ -1,16 +1,30 @@
 :host {
+  // Ionic fixes ion-app to the window with overflow hidden, so this page is its own scroll area (as the sign-in page).
   display: flex;
   flex-direction: column;
-  min-height: 100dvh;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--c-bg);
   color: var(--c-text);
 }
 
 .bar {
   display: flex;
+  flex: none;
   align-items: center;
   padding: var(--s-3) var(--s-4);
   background: var(--brand-navy-900);
+
+  a {
+    display: inline-flex;
+    border-radius: var(--r);
+
+    &:focus-visible {
+      outline: 2px solid var(--c-focus);
+      outline-offset: 4px;
+    }
+  }
 }
 
 .panel {
@@ -151,6 +165,16 @@ input.code {
   gap: var(--s-3);
   align-items: center;
   justify-content: space-between;
+}
+
+.download-error {
+  display: flex;
+  flex-basis: 100%;
+  gap: 6px;
+  align-items: center;
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--c-danger);
 }
 
 .foot {
