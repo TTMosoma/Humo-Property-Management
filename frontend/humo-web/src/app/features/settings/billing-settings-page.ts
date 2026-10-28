@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { combineLatest, map } from 'rxjs';
+import { catchError, combineLatest, map, of } from 'rxjs';
 import { ComplianceDataSource, ComplianceProfile, Scheme, SettingsDataSource } from '../../domain';
 import { loadable } from '../../core/data/loadable';
 import { ScopeService } from '../../core/scope/scope.service';
@@ -54,6 +54,7 @@ const ordinal = (n: number) => `${n}${n % 10 === 1 && n !== 11 ? 'st' : n % 10 =
         </dl>
       </section>
 
+      @if (result.value()?.profiles) {
       <section class="surface panel">
         <h2 class="section-title">Financial years</h2>
         <p class="muted">Each scheme’s year-end sets its AGM, audit and CSOS deadlines in Compliance. Lifts add the lift inspection.</p>
@@ -68,6 +69,7 @@ const ordinal = (n: number) => `${n}${n % 10 === 1 && n !== 11 ? 'st' : n % 10 =
           </ng-template>
         </ui-data-table>
       </section>
+      }
     }
   `,
   styles: `
@@ -91,7 +93,9 @@ export class BillingSettingsPage {
 
   protected readonly result = loadable(() => {
     const schemes = this.scope.accessible();
-    return combineLatest([this.data.agency(), this.compliance.profiles(schemes.map((s) => s.id))]).pipe(map(([agency, profiles]) => ({ agency, profiles })));
+    // Year-ends come from Compliance, which isn't on every server yet: without it the rules still show.
+    const profiles = this.compliance.profiles(schemes.map((s) => s.id)).pipe(catchError(() => of(null)));
+    return combineLatest([this.data.agency(), profiles]).pipe(map(([agency, profiles]) => ({ agency, profiles })));
   });
 
   protected readonly rows = computed<YearRow[]>(() => {

@@ -213,7 +213,7 @@ public static class SmsStepUp
             "/settings/security");
         if (actor.OrganisationId is { } org)
             notices.ToRole(Roles.AgencyAdmin, me.Id, $"{me.Name} confirmed an approval by SMS code", "They used a code by SMS instead of a passkey. It’s flagged in the audit log and covers approvals only.",
-                "/audit", org, "security");
+                "/audit", org);
         await db.SaveChangesAsync(ct);
         await notices.SendEmailsAsync(ct);
         await sessions.ReissueAsync(me, principal, claims, signIn, ct);

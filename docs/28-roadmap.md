@@ -6,7 +6,7 @@
 
 ## 1. Version 1: the live system as complete as the prototype
 
-The prototype (`npm start`) runs every screen on simulated data. The live system (`npm run start:api`) runs only what's on Humo's API. Twelve data sources aren't on the API yet (Platform › Document templates joined it on 26 October 2026). Screens that read them fail rather than fall back to simulated data, by design (docs/18 R-6).
+The prototype (`npm start`) runs every screen on simulated data. The live system (`npm run start:api`) runs only what's on Humo's API. Eleven data sources aren't on the API yet (Platform › Document templates joined it on 26 October 2026, timelines and notes on 28 October). Screens that read them fail rather than fall back to simulated data, by design (docs/18 R-6).
 
 | Not on the API yet | Screens it breaks | Slice |
 |---|---|---|
@@ -14,7 +14,6 @@ The prototype (`npm start`) runs every screen on simulated data. The live system
 | `StaffDataSource` | Staff | Staff |
 | `BudgetDataSource` | Finance › Budgets | Budgets |
 | `ReportDataSource` | Reports | Reporting |
-| `TimelineDataSource` | Timelines on records | Timeline |
 | `MeetingDataSource`, `ResolutionDataSource` | Governance › Meetings and resolutions | Governance |
 | `ComplianceDataSource` | Compliance | Compliance |
 | `RulesDataSource` | Scheme rules and breaches | Governance |
@@ -23,7 +22,7 @@ The prototype (`npm start`) runs every screen on simulated data. The live system
 | `PaymentGateway` | Paying Humo invoices online (Payfast) | R-14 |
 
 **How the two come together:**
-1. **No screen fails because a feature isn't built yet.** A screen whose data source isn't on the API says *Coming to Humo Property Management* and isn't in the menu in the live build. Panels on shared pages (the dashboard) leave out what isn't built.
+1. **No screen fails because a feature isn't built yet** (done 28 October 2026). A screen whose data source isn't on the API says *Coming to Humo Property Management* and isn't in the menu in the live build: the list is `NOT_CONNECTED` in `http/provide-http-data.ts`, and a slice that lands removes its routes from it. Panels on shared pages (the dashboard, Levy billing rules) leave out what isn't built.
 2. **A development seed on the API.** The live system starts empty, so it looks broken next to the prototype's full demo agencies. A seed command loads the same demo agencies (Acacia, Fynbos) through the API's own rules, so both can be compared screen by screen. Never in production.
 3. **A route check in CI.** Sign in as each role against the API and open every screen in the menu. Any screen that shows an error fails the build. This is the check that found the five failing screens on 22 October.
 4. **One slice at a time** in the order of the table, each removing its data source from the "not on the API" list and its tags (docs/18).

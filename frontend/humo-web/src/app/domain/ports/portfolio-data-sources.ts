@@ -88,6 +88,8 @@ export abstract class AccountDataSource {
   abstract paymentOptions(accountId: string): Observable<PaymentOptions>;
   /** The holder starts paying the balance by card on Payfast's page, into the scheme's own merchant (D25). Not a payment until Payfast confirms it. */
   abstract startCardPayment(accountId: string): Observable<CheckoutSession>;
+  /** "I've already paid": the holder tells the agency when and how much. It lands on the unit as a note and finance is told. */
+  abstract reportPayment(accountId: string, text: string): Observable<void>;
 }
 
 export abstract class ReceiptDataSource {

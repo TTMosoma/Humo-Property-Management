@@ -3,7 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { combineLatest, map, switchMap, throwError } from 'rxjs';
-import { AccountDataSource, ApiError, TimelineDataSource, UnitDataSource, describeFailure, periodLabel, periodOf } from '../../domain';
+import { AccountDataSource, ApiError, UnitDataSource, describeFailure, periodLabel, periodOf } from '../../domain';
 import { goToCheckout } from '../billing/invoice-view-page';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { loadable } from '../../core/data/loadable';
@@ -31,7 +31,6 @@ export class OwnerAccountPage {
   private readonly session = inject(SessionService);
   private readonly units = inject(UnitDataSource);
   private readonly accounts = inject(AccountDataSource);
-  private readonly timeline = inject(TimelineDataSource);
   private readonly feedback = inject(FeedbackService);
 
   private readonly switcher = inject(RoleSwitcher);
@@ -100,14 +99,13 @@ export class OwnerAccountPage {
   protected sendPaid(): void {
     const s = this.summary();
     if (!s) return;
-    const text = `Owner reports payment: ${this.paidText().trim() || '(no details)'}`;
-    this.timeline.addNote({ unitId: s.unit.id, personId: s.owners[0]?.id, kind: 'note', text }).subscribe({
+    this.accounts.reportPayment(s.account.id, this.paidText().trim()).subscribe({
       next: () => {
         this.paidOpen.set(false);
         this.paidText.set('');
         this.feedback.success('Thanks — we’ll match your payment and let you know.');
       },
-      error: () => this.feedback.error('That didn’t send. Please try again.'),
+      error: (e) => this.feedback.error(describeFailure(e, 'That didn’t send')),
     });
   }
 }

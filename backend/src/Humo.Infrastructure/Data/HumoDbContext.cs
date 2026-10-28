@@ -42,6 +42,7 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
     public DbSet<TrustAccountRow> TrustAccounts => Set<TrustAccountRow>();
     public DbSet<LevyCardPayment> LevyCardPayments => Set<LevyCardPayment>();
     public DbSet<SmsCode> SmsCodes => Set<SmsCode>();
+    public DbSet<NoteRow> Notes => Set<NoteRow>();
     public DbSet<IssuedStatement> IssuedStatements => Set<IssuedStatement>();
     public DbSet<PersonalPreference> PersonalPreferences => Set<PersonalPreference>();
     public DbSet<CollectionCaseRow> CollectionCases => Set<CollectionCaseRow>();
@@ -324,6 +325,16 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.Property(x => x.PayfastLinkedBy).HasMaxLength(200);
             e.Property(x => x.Version).IsConcurrencyToken();
             e.HasOne<Scheme>().WithOne().HasForeignKey<TrustAccountRow>(x => x.SchemeId);
+        });
+
+        builder.Entity<NoteRow>(e =>
+        {
+            e.ToTable("Notes");
+            e.HasIndex(x => x.UnitId);
+            e.HasIndex(x => x.PersonId);
+            e.Property(x => x.Kind).HasMaxLength(8);
+            e.Property(x => x.Text).HasMaxLength(2100);
+            e.Property(x => x.Author).HasMaxLength(200);
         });
 
         builder.Entity<SmsCode>(e =>

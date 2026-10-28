@@ -872,6 +872,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/access/no-access-page').then((m) => m.NoAccessPage),
       },
       {
+        path: 'coming-soon',
+        title: 'Coming soon',
+        loadComponent: () => import('./features/access/coming-soon-page').then((m) => m.ComingSoonPage),
+      },
+      {
         path: 'not-found',
         title: 'Not found',
         loadComponent: () => import('./features/not-found/not-found-page').then((m) => m.NotFoundPage),

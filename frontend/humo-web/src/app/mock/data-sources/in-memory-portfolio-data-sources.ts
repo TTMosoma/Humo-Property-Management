@@ -365,6 +365,15 @@ export class InMemoryAccountDataSource extends AccountDataSource {
     });
   }
 
+  reportPayment(accountId: string, text: string): Observable<void> {
+    const d = this.db.accountDetail(accountId);
+    return this.gateway
+      .command({ action: `Reported a payment on ${d?.account.accountNo ?? accountId}`, resource: 'Account', resourceId: accountId, permission: 'Account.ViewOwn' }, () =>
+        this.db.addNote({ unitId: d?.unit.id, personId: d?.holder.id, kind: 'note', text: `Owner reports payment: ${text}` }, this.session.current.identity.name),
+      )
+      .pipe(map(() => undefined));
+  }
+
   startCardPayment(): Observable<CheckoutSession> {
     return throwError(() => new ApiError('server', 'Card payments aren’t available in the demo. Pay by EFT.'));
   }

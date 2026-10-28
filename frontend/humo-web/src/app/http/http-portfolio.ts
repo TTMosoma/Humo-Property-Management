@@ -24,6 +24,9 @@ import {
   StepUpMethod,
   StepUpRequest,
   StepUpResult,
+  Note,
+  TimelineDataSource,
+  TimelineEvent,
 } from '../domain';
 import { HttpPort, toApiErrorFromHttp } from './http-port';
 
@@ -209,5 +212,24 @@ export class HttpPersonDataSource extends HttpPort implements PersonDataSource {
     return this.http
       .get<PersonSummary[]>(`${this.base}/people/search`, { withCredentials: true, params: { q: query, schemeIds, ...(limit ? { limit: String(limit) } : {}) } })
       .pipe(catchError((e) => throwError(() => toApiErrorFromHttp(e))));
+  }
+}
+
+/**
+ * Timelines and notes over HTTP: a unit's or a person's history, built on the API from the ledger, statements,
+ * maintenance jobs and who owned or rented it, plus the notes and calls staff log (Notes.Add).
+ */
+@Injectable()
+export class HttpTimelineDataSource extends HttpPort implements TimelineDataSource {
+  forUnit(unitId: string): Observable<TimelineEvent[]> {
+    return this.live<TimelineEvent[]>(`/units/${unitId}/timeline`, ['timeline', 'units', 'accounts', 'receipts', 'jobs', 'people', 'billing']);
+  }
+
+  forPerson(personId: string): Observable<TimelineEvent[]> {
+    return this.live<TimelineEvent[]>(`/people/${personId}/timeline`, ['timeline', 'units', 'accounts', 'receipts', 'jobs', 'people', 'billing']);
+  }
+
+  addNote(note: Omit<Note, 'id' | 'at' | 'author'>): Observable<void> {
+    return this.command<unknown>('POST', '/notes', note, ['timeline']).pipe(map(() => undefined));
   }
 }
