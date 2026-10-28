@@ -37,7 +37,7 @@ public sealed class DocumentLinks(HumoDbContext db, ISmsSender sms, IEmailSender
     public static readonly TimeSpan GrantLifetime = TimeSpan.FromMinutes(30);
     public static readonly TimeSpan ResendAfter = TimeSpan.FromMinutes(1);
     public const int MaxAttempts = 5;
-    public const int MaxCodesPerDay = 5;
+    public const int MaxCodesPerDay = 10;
     public const string GrantHeader = "X-Document-Grant";
 
     private DateTimeOffset Now => clock.GetUtcNow();
