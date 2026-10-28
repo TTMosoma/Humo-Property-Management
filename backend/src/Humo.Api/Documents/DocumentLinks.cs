@@ -254,13 +254,23 @@ public static class DocumentLinkEndpoints
         return Results.Text(issued.Snapshot, "application/json", Encoding.UTF8);
     }
 
-    private static async Task<IResult> Pdf(string token, HttpRequest request, DocumentLinks links, HumoDbContext db, StatementService statements, CancellationToken ct)
+    private static async Task<IResult> Pdf(string token, HttpRequest request, DocumentLinks links, HumoDbContext db, StatementService statements, ILoggerFactory logs,
+        CancellationToken ct)
     {
         if (await links.FindAsync(token, ct) is not { } link) return Problems.NotFound();
         if (links.Expired(link)) return Gone();
         if (!links.Granted(link, request.Headers[DocumentLinks.GrantHeader])) return Results.Unauthorized();
         var issued = await db.IssuedStatements.FirstAsync(s => s.Id == link.DocumentId, ct);
         var accountNo = await db.LevyAccounts.Where(a => a.Id == issued.AccountId).Select(a => a.AccountNo).FirstAsync(ct);
-        return Results.File(await statements.PdfAsync(issued, ct), "application/pdf", $"{accountNo}-{issued.Period}.pdf");
+        try
+        {
+            return Results.File(await statements.PdfAsync(issued, ct), "application/pdf", $"{accountNo}-{issued.Period}.pdf");
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            // Not stored yet and the renderer failed: the page still shows the statement.
+            logs.CreateLogger("Humo.DocumentLinks").LogError(e, "Couldn't make the PDF for statement {Id}", issued.Id);
+            return Failure("pdf-unavailable", "The PDF can’t be made right now. Try again in a few minutes.", StatusCodes.Status503ServiceUnavailable);
+        }
     }
 }

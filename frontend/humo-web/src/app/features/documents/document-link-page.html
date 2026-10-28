@@ -1,5 +1,5 @@
 <header class="bar">
-  <ui-logo variant="full" [reverse]="true" [height]="30" />
+  <a routerLink="/" aria-label="Humo Property Management home"><ui-logo variant="full" [reverse]="true" [height]="30" /></a>
 </header>
 
 @if (step() === 'view' && statement(); as s) {
@@ -12,6 +12,9 @@
       <button type="button" class="btn btn-primary" [disabled]="downloading()" (click)="download()">
         <ion-icon name="download-outline" aria-hidden="true" /> {{ downloading() ? 'Preparing…' : 'Download PDF' }}
       </button>
+      @if (error()) {
+        <p class="download-error" role="alert"><ion-icon name="alert-circle-outline" aria-hidden="true" /> {{ error() }}</p>
+      }
     </div>
     <app-levy-statement-document [view]="s.view" [design]="s.design" [branding]="s.branding" [settings]="s.settings" [organisationName]="s.organisationName" />
     <p class="foot">This page closes after 30 minutes. Open the link in your email again whenever you need it, until {{ until() }}.</p>

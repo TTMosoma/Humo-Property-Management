@@ -210,6 +210,14 @@ if (args is ["send-test-sms", var to])
 }
 
 await app.InitialiseDatabaseAsync();
+
+// Development only (docs/28 §1): `seed-demo` loads the demo agencies into the local database, then exits.
+if (args is [Humo.Api.Startup.DevSeed.Command])
+{
+    Console.WriteLine(await Humo.Api.Startup.DevSeed.RunAsync(app.Services, app.Environment));
+    return;
+}
+
 app.Run();
 
 /// <summary>Exposed for the API tests (WebApplicationFactory).</summary>
