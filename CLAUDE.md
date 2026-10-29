@@ -65,6 +65,7 @@ TZ=Africa/Johannesburg npm test
 npm run build
 npm run build:demo
 npm run build:contractor
+npm run e2e:screens   # needs the seeded API, Mailpit and `npm run start:api` (backend/README)
 ```
 
 Local services for the API (PostgreSQL on port 55432, Mailpit on 8025, and ClamAV on 3310, which checks every upload; without it uploads are refused):

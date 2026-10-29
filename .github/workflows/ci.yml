@@ -140,3 +140,91 @@ jobs:
       - name: Docker image
         working-directory: .
         run: docker build -f backend/Dockerfile -t humo-api:ci .
+
+  # The screen check (docs/28 §1): the API with the development seed, the frontend against it, and a browser that signs
+  # in as each seeded role and opens every page in its menu. Any page that shows an error, or any API 5xx, fails it.
+  screens:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: humo
+          POSTGRES_USER: humo
+          POSTGRES_PASSWORD: humo-ci-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U humo -d humo"
+          --health-interval 5s
+          --health-retries 12
+      # Catches the sign-in emails; the check reads the links from its API.
+      mailpit:
+        image: axllent/mailpit:latest
+        ports:
+          - 1025:1025
+          - 8025:8025
+    env:
+      # Development: the seed runs only there. The database is CI's; mail goes to Mailpit as on a developer's machine.
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://localhost:5080
+      ConnectionStrings__Humo: Host=localhost;Port=5432;Database=humo;Username=humo;Password=humo-ci-only
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: backend/global.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend/humo-web/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/humo-web/package-lock.json
+
+      - name: Build the API
+        working-directory: backend
+        run: dotnet build -c Release src/Humo.Api
+
+      - name: Load the demo agencies
+        working-directory: backend
+        run: dotnet run -c Release --no-build --no-launch-profile --project src/Humo.Api -- seed-demo
+
+      - name: Start the API
+        working-directory: backend
+        run: |
+          dotnet run -c Release --no-build --no-launch-profile --project src/Humo.Api > api.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:5080/api/health && break; sleep 2; done
+          curl -sf http://localhost:5080/api/health || { cat api.log; exit 1; }
+
+      - name: Install the frontend and Chromium
+        working-directory: frontend/humo-web
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Start the frontend against the API
+        working-directory: frontend/humo-web
+        run: |
+          npm run start:api > web.log 2>&1 &
+          for i in $(seq 1 90); do curl -sf http://localhost:4310/ > /dev/null && break; sleep 2; done
+          curl -sf http://localhost:4310/ > /dev/null || { cat web.log; exit 1; }
+
+      - name: Every menu page opens for each role
+        working-directory: frontend/humo-web
+        run: npm run e2e:screens
+
+      - name: Logs and report on failure
+        if: failure()
+        run: |
+          tail -n 200 backend/api.log || true
+          tail -n 100 frontend/humo-web/web.log || true
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: screen-check
+          path: |
+            frontend/humo-web/playwright-report
+            frontend/humo-web/test-results
+          retention-days: 7

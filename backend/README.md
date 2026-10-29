@@ -60,6 +60,10 @@ The rest of slice 1 follows port by port: organisations, schemes, units, people,
    ```bash
    powershell -ExecutionPolicy Bypass -File backend/src/Humo.Api/bin/Debug/net10.0/playwright.ps1 install chromium
    ```
+7. **The screen check (optional).** With the API seeded and running, Mailpit, and `start:api` as above, this signs in as each seeded role and opens every page in its menu, as CI does. A page that shows an error fails it; the report is in `frontend/humo-web/playwright-report`.
+   ```bash
+   npm --prefix frontend/humo-web run e2e:screens
+   ```
 
 ## Tests
 

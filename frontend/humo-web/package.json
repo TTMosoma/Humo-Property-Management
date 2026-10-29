@@ -11,7 +11,8 @@
     "start:contractor": "ng serve humo-contractor --port 4320",
     "build:contractor": "ng build humo-contractor",
     "test": "ng test humo-web --watch=false",
-    "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.spec.json --noEmit && tsc -p projects/humo-contractor/tsconfig.app.json --noEmit",
+    "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.spec.json --noEmit && tsc -p projects/humo-contractor/tsconfig.app.json --noEmit && tsc -p e2e/tsconfig.json",
+    "e2e:screens": "playwright test -c e2e/playwright.config.ts",
     "lint": "eslint ."
   },
   "private": true,
@@ -33,6 +34,8 @@
     "@angular/build": "^22.0.8",
     "@angular/cli": "^22.0.8",
     "@angular/compiler-cli": "^22.0.0",
+    "@playwright/test": "1.63.0",
+    "@types/node": "^24.19.2",
     "angular-eslint": "^22.6.0",
     "eslint": "^9.39.5",
     "jsdom": "^30.1.2",

@@ -24,7 +24,7 @@ The prototype (`npm start`) runs every screen on simulated data. The live system
 **How the two come together:**
 1. **No screen fails because a feature isn't built yet** (done 28 October 2026). A screen whose data source isn't on the API says *Coming to Humo Property Management* and isn't in the menu in the live build: the list is `NOT_CONNECTED` in `http/provide-http-data.ts`, and a slice that lands removes its routes from it. Panels on shared pages (the dashboard, Levy billing rules) leave out what isn't built.
 2. **A development seed on the API** (done 28 October 2026). The live system starts empty, so it looks broken next to the prototype's full demo agencies. `dotnet run --project backend/src/Humo.Api -- seed-demo` loads demo agencies (Acacia, Fynbos) through the API's own services, with the sign-ins listed in the backend README. Development only: it refuses anywhere else.
-3. **A route check in CI.** Sign in as each role against the API and open every screen in the menu. Any screen that shows an error fails the build. This is the check that found the five failing screens on 22 October.
+3. **A screen check in CI** (done 28 October 2026). The `screens` job runs the API with the development seed and the frontend against it; a browser (Playwright, `frontend/humo-web/e2e`) signs in as each seeded role and the System Administrator and opens every page in the menu. A page that shows an error, or any API 5xx, fails the build. Locally: with the API (seeded), Mailpit and `npm run start:api` running, `npm --prefix frontend/humo-web run e2e:screens`.
 4. **One slice at a time** in the order of the table, each removing its data source from the "not on the API" list and its tags (docs/18).
 
 ## 2. Finance role (recommended 22 October 2026)
