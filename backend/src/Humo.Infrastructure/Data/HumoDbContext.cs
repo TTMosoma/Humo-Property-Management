@@ -56,6 +56,7 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
     public DbSet<SupplierRow> Suppliers => Set<SupplierRow>();
     public DbSet<JobRow> Jobs => Set<JobRow>();
     public DbSet<SupplierInvoiceRow> SupplierInvoices => Set<SupplierInvoiceRow>();
+    public DbSet<PaymentBatchRow> PaymentBatches => Set<PaymentBatchRow>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Notice> Notices => Set<Notice>();
     public DbSet<NoticeRead> NoticeReads => Set<NoticeRead>();
@@ -497,6 +498,13 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.Property(x => x.Phone).HasMaxLength(30);
             e.Property(x => x.Email).HasMaxLength(254);
             e.Property(x => x.BankAccount).HasMaxLength(60);
+            e.Property(x => x.BankName).HasMaxLength(60);
+            e.Property(x => x.BranchCode).HasMaxLength(6);
+            e.Property(x => x.AccountNumber).HasMaxLength(12);
+            e.Property(x => x.AccountType).HasMaxLength(12);
+            e.Property(x => x.AccountHolder).HasMaxLength(120);
+            e.Property(x => x.BankChangedBy).HasMaxLength(120);
+            e.Property(x => x.BankVerifiedBy).HasMaxLength(120);
             e.Property(x => x.Status).HasMaxLength(10);
             e.Property(x => x.PartyId).HasMaxLength(60);
             e.Property(x => x.Version).IsConcurrencyToken();
@@ -531,6 +539,22 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.HasIndex(x => new { x.SupplierId, x.Number }).IsUnique();
             e.HasIndex(x => new { x.SchemeId, x.Status });
             e.HasOne<SupplierRow>().WithMany().HasForeignKey(x => x.SupplierId);
+        });
+
+        builder.Entity<PaymentBatchRow>(e =>
+        {
+            e.ToTable("PaymentBatches");
+            e.Property(x => x.Ref).HasMaxLength(20);
+            e.Property(x => x.Total).HasPrecision(18, 2);
+            e.Property(x => x.Status).HasMaxLength(20);
+            e.Property(x => x.CreatedBy).HasMaxLength(120);
+            e.Property(x => x.ReleasedBy).HasMaxLength(120);
+            e.Property(x => x.CancelledBy).HasMaxLength(120);
+            e.Property(x => x.CancelReason).HasMaxLength(300);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => new { x.OrganisationId, x.Ref }).IsUnique();
+            e.HasIndex(x => new { x.SchemeId, x.Status });
+            e.HasOne<Scheme>().WithMany().HasForeignKey(x => x.SchemeId);
         });
 
         builder.Entity<Invoice>(e =>

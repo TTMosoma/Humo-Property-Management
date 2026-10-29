@@ -415,7 +415,7 @@ export function seedMaintenance(units: Unit[]): MaintenanceSeed {
     return id;
   });
   const batches: PaymentBatch[] = [
-    { version: 1, id: 'PB-0412', schemeId: 'kingfisher-court', invoiceIds: batchInvoiceIds, total: 58940.2, createdAt: day(-1, 16), createdBy: 'Priya Naidoo', status: 'awaiting-approval', approvalWorkItemId: 'w08' },
+    { version: 1, id: 'PB-0412', ref: 'PB-0412', schemeId: 'kingfisher-court', invoiceIds: batchInvoiceIds, total: 58940.2, createdAt: day(-1, 16), createdBy: 'Priya Naidoo', status: 'awaiting-approval', approvalWorkItemId: 'w08' },
   ];
 
   // A few approved invoices ready for the next batch.

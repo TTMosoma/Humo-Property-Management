@@ -54,6 +54,10 @@ export interface Supplier {
   /** Masked; changing bank details requires verification. */
   bankAccount: string;
   bankVerified: boolean;
+  /** New bank details waiting for someone other than the person who entered them to verify them in My work (D27). */
+  bankChange?: { by: string; byId: string; at: string; workItemId?: string };
+  bankVerifiedBy?: string;
+  bankVerifiedAt?: string;
   bbbeeLevel?: number;
   schemeIds: string[];
   documents: SupplierDocument[];
@@ -86,4 +90,15 @@ export function supplierCompliance(s: Supplier): DocStatus {
     .filter((d) => d.type !== 'B-BBEE certificate')
     .map((d) => docStatus(d));
   return order.find((o) => statuses.includes(o)) ?? 'valid';
+}
+
+export type BankAccountType = 'cheque' | 'savings' | 'transmission';
+
+/** A supplier's bank account, as entered (D27): the API holds payments until someone else verifies it. */
+export interface BankDetailsInput {
+  bankName: string;
+  branchCode: string;
+  accountNumber: string;
+  accountType: BankAccountType;
+  accountHolder: string;
 }

@@ -22,6 +22,8 @@ public interface IApprovalHandler
     /// <summary>Refuse (with a reason) before the decision is recorded, e.g. the person who prepared it can't approve it.</summary>
     Task<string?> RefuseAsync(WorkItemRow item, Actor actor, bool approve, CancellationToken ct);
     Task DecidedAsync(WorkItemRow item, Actor actor, bool approve, string? comment, CancellationToken ct);
+    /// <summary>Approving always needs the passkey, whatever the amount, and never an SMS code (e.g. a supplier's bank details, D27).</summary>
+    bool NeedsPasskey => false;
 }
 
 /// <summary>
@@ -121,9 +123,9 @@ public static class WorkItemEndpoints
             Category = "security",
             // Approving a large amount needs a fresh passkey; rejecting never does.
             // Approving alone always does (D24).
-            StepUp = approve && (alone || item.Amount >= org.ApprovalStepUpAmount),
-            // D26: an SMS code can confirm an approval, but approving alone (D24) always needs the passkey.
-            SmsStepUpAllowed = !alone,
+            StepUp = approve && (alone || item.Amount >= org.ApprovalStepUpAmount || handler?.NeedsPasskey == true),
+            // D26: an SMS code can confirm an approval, but approving alone (D24) and bank details (D27) always need the passkey.
+            SmsStepUpAllowed = !alone && handler?.NeedsPasskey != true,
             Validate = () =>
                 body.Decision is not ("approved" or "rejected") ? new() { ["decision"] = "Approve or reject." }
                 : item.Kind != "approval" || item.Status != "open" ? new() { ["status"] = "This isn’t waiting for a decision." }

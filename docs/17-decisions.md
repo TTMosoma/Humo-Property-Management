@@ -605,6 +605,27 @@ Approved on 18 October 2026 by Terry Mosoma (product owner). Options and reasons
 
 ---
 
+## D27 — Paying suppliers: two people, verified accounts (28 October 2026)
+
+**Status:** approved by the product owner (Terry Mosoma).
+
+**The problem:** paying suppliers is where trust money is most often stolen. One person who can change a supplier's bank account and also pay it can redirect a payment to themselves. Humo PM also can't move money out of a trust account: the agency pays at its bank.
+
+**Decision:**
+1. **Bank details are entered once and verified by someone else.** They're entered from the supplier's bank confirmation letter, with a passkey. Payments to the supplier are then held until another approver (Agency Administrator or Finance) verifies them in My work, after calling the supplier back on the number already on file. Verifying always needs a passkey, never an SMS code (D26). With one approver at the agency, the D24 rules apply: a trustee on Humo verifies, or the agency verifies alone under the trustees' permission.
+2. **Maker and checker.** Whoever prepares a payment batch doesn't approve it and doesn't release it. Approval is in My work, by another approver (D24 applies as for any approval). Release needs a fresh passkey (never an SMS code). The one exception: when nobody else at the agency can release, the preparer may, because the approval was the second person.
+3. **A batch pays the accounts it was made with.** It holds each supplier's verified account. If an account changes after that, release is refused; the batch is cancelled and prepared again.
+4. **Releasing gives a payment file** (CSV: beneficiary, bank, branch code, account number, account type, amount, references) to import into the trust account's internet banking. It marks the invoices and their jobs paid. One generic layout to start; layouts for particular banks come later.
+5. **Each supplier is emailed a remittance advice** when their payment is released: the invoices, the amount, the date, the masked account and the reference.
+6. **Narrowing what Finance can read** (docs/28 §2) is left for a separate decision.
+
+**Consequences:**
+- API: `POST /suppliers/{id}/bank-details` takes the account and opens a `bank-details-verification` approval; `GET /payables/invoices`, `GET /payables/batches`, `POST /payables/batches`, `POST /payables/batches/{id}/release` (returns the file), `POST …/payment-file` (again, audited) and `POST …/cancel`.
+- My work shows *Verify bank details* approvals; Finance › Payables shows open batches and the last ten closed ones.
+- Humo PM doesn't yet keep the scheme's cashbook: the payment to the supplier isn't posted to a ledger until it does.
+
+---
+
 ## Still open (needs domain expertise before slice 2)
 
 - **Levies and participation quotas:** decided per scheme in **D13**. Still open: interest rules, special levies, VAT.

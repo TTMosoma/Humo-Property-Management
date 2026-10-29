@@ -40,7 +40,7 @@ export class HttpAuditDataSource extends HttpPort implements AuditDataSource {
 }
 
 /** A refused download carries its ProblemDetails as a Blob: read it so step-up and refusals work as usual. */
-async function problemFromBlob(e: unknown): Promise<unknown> {
+export async function problemFromBlob(e: unknown): Promise<unknown> {
   if (e instanceof HttpErrorResponse && e.error instanceof Blob) {
     try {
       return new HttpErrorResponse({ error: JSON.parse(await e.error.text()), status: e.status, statusText: e.statusText, url: e.url ?? undefined });

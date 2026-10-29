@@ -1,5 +1,5 @@
 import { Router } from '@angular/router';
-import { SUPPLIER_STATUS_LABELS, Scheme, Supplier, SupplierDataSource, SupplierDetails, SupplierStatus, Trade } from '../../domain';
+import { BankAccountType, SUPPLIER_STATUS_LABELS, Scheme, Supplier, SupplierDataSource, SupplierDetails, SupplierStatus, Trade } from '../../domain';
 import { DrawerService } from '../../ui/drawer/drawer.service';
 import { FormField, FormValues, REASON_FIELD, openForm } from '../shared/form-drawer';
 
@@ -85,5 +85,42 @@ export function supplierStatusForm(drawer: DrawerService, data: SupplierDataSour
     submit: (v) => data.setStatus(s.id, status, v['reason'], s.version),
     success: () => `${s.name} is ${SUPPLIER_STATUS_LABELS[status].toLowerCase()}.`,
     failure: 'The supplier wasn’t changed',
+  });
+}
+
+const BANKS = ['Absa', 'African Bank', 'Bidvest Bank', 'Capitec Business', 'Discovery Bank', 'FNB', 'Investec', 'Nedbank', 'Standard Bank', 'TymeBank'];
+
+/**
+ * The account a supplier is paid into (D27): a fresh passkey to enter it, then payments are held until someone else
+ * verifies it in My work, after calling the supplier back on the number already on file.
+ */
+export function bankDetailsForm(drawer: DrawerService, data: SupplierDataSource, s: Supplier): void {
+  openForm(drawer, {
+    eyebrow: s.name,
+    title: 'Enter bank details',
+    intro: `Take them from the supplier’s bank confirmation letter, never from an email asking you to change them. Payments to ${s.name} are held until someone else verifies the account in My work, after calling ${s.contactName} on ${s.phone}.`,
+    fields: [
+      { key: 'bankName', label: 'Bank', type: 'select', required: true, half: true, options: BANKS.map((b) => ({ value: b, label: b })) },
+      { key: 'branchCode', label: 'Branch code', type: 'text', required: true, half: true, help: '6 digits, e.g. 250655.' },
+      { key: 'accountNumber', label: 'Account number', type: 'text', required: true, half: true },
+      {
+        key: 'accountType', label: 'Account type', type: 'select', required: true, half: true,
+        options: [{ value: 'cheque', label: 'Cheque / current' }, { value: 'savings', label: 'Savings' }, { value: 'transmission', label: 'Transmission' }],
+      },
+      { key: 'accountHolder', label: 'Account holder', type: 'text', required: true, help: 'The name the bank has on the account.' },
+    ],
+    initial: { bankName: 'FNB', accountType: 'cheque', accountHolder: s.name },
+    submitLabel: 'Enter bank details',
+    stepUp: { action: 'change-bank-details', detail: `Change the bank account ${s.name} is paid into` },
+    submit: (v) =>
+      data.changeBankDetails(s.id, {
+        bankName: v['bankName'],
+        branchCode: v['branchCode'].replace(/\s/g, ''),
+        accountNumber: v['accountNumber'].replace(/\s/g, ''),
+        accountType: v['accountType'] as BankAccountType,
+        accountHolder: v['accountHolder'],
+      }),
+    success: () => `Entered. Payments to ${s.name} are held until someone else verifies the account in My work.`,
+    failure: 'The bank details weren’t changed',
   });
 }

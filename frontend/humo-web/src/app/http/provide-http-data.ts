@@ -62,6 +62,7 @@ import { HttpOrganisationDataSource, HttpPersonDataSource, HttpSchemeDataSource,
 import { NOT_CONNECTED } from '../core/availability/not-connected';
 import { HttpSessionDataSource } from './http-session-data-source';
 import { HttpLibraryDataSource } from './http-library';
+import { HttpPayablesDataSource } from './http-payables';
 import { HttpPackageLimitsDataSource } from './http-package-limits';
 import { HttpOwnerInvoiceDataSource } from './http-owner-invoices';
 import { HttpDocumentTemplateDataSource, HttpPlatformTemplateDataSource, HttpSettingsDataSource } from './http-settings';
@@ -69,7 +70,6 @@ import { notConnected } from './not-connected';
 
 /** Ports whose HTTP adapters come with later backend slices. Remove each from this list as its adapter lands. */
 const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
-  [PayablesDataSource, 'PayablesDataSource'],
   [PaymentGateway, 'PaymentGateway'],
   [MeetingDataSource, 'MeetingDataSource'],
   [ResolutionDataSource, 'ResolutionDataSource'],
@@ -127,7 +127,6 @@ export function provideHttpData(): EnvironmentProviders {
     {
       provide: NOT_CONNECTED,
       useValue: [
-        '/finance/payables',
         '/finance/budgets',
         '/staff',
         '/reports',
@@ -155,9 +154,10 @@ export function provideHttpData(): EnvironmentProviders {
     { provide: CommunicationsDataSource, useClass: HttpCommunicationsDataSource },
     { provide: NoticeDataSource, useClass: HttpNoticeDataSource },
     { provide: InboxDataSource, useClass: HttpInboxDataSource },
-    // Slice 3a: maintenance jobs and suppliers. Payables (payment batches) follow.
+    // Slice 3a: maintenance jobs and suppliers; slice 3b: payables (payment batches, D27).
     { provide: JobDataSource, useClass: HttpJobDataSource },
     { provide: SupplierDataSource, useClass: HttpSupplierDataSource },
+    { provide: PayablesDataSource, useClass: HttpPayablesDataSource },
     ...pending,
   ]);
 }

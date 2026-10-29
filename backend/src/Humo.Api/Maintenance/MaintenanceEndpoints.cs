@@ -500,25 +500,84 @@ public static partial class MaintenanceEndpoints
         }, _ => Task.FromResult(Results.NoContent()), ct);
     }
 
-    /// <summary>Sensitive: a fresh passkey, and payments to the supplier are held until the new account is verified.</summary>
-    private static async Task<IResult> ChangeBankDetails(Guid id, CurrentActor current, CommandRunner commands, HumoDbContext db, CancellationToken ct)
+    /// <summary>
+    /// Sensitive (D27): a fresh passkey; payments to the supplier are held until someone other than the person who entered
+    /// the account verifies it in My work, after calling the supplier back on the number already on file.
+    /// </summary>
+    private static async Task<IResult> ChangeBankDetails(Guid id, Finance.BankDetailsRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, TimeProvider clock,
+        CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { OrganisationId: { } org }) return Problems.NotFound();
         if (await db.Suppliers.FirstOrDefaultAsync(s => s.Id == id && s.OrganisationId == org, ct) is not { } row) return Problems.NotFound();
-        return await commands.RunAsync(new CommandSpec($"Started a bank details change for {row.Name}: payments held until the new account is verified", "Suppliers.ChangeBankDetails")
+        var bank = (body.BankName ?? "").Trim();
+        var number = (body.AccountNumber ?? "").Replace(" ", "");
+        var branch = (body.BranchCode ?? "").Replace(" ", "");
+        var holder = (body.AccountHolder ?? "").Trim();
+        var type = (body.AccountType ?? "").Trim().ToLowerInvariant();
+        var masked = Finance.Payables.Masked(bank, number);
+        return await commands.RunAsync(new CommandSpec($"Entered new bank details for {row.Name} ({masked}): payments held until someone else verifies them", "Suppliers.ChangeBankDetails")
         {
             Resource = "Supplier",
             ResourceId = id.ToString(),
             Category = "security",
             StepUp = true,
-        }, _ =>
+            Validate = () =>
+            {
+                var e = new Dictionary<string, string>();
+                if (bank.Length < 2) e["bankName"] = "Which bank?";
+                if (!BankBranch().IsMatch(branch)) e["branchCode"] = "A 6-digit branch code.";
+                if (!BankAccountNumber().IsMatch(number)) e["accountNumber"] = "An account number of 7 to 12 digits.";
+                if (!Finance.Payables.AccountTypes.Contains(type)) e["accountType"] = "Cheque, savings or transmission.";
+                if (holder.Length < 2) e["accountHolder"] = "The account holder’s name as the bank has it.";
+                return e;
+            },
+        }, async actor =>
         {
+            var schemes = MaintenanceService.List<string>(row.SchemeIds);
+            // A verification still waiting for the details this replaces is closed: the new details are verified instead.
+            if (row.BankWorkItemId is { } old && await db.WorkItems.FirstOrDefaultAsync(w => w.Id == old && w.Status == "open", ct) is { } stale)
+            {
+                stale.Status = "rejected";
+                stale.DecidedBy = actor.Human.Name;
+                stale.DecidedAt = clock.GetUtcNow();
+                stale.Comment = "Replaced by newer bank details";
+            }
+            // On the supplier's first scheme, so that with one approver at the agency its trustees can verify it (D24).
+            var item = new WorkItemRow
+            {
+                Id = Guid.CreateVersion7(), OrganisationId = org, SchemeId = Guid.TryParse(schemes.Order().FirstOrDefault(), out var s) ? s : null, Ref = $"Bank {masked}",
+                Kind = "approval", Type = "bank-details-verification", Title = $"Verify bank details — {row.Name}",
+                Detail = $"New account: {bank}, account {number}, branch {branch}, {type}, in the name of {holder}. Call {row.ContactName} on {row.Phone} (the number already on file, not one from the change request) and confirm it before you verify.",
+                Amount = null, CreatedAt = clock.GetUtcNow(), DueAt = clock.GetUtcNow().AddDays(2),
+                ApproverRoles = WorkItemEndpoints.Roles([.. Finance.Payables.Approvers]),
+                Evidence = JsonSerializer.Serialize(new[] { $"Entered by {actor.Human.Name}", $"Previous account: {(row.AccountNumber.Length > 0 ? Finance.Payables.Masked(row.BankName, row.AccountNumber) : "none")}",
+                    $"Call back: {row.ContactName}, {row.Phone}" }),
+                Route = $"/suppliers/{row.Id}", SourceId = row.Id,
+            };
+            db.WorkItems.Add(item);
+            row.BankName = bank;
+            row.BranchCode = branch;
+            row.AccountNumber = number;
+            row.AccountType = type;
+            row.AccountHolder = holder;
+            row.BankAccount = masked;
             row.BankVerified = false;
-            row.BankAccount = "Change pending verification";
+            row.BankVerifiedBy = null;
+            row.BankVerifiedAt = null;
+            row.BankChangedById = actor.Human.Id;
+            row.BankChangedBy = actor.Human.Name;
+            row.BankChangedAt = clock.GetUtcNow();
+            row.BankWorkItemId = item.Id;
             row.Version++;
-            return Task.FromResult(Results.NoContent());
+            return Results.NoContent();
         }, ct);
     }
+
+    [GeneratedRegex(@"^\d{6}$")]
+    private static partial Regex BankBranch();
+
+    [GeneratedRegex(@"^\d{7,12}$")]
+    private static partial Regex BankAccountNumber();
 
     private static async Task<IResult> LinkParty(CurrentActor current, CancellationToken ct) =>
         await current.GetAsync(ct) is null ? Results.Unauthorized()

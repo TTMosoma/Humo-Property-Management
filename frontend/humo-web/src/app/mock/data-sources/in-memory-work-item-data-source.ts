@@ -10,6 +10,7 @@ const NOUN: Partial<Record<WorkItem['type'], string>> = {
   'quote-approval': 'quote',
   'invoice-approval': 'supplier invoice',
   'payment-batch-approval': 'payment batch',
+  'bank-details-verification': 'supplier’s bank details',
   'billing-run-approval': 'billing run',
 };
 
