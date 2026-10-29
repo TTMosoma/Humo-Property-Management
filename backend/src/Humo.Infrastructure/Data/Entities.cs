@@ -1130,6 +1130,28 @@ public sealed class SupplierInvoiceRow
 }
 
 /// <summary>
+/// Away cover (Staff): while someone is away, their open tasks and messages move to a colleague, and so does new work
+/// assigned to them. When the cover ends, what's still open moves back. One row per cover; ended covers stay as history.
+/// </summary>
+public sealed class StaffCoverRow
+{
+    public Guid Id { get; set; }
+    public Guid OrganisationId { get; set; }
+    /// <summary>The person who is away (their user id, the id work items are assigned to).</summary>
+    public Guid StaffId { get; set; }
+    public Guid CoverId { get; set; }
+    public DateOnly From { get; set; }
+    public DateOnly To { get; set; }
+    public string Reason { get; set; } = "";
+    public string SetBy { get; set; } = "";
+    public DateTimeOffset SetAt { get; set; }
+    /// <summary>JSON list of the work items moved to the cover, to move back afterwards.</summary>
+    public string MovedIds { get; set; } = "[]";
+    /// <summary>Set when it's over (back early, or past its last day) and what was still open has moved back.</summary>
+    public DateTimeOffset? EndedAt { get; set; }
+}
+
+/// <summary>
 /// Supplier payments from one scheme's trust account (slice 3b, D27): prepared by one person, approved in My work by
 /// another, released (the bank file, invoices paid, remittances) by someone other than the preparer. Payees holds each
 /// supplier's verified bank account as it was when the batch was made: release is refused if it has changed since.

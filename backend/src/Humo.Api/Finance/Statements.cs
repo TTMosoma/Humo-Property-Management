@@ -320,6 +320,8 @@ public sealed class DeliveryHost(DeliveryQueue queue, IServiceScopeFactory scope
                     await scope.ServiceProvider.GetRequiredService<Messaging.Communications>().SendDueAsync(stoppingToken);
                     // Approvals made alone take effect when their cooling-off ends (D24).
                     await scope.ServiceProvider.GetRequiredService<Work.SoleAuthority>().ReleaseDueAsync(stoppingToken);
+                    // Away cover: started covers take the away person's work (new work too); finished ones hand it back.
+                    await scope.ServiceProvider.GetRequiredService<Work.StaffCovers>().SweepAsync(stoppingToken);
                 }
                 catch (Exception e) when (e is not OperationCanceledException)
                 {

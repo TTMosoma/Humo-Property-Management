@@ -27,6 +27,7 @@ Checkpoint 10 builds the remaining pages that showed the "Not built yet" card: C
 - **Each person's open work**, approvals and recent completions.
 - **Away cover:** *X is away, Y covers from … to …* moves their open, non-approval work to the cover. New work (compliance Tasks, Inbox, credit control) is routed to the cover while they're away (`StaffStore.routeTo`). *X is back* moves still-open items back.
 - **Permissions:** covering for yourself needs `Work.Manage`; setting cover for someone else also needs `Users.Manage`.
+- **On the API (29 October 2026):** the team is everyone with an active staff role (Agency Administrator, Portfolio Manager, Finance, Operations). Covers are stored (`StaffCovers`); a cover that starts later, and work assigned to someone while they're away, are picked up by the minute loop, which also hands the work back once the cover's last day has passed. Ending a cover early moves still-open work back straight away. Approvals never move: they're decided by role.
 
 ## 4. Budgets (`/finance/budgets`) and the scheme Finance tab
 
@@ -111,7 +112,8 @@ Text written in this checkpoint follows [07 — Brand architecture](07-brand-arc
 |---|---|
 | `GET/POST /templates`, `POST /messages/preview`, `POST /messages`, `GET /messages`, `POST /messages/{id}/retry`, `POST /messages/{id}/cancel` | `Messages.Reply` |
 | `GET /conversations`, `POST /conversations/{id}/actions`, `GET/POST /me/conversations` | `Messages.Reply` / `Resident.Portal` |
-| `GET /staff`, `POST /staff/{id}/cover`, `DELETE /staff/{id}/cover` | `Work.Manage` (+ `Users.Manage` for others) |
+| `GET /staff`, `GET /staff/{id}` | `Portfolio.Browse` |
+| `PUT /staff/{id}/cover`, `DELETE /staff/{id}/cover` | `Work.Manage` (+ `Users.Manage` for others) |
 | `GET /budgets`, `POST /budgets`, `POST /budgets/{id}/actions` | `Finance.View` / `Budgets.Manage` |
 | `GET /boards`, `GET /boards/{schemeId}`, `POST /boards/{schemeId}/actions` | `Governance.View` / `Meetings.Manage` |
 | `GET /rules/{schemeId}`, `POST /rules/{schemeId}/actions` | `Governance.View` / `Meetings.Manage` |
