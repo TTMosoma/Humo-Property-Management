@@ -249,7 +249,8 @@ export class BudgetPage {
   private readonly scope = inject(ScopeService);
   private readonly session = inject(SessionService);
   /** On the live system meetings aren't on the API yet: the owners' approval is recorded by hand (D28). */
-  protected readonly meetingsConnected = !notConnected(inject(NOT_CONNECTED), '/governance/meetings');
+  // Governance is in Enterprise: without it the owners' approval is recorded by hand too.
+  protected readonly meetingsConnected = !notConnected(inject(NOT_CONNECTED), '/governance/meetings') && this.session.hasFeature('governance');
 
   private readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('budgetId')!)), { initialValue: this.route.snapshot.paramMap.get('budgetId')! });
   /** undefined = loading; false = not found. */

@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { firstValueFrom } from 'rxjs';
-import { AccessDataSource, AccountDataSource, ApiError, BudgetDataSource, ComplianceDataSource, JobDataSource, describeFailure, MeetingDataSource, PayablesDataSource, PlatformTemplateDataSource, PolicyError, SchemeDataSource, SessionDataSource, SettingsDataSource, SignInError, StaffDataSource, StepUpAuthenticator, SupplierDataSource, TimelineDataSource, ReportDataSource } from '../domain';
+import { AccessDataSource, AccountDataSource, ApiError, BudgetDataSource, ComplianceDataSource, JobDataSource, describeFailure, MeetingDataSource, PayablesDataSource, PlatformTemplateDataSource, PolicyError, SchemeDataSource, SessionDataSource, SettingsDataSource, SignInError, StaffDataSource, StepUpAuthenticator, SupplierDataSource, TimelineDataSource, ReportDataSource, RulesDataSource } from '../domain';
 import { NOT_CONNECTED, notConnected } from '../core/availability/not-connected';
 import { provideHttpData } from './provide-http-data';
 
@@ -49,7 +49,7 @@ describe('Production data layer (provideHttpData)', () => {
   });
 
   it('ports without an API yet say so', async () => {
-    await expect(firstValueFrom(TestBed.inject(MeetingDataSource).list(['s-1']))).rejects.toBeInstanceOf(ApiError);
+    await expect(firstValueFrom(TestBed.inject(RulesDataSource).breaches(['s-1']))).rejects.toBeInstanceOf(ApiError);
     // Compliance is partly on the API: the financial year end is, the rest isn't yet.
     await expect(firstValueFrom(TestBed.inject(ComplianceDataSource).list(['s-1']))).rejects.toMatchObject({ kind: 'server' });
   });
@@ -106,7 +106,8 @@ describe('Production data layer (provideHttpData)', () => {
     await added;
 
     const routes = TestBed.inject(NOT_CONNECTED);
-    expect(notConnected(routes, '/governance/meetings')).toBe(true);
+    expect(notConnected(routes, '/governance/rules')).toBe(true);
+    expect(notConnected(routes, '/governance/meetings')).toBe(false);
     expect(notConnected(routes, '/reports')).toBe(false);
     expect(notConnected(routes, '/finance/budgets/b-1')).toBe(false);
     expect(notConnected(routes, '/finance/payables')).toBe(false);
@@ -120,6 +121,18 @@ describe('Production data layer (provideHttpData)', () => {
     const suppliers = firstValueFrom(TestBed.inject(SupplierDataSource).list(['s-1']));
     http.expectOne('/api/suppliers?schemeIds=s-1').flush([]);
     expect(await suppliers).toEqual([]);
+  });
+
+  it('runs meetings over HTTP: the upcoming view, and lifecycle commands with the version', async () => {
+    const meetings = TestBed.inject(MeetingDataSource);
+    const list = firstValueFrom(meetings.list(['s-1'], { filters: { view: 'upcoming' } }));
+    http.expectOne({ method: 'GET', url: '/api/meetings?schemeIds=s-1&view=upcoming' }).flush({ items: [], total: 0, page: 1, pageSize: 25 });
+    expect((await list).total).toBe(0);
+    const sent = firstValueFrom(meetings.act('m-1', { type: 'send-notice' }, 4));
+    const post = http.expectOne({ method: 'POST', url: '/api/meetings/m-1/actions' });
+    expect(post.request.body).toEqual({ action: { type: 'send-notice' }, expectedVersion: 4 });
+    post.flush(null, { status: 204, statusText: 'No Content' });
+    await sent;
   });
 
   it('runs a report over HTTP, with the schemes and months', async () => {

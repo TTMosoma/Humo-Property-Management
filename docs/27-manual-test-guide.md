@@ -2,7 +2,7 @@
 
 **Purpose:** the checks the product owner runs by hand against the local stack before a release. The automated tests cover the rules; this guide covers what only a person can judge: the screens, the emails and SMS, and whether it all makes sense. Tick each box, and note anything that differs from **Expect**.
 
-**Last updated:** 31 October 2026 (sections 10 to 16: the demo agencies, supplier payments, Staff, Budgets, Reports).
+**Last updated:** 2 November 2026 (section 17: meetings and resolutions; sections 10 to 16: the demo agencies, supplier payments, Staff, Budgets, Reports).
 
 ## 0. Set up
 
@@ -149,6 +149,22 @@ It signs in as each demo person and opens every page in their menu; any error fa
 npm --prefix frontend/humo-web run e2e:screens
 ```
 - [ ] **Expect:** six tests pass in a few minutes. A failure names the page and the error; the report is in `frontend/playwright-report`.
+
+## 17. Meetings and resolutions (Governance, Enterprise)
+
+1. Governance is in Enterprise: as `terry@humo.co.za`, Platform › Customers › Acacia › *Manage features* › package **Enterprise** (passkey).
+2. As Thandeka: Governance › Trustee boards › Kingfisher Court › *Invite to Humo PM* for Sipho; open the invite from Mailpit in a private window and add a passkey. Written resolutions are decided by a trustee.
+
+- [ ] Meetings › *Schedule*: Kingfisher Court, trustee meeting, 3 days ahead; *Send notice*. **Expect:** refused, 7 days' notice needed.
+- [ ] *Reschedule* to 10 days ahead, *Send notice*. **Expect:** Mailpit has a notice for each of the three trustees (date, venue, agenda); adding an agenda item is now refused.
+- [ ] *Record attendance* with one trustee present. **Expect:** "Not quorate". With two: held.
+- [ ] *Add a resolution* passed 2–0–0 with an action for Priya. **Expect:** the action is in Priya's Tasks; when she completes it, Resolutions shows *Completed*.
+- [ ] *Send minutes for approval*; approve them in My work (Sipho or Thandeka). **Expect:** *Minutes approved*.
+- [ ] Resolutions › *Propose* a written resolution with an action. **Expect:** no task yet; when Sipho approves it in My work it's *Passed* and the action appears in Tasks.
+- [ ] Schedule an **AGM** 20 days ahead; Finance › Budgets › next year's draft › *Put it to the AGM*. **Expect:** it uses the AGM's *Budget and levies* item. *Send notice*: every owner gets it (with the proxy line). Record attendance (owners present: 2 or more), then a passed resolution on that item. **Expect:** the budget is *Approved*, citing the resolution.
+- [ ] Trustee boards › *Appoint* as elected. **Expect:** the *Resolution* list holds passed resolutions only.
+- [ ] Reports. **Expect:** the *Resolutions register* is there.
+- [ ] As Annette (Fynbos, Essentials). **Expect:** no Governance menu; budgets keep *Record the owners' approval*.
 
 ## Reporting back
 

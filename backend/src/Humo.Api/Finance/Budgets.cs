@@ -16,7 +16,9 @@ public sealed record BudgetLine(string Category, string Kind, decimal Annual);
 public sealed record BudgetApproval(string At, string ResolutionRef, string? MeetingId = null, string? RecordedBy = null);
 public sealed record BroughtForward(string To, Dictionary<string, decimal> Amounts);
 public sealed record BudgetDto(string Id, int Version, string SchemeId, string Year, string From, string To, string Status, List<BudgetLine> Lines, string CreatedBy, string UpdatedAt,
-    BudgetApproval? Approved, BroughtForward? BroughtForward);
+    BudgetApproval? Approved, BroughtForward? BroughtForward, BudgetAgm? Agm = null);
+/// <summary>While proposed: the AGM and its agenda item; the resolution passed on that item approves the budget.</summary>
+public sealed record BudgetAgm(string MeetingId, string MeetingRef, string AgendaItemId);
 public sealed record BudgetLineViewDto(BudgetLine Line, decimal ToDate, decimal? Actual, decimal Committed, decimal? Variance);
 public sealed record BudgetTotalsDto(decimal Income, decimal Expense, decimal Surplus, decimal IncomeActual, decimal ExpenseActual);
 public sealed record BudgetViewDto(BudgetDto Budget, SchemeDto Scheme, double Elapsed, List<BudgetLineViewDto> Lines, BudgetTotalsDto Totals, List<string> Overspent);
@@ -80,7 +82,8 @@ public sealed class Budgets(HumoDbContext db, TimeProvider clock)
     public static BroughtForward? Opening(BudgetRow b) => b.BroughtForward is null ? null : JsonSerializer.Deserialize<BroughtForward>(b.BroughtForward, Json.Options);
 
     public static BudgetDto ToDto(BudgetRow b) => new(b.Id.ToString(), b.Version, b.SchemeId.ToString(), b.Year, Day(b.From), Day(b.To), b.Status, Lines(b), b.CreatedBy,
-        b.UpdatedAt.ToString("O"), b.Approved is null ? null : JsonSerializer.Deserialize<BudgetApproval>(b.Approved, Json.Options), Opening(b));
+        b.UpdatedAt.ToString("O"), b.Approved is null ? null : JsonSerializer.Deserialize<BudgetApproval>(b.Approved, Json.Options), Opening(b),
+        b.Agm is null ? null : JsonSerializer.Deserialize<BudgetAgm>(b.Agm, Json.Options));
 
     private static decimal Whole(decimal n) => Math.Round(n, 0, MidpointRounding.AwayFromZero);
 
@@ -267,7 +270,8 @@ public static class BudgetEndpoints
         }, ct);
     }
 
-    private static async Task<IResult> Act(Guid id, BudgetActionRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, Budgets budgets, CancellationToken ct)
+    private static async Task<IResult> Act(Guid id, BudgetActionRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, Budgets budgets, Governance.Governance governance,
+        CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } me) return Results.Unauthorized();
         if (await VisibleAsync(me, db, id, ct) is not { } b) return Problems.NotFound();
@@ -277,12 +281,17 @@ public static class BudgetEndpoints
         var category = (a.Category ?? "").Trim();
         var approvedOn = DateOnly.TryParseExact(a.ApprovedOn, "yyyy-MM-dd", out var on) ? on : (DateOnly?)null;
         var openingTo = DateOnly.TryParseExact(a.To, "yyyy-MM-dd", out var t) ? t : (DateOnly?)null;
+        // Proposing: this scheme's AGM whose agenda is still open, and the agenda items other budgets already hold.
+        var agmRow = a.Type == "propose" && Guid.TryParse(a.MeetingId, out var mid) ? await db.Meetings.FirstOrDefaultAsync(x => x.Id == mid && x.SchemeId == b.SchemeId, ct) : null;
+        var taken = agmRow is null ? [] : (await db.Budgets.Where(x => x.Id != b.Id && x.Agm != null).Select(x => x.Agm!).ToListAsync(ct))
+            .Select(x => JsonSerializer.Deserialize<BudgetAgm>(x, Json.Options)!).Where(x => x.MeetingId == agmRow.Id.ToString()).Select(x => x.AgendaItemId).ToList();
         var what = a.Type switch
         {
             "set-line" => $"Set {category} to {BillingRules.Rand(a.Annual ?? 0)} in",
             "remove-line" => $"Removed {category} from",
             "record-approval" => $"Recorded the owners’ approval ({(a.ResolutionRef ?? "").Trim()}, {a.ApprovedOn}) of",
             "set-opening" => $"Set the spending before Humo Property Management (to {a.To}) for",
+            "propose" => $"Put on the agenda of {agmRow?.Ref ?? "an AGM"}",
             _ => "Changed",
         };
         return await commands.RunAsync(new CommandSpec($"{what} the {b.Year} budget for {scheme.Name}", "Budgets.Manage")
@@ -309,7 +318,9 @@ public static class BudgetEndpoints
                     case "remove-line":
                         return lines.Any(l => l.Category == category) ? [] : new() { ["category"] = "No such line." };
                     case "propose":
-                        return new() { ["meetingId"] = "Meetings aren’t on Humo Property Management yet: record the owners’ approval instead." };
+                        if (agmRow is null || agmRow.Type != "agm") return new() { ["meetingId"] = "Choose this scheme’s AGM." };
+                        if (agmRow.Stage != "draft") return new() { ["meetingId"] = "Notice has gone out: the agenda is fixed. Propose it at the next AGM, or at an SGM." };
+                        return b.Status == "proposed" ? new() { ["id"] = "Already on an AGM agenda." } : [];
                     case "record-approval":
                         if (b.Status == "approved") return new() { ["id"] = "It’s already approved." };
                         if (lines.Count == 0) return new() { ["id"] = "Add the budget’s lines first." };
@@ -341,6 +352,18 @@ public static class BudgetEndpoints
                     b.Status = "approved";
                     b.Approved = JsonSerializer.Serialize(new BudgetApproval(Budgets.Day(approvedOn!.Value), a.ResolutionRef!.Trim(), null, actor.Human.Name), Json.Options);
                     break;
+                case "propose":
+                {
+                    var m = Governance.Governance.Read(agmRow!);
+                    var expense = lines.Where(l => l.Kind == "expense").Sum(l => l.Annual);
+                    var notes = $"The {b.Year} budget: expenses of {BillingRules.Rand(expense)} for the year from {Budgets.Day(b.From)}. A resolution on this item approves it.";
+                    var itemId = Governance.GovernanceEndpoints.PlaceOnAgenda(m, governance, x => x.Contains("budget", StringComparison.OrdinalIgnoreCase), $"Approve the {b.Year} budget", notes,
+                        actor.Human.Name, taken);
+                    Governance.Governance.Write(agmRow!, m);
+                    b.Agm = JsonSerializer.Serialize(new BudgetAgm(m.Id, m.Ref, itemId), Json.Options);
+                    b.Status = "proposed";
+                    break;
+                }
                 case "set-opening":
                     b.BroughtForward = JsonSerializer.Serialize(new BroughtForward(Budgets.Day(openingTo!.Value),
                         (a.Amounts ?? []).Where(x => x.Value > 0).ToDictionary(x => x.Key, x => Math.Round(x.Value, 2))), Json.Options);

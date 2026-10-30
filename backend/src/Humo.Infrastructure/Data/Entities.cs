@@ -1162,6 +1162,40 @@ public sealed class BudgetRow
     public string? Approved { get; set; }
     /// <summary>JSON: spending before Humo PM, up to a date, by category.</summary>
     public string? BroughtForward { get; set; }
+    /// <summary>JSON: while proposed, the AGM and its agenda item; the resolution passed on that item approves the budget.</summary>
+    public string? Agm { get; set; }
+}
+
+/// <summary>A meeting (governance): key columns for finding it, the meeting itself as JSON (Humo.Api.Governance.Meeting).</summary>
+public sealed class MeetingRow
+{
+    public Guid Id { get; set; }
+    public Guid OrganisationId { get; set; }
+    public Guid SchemeId { get; set; }
+    public int Version { get; set; } = 1;
+    /// <summary>"MTG-KC-001".</summary>
+    public string Ref { get; set; } = "";
+    /// <summary>trustee, agm or sgm.</summary>
+    public string Type { get; set; } = "";
+    public string Stage { get; set; } = "draft";
+    public DateTimeOffset ScheduledFor { get; set; }
+    public string Json { get; set; } = "{}";
+}
+
+/// <summary>A resolution, passed at a meeting or in writing (governance), as JSON (Humo.Api.Governance.Resolution).</summary>
+public sealed class ResolutionRow
+{
+    public Guid Id { get; set; }
+    public Guid OrganisationId { get; set; }
+    public Guid SchemeId { get; set; }
+    public int Version { get; set; } = 1;
+    /// <summary>"RES-KC-14": numbered per scheme.</summary>
+    public string Ref { get; set; } = "";
+    public int Number { get; set; }
+    public Guid? MeetingId { get; set; }
+    /// <summary>proposed, passed, not-passed or withdrawn.</summary>
+    public string Outcome { get; set; } = "proposed";
+    public string Json { get; set; } = "{}";
 }
 
 /// <summary>
