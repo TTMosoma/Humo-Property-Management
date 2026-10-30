@@ -322,6 +322,9 @@ public sealed class DeliveryHost(DeliveryQueue queue, IServiceScopeFactory scope
                     await scope.ServiceProvider.GetRequiredService<Work.SoleAuthority>().ReleaseDueAsync(stoppingToken);
                     // Away cover: started covers take the away person's work (new work too); finished ones hand it back.
                     await scope.ServiceProvider.GetRequiredService<Work.StaffCovers>().SweepAsync(stoppingToken);
+                    // A sold unit's account goes to its current owner once the previous ownership has ended.
+                    await Portfolio.PeopleEndpoints.HandOverEndedAsync(scope.ServiceProvider.GetRequiredService<HumoDbContext>(),
+                        scope.ServiceProvider.GetRequiredService<Portfolio.PortfolioReads>(), stoppingToken);
                 }
                 catch (Exception e) when (e is not OperationCanceledException)
                 {

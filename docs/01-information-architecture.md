@@ -39,7 +39,8 @@ The UI will treat **People** as one directory, with **roles derived from relatio
 relationship entities, not three duplicated tables). Better to validate it in the UI now.
 
 ### Decision D2 — Account belongs to the Unit's ownership, not the Person
-The levy account is `Scheme → Unit → Account`, and the current owner is the account holder.
+The levy account is `Scheme → Unit → Account`, and the current owner is the account holder. Statements, letters and invoices go to the account holder.
+- **When the unit changes hands:** adding the buyer as an owner who *replaces* the seller hands the account over at once. A buyer added after the seller's ownership was ended takes it over too. An ownership ended from a later date hands the account to the next current owner the day after, by the API's minute loop. A joint owner (partners, spouses) leaves the holder as it is.
 When a unit transfers, the account history stays with the unit. The Unit page shows this chain visually:
 
 ```
