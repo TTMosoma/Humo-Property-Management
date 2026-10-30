@@ -57,6 +57,7 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
     public DbSet<JobRow> Jobs => Set<JobRow>();
     public DbSet<SupplierInvoiceRow> SupplierInvoices => Set<SupplierInvoiceRow>();
     public DbSet<PaymentBatchRow> PaymentBatches => Set<PaymentBatchRow>();
+    public DbSet<StaffCoverRow> StaffCovers => Set<StaffCoverRow>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Notice> Notices => Set<Notice>();
     public DbSet<NoticeRead> NoticeReads => Set<NoticeRead>();
@@ -539,6 +540,15 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.HasIndex(x => new { x.SupplierId, x.Number }).IsUnique();
             e.HasIndex(x => new { x.SchemeId, x.Status });
             e.HasOne<SupplierRow>().WithMany().HasForeignKey(x => x.SupplierId);
+        });
+
+        builder.Entity<StaffCoverRow>(e =>
+        {
+            e.ToTable("StaffCovers");
+            e.Property(x => x.Reason).HasMaxLength(200);
+            e.Property(x => x.SetBy).HasMaxLength(120);
+            e.HasIndex(x => new { x.OrganisationId, x.StaffId });
+            e.HasOne<Organisation>().WithMany().HasForeignKey(x => x.OrganisationId);
         });
 
         builder.Entity<PaymentBatchRow>(e =>

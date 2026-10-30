@@ -2571,6 +2571,54 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.ToTable("SmsCodes", (string)null);
                 });
 
+            modelBuilder.Entity("Humo.Infrastructure.Data.StaffCoverRow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CoverId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("EndedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("From")
+                        .HasColumnType("date");
+
+                    b.Property<string>("MovedIds")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("SetAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SetBy")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<Guid>("StaffId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("To")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganisationId", "StaffId");
+
+                    b.ToTable("StaffCovers", (string)null);
+                });
+
             modelBuilder.Entity("Humo.Infrastructure.Data.StatementImport", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3800,6 +3848,15 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.HasOne("Humo.Infrastructure.Data.HumoUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Humo.Infrastructure.Data.StaffCoverRow", b =>
+                {
+                    b.HasOne("Humo.Infrastructure.Data.Organisation", null)
+                        .WithMany()
+                        .HasForeignKey("OrganisationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

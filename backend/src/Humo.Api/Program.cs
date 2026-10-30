@@ -56,6 +56,7 @@ builder.Services.AddScoped<Humo.Api.Work.IApprovalHandler, Humo.Api.Finance.Paym
 builder.Services.AddScoped<Humo.Api.Work.IApprovalHandler, Humo.Api.Finance.BankDetailsVerificationHandler>();
 builder.Services.AddScoped<Humo.Api.Messaging.MessageUsage>();
 builder.Services.AddScoped<Humo.Api.Work.SoleAuthority>();
+builder.Services.AddScoped<Humo.Api.Work.StaffCovers>();
 builder.Services.AddScoped<Humo.Api.Messaging.EmailSignatures>();
 builder.Services.AddScoped<Humo.Api.Messaging.Communications>();
 builder.Services.AddScoped<Humo.Api.Messaging.Inbox>();
@@ -187,6 +188,7 @@ Humo.Api.Finance.ReceiptEndpoints.MapReceipts(api);
 Humo.Api.Finance.BillingRunEndpoints.MapBillingRuns(api);
 Humo.Api.Finance.MeterEndpoints.MapMetersAndLevies(api);
 Humo.Api.Work.WorkItemEndpoints.MapWorkItems(api);
+Humo.Api.Work.StaffEndpoints.MapStaff(api);
 Humo.Api.Work.TrusteePermissionEndpoints.MapTrusteePermissions(api);
 Humo.Api.Finance.StatementEndpoints.MapStatements(api);
 Humo.Api.Documents.DocumentLinkEndpoints.MapDocumentLinks(api);

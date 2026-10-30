@@ -63,6 +63,7 @@ import { NOT_CONNECTED } from '../core/availability/not-connected';
 import { HttpSessionDataSource } from './http-session-data-source';
 import { HttpLibraryDataSource } from './http-library';
 import { HttpPayablesDataSource } from './http-payables';
+import { HttpStaffDataSource } from './http-staff';
 import { HttpPackageLimitsDataSource } from './http-package-limits';
 import { HttpOwnerInvoiceDataSource } from './http-owner-invoices';
 import { HttpDocumentTemplateDataSource, HttpPlatformTemplateDataSource, HttpSettingsDataSource } from './http-settings';
@@ -76,7 +77,6 @@ const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
   [ComplianceDataSource, 'ComplianceDataSource'],
   [ReportDataSource, 'ReportDataSource'],
   [OpsDataSource, 'OpsDataSource'],
-  [StaffDataSource, 'StaffDataSource'],
   [BudgetDataSource, 'BudgetDataSource'],
   [RulesDataSource, 'RulesDataSource'],
   [ContractorNetwork, 'ContractorNetwork'],
@@ -128,7 +128,6 @@ export function provideHttpData(): EnvironmentProviders {
       provide: NOT_CONNECTED,
       useValue: [
         '/finance/budgets',
-        '/staff',
         '/reports',
         '/governance/meetings',
         '/governance/resolutions',
@@ -158,6 +157,8 @@ export function provideHttpData(): EnvironmentProviders {
     { provide: JobDataSource, useClass: HttpJobDataSource },
     { provide: SupplierDataSource, useClass: HttpSupplierDataSource },
     { provide: PayablesDataSource, useClass: HttpPayablesDataSource },
+    // Staff: the team, workload and away cover.
+    { provide: StaffDataSource, useClass: HttpStaffDataSource },
     ...pending,
   ]);
 }

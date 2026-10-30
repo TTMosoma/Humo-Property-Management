@@ -132,7 +132,7 @@ export class StaffMemberPage {
     ];
   });
   protected readonly chain = computed<ChainLink[]>(() => [{ kind: 'Portfolio', label: 'Staff', route: '/staff' }, { kind: 'Person', label: this.d()?.name ?? '' }]);
-  protected readonly canCover = computed(() => !this.session.readOnly() && (this.session.can('Users.Manage') || this.session.identity().staffId === this.id()));
+  protected readonly canCover = computed(() => !this.session.readOnly() && (this.session.can('Users.Manage') || this.session.selfIds().includes(this.id())));
 
   protected readonly formatDate = formatDate;
   protected readonly dueLabel = dueLabel;

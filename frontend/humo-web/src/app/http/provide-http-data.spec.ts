@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { firstValueFrom } from 'rxjs';
-import { AccessDataSource, AccountDataSource, ApiError, BudgetDataSource, JobDataSource, describeFailure, MeetingDataSource, PayablesDataSource, PlatformTemplateDataSource, PolicyError, SchemeDataSource, SessionDataSource, SettingsDataSource, SignInError, StepUpAuthenticator, SupplierDataSource, TimelineDataSource } from '../domain';
+import { AccessDataSource, AccountDataSource, ApiError, BudgetDataSource, JobDataSource, describeFailure, MeetingDataSource, PayablesDataSource, PlatformTemplateDataSource, PolicyError, SchemeDataSource, SessionDataSource, SettingsDataSource, SignInError, StaffDataSource, StepUpAuthenticator, SupplierDataSource, TimelineDataSource } from '../domain';
 import { NOT_CONNECTED, notConnected } from '../core/availability/not-connected';
 import { provideHttpData } from './provide-http-data';
 
@@ -117,6 +117,21 @@ describe('Production data layer (provideHttpData)', () => {
     const suppliers = firstValueFrom(TestBed.inject(SupplierDataSource).list(['s-1']));
     http.expectOne('/api/suppliers?schemeIds=s-1').flush([]);
     expect(await suppliers).toEqual([]);
+  });
+
+  it('reads the team and sets away cover over HTTP', async () => {
+    const staff = TestBed.inject(StaffDataSource);
+    const team = firstValueFrom(staff.list());
+    http.expectOne({ method: 'GET', url: '/api/staff' }).flush([{ id: 'u-1', name: 'Priya' }]);
+    expect((await team)[0].name).toBe('Priya');
+    const set = firstValueFrom(staff.setCover('u-1', { coverId: 'u-2', from: '2026-11-02', to: '2026-11-06', reason: 'Leave' }));
+    const put = http.expectOne({ method: 'PUT', url: '/api/staff/u-1/cover' });
+    expect(put.request.body).toEqual({ coverId: 'u-2', from: '2026-11-02', to: '2026-11-06', reason: 'Leave' });
+    put.flush(null, { status: 204, statusText: 'No Content' });
+    await set;
+    const ended = firstValueFrom(staff.endCover('u-1'));
+    http.expectOne({ method: 'DELETE', url: '/api/staff/u-1/cover' }).flush(null, { status: 204, statusText: 'No Content' });
+    await ended;
   });
 
   it('pays suppliers over HTTP: bank details, batches, release with the payment file (D27)', async () => {
