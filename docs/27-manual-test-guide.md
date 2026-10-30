@@ -2,7 +2,7 @@
 
 **Purpose:** the checks the product owner runs by hand against the local stack before a release. The automated tests cover the rules; this guide covers what only a person can judge: the screens, the emails and SMS, and whether it all makes sense. Tick each box, and note anything that differs from **Expect**.
 
-**Last updated:** 22 October 2026 (slices 3a, secure statement links, D16–D22).
+**Last updated:** 31 October 2026 (sections 10 to 16: the demo agencies, supplier payments, Staff, Budgets, Reports).
 
 ## 0. Set up
 
@@ -88,6 +88,67 @@ Needs a Payfast **sandbox** merchant (register at sandbox.payfast.co.za, set a s
 ## 9. Notices (UTC fix)
 
 - [ ] Publish a notice with an end date. **Expect:** it publishes (this failed before 20 October) and shows in the resident portal until the end date.
+
+## 10. The demo agencies, and a passkey for each person
+
+Sections 11 to 16 use the development seed instead of a hand-made agency.
+
+1. With the services and the API running (section 0), load the demo agencies once (running it again changes nothing):
+   ```bash
+   dotnet run --project backend/src/Humo.Api -- seed-demo
+   ```
+2. Sign in by email link (Mailpit) as:
+   - `thandeka@acacia.example`: Agency Administrator;
+   - `priya@acacia.example`: Finance;
+   - `johan@acacia.example`: Portfolio Manager, Kingfisher Court only;
+   - `anele@mail.example`: an owner;
+   - `annette@fynbos.example`: Fynbos's administrator (Essentials).
+3. **Add a passkey for Thandeka and for Priya** (Settings › Security › *Add a passkey*; Windows Hello works on localhost). Bank details, trust accounts, releasing payments and recording a budget's approval all need one, and an SMS code isn't accepted for them.
+4. **Two people at once:** sign Thandeka in in a normal window and Priya in a private window (or another browser). Maker and checker needs both.
+
+- [ ] **A form that needs a passkey you don't have** (fixed 31 October 2026): as someone without one, Settings › Agency › Trust accounts › *Change* › *Change account*. **Expect:** the dialog says you have no passkey; *Set up a passkey* opens Security with the form closed, so *Add a passkey* is in view.
+
+## 11. Trust accounts
+
+- [ ] As Thandeka: Settings › Agency › Trust accounts. **Expect:** every scheme has a row (Scheme, Bank, Account number, Status), readable side by side.
+- [ ] *Change* a scheme's account (bank, 6-digit branch code, 7 to 12-digit account number), confirm with your passkey. **Expect:** saved; the status is *Awaiting bank letter*; the change is in the audit log as a security event.
+
+## 12. Supplier payments (D27)
+
+- [ ] As Priya: Finance › Payables › *Ready to pay*: select **SafeGuard Security**'s invoice and *Create payment batch*. **Expect:** refused: its bank details aren't verified.
+- [ ] As Priya: My work › Approvals › *Verify bank details — SafeGuard Security* (Thandeka entered them). **Expect:** the call-back instructions; approving asks for the passkey; SafeGuard's supplier page then says verified.
+- [ ] As Priya: select AquaFix's and GreenLeaf's Kingfisher Court invoices and create a batch. **Expect:** batch PB-KC-0001 with the verified accounts it will pay; for Priya it says someone else approves it.
+- [ ] As Thandeka: approve it (on Payables or in My work), then *Release and download the payment file* with the passkey. **Expect:** a CSV downloads (beneficiary, bank, branch code, account number, amount, references); the invoices move to *Paid*; Mailpit has a remittance advice for each supplier.
+- [ ] Make another batch, then change a supplier's bank details (Suppliers › the supplier › *Change bank details*) and verify them as the other person. **Expect:** releasing the batch is refused ("Bank details changed after this batch was made"); *Cancel batch* frees its invoices.
+
+## 13. Staff
+
+- [ ] As Thandeka: Portfolio › Staff. **Expect:** Thandeka, Priya and Johan with their schemes, open tasks and approvals waiting.
+- [ ] Open Priya: *Set away cover*, covered by Johan, from today. **Expect:** Priya's open tasks and messages move to Johan; approvals stay. Johan's row says he's covering.
+- [ ] *Priya is back*. **Expect:** what’s still open moves back to Priya.
+
+## 14. Budgets (D28)
+
+- [ ] As Priya: Finance › Budgets › *New budget* › Kingfisher Court, **This year's**. **Expect:** it asks for the financial year end (February unless it's set) and opens a draft for the current year, with lines from the levy roll.
+- [ ] *Spending before Humo PM*: a date last month and a few amounts. **Expect:** actuals include them; the bars and the variances update.
+- [ ] *Record the owners' approval*: the AGM's date and resolution, with the passkey. **Expect:** approved; *Add a line* and *Edit* are gone; the audit log has it as a security event.
+- [ ] *New budget* › **Next year's** at 7%. **Expect:** every line about 7% up (rounded to R100); *Record the owners' approval* is the main button (meetings aren't on the live system yet).
+- [ ] Settings › Levies & billing › Financial years: change Kingfisher Court's year end. **Expect:** saved.
+
+## 15. Reports and scheme health
+
+- [ ] As Thandeka: Reports. **Expect:** eleven reports; no resolutions register or compliance status yet.
+- [ ] Open *Age analysis*, *Debtors list* and *Scheme health*. **Expect:** figures that match the accounts (Lindiwe and Grace in arrears on Kingfisher Court); a totals row; *Export CSV* works.
+- [ ] Dashboard and Schemes. **Expect:** collection rate, arrears and the health rating agree with the *Scheme health* report (before 30 October every scheme read 100% collected).
+- [ ] As Annette (Essentials): Reports. **Expect:** no billing summary, receipts, supplier payments or debtors list (they need Professional).
+
+## 16. The screen check (runs in CI on every pull request)
+
+It signs in as each demo person and opens every page in their menu; any error fails it. To run it yourself, with the seeded API, Mailpit and `npm run start:api` running:
+```bash
+npm --prefix frontend/humo-web run e2e:screens
+```
+- [ ] **Expect:** six tests pass in a few minutes. A failure names the page and the error; the report is in `frontend/playwright-report`.
 
 ## Reporting back
 

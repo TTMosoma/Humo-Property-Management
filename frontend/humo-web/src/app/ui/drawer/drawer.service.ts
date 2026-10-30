@@ -1,6 +1,8 @@
 import { Injectable, Type, inject } from '@angular/core';
 import { Dialog, DialogRef } from '@angular/cdk/dialog';
 import { Overlay } from '@angular/cdk/overlay';
+import { NavigationStart, Router } from '@angular/router';
+import { filter } from 'rxjs';
 
 /**
  * Preview drawer: opens any record's summary on the right without leaving the
@@ -12,6 +14,17 @@ export class DrawerService {
   private readonly dialog = inject(Dialog);
   private readonly overlay = inject(Overlay);
   private current: DialogRef<unknown, unknown> | null = null;
+
+  constructor() {
+    // A drawer belongs to the page it was opened on: going to another page closes it, so it never covers the next one
+    // (e.g. "Set up a passkey" from a form that needs one).
+    // Only a new page: a list that keeps its filters in the query string stays as it is.
+    const router = inject(Router);
+    const path = (url: string) => url.split(/[?#]/)[0];
+    router.events.pipe(filter((e): e is NavigationStart => e instanceof NavigationStart)).subscribe((e) => {
+      if (path(e.url) !== path(router.url)) this.close();
+    });
+  }
 
   open<C, D>(component: Type<C>, data: D, ariaLabel: string): DialogRef<unknown, C> {
     // One drawer at a time: opening another replaces it (like moving through rows).
