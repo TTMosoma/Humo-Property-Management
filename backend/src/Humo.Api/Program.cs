@@ -196,6 +196,7 @@ Humo.Api.Work.WorkItemEndpoints.MapWorkItems(api);
 Humo.Api.Work.StaffEndpoints.MapStaff(api);
 Humo.Api.Finance.BudgetEndpoints.MapBudgets(api);
 Humo.Api.Portfolio.ReportEndpoints.MapReports(api);
+Humo.Api.Platform.FeatureSwitches.MapFeatureSwitches(api);
 Humo.Api.Governance.GovernanceEndpoints.MapGovernance(api);
 Humo.Api.Settings.ComplianceProfiles.MapComplianceProfiles(api);
 Humo.Api.Work.TrusteePermissionEndpoints.MapTrusteePermissions(api);

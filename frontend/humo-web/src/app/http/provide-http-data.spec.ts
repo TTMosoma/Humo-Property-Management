@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { firstValueFrom } from 'rxjs';
-import { AccessDataSource, AccountDataSource, ApiError, BudgetDataSource, ComplianceDataSource, JobDataSource, describeFailure, MeetingDataSource, PayablesDataSource, PlatformTemplateDataSource, PolicyError, SchemeDataSource, SessionDataSource, SettingsDataSource, SignInError, StaffDataSource, StepUpAuthenticator, SupplierDataSource, TimelineDataSource, ReportDataSource, RulesDataSource } from '../domain';
+import { AccessDataSource, AccountDataSource, ApiError, BudgetDataSource, ComplianceDataSource, JobDataSource, describeFailure, MeetingDataSource, PayablesDataSource, PlatformTemplateDataSource, PolicyError, SchemeDataSource, SessionDataSource, SettingsDataSource, SignInError, StaffDataSource, StepUpAuthenticator, SupplierDataSource, TimelineDataSource, ReportDataSource, RulesDataSource, OpsDataSource } from '../domain';
 import { NOT_CONNECTED, notConnected } from '../core/availability/not-connected';
 import { provideHttpData } from './provide-http-data';
 
@@ -133,6 +133,12 @@ describe('Production data layer (provideHttpData)', () => {
     expect(post.request.body).toEqual({ action: { type: 'send-notice' }, expectedVersion: 4 });
     post.flush(null, { status: 204, statusText: 'No Content' });
     await sent;
+  });
+
+  it('reads the feature switches from the API (receipt capture and import are on)', async () => {
+    const flags = firstValueFrom(TestBed.inject(OpsDataSource).myFlags());
+    http.expectOne({ method: 'GET', url: '/api/me/flags' }).flush({ 'receipt-capture': true });
+    expect((await flags)['receipt-capture']).toBe(true);
   });
 
   it('runs a report over HTTP, with the schemes and months', async () => {

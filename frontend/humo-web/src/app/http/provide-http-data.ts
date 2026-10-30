@@ -70,12 +70,12 @@ import { HttpDocumentTemplateDataSource, HttpPlatformTemplateDataSource, HttpSet
 import { notConnected, partlyConnected } from './not-connected';
 import { HttpBudgetDataSource, HttpComplianceProfiles } from './http-budgets';
 import { HttpReportDataSource } from './http-reports';
+import { HttpFeatureSwitches } from './http-flags';
 import { HttpMeetingDataSource, HttpResolutionDataSource } from './http-governance';
 
 /** Ports whose HTTP adapters come with later backend slices. Remove each from this list as its adapter lands. */
 const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
   [PaymentGateway, 'PaymentGateway'],
-  [OpsDataSource, 'OpsDataSource'],
   [RulesDataSource, 'RulesDataSource'],
   [ContractorNetwork, 'ContractorNetwork'],
 ];
@@ -164,6 +164,13 @@ export function provideHttpData(): EnvironmentProviders {
     // Governance: meetings, resolutions and their actions.
     { provide: MeetingDataSource, useClass: HttpMeetingDataSource },
     { provide: ResolutionDataSource, useClass: HttpResolutionDataSource },
+    // Feature switches come from the API; the rest of platform operations isn't on it yet.
+    HttpFeatureSwitches,
+    {
+      provide: OpsDataSource,
+      useFactory: (f: HttpFeatureSwitches) => partlyConnected<OpsDataSource>('OpsDataSource', { myFlags: () => f.myFlags() }),
+      deps: [HttpFeatureSwitches],
+    },
     // Staff: the team, workload and away cover.
     { provide: StaffDataSource, useClass: HttpStaffDataSource },
     ...pending,
