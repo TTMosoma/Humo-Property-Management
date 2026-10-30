@@ -59,6 +59,8 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
     public DbSet<PaymentBatchRow> PaymentBatches => Set<PaymentBatchRow>();
     public DbSet<StaffCoverRow> StaffCovers => Set<StaffCoverRow>();
     public DbSet<BudgetRow> Budgets => Set<BudgetRow>();
+    public DbSet<MeetingRow> Meetings => Set<MeetingRow>();
+    public DbSet<ResolutionRow> Resolutions => Set<ResolutionRow>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Notice> Notices => Set<Notice>();
     public DbSet<NoticeRead> NoticeReads => Set<NoticeRead>();
@@ -543,6 +545,29 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.HasIndex(x => new { x.SupplierId, x.Number }).IsUnique();
             e.HasIndex(x => new { x.SchemeId, x.Status });
             e.HasOne<SupplierRow>().WithMany().HasForeignKey(x => x.SupplierId);
+        });
+
+        builder.Entity<MeetingRow>(e =>
+        {
+            e.ToTable("Meetings");
+            e.Property(x => x.Ref).HasMaxLength(30);
+            e.Property(x => x.Type).HasMaxLength(10);
+            e.Property(x => x.Stage).HasMaxLength(20);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => new { x.OrganisationId, x.Ref }).IsUnique();
+            e.HasIndex(x => new { x.SchemeId, x.ScheduledFor });
+            e.HasOne<Scheme>().WithMany().HasForeignKey(x => x.SchemeId);
+        });
+
+        builder.Entity<ResolutionRow>(e =>
+        {
+            e.ToTable("Resolutions");
+            e.Property(x => x.Ref).HasMaxLength(30);
+            e.Property(x => x.Outcome).HasMaxLength(20);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => new { x.SchemeId, x.Number }).IsUnique();
+            e.HasIndex(x => x.MeetingId);
+            e.HasOne<Scheme>().WithMany().HasForeignKey(x => x.SchemeId);
         });
 
         builder.Entity<BudgetRow>(e =>

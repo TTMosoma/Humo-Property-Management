@@ -328,6 +328,9 @@ namespace Humo.Infrastructure.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Agm")
+                        .HasColumnType("text");
+
                     b.Property<string>("Approved")
                         .HasColumnType("text");
 
@@ -1401,6 +1404,54 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.ToTable("LibraryDocuments", (string)null);
                 });
 
+            modelBuilder.Entity("Humo.Infrastructure.Data.MeetingRow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Json")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Ref")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTimeOffset>("ScheduledFor")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("SchemeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Stage")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganisationId", "Ref")
+                        .IsUnique();
+
+                    b.HasIndex("SchemeId", "ScheduledFor");
+
+                    b.ToTable("Meetings", (string)null);
+                });
+
             modelBuilder.Entity("Humo.Infrastructure.Data.Membership", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2340,6 +2391,52 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.HasIndex("SchemeId", "Type");
 
                     b.ToTable("Relationships", (string)null);
+                });
+
+            modelBuilder.Entity("Humo.Infrastructure.Data.ResolutionRow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Json")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("MeetingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Ref")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<Guid>("SchemeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MeetingId");
+
+                    b.HasIndex("SchemeId", "Number")
+                        .IsUnique();
+
+                    b.ToTable("Resolutions", (string)null);
                 });
 
             modelBuilder.Entity("Humo.Infrastructure.Data.RoleAssignment", b =>
@@ -3790,6 +3887,15 @@ namespace Humo.Infrastructure.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Humo.Infrastructure.Data.MeetingRow", b =>
+                {
+                    b.HasOne("Humo.Infrastructure.Data.Scheme", null)
+                        .WithMany()
+                        .HasForeignKey("SchemeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Humo.Infrastructure.Data.Membership", b =>
                 {
                     b.HasOne("Humo.Infrastructure.Data.Organisation", null)
@@ -3900,6 +4006,15 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.HasOne("Humo.Infrastructure.Data.Unit", null)
                         .WithMany()
                         .HasForeignKey("UnitId");
+                });
+
+            modelBuilder.Entity("Humo.Infrastructure.Data.ResolutionRow", b =>
+                {
+                    b.HasOne("Humo.Infrastructure.Data.Scheme", null)
+                        .WithMany()
+                        .HasForeignKey("SchemeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Humo.Infrastructure.Data.RoleAssignment", b =>

@@ -48,8 +48,8 @@ public sealed class SchemeHealth(HumoDbContext db, TimeProvider clock)
 
 /// <summary>
 /// Reports (review finding F7) on the API: one catalogue, each report a table worked out from live records in the
-/// person's schemes. Reports.View, plus each report's own permission and plan feature. The resolutions register and
-/// compliance status wait for governance and compliance on the API, so they're not in the catalogue yet.
+/// person's schemes. Reports.View, plus each report's own permission and plan feature. Compliance status waits for
+/// compliance on the API, so it's not in the catalogue yet.
 /// </summary>
 public static class ReportEndpoints
 {
@@ -64,6 +64,7 @@ public static class ReportEndpoints
         new("collections", "Collection pipeline", "arrears", "How many accounts sit at each collection stage, per scheme.", "Billing.View", "credit-control"),
         new("jobs-by-stage", "Jobs by stage", "maintenance", "Open maintenance jobs per scheme, by stage, with what’s overdue.", "Maintenance.View", "reporting-basic"),
         new("supplier-performance", "Supplier performance", "maintenance", "Jobs, on-time rate, invoice vs quote and spend per supplier.", "Suppliers.View", "reporting-basic"),
+        new("resolutions", "Resolutions register", "governance", "Every resolution with its outcome and the progress of its actions.", "Governance.View", "governance"),
         new("scheme-health", "Scheme health", "portfolio", "Collections, arrears, jobs and rating for every scheme.", "Portfolio.View", "reporting-basic"),
         new("occupancy", "Units & occupancy", "portfolio", "Owner-occupied, tenanted and vacant units per scheme.", "Portfolio.View", "reporting-basic"),
     ];
@@ -93,7 +94,7 @@ public static class ReportEndpoints
     private static ReportColumnDto Col(string key, string label, string kind = "text", bool total = false) => new(key, label, kind, total);
 
     private static async Task<IResult> Run(string id, string[]? schemeIds, int? months, CurrentActor current, HumoDbContext db, Commercial.CommercialRecords commercial,
-        SchemeHealth health, MaintenanceService maintenance, CreditControl collections, TimeProvider clock, CancellationToken ct)
+        SchemeHealth health, MaintenanceService maintenance, CreditControl collections, Governance.Governance governance, TimeProvider clock, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         if ((await AllowedAsync(actor, commercial, ct)).FirstOrDefault(r => r.Id == id) is not { } def) return Problems.NotFound();
@@ -247,6 +248,21 @@ public static class ReportEndpoints
                 links = [.. schemes.Select(s => (string?)$"/schemes/{s.Id}/overview")];
                 notes.Add("Collected ≈ 1 − unpaid from the last 3 months ÷ 3 months’ levies.");
                 notes.Add("Ratings: at risk when collections are under 85%; watch when under 95%, or with accounts 90+ days or overdue jobs. Compliance joins the rating when it’s on Humo Property Management.");
+                break;
+            }
+            case "resolutions":
+            {
+                var views = (await governance.ResolutionViewsAsync(await db.Resolutions.Where(r => ids.Contains(r.SchemeId)).ToListAsync(ct), ct))
+                    .OrderByDescending(v => v.Resolution.ProposedAt).ToList();
+                var outcomes = new Dictionary<string, string> { ["passed"] = "Passed", ["not-passed"] = "Not passed", ["withdrawn"] = "Withdrawn" };
+                var progress = new Dictionary<string, string>
+                {
+                    ["awaiting-decision"] = "Awaiting trustees", ["not-passed"] = "Not passed", ["withdrawn"] = "Withdrawn", ["no-actions"] = "Passed", ["in-progress"] = "Actions open", ["completed"] = "Completed",
+                };
+                columns = [Col("ref", "Ref"), Col("title", "Resolution"), Col("scheme", "Scheme"), Col("outcome", "Outcome"), Col("actions", "Actions done"), Col("progress", "Progress")];
+                rows = [.. views.Select(v => Row(("ref", v.Resolution.Ref), ("title", v.Resolution.Title), ("scheme", v.Scheme.Name), ("outcome", outcomes.GetValueOrDefault(v.Resolution.Outcome, "Awaiting trustees")),
+                    ("actions", v.Actions.Count == 0 ? "—" : $"{v.Actions.Count(x => x.Status == "done")} of {v.Actions.Count}"), ("progress", progress[v.Progress])))];
+                links = [.. views.Select(v => (string?)(v.Meeting is { } m ? $"/governance/meetings/{m.Id}" : "/governance/resolutions"))];
                 break;
             }
             case "occupancy":

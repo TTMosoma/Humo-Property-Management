@@ -265,6 +265,7 @@ export class GovernanceStore {
         this.log(m, 'stage', `Moved to ${formatDate(action.scheduledFor)} at ${m.venue}`, by);
         break;
       case 'send-notice': {
+        // SIMULATED (docs/18 R-16): no notice is emailed.
         const recipients = m.type === 'trustee' ? m.attendees.filter((a) => a.role !== 'agent').length : scheme.unitCount;
         m.notice = { sentAt: new Date().toISOString(), sentBy: by, recipients, document: this.templateFor(scheme.organisationId, 'meeting-notice') };
         m.stage = 'notice-sent';

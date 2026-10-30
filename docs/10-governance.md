@@ -100,8 +100,17 @@ The seed's actions replace the old fixture tasks w28–w30 (same ids), so Tasks 
 |---|---|
 | Real round-robin voting | A written resolution passes on one trustee's approval in the simulation. The real rule (a majority of trustees signing) needs per-trustee votes on the approval. |
 | Proxies and owner attendance at general meetings | Captured as a count, not per owner; no proxy forms or voting by unit quota. |
-| Sending notice | Simulated: no email is sent, and the notice isn't published to the owner portal yet (Communications, Checkpoint 6/8). |
+| Sending notice | On the API (2 November 2026) the notice is emailed to the trustees, or to every current owner for a general meeting, and a cancellation tells them too; owners without an email are counted for the post. The prototype simulates it (docs/18 R-16). Not yet published to the owner portal. |
 | Meeting pack from the document library | Listed by name; the library comes with Checkpoint 7. |
 | Trustee boards, elections at AGMs, scheme rules | Still planned pages (Governance › Trustee boards, Rules). |
-| AGM checklist links | Budget approval from Budgets, insurance values from the valuer: planned. |
+| AGM checklist links | Budget approval: done (a budget put to the AGM is approved by the resolution passed on its agenda item, D28). Insurance values from the valuer: planned. |
 | Editing or rescinding a resolution after the minutes are approved | A rescinding resolution at a later meeting is the proper route; not built. |
+
+## 8. On the API (2 November 2026)
+
+- **Meetings:** `GET /meetings?schemeIds=…&view=upcoming|held|all`, `GET /meetings/{id}` (or its reference), `POST /meetings`, `POST /meetings/{id}/actions`. The API runs the lifecycle, the notice period (7 days for trustee meetings, 14 for general meetings) and quorum (a majority of the trustees; a third of the units at general meetings).
+- **Resolutions:** `GET /resolutions?schemeIds=…` (the register), `GET /resolutions/assignees`, `POST /resolutions/written`. A written resolution is decided by a trustee in My work (`resolution-approval`); minutes go to the trustees or the Agency Administrator (`minutes-approval`). Each action is a task in My work (`meeting-action`), and the register reads its status from there.
+- **Budgets at the AGM:** *Put it to the AGM* uses the AGM's *Budget and levies* item; the resolution passed on it approves the budget. Agencies without Governance (Essentials and Professional) record the owners' approval by hand (D28).
+- **Trustee elections** on the board cite a passed resolution of the scheme from the register.
+- **Reports:** the resolutions register is back in the catalogue.
+- Governance is in Enterprise; the API refuses meeting commands on other plans.

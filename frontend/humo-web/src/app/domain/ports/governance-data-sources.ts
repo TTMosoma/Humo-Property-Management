@@ -20,6 +20,7 @@ export abstract class MeetingDataSource {
   abstract get(id: string): Observable<MeetingDetail | undefined>;
   /** Returns the new meeting's id. */
   abstract create(input: NewMeeting): Observable<string>;
+  /** PRODUCTION: send-notice emails the trustees or owners, and cancel tells them after notice (docs/18 R-16). */
   abstract act(id: string, action: MeetingAction, expectedVersion?: number): Observable<void>;
 }
 

@@ -70,6 +70,8 @@ public static class BoardEndpoints
         var trustees = (await db.Relationships.Where(r => r.SchemeId == schemeId && r.Type == "trustee").ToListAsync(ct)).Where(reads.IsCurrent).ToList();
         var candidates = await CandidatesOf(schemeId, reads, db, ct);
         var target = Guid.TryParse(a.RelationshipId, out var rid) ? trustees.FirstOrDefault(r => r.Id == rid) : null;
+        // An election cites a passed resolution of this scheme, chosen from its register.
+        var cited = Guid.TryParse(a.ResolutionId, out var resId) ? await db.Resolutions.AsNoTracking().FirstOrDefaultAsync(r => r.Id == resId && r.SchemeId == schemeId, ct) : null;
         var name = async (Guid? personId) => personId is { } p ? await db.People.Where(x => x.Id == p).Select(x => x.DisplayName).FirstOrDefaultAsync(ct) : null;
         var what = a.Type switch
         {
@@ -85,7 +87,7 @@ public static class BoardEndpoints
             ResourceId = schemeId.ToString(),
             SchemeId = schemeId,
             Feature = "governance",
-            Validate = () => Check(a, trustees, target, candidates, reads.Today),
+            Validate = () => Check(a, trustees, target, candidates, reads.Today, cited),
         }, async actor =>
         {
             switch (a.Type)
@@ -96,8 +98,7 @@ public static class BoardEndpoints
                     {
                         Id = Guid.CreateVersion7(), PersonId = personId, Type = "trustee", SchemeId = schemeId, Portfolio = a.Portfolio,
                         Since = PeopleEndpoints.ParseDate(a.Since)!.Value, AppointmentHow = a.How,
-                        // Until the governance slice, an election cites its resolution by reference.
-                        ResolutionRef = a.How == "elected" ? a.ResolutionId?.Trim() : null,
+                        ResolutionRef = a.How == "elected" ? cited?.Ref ?? a.ResolutionId?.Trim() : null,
                     });
                     await GrantAccess(db, scheme, personId, a.Portfolio!, actor.User.Name, ct);
                     break;
@@ -119,7 +120,8 @@ public static class BoardEndpoints
         }, ct);
     }
 
-    private static Dictionary<string, string> Check(BoardActionRequest a, List<Relationship> current, Relationship? target, List<BoardCandidateDto> candidates, DateOnly today)
+    private static Dictionary<string, string> Check(BoardActionRequest a, List<Relationship> current, Relationship? target, List<BoardCandidateDto> candidates, DateOnly today,
+        ResolutionRow? cited)
     {
         var e = new Dictionary<string, string>();
         switch (a.Type)
@@ -132,6 +134,7 @@ public static class BoardEndpoints
                 else if (since > today) e["since"] = "Record the appointment once it has happened.";
                 if (a.How is not ("elected" or "co-opted")) e["how"] = "Elected or co-opted?";
                 else if (a.How == "elected" && string.IsNullOrWhiteSpace(a.ResolutionId)) e["resolutionId"] = "Elections are by resolution of the owners: give the resolution.";
+                else if (a.How == "elected" && Guid.TryParse(a.ResolutionId, out _) && cited is not { Outcome: "passed" }) e["resolutionId"] = "Choose a passed resolution of this scheme.";
                 break;
             case "end":
                 if (target is null) return new() { ["relationshipId"] = "They’re not on the board." };
