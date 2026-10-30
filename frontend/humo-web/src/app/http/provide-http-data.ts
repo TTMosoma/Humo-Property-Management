@@ -69,13 +69,13 @@ import { HttpOwnerInvoiceDataSource } from './http-owner-invoices';
 import { HttpDocumentTemplateDataSource, HttpPlatformTemplateDataSource, HttpSettingsDataSource } from './http-settings';
 import { notConnected, partlyConnected } from './not-connected';
 import { HttpBudgetDataSource, HttpComplianceProfiles } from './http-budgets';
+import { HttpReportDataSource } from './http-reports';
 
 /** Ports whose HTTP adapters come with later backend slices. Remove each from this list as its adapter lands. */
 const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
   [PaymentGateway, 'PaymentGateway'],
   [MeetingDataSource, 'MeetingDataSource'],
   [ResolutionDataSource, 'ResolutionDataSource'],
-  [ReportDataSource, 'ReportDataSource'],
   [OpsDataSource, 'OpsDataSource'],
   [RulesDataSource, 'RulesDataSource'],
   [ContractorNetwork, 'ContractorNetwork'],
@@ -126,7 +126,6 @@ export function provideHttpData(): EnvironmentProviders {
     {
       provide: NOT_CONNECTED,
       useValue: [
-        '/reports',
         '/governance/meetings',
         '/governance/resolutions',
         '/governance/rules',
@@ -163,6 +162,8 @@ export function provideHttpData(): EnvironmentProviders {
       useFactory: (p: HttpComplianceProfiles) => partlyConnected<ComplianceDataSource>('ComplianceDataSource', { profiles: (ids: string[]) => p.profiles(ids) }),
       deps: [HttpComplianceProfiles],
     },
+    // Reports: the catalogue and each report from live records (resolutions and compliance wait for their slices).
+    { provide: ReportDataSource, useClass: HttpReportDataSource },
     // Staff: the team, workload and away cover.
     { provide: StaffDataSource, useClass: HttpStaffDataSource },
     ...pending,

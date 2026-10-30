@@ -60,6 +60,10 @@ Trust account overrides live in `MockDb.trustAccount(scheme)`.
 - **Table:** sortable columns, with a totals row.
 - **Links:** rows open their record (scheme, run, supplier, debtor, meeting).
 - **Explaining the figures:** notes say how they were worked out.
+
+**On the API (30 October 2026):** `GET /reports` (the catalogue the person may run) and `GET /reports/{id}?schemeIds=…&months=…` (the report from live records, with its totals). The resolutions register and compliance status join the catalogue with the governance and compliance slices. Age analysis ages each account's actual transactions; levies billed come from the ledger. CSV export stays in the browser.
+
+**Scheme health** (the dashboard, the scheme pages and the report) is worked out by the API from the records: collected ≈ 1 − unpaid from the last three months ÷ three months' levies; arrears 30 days and older; accounts 90 days and more; open and overdue jobs. At risk under 85% collected; watch under 95%, or with accounts 90+ days or overdue jobs. Compliance joins the rating when it's on the API.
 - **Output:** *Export CSV* (raw values, UTF-8 with BOM, built in the browser) and *Print*.
 
 Every report is worked out from the same live records the screens use (`InMemoryReportDataSource`), so a report never disagrees with a page.

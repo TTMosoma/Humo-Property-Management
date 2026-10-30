@@ -13,10 +13,7 @@ public sealed record StaffRefDto(string IdentityId, string? StaffId, string Name
 public sealed record SchemeDto(string Id, int Version, string OrganisationId, string Name, string Code, string Type, string Status,
     string Suburb, string City, string Province, int UnitCount, StaffRefDto? PortfolioManager);
 
-/// <summary>
-/// Vital signs per scheme. Until the billing, maintenance, compliance and governance slices
-/// land there's nothing billed, owed, open or due, so a scheme reads as having none of those.
-/// </summary>
+/// <summary>Vital signs per scheme (worked out by <see cref="SchemeHealth"/>). Compliance reads as not applicable until it's on the API.</summary>
 public sealed record SchemeHealthDto(string SchemeId, double CollectionRate, decimal Arrears, int Accounts90Plus, decimal MonthlyLevyRoll,
     int OpenJobs, int OverdueJobs, string Compliance, int ComplianceOpenItems, string Rating);
 
@@ -51,13 +48,11 @@ public static partial class SchemeEndpoints
         return scheme is null ? Problems.NotFound() : Results.Ok((await ToDtos([scheme], db, ct))[0]);
     }
 
-    private static async Task<IResult> Health(CurrentActor current, HumoDbContext db, CancellationToken ct)
+    private static async Task<IResult> Health(CurrentActor current, HumoDbContext db, SchemeHealth health, CancellationToken ct)
     {
         var actor = await current.GetAsync(ct);
         if (actor is null) return Results.Unauthorized();
-        var ids = await Visible(actor, db).Select(s => s.Id).ToListAsync(ct);
-        var rolls = await db.Units.Where(u => ids.Contains(u.SchemeId)).GroupBy(u => u.SchemeId).Select(g => new { g.Key, Roll = g.Sum(u => u.MonthlyLevy) }).ToDictionaryAsync(x => x.Key, x => x.Roll, ct);
-        return Results.Ok(ids.Select(id => new SchemeHealthDto(id.ToString(), 100, 0, 0, rolls.GetValueOrDefault(id), 0, 0, "not-applicable", 0, "good")));
+        return Results.Ok(await health.ForAsync(await Visible(actor, db).Select(s => s.Id).ToListAsync(ct), ct));
     }
 
     private static async Task<IResult> Create(SchemeDetailsRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, TimeProvider clock, CancellationToken ct)
