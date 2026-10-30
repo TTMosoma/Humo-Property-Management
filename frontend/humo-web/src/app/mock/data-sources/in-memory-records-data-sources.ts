@@ -562,7 +562,10 @@ export class InMemoryBudgetDataSource extends BudgetDataSource {
   create(input: NewBudget): Observable<string> {
     return this.gateway.command(
       {
-        action: `Drafted next year’s budget for ${this.db.schemes.get(input.schemeId)?.name ?? input.schemeId} (${input.increasePct >= 0 ? '+' : ''}${input.increasePct}%)`,
+        action:
+          input.year === 'current'
+            ? `Captured this year’s budget for ${this.db.schemes.get(input.schemeId)?.name ?? input.schemeId}`
+            : `Drafted next year’s budget for ${this.db.schemes.get(input.schemeId)?.name ?? input.schemeId} (${input.increasePct >= 0 ? '+' : ''}${input.increasePct}%)`,
         resource: 'Budget',
         schemeId: input.schemeId,
         permission: 'Budgets.Manage',
@@ -575,7 +578,12 @@ export class InMemoryBudgetDataSource extends BudgetDataSource {
 
   act(id: string, action: BudgetAction, expectedVersion?: number): Observable<void> {
     const b = this.store.get(id);
-    const what = action.type === 'set-line' ? `Set ${action.category} to R ${action.annual.toLocaleString('en-ZA')}` : action.type === 'remove-line' ? `Removed ${action.category}` : 'Proposed it at the AGM';
+    const what =
+      action.type === 'set-line' ? `Set ${action.category} to R ${action.annual.toLocaleString('en-ZA')}`
+      : action.type === 'remove-line' ? `Removed ${action.category}`
+      : action.type === 'record-approval' ? `Recorded the owners’ approval (${action.resolutionRef}, ${action.approvedOn}) of`
+      : action.type === 'set-opening' ? `Set the spending before Humo Property Management (to ${action.to}) for`
+      : 'Proposed it at the AGM';
     return this.gateway
       .command(
         {
@@ -586,6 +594,8 @@ export class InMemoryBudgetDataSource extends BudgetDataSource {
           permission: 'Budgets.Manage',
           feature: 'budgets',
           version: { expected: expectedVersion, current: b?.version },
+          // Recording the owners' approval fixes the figures: a fresh passkey (D28).
+          ...(action.type === 'record-approval' ? { stepUp: true, category: 'security' as const } : {}),
           validate: () => this.store.check(id, action),
         },
         () => this.store.act(id, action, this.auth.current.identity.name),

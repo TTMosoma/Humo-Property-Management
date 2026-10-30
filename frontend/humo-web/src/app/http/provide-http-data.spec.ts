@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { firstValueFrom } from 'rxjs';
-import { AccessDataSource, AccountDataSource, ApiError, BudgetDataSource, JobDataSource, describeFailure, MeetingDataSource, PayablesDataSource, PlatformTemplateDataSource, PolicyError, SchemeDataSource, SessionDataSource, SettingsDataSource, SignInError, StaffDataSource, StepUpAuthenticator, SupplierDataSource, TimelineDataSource } from '../domain';
+import { AccessDataSource, AccountDataSource, ApiError, BudgetDataSource, ComplianceDataSource, JobDataSource, describeFailure, MeetingDataSource, PayablesDataSource, PlatformTemplateDataSource, PolicyError, SchemeDataSource, SessionDataSource, SettingsDataSource, SignInError, StaffDataSource, StepUpAuthenticator, SupplierDataSource, TimelineDataSource, ReportDataSource } from '../domain';
 import { NOT_CONNECTED, notConnected } from '../core/availability/not-connected';
 import { provideHttpData } from './provide-http-data';
 
@@ -50,7 +50,9 @@ describe('Production data layer (provideHttpData)', () => {
 
   it('ports without an API yet say so', async () => {
     await expect(firstValueFrom(TestBed.inject(MeetingDataSource).list(['s-1']))).rejects.toBeInstanceOf(ApiError);
-    await expect(firstValueFrom(TestBed.inject(BudgetDataSource).list(['s-1']))).rejects.toMatchObject({ kind: 'server' });
+    await expect(firstValueFrom(TestBed.inject(ReportDataSource).catalogue())).rejects.toMatchObject({ kind: 'server' });
+    // Compliance is partly on the API: the financial year end is, the rest isn't yet.
+    await expect(firstValueFrom(TestBed.inject(ComplianceDataSource).list(['s-1']))).rejects.toMatchObject({ kind: 'server' });
   });
   it('sets up and publishes a customer’s custom template over HTTP (D12, D23)', async () => {
     const templates = TestBed.inject(PlatformTemplateDataSource);
@@ -105,7 +107,8 @@ describe('Production data layer (provideHttpData)', () => {
     await added;
 
     const routes = TestBed.inject(NOT_CONNECTED);
-    expect(notConnected(routes, '/finance/budgets/b-1')).toBe(true);
+    expect(notConnected(routes, '/reports')).toBe(true);
+    expect(notConnected(routes, '/finance/budgets/b-1')).toBe(false);
     expect(notConnected(routes, '/finance/payables')).toBe(false);
     expect(notConnected(routes, '/finance/receipts')).toBe(false);
   });
@@ -117,6 +120,23 @@ describe('Production data layer (provideHttpData)', () => {
     const suppliers = firstValueFrom(TestBed.inject(SupplierDataSource).list(['s-1']));
     http.expectOne('/api/suppliers?schemeIds=s-1').flush([]);
     expect(await suppliers).toEqual([]);
+  });
+
+  it('reads budgets, the year end, and records the owners’ approval over HTTP (D28)', async () => {
+    const profiles = firstValueFrom(TestBed.inject(ComplianceDataSource).profiles(['s-1']));
+    http.expectOne({ method: 'GET', url: '/api/settings/compliance-profiles?schemeIds=s-1' }).flush([{ schemeId: 's-1', financialYearEnd: 2, hasLifts: false }]);
+    expect((await profiles)[0].financialYearEnd).toBe(2);
+    const budgets = TestBed.inject(BudgetDataSource);
+    const created = firstValueFrom(budgets.create({ schemeId: 's-1', year: 'current', increasePct: 0, financialYearEnd: 2 }));
+    const post = http.expectOne({ method: 'POST', url: '/api/budgets' });
+    expect(post.request.body).toEqual({ schemeId: 's-1', year: 'current', increasePct: 0, financialYearEnd: 2 });
+    post.flush({ id: 'b-1' }, { status: 201, statusText: 'Created' });
+    expect(await created).toBe('b-1');
+    const recorded = firstValueFrom(budgets.act('b-1', { type: 'record-approval', approvedOn: '2026-03-20', resolutionRef: 'AGM 2026 resolution 4' }, 3));
+    const act = http.expectOne({ method: 'POST', url: '/api/budgets/b-1/actions' });
+    expect(act.request.body).toEqual({ action: { type: 'record-approval', approvedOn: '2026-03-20', resolutionRef: 'AGM 2026 resolution 4' }, expectedVersion: 3 });
+    act.flush(null, { status: 204, statusText: 'No Content' });
+    await recorded;
   });
 
   it('reads the team and sets away cover over HTTP', async () => {

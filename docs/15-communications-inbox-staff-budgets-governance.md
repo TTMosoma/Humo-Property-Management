@@ -50,6 +50,11 @@ Checkpoint 10 builds the remaining pages that showed the "Not built yet" card: C
 - **No open AGM:** *Put it to the AGM* offers to schedule one.
 - **Approval cards:** maintenance approvals show the job's budget line with what's been spent.
 - **Permission:** new `Budgets.Manage` (Agency Administrator, Portfolio Manager, Finance).
+- **On the API (30 October 2026, D28):**
+  - The year end is the scheme's own setting (`Scheme.FinancialYearEnd`), asked for with the scheme's first budget.
+  - Until meetings are on the API, *Record the owners' approval* (the AGM's date and resolution, with a passkey) approves a budget; *Put it to the AGM* shows only where meetings work.
+  - *New budget* makes next year's draft, or captures this year's part-way: its lines, *Spending before Humo PM* up to a date, then the owners' approval.
+  - Levies actual comes from the ledger: what was billed in the year.
 
 **Scheme › Finance tab:** levy roll and last billing run, receipts (last 30 days, to allocate, suspense), arrears by collection stage, payables (awaiting approval, approved, in a batch, paid) and the scheme's budgets. Each section links to the agency-wide page.
 
@@ -114,7 +119,8 @@ Text written in this checkpoint follows [07 — Brand architecture](07-brand-arc
 | `GET /conversations`, `POST /conversations/{id}/actions`, `GET/POST /me/conversations` | `Messages.Reply` / `Resident.Portal` |
 | `GET /staff`, `GET /staff/{id}` | `Portfolio.Browse` |
 | `PUT /staff/{id}/cover`, `DELETE /staff/{id}/cover` | `Work.Manage` (+ `Users.Manage` for others) |
-| `GET /budgets`, `POST /budgets`, `POST /budgets/{id}/actions` | `Finance.View` / `Budgets.Manage` |
+| `GET /budgets`, `GET /budgets/{id}`, `POST /budgets`, `POST /budgets/{id}/actions` | `Finance.View` / `Budgets.Manage` (recording the owners' approval needs a fresh passkey) |
+| `GET /settings/compliance-profiles`, `PUT /settings/compliance-profiles/{schemeId}` | signed in / `Compliance.Manage` |
 | `GET /boards`, `GET /boards/{schemeId}`, `POST /boards/{schemeId}/actions` | `Governance.View` / `Meetings.Manage` |
 | `GET /rules/{schemeId}`, `POST /rules/{schemeId}/actions` | `Governance.View` / `Meetings.Manage` |
 | `GET /breaches`, `POST /breaches`, `POST /breaches/{id}/actions` | `Governance.View` / `Rules.Enforce` |

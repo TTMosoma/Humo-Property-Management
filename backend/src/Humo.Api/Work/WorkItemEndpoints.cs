@@ -9,7 +9,7 @@ namespace Humo.Api.Work;
 
 public sealed record WorkItemDto(string Id, string Ref, string Kind, string Type, string Title, string Detail, string SchemeId, decimal? Amount, int? Count, string CreatedAt, string DueAt,
     string? AssigneeId, IReadOnlyList<string> ApproverRoles, IReadOnlyList<string> Evidence, string Status, string? DecidedBy, string? DecidedAt, string? Comment, string Route,
-    string? HeldUntil = null, string? HeldBy = null, SecondAuthoriserDto? SecondAuthoriser = null);
+    string? HeldUntil = null, string? HeldBy = null, SecondAuthoriserDto? SecondAuthoriser = null, Finance.BudgetLineSpendDto? Budget = null);
 public sealed record WorkIdsRequest(List<string> Ids);
 public sealed record AssignRequest(List<string> Ids, string? AssigneeId);
 /// <param name="Alone">Approve alone under the trustees' permission (D24), when that's the only way.</param>
@@ -44,7 +44,7 @@ public static class WorkItemEndpoints
         g.MapPost("/{id:guid}/cancel-hold", CancelHold);
     }
 
-    private static async Task<IResult> List(CurrentActor current, HumoDbContext db, IEnumerable<IApprovalHandler> handlers, SoleAuthority sole, CancellationToken ct)
+    private static async Task<IResult> List(CurrentActor current, HumoDbContext db, IEnumerable<IApprovalHandler> handlers, SoleAuthority sole, Finance.Budgets budgets, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         if (actor.OrganisationId is not { } org || !actor.Can("Work.View")) return Results.Ok(Array.Empty<WorkItemDto>());
@@ -62,6 +62,10 @@ public static class WorkItemEndpoints
             if (w.Kind == "approval" && w.Status == "open" && w.SchemeId is not null && !dto.ApproverRoles.Contains(Domain.Access.Roles.Trustee)
                 && (await sole.StaffApproversAsync(w, ct)).Count <= 1)
                 dto = dto with { ApproverRoles = [.. dto.ApproverRoles, Domain.Access.Roles.Trustee] };
+            // Quotes and invoices waiting for a decision show the job's budget line and what's been spent (D28).
+            if (w.Kind == "approval" && w.Status == "open" && w.SchemeId is { } scheme && w.Type is "quote-approval" or "invoice-approval"
+                && await JobCategoryAsync(w, db, ct) is { } category)
+                dto = dto with { Budget = await budgets.LineForAsync(scheme, category, ct) };
             list.Add(dto);
         }
         return Results.Ok(list);
@@ -170,6 +174,14 @@ public static class WorkItemEndpoints
             SoleAuthority.CancelHold(item);
             return Task.FromResult(Results.NoContent());
         }, ct);
+    }
+
+    /// <summary>The category of the job a quote or invoice approval is about.</summary>
+    private static async Task<string?> JobCategoryAsync(WorkItemRow w, HumoDbContext db, CancellationToken ct)
+    {
+        var jobId = w.Type == "quote-approval" ? w.SourceId
+            : await db.SupplierInvoices.Where(i => i.ApprovalWorkItemId == w.Id).Select(i => i.JobId).FirstOrDefaultAsync(ct);
+        return jobId is { } id && await db.Jobs.FirstOrDefaultAsync(j => j.Id == id, ct) is { } row ? Maintenance.MaintenanceService.Read(row).Category : null;
     }
 
     internal static WorkItemDto ToDto(WorkItemRow w) => new(w.Id.ToString(), w.Ref, w.Kind, w.Type, w.Title, w.Detail, w.SchemeId?.ToString() ?? "", w.Amount, w.Count,

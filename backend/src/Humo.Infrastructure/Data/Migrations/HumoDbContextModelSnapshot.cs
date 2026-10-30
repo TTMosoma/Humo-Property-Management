@@ -322,6 +322,64 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.ToTable("BillingRuns", (string)null);
                 });
 
+            modelBuilder.Entity("Humo.Infrastructure.Data.BudgetRow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Approved")
+                        .HasColumnType("text");
+
+                    b.Property<string>("BroughtForward")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<DateOnly>("From")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Lines")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SchemeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateOnly>("To")
+                        .HasColumnType("date");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Year")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SchemeId", "From")
+                        .IsUnique();
+
+                    b.ToTable("Budgets", (string)null);
+                });
+
             modelBuilder.Entity("Humo.Infrastructure.Data.CollectionCaseRow", b =>
                 {
                     b.Property<Guid>("AccountId")
@@ -2364,6 +2422,12 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int?>("FinancialYearEnd")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("HasLifts")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -3598,6 +3662,15 @@ namespace Humo.Infrastructure.Data.Migrations
                 });
 
             modelBuilder.Entity("Humo.Infrastructure.Data.BillingRunRow", b =>
+                {
+                    b.HasOne("Humo.Infrastructure.Data.Scheme", null)
+                        .WithMany()
+                        .HasForeignKey("SchemeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Humo.Infrastructure.Data.BudgetRow", b =>
                 {
                     b.HasOne("Humo.Infrastructure.Data.Scheme", null)
                         .WithMany()

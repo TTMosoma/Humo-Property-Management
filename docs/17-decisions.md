@@ -626,6 +626,24 @@ Approved on 18 October 2026 by Terry Mosoma (product owner). Options and reasons
 
 ---
 
+## D28 — Budgets on the live system before meetings are (30 October 2026)
+
+**Status:** approved by the product owner (Terry Mosoma).
+
+**The problem:** owners approve a scheme's budget at the AGM, and in the prototype the passed resolution approves it. Meetings and resolutions aren't on the API yet (the Governance slice). Budgets also need each scheme's financial year, and agencies moving onto the live system already have this year's budget, approved before they arrived.
+
+**Decision:**
+1. **The owners' approval is recorded by hand** until meetings are on the API: the date of the AGM and the resolution's reference, from the signed minutes. It needs a fresh passkey, it's in the security log, and the figures are fixed after it. When Governance lands, *Put it to the AGM* works on the live system as in the prototype, and recording by hand stays for budgets approved outside Humo PM.
+2. **The financial year end is a scheme setting.** It's asked for the first time a budget is made for the scheme (February by default), and changed in Settings › Levies & billing. Compliance will use the same setting.
+3. **This year's budget can be captured part-way**, for a scheme new to Humo PM: its lines, then the spending before Humo PM up to a date (and the levies billed), then the owners' approval. Actuals count Humo PM's own records from the day after, so they're right from day one.
+
+**Consequences:**
+- API: `GET /budgets`, `GET /budgets/{id}`, `POST /budgets` (this year's or next year's), `POST /budgets/{id}/actions` (set or remove a line; `record-approval`; `set-opening`; `propose` is refused until meetings are on the API); `GET /settings/compliance-profiles`, `PUT /settings/compliance-profiles/{schemeId}`.
+- Approval cards for quotes and invoices show the job's budget line with what's been spent and committed.
+- Levies actual is what the ledger billed in the year (plus the levies before Humo PM for a captured year), not an estimate from the levy roll.
+
+---
+
 ## Still open (needs domain expertise before slice 2)
 
 - **Levies and participation quotas:** decided per scheme in **D13**. Still open: interest rules, special levies, VAT.

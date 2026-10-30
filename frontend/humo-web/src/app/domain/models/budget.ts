@@ -38,7 +38,8 @@ export interface Budget {
   updatedAt: string;
   /** While proposed: the AGM and its agenda item. */
   agm?: { meetingId: string; meetingRef: string; agendaItemId: string };
-  approved?: { at: string; resolutionRef: string; meetingId?: string };
+  /** `meetingId` when the AGM in Humo PM passed it; `recordedBy` when it was recorded by hand (D28). */
+  approved?: { at: string; resolutionRef: string; meetingId?: string; recordedBy?: string };
   /**
    * Spending before the scheme moved to Humo PM, imported from the previous
    * system when it was onboarded: by category, up to `to` (yyyy-mm-dd).
@@ -73,10 +74,18 @@ export interface BudgetView {
 export type BudgetAction =
   | { type: 'set-line'; category: string; kind: 'income' | 'expense'; annual: number }
   | { type: 'remove-line'; category: string }
-  | { type: 'propose'; meetingId: string };
+  | { type: 'propose'; meetingId: string }
+  /** The owners approved it at an AGM, recorded by hand (D28): a fresh passkey; the figures are fixed after this. */
+  | { type: 'record-approval'; approvedOn: string; resolutionRef: string }
+  /** A year captured part-way: spending before Humo PM, up to `to` (yyyy-mm-dd), by line (D28). */
+  | { type: 'set-opening'; to: string; amounts: Record<string, number> };
 
 export interface NewBudget {
   schemeId: string;
-  /** Start from the current year's budget, increased by this %. */
+  /** Next year's (the default), or this year's, captured part-way to record as approved (D28). */
+  year?: 'current' | 'next';
+  /** Next year's: start from the current year's budget, increased by this %. */
   increasePct: number;
+  /** The month the scheme's financial year ends, asked the first time (it's a scheme setting after that). */
+  financialYearEnd?: number;
 }

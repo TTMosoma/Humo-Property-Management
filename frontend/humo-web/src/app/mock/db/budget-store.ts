@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Budget, BudgetAction, BudgetLine, BudgetLineView, BudgetView, FieldErrors, Invoice, NewBudget, financialYearLabel } from '../../domain';
+import { Budget, BudgetAction, BudgetLine, BudgetLineView, BudgetView, FieldErrors, Invoice, NewBudget, financialYearLabel, todaySA } from '../../domain';
 import { simulationStorage } from '../simulation/simulation-storage';
 import { ComplianceStore } from './compliance-store';
 import { GovernanceStore } from './governance-store';
@@ -188,20 +188,29 @@ export class BudgetStore {
   checkCreate(input: NewBudget): FieldErrors | null {
     const e: FieldErrors = {};
     if (!this.db.schemes.has(input.schemeId)) return { schemeId: 'Choose a scheme.' };
-    const next = this.year(input.schemeId, 1);
-    if (this.budgets.some((b) => b.schemeId === input.schemeId && b.from === next.from)) e['schemeId'] = `There’s already a ${next.label} budget for this scheme.`;
-    if (!(input.increasePct >= -20 && input.increasePct <= 30)) e['increasePct'] = 'Between −20% and 30%.';
+    const current = input.year === 'current';
+    const y = this.year(input.schemeId, current ? 0 : 1);
+    const set = this.compliance.profile(input.schemeId).financialYearEnd;
+    if (input.financialYearEnd !== undefined && input.financialYearEnd !== set) e['financialYearEnd'] = 'The scheme’s year end is set already: change it in Settings › Levies & billing first.';
+    if (this.budgets.some((b) => b.schemeId === input.schemeId && b.from === y.from)) e['schemeId'] = `There’s already a ${y.label} budget for this scheme.`;
+    if (!current && !(input.increasePct >= -20 && input.increasePct <= 30)) e['increasePct'] = 'Between −20% and 30%.';
     return Object.keys(e).length ? e : null;
   }
 
   create(input: NewBudget, by: string): string {
+    const current = input.year === 'current';
     const now = this.year(input.schemeId);
-    const next = this.year(input.schemeId, 1);
-    const base = this.budgets.find((b) => b.schemeId === input.schemeId && b.from === now.from);
+    const y = current ? now : this.year(input.schemeId, 1);
+    const base = current ? undefined : this.budgets.find((b) => b.schemeId === input.schemeId && b.from === now.from);
     const f = 1 + input.increasePct / 100;
     const lines = base ? base.lines.map((l) => ({ ...l, annual: Math.round((l.annual * f) / 100) * 100 })) : this.defaultLines(input.schemeId);
     const id = `bud-${++this.seq}`;
-    this.budgets.push({ id, version: 1, schemeId: input.schemeId, year: next.label, from: next.from, to: next.to, status: 'draft', lines, createdBy: by, updatedAt: new Date().toISOString() });
+    const yesterday = iso(new Date(Date.now() - 86_400_000));
+    this.budgets.push({
+      id, version: 1, schemeId: input.schemeId, year: y.label, from: y.from, to: y.to, status: 'draft', lines, createdBy: by, updatedAt: new Date().toISOString(),
+      // This year, captured part-way: the spending before Humo PM is entered next (D28).
+      ...(current ? { broughtForward: { to: yesterday < y.from ? y.from : yesterday, amounts: {} } } : {}),
+    });
     this.commit();
     return id;
   }
@@ -209,6 +218,17 @@ export class BudgetStore {
   check(id: string, a: BudgetAction): FieldErrors | null {
     const b = this.get(id);
     if (!b) return { id: 'This budget no longer exists.' };
+    if (a.type === 'set-opening') {
+      if (b.from > todaySA()) return { id: 'The year hasn’t started: there’s no spending before Humo Property Management to enter.' };
+      if (!a.to || a.to < b.from || a.to > todaySA()) return { to: 'A date in the year, up to today.' };
+      if (Object.values(a.amounts).some((n) => !(n >= 0))) return { amounts: 'Amounts of R 0 or more.' };
+      return null;
+    }
+    if (a.type === 'record-approval') {
+      if (b.status === 'approved') return { id: 'It’s already approved.' };
+      if (!a.approvedOn || a.approvedOn > todaySA()) return { approvedOn: 'The date of the meeting, today or earlier.' };
+      return a.resolutionRef.trim().length < 3 ? { resolutionRef: 'The resolution’s number or the minutes’ reference.' } : null;
+    }
     if (b.status === 'approved') return { id: 'An approved budget can’t change: the owners approved these figures.' };
     if (b.status === 'proposed' && a.type !== 'propose') return { id: 'It’s on the AGM agenda: the figures are what the owners will vote on.' };
     switch (a.type) {
@@ -251,6 +271,13 @@ export class BudgetStore {
         b.status = 'proposed';
         break;
       }
+      case 'record-approval':
+        b.status = 'approved';
+        b.approved = { at: a.approvedOn, resolutionRef: a.resolutionRef.trim(), recordedBy: by };
+        break;
+      case 'set-opening':
+        b.broughtForward = { to: a.to, amounts: Object.fromEntries(Object.entries(a.amounts).filter(([, n]) => n > 0)) };
+        break;
     }
     b.updatedAt = new Date().toISOString();
     b.version++;
