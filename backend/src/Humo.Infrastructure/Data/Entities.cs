@@ -851,6 +851,12 @@ public sealed class IssuedStatement
     /// <summary>How it went out last: email, portal or post.</summary>
     public string? SentBy { get; set; }
     public DateTimeOffset? SentAt { get; set; }
+    /// <summary>
+    /// Replaced by a statement for the same month addressed to the account's new holder (the unit changed hands after
+    /// this was issued). Kept as the record of what was sent; it no longer counts as the month's statement.
+    /// </summary>
+    public DateTimeOffset? ReplacedAt { get; set; }
+    public string? ReplacedBy { get; set; }
 }
 
 /// <summary>A person's own notification preferences (Settings › My profile). No row: the defaults.</summary>

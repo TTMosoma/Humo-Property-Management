@@ -76,7 +76,7 @@
           <p class="small muted">Cancelled by {{ b.batch.cancelledBy }} {{ formatDate(b.batch.cancelledAt, true) }}: {{ b.batch.cancelReason }}. Its invoices are ready to pay again.</p>
         }
         @case ('rejected') {
-          <p class="small muted">Rejected in My work{{ b.approvalItem?.comment ? ': ' + b.approvalItem?.comment : '' }}. Its invoices are ready to pay again.</p>
+          <p class="small muted">Rejected in My work{{ b.approvalItem?.comment ? ': ' + b.approvalItem.comment : '' }}. Its invoices are ready to pay again.</p>
         }
       }
       @if (b.batch.status === 'awaiting-approval' && canPay()) {

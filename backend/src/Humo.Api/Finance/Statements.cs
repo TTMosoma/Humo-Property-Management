@@ -91,7 +91,7 @@ public sealed class StatementService(HumoDbContext db, Commercial.CommercialReco
     /// <summary>The issued statement for the period, or a new one (not yet saved). Issuing is once per account per month.</summary>
     public async Task<IssuedStatement?> IssueAsync(LevyAccount account, string period, string by, Guid? runId, CancellationToken ct)
     {
-        if (await db.IssuedStatements.FirstOrDefaultAsync(s => s.AccountId == account.Id && s.Period == period, ct) is { } existing) return existing;
+        if (await db.IssuedStatements.FirstOrDefaultAsync(s => s.AccountId == account.Id && s.Period == period && s.ReplacedAt == null, ct) is { } existing) return existing;
         if (await DraftAsync(account, period, Today, ct) is not { } snapshot) return null;
         var json = JsonSerializer.Serialize(snapshot, Json.Options);
         var issued = new IssuedStatement
@@ -104,10 +104,27 @@ public sealed class StatementService(HumoDbContext db, Commercial.CommercialReco
         return issued;
     }
 
+    /// <summary>
+    /// The month's statement was issued to someone who no longer holds the account: it's marked replaced (kept as the
+    /// record of what was sent), so the next issue makes one for the holder now. Returns whether it replaced one.
+    /// </summary>
+    public async Task<bool> ReplaceForNewHolderAsync(LevyAccount account, string period, string by, CancellationToken ct)
+    {
+        if (account.HolderPersonId is not { } holder
+            || await db.IssuedStatements.FirstOrDefaultAsync(s => s.AccountId == account.Id && s.Period == period && s.ReplacedAt == null, ct) is not { } issued) return false;
+        var addressedTo = JsonSerializer.Deserialize<StatementSnapshot>(issued.Snapshot, Json.Options)!.View.Holder.Id;
+        if (addressedTo == holder.ToString()) return false;
+        issued.ReplacedAt = clock.GetUtcNow();
+        issued.ReplacedBy = by;
+        // Saved now, so the corrected statement for the month can be issued in the same change.
+        await db.SaveChangesAsync(ct);
+        return true;
+    }
+
     /// <summary>The view the app shows: as issued (from the snapshot, unchanged), or as it stands in the ledger.</summary>
     public async Task<JsonNode?> ViewAsync(LevyAccount account, string period, CancellationToken ct)
     {
-        if (await db.IssuedStatements.AsNoTracking().FirstOrDefaultAsync(s => s.AccountId == account.Id && s.Period == period, ct) is { } issued)
+        if (await db.IssuedStatements.AsNoTracking().FirstOrDefaultAsync(s => s.AccountId == account.Id && s.Period == period && s.ReplacedAt == null, ct) is { } issued)
         {
             var snapshot = JsonNode.Parse(issued.Snapshot)!;
             var view = snapshot["view"]!.DeepClone();
@@ -384,7 +401,7 @@ public static class StatementEndpoints
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         if (!IsPeriod(period) || await AccountEndpoints.Readable(actor, db, id, ct) is not { } account) return Problems.NotFound();
-        if (await db.IssuedStatements.FirstOrDefaultAsync(s => s.AccountId == id && s.Period == period, ct) is not { } issued) return Problems.NotFound();
+        if (await db.IssuedStatements.FirstOrDefaultAsync(s => s.AccountId == id && s.Period == period && s.ReplacedAt == null, ct) is not { } issued) return Problems.NotFound();
         var pdf = await statements.PdfAsync(issued, ct);
         return Results.File(pdf, "application/pdf", $"{account.AccountNo}-{period}.pdf");
     }
@@ -411,6 +428,9 @@ public static class StatementEndpoints
                 : [],
         }, async actor =>
         {
+            // Issued to someone who no longer holds the account (the unit changed hands): a corrected statement for
+            // the month, addressed to the holder now. The previous owner's details never go to the new owner.
+            await statements.ReplaceForNewHolderAsync(account, period, actor.Human.Name, ct);
             var issued = (await statements.IssueAsync(account, period, actor.Human.Name, null, ct))!;
             issued.SentBy = "email";
             issued.SentAt = clock.GetUtcNow();

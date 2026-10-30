@@ -200,6 +200,36 @@ public sealed class StatementTests : IDisposable
     }
 
     [Fact]
+    public async Task After_the_unit_changes_hands_resending_issues_a_statement_for_the_new_owner()
+    {
+        var s = await Scheme();
+        await PostedRun(s);
+        Assert.Equal(HttpStatusCode.OK, (await s.Finance.PostAsync($"/api/accounts/{s.Account42}/statements/2026-11/send", null)).StatusCode);
+        await HumoApiFactory.Until(() => api.Email.Sent.Any(m => m.To == "sipho@mail.example"));
+
+        // Sold: the buyer replaces Sipho and holds the account.
+        var unit = await api.Db(db => db.LevyAccounts.Where(a => a.Id == s.Account42).Select(a => a.UnitId).SingleAsync());
+        Assert.Equal(HttpStatusCode.Created, (await s.Admin.PostAsJsonAsync("/api/people", new
+        {
+            details = new { firstName = "Tshwari", lastName = "Mosoma", kind = "individual", email = "tshwari@mail.example", phone = "078 587 3841", preferredChannel = "email" },
+            link = new { type = "owner", schemeId = s.Kc.ToString(), unitId = unit.ToString(), since = "2026-10-30", ownership = "replaces" },
+        })).StatusCode);
+
+        // Resending goes to the new owner, addressed to them; Sipho's statement stays on record as replaced.
+        Assert.Equal(HttpStatusCode.OK, (await s.Finance.PostAsync($"/api/accounts/{s.Account42}/statements/2026-11/send", null)).StatusCode);
+        await HumoApiFactory.Until(() => api.Email.Sent.Any(m => m.To == "tshwari@mail.example"));
+        var mail = api.Email.Sent.Single(m => m.To == "tshwari@mail.example");
+        Assert.Contains("Tshwari", mail.Text);
+        Assert.DoesNotContain("Sipho", mail.Text);
+        Assert.Single(api.Email.Sent, m => m.To == "sipho@mail.example");
+        var statements = await api.Db(db => db.IssuedStatements.Where(x => x.AccountId == s.Account42 && x.Period == "2026-11").Select(x => x.ReplacedAt).ToListAsync());
+        Assert.Equal(2, statements.Count);
+        Assert.Single(statements, r => r is not null);
+        var view = await Ok(await s.Finance.GetAsync($"/api/accounts/{s.Account42}/statements/2026-11"));
+        Assert.Contains("Tshwari", view.GetProperty("holder").GetProperty("displayName").GetString());
+    }
+
+    [Fact]
     public async Task Staff_revoke_an_emailed_statement_link_and_it_stops_working()
     {
         var s = await Scheme();

@@ -372,8 +372,10 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.Property(x => x.PdfSha256).HasMaxLength(64);
             e.Property(x => x.IssuedBy).HasMaxLength(200);
             e.Property(x => x.SentBy).HasMaxLength(10);
-            // One statement per account per month: issuing twice is refused by the database too.
-            e.HasIndex(x => new { x.AccountId, x.Period }).IsUnique();
+            e.Property(x => x.ReplacedBy).HasMaxLength(200);
+            // One current statement per account per month: issuing twice is refused by the database too. A statement
+            // replaced for a new holder stays, outside the rule.
+            e.HasIndex(x => new { x.AccountId, x.Period }).IsUnique().HasFilter("\"ReplacedAt\" IS NULL");
             e.HasIndex(x => new { x.SchemeId, x.Period });
             e.HasIndex(x => x.BillingRunId);
             e.HasOne<LevyAccount>().WithMany().HasForeignKey(x => x.AccountId);
