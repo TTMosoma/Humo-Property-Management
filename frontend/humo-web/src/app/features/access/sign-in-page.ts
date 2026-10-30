@@ -140,6 +140,11 @@ export class SignInPage {
       next: (askTrust) => this.signedIn(askTrust, 'done'),
       error: (e: unknown) => {
         const code = e instanceof SignInError ? e.code : 'no-passkey';
+        // No passkey to ask for: the emailed link is the way in, so send it rather than fail first.
+        if (code === 'no-passkeys' && email) {
+          this.sendLink();
+          return;
+        }
         this.step.set(code === 'paused' ? 'paused' : code === 'cancelled' ? 'start' : code === 'unavailable' ? 'unavailable' : 'no-passkey');
       },
     });

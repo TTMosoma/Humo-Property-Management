@@ -51,6 +51,9 @@ Sarah Jacobs has **one** identity with four assignments:
 - Humo roles never appear in customer screens, and the customer-side picker cannot offer them.
 - **Nobody can change their own roles.** The UI blocks it and the mock API refuses it too.
 - Granting **Agency Administrator** is the "add an administrator" step-up action.
+- **Owners and tenants:** once someone signs in, their access follows the units they're on, as a trustee's follows the board (D2). Adding them to another unit gives them that unit's portal at once (switch between units from their name, like a role); when they stop owning or renting a unit, its access ends (on the day it ends, by the API's minute loop). Inviting someone who doesn't sign in yet is still a separate step.
+
+**Signing in:** *Continue* asks for a passkey only when the account has one; otherwise it emails the one-time link straight away. An address with no account gets the same answer, so the screen never reveals who has an account (docs/18 R-8).
 
 ## 3. Permissions
 
