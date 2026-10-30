@@ -189,12 +189,12 @@ export class AgencySettingsPage {
   protected readonly canManage = computed(() => this.session.can('Organisation.Manage') && !this.session.readOnly());
 
   protected readonly columns: ColumnDef<SchemeTrustAccount>[] = [
-    { key: 'scheme', header: 'Scheme', mobile: 'title', sort: (t) => t.scheme.name },
-    { key: 'bank', header: 'Bank', width: '30%' },
-    { key: 'number', header: 'Account number', width: '170px' },
-    { key: 'verified', header: '', width: '170px', sort: (t) => (t.verified ? 1 : 0) },
-    { key: 'online', header: 'Online payments', width: '170px' },
-    { key: 'action', header: '', align: 'end', width: '200px' },
+    { key: 'scheme', header: 'Scheme', mobile: 'title', width: '20%', sort: (t) => t.scheme.name },
+    { key: 'bank', header: 'Bank', width: '24%' },
+    { key: 'number', header: 'Account number', width: '140px' },
+    { key: 'verified', header: 'Status', width: '150px', sort: (t) => (t.verified ? 1 : 0) },
+    { key: 'online', header: 'Online payments', width: '140px' },
+    { key: 'action', header: '', align: 'end', width: '170px' },
   ];
   protected readonly rowId = (t: SchemeTrustAccount) => t.scheme.id;
 
