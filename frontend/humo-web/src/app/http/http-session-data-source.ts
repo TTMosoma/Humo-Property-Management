@@ -45,7 +45,12 @@ export class HttpSessionDataSource extends SessionDataSource {
   signInWithPasskey(emailHint?: string): Observable<boolean> {
     if (!webAuthnJson()) return throwError(() => new SignInError('no-passkey', 'This browser can’t use passkeys'));
     return this.http.post<PublicKeyCredentialRequestOptionsJSON>(`${this.base}/auth/passkey/options`, { email: emailHint ?? null }, { withCredentials: true }).pipe(
-      switchMap((options) => from(navigator.credentials.get({ publicKey: PublicKeyCredential.parseRequestOptionsFromJSON(options) }))),
+      // An account with no passkey (or no account: the same answer) has nothing to ask the browser for.
+      switchMap((options) =>
+        emailHint && !options.allowCredentials?.length
+          ? throwError(() => new SignInError('no-passkeys', 'There’s no passkey for that account'))
+          : from(navigator.credentials.get({ publicKey: PublicKeyCredential.parseRequestOptionsFromJSON(options) })),
+      ),
       switchMap((credential) => this.http.post<SignInResult>(`${this.base}/auth/passkey`, { credential: (credential as PublicKeyCredential).toJSON() }, { withCredentials: true })),
       switchMap((result) => this.reload().pipe(map(() => result.askBrowserTrust))),
       catchError((e: unknown) => throwError(() => signInError(e, 'no-passkey'))),

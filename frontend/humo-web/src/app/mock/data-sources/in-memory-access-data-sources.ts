@@ -584,6 +584,8 @@ export class InMemorySessionDataSource extends SessionDataSource {
     const email = emailHint?.trim().toLowerCase();
     const who = email ? this.store.identities().find((i) => i.email.toLowerCase() === email) : this.store.identity(this.auth.deviceIdentityId());
     const hasPasskey = !!who && (this.store.security()[who.id]?.passkeys.length ?? 0) > 0;
+    // An account with no passkey (or no account) isn't sent to the browser's prompt: straight to the emailed link.
+    if (email && (!hasPasskey || who?.status === 'invited')) return throwError(() => new SignInError('no-passkeys', 'There’s no passkey for that account'));
     return timer(1400).pipe(
       switchMap(() => {
         if (!who || !hasPasskey || who.status === 'invited') {

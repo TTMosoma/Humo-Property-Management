@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Humo.Api.Commands;
+using Humo.Domain.Access;
 using Humo.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -136,10 +137,11 @@ public static partial class PeopleEndpoints
             ResourceId = id.ToString(),
             SchemeId = scheme?.Id,
             Validate = () => errors,
-        }, _ =>
+        }, async actor =>
         {
             Link(db, id, link);
-            return Task.FromResult(Results.NoContent());
+            await SyncResidentAccessAsync(db, reads, id, actor.Human.Name, ct);
+            return Results.NoContent();
         }, ct);
     }
 
@@ -168,6 +170,7 @@ public static partial class PeopleEndpoints
         {
             rel.Until = until;
             await HandOverAccountAsync(db, reads, rel, ct);
+            await SyncResidentAccessAsync(db, reads, rel.PersonId, actor.Human.Name, ct);
             return Results.NoContent();
         }, ct);
     }
@@ -227,6 +230,7 @@ public static partial class PeopleEndpoints
             db.Relationships.Remove(rel);
             rel.Until = DateOnly.MinValue;
             await HandOverAccountAsync(db, reads, rel, ct, removed: true);
+            await SyncResidentAccessAsync(db, reads, rel.PersonId, actor.Human.Name, ct);
             return Results.NoContent();
         }, ct);
     }
@@ -258,6 +262,62 @@ public static partial class PeopleEndpoints
         var next = (await db.Relationships.Where(r => r.UnitId == unitId && r.Type == "owner" && r.Id != ended.Id).ToListAsync(ct)).Where(reads.IsCurrent).OrderBy(r => r.Since).FirstOrDefault();
         if (next is not null) account.HolderPersonId = next.PersonId;
         else if (removed) account.HolderPersonId = null;
+    }
+
+    /// <summary>
+    /// An owner's or tenant's portal access follows the units they're on (as a trustee's follows the board, D2): someone
+    /// who signs in gets access to each unit they own or rent now, and loses it to a unit once they're no longer on it.
+    /// Only for people who already sign in; inviting someone new stays a separate step.
+    /// </summary>
+    public static async Task SyncResidentAccessAsync(HumoDbContext db, PortfolioReads reads, Guid personId, string by, CancellationToken ct)
+    {
+        var key = personId.ToString();
+        var users = await db.Users.Include(u => u.Assignments).Include(u => u.Memberships)
+            .Where(u => u.PersonId == key && u.Kind == IdentityKinds.Customer && u.Status != IdentityStatuses.Deactivated).ToListAsync(ct);
+        if (users.Count == 0) return;
+        // As this change leaves them: added and changed links count, removed ones don't.
+        var rels = (await db.Relationships.Where(r => r.PersonId == personId && r.UnitId != null && (r.Type == "owner" || r.Type == "tenant")).ToListAsync(ct))
+            .Concat(db.Relationships.Local.Where(r => r.PersonId == personId && r.UnitId != null && (r.Type == "owner" || r.Type == "tenant")))
+            .Distinct().Where(r => db.Entry(r).State != EntityState.Deleted).Where(reads.IsCurrent).ToList();
+        var unitIds = rels.Select(r => r.UnitId!.Value).Distinct().ToList();
+        var units = await db.Units.Where(u => unitIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, ct);
+        var schemeIds = units.Values.Select(u => u.SchemeId).Distinct().ToList();
+        var schemes = await db.Schemes.Where(s => schemeIds.Contains(s.Id)).ToDictionaryAsync(s => s.Id, ct);
+        var now = DateTimeOffset.UtcNow;
+        foreach (var user in users)
+        {
+            foreach (var r in rels.Where(r => units.ContainsKey(r.UnitId!.Value)))
+            {
+                var unitId = r.UnitId!.Value.ToString();
+                if (user.Assignments.Any(a => a.Role == r.Type && a.UnitId == unitId && a.Status == AssignmentStatuses.Active)) continue;
+                var unit = units[r.UnitId!.Value];
+                var scheme = schemes[unit.SchemeId];
+                if (!user.Memberships.Any(m => m.OrganisationId == scheme.OrganisationId && m.Status != MembershipStatuses.Ended))
+                    db.Memberships.Add(new Membership { Id = Guid.CreateVersion7(), UserId = user.Id, OrganisationId = scheme.OrganisationId, Since = now });
+                db.RoleAssignments.Add(new RoleAssignment
+                {
+                    Id = Guid.CreateVersion7(), UserId = user.Id, Role = r.Type, ScopeType = ScopeTypes.Unit, OrganisationId = scheme.OrganisationId, SchemeIds = [scheme.Id.ToString()],
+                    UnitId = unitId, Label = $"{scheme.Name} · Unit {unit.Number}", GrantedBy = $"{by} ({r.Type} of the unit)", GrantedAt = now,
+                });
+            }
+            foreach (var a in user.Assignments.Where(a => a.Status == AssignmentStatuses.Active && a.ScopeType == ScopeTypes.Unit && a.Role is Roles.Owner or Roles.Tenant))
+            {
+                if (rels.Any(r => r.Type == a.Role && r.UnitId?.ToString() == a.UnitId)) continue;
+                a.Status = AssignmentStatuses.Ended;
+                a.EndedBy = $"{by} (no longer {(a.Role == Roles.Owner ? "an owner" : "a tenant")} of the unit)";
+                a.EndedAt = now;
+                a.Version++;
+            }
+        }
+    }
+
+    /// <summary>The minute loop: portal access catches up with ownerships and tenancies that started or ended by date.</summary>
+    public static async Task SyncAllResidentAccessAsync(HumoDbContext db, PortfolioReads reads, CancellationToken ct)
+    {
+        var people = (await db.Users.Where(u => u.PersonId != null && u.Kind == IdentityKinds.Customer && u.Status != IdentityStatuses.Deactivated).Select(u => u.PersonId!).ToListAsync(ct))
+            .Select(p => Guid.TryParse(p, out var g) ? g : Guid.Empty).Where(g => g != Guid.Empty).Distinct().ToList();
+        foreach (var person in people) await SyncResidentAccessAsync(db, reads, person, "Humo Property Management", ct);
+        await db.SaveChangesAsync(ct);
     }
 
     // ---- Rules ----

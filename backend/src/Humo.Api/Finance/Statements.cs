@@ -342,6 +342,9 @@ public sealed class DeliveryHost(DeliveryQueue queue, IServiceScopeFactory scope
                     // A sold unit's account goes to its current owner once the previous ownership has ended.
                     await Portfolio.PeopleEndpoints.HandOverEndedAsync(scope.ServiceProvider.GetRequiredService<HumoDbContext>(),
                         scope.ServiceProvider.GetRequiredService<Portfolio.PortfolioReads>(), stoppingToken);
+                    // Owners' and tenants' portal access follows the units they're on now.
+                    await Portfolio.PeopleEndpoints.SyncAllResidentAccessAsync(scope.ServiceProvider.GetRequiredService<HumoDbContext>(),
+                        scope.ServiceProvider.GetRequiredService<Portfolio.PortfolioReads>(), stoppingToken);
                 }
                 catch (Exception e) when (e is not OperationCanceledException)
                 {
