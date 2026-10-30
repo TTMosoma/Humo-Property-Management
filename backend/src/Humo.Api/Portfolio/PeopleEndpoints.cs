@@ -360,8 +360,35 @@ public static partial class PeopleEndpoints
                     old.Until = rel.Since.AddDays(-1);
                 account.HolderPersonId = personId;
             }
-            else if (account.HolderPersonId is null) account.HolderPersonId = personId;
+            // The holder's ownership had ended (sold, and the buyer added afterwards): the new owner holds it.
+            else if (account.HolderPersonId is not { } holder || !StillOwns(db, holder, unitId, rel.Since)) account.HolderPersonId = personId;
         }
+    }
+
+    /// <summary>Whether the person still owns the unit on that day (their ownership hasn't ended before it).</summary>
+    private static bool StillOwns(HumoDbContext db, Guid personId, Guid unitId, DateOnly on) =>
+        db.Relationships.Local.Concat(db.Relationships.Where(r => r.UnitId == unitId && r.PersonId == personId && r.Type == "owner").ToList())
+            .Any(r => r.UnitId == unitId && r.PersonId == personId && r.Type == "owner" && (r.Until is null || r.Until >= on));
+
+    /// <summary>
+    /// The minute loop: an account whose holder's ownership has ended (ended for a date that has now passed, or ended
+    /// before the next owner was added) goes to a current owner, so statements and letters reach whoever owns the unit.
+    /// </summary>
+    public static async Task HandOverEndedAsync(HumoDbContext db, PortfolioReads reads, CancellationToken ct)
+    {
+        var today = reads.Today;
+        var ended = await db.Relationships.Where(r => r.Type == "owner" && r.UnitId != null && r.Until != null && r.Until < today).Select(r => new { r.PersonId, UnitId = r.UnitId!.Value }).Distinct().ToListAsync(ct);
+        if (ended.Count == 0) return;
+        var unitIds = ended.Select(e => e.UnitId).Distinct().ToList();
+        var accounts = await db.LevyAccounts.Where(a => unitIds.Contains(a.UnitId) && a.HolderPersonId != null).ToListAsync(ct);
+        var owners = (await db.Relationships.Where(r => r.Type == "owner" && r.UnitId != null && unitIds.Contains(r.UnitId.Value)).ToListAsync(ct)).Where(reads.IsCurrent).ToList();
+        foreach (var account in accounts)
+        {
+            var current = owners.Where(r => r.UnitId == account.UnitId).OrderBy(r => r.Since).ToList();
+            if (current.Count == 0 || current.Any(r => r.PersonId == account.HolderPersonId)) continue;
+            account.HolderPersonId = current[0].PersonId;
+        }
+        await db.SaveChangesAsync(ct);
     }
 
     public static DateOnly? ParseDate(string? s) =>

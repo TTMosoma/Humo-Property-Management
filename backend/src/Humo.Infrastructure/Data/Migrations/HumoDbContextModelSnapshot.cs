@@ -1021,6 +1021,13 @@ namespace Humo.Infrastructure.Data.Migrations
                         .HasMaxLength(7)
                         .HasColumnType("character varying(7)");
 
+                    b.Property<DateTimeOffset?>("ReplacedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ReplacedBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<Guid>("SchemeId")
                         .HasColumnType("uuid");
 
@@ -1053,7 +1060,8 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.HasIndex("BillingRunId");
 
                     b.HasIndex("AccountId", "Period")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"ReplacedAt\" IS NULL");
 
                     b.HasIndex("SchemeId", "Period");
 
