@@ -50,7 +50,6 @@ describe('Production data layer (provideHttpData)', () => {
 
   it('ports without an API yet say so', async () => {
     await expect(firstValueFrom(TestBed.inject(MeetingDataSource).list(['s-1']))).rejects.toBeInstanceOf(ApiError);
-    await expect(firstValueFrom(TestBed.inject(ReportDataSource).catalogue())).rejects.toMatchObject({ kind: 'server' });
     // Compliance is partly on the API: the financial year end is, the rest isn't yet.
     await expect(firstValueFrom(TestBed.inject(ComplianceDataSource).list(['s-1']))).rejects.toMatchObject({ kind: 'server' });
   });
@@ -107,7 +106,8 @@ describe('Production data layer (provideHttpData)', () => {
     await added;
 
     const routes = TestBed.inject(NOT_CONNECTED);
-    expect(notConnected(routes, '/reports')).toBe(true);
+    expect(notConnected(routes, '/governance/meetings')).toBe(true);
+    expect(notConnected(routes, '/reports')).toBe(false);
     expect(notConnected(routes, '/finance/budgets/b-1')).toBe(false);
     expect(notConnected(routes, '/finance/payables')).toBe(false);
     expect(notConnected(routes, '/finance/receipts')).toBe(false);
@@ -120,6 +120,13 @@ describe('Production data layer (provideHttpData)', () => {
     const suppliers = firstValueFrom(TestBed.inject(SupplierDataSource).list(['s-1']));
     http.expectOne('/api/suppliers?schemeIds=s-1').flush([]);
     expect(await suppliers).toEqual([]);
+  });
+
+  it('runs a report over HTTP, with the schemes and months', async () => {
+    const reports = TestBed.inject(ReportDataSource);
+    const result = firstValueFrom(reports.run('receipts', { schemeIds: ['s-1', 's-2'], months: 6 }));
+    http.expectOne({ method: 'GET', url: '/api/reports/receipts?schemeIds=s-1&schemeIds=s-2&months=6' }).flush({ def: { id: 'receipts' }, rows: [], columns: [], notes: [], scope: '2 schemes', generatedAt: '' });
+    expect((await result)?.scope).toBe('2 schemes');
   });
 
   it('reads budgets, the year end, and records the owners’ approval over HTTP (D28)', async () => {
