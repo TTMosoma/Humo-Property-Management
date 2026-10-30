@@ -17,7 +17,8 @@ import { ErrorState } from '../../../ui/states/error-state';
 import { Skeleton } from '../../../ui/states/skeleton';
 import { links } from '../../accounts/account-view';
 import { scheduleMeetingForm } from '../../governance/meeting-forms';
-import { lineForm, proposeForm } from './budget-forms';
+import { lineForm, openingForm, proposeForm, recordApprovalForm } from './budget-forms';
+import { NOT_CONNECTED, notConnected } from '../../../core/availability/not-connected';
 import { BUDGET_TONE } from './budget-view';
 
 /**
@@ -44,17 +45,37 @@ import { BUDGET_TONE } from './budget-view';
       @let v = view()!;
       @let b = v.budget;
       <ui-record-header [eyebrow]="'Budget · ' + b.year" [title]="v.scheme.name" [subtitle]="formatDate(b.from) + ' to ' + formatDate(b.to)" [status]="status()" [facts]="facts()" [chain]="chain()">
-        @if (canManage() && b.status === 'draft') {
+        @if (canManage()) {
           <ng-container recordActions>
-            <button type="button" class="btn btn-secondary" (click)="addLine()"><ion-icon name="add-outline" aria-hidden="true" /> Add a line</button>
-            <button type="button" class="btn btn-primary" (click)="propose()"><ion-icon name="people-outline" aria-hidden="true" /> Put it to the AGM</button>
+            @if (b.status === 'draft') {
+              <button type="button" class="btn btn-secondary" (click)="addLine()"><ion-icon name="add-outline" aria-hidden="true" /> Add a line</button>
+              @if (meetingsConnected) {
+                <button type="button" class="btn btn-primary" (click)="propose()"><ion-icon name="people-outline" aria-hidden="true" /> Put it to the AGM</button>
+              }
+            }
+            @if (b.status !== 'approved') {
+              <button type="button" [class]="meetingsConnected ? 'btn btn-ghost' : 'btn btn-primary'" (click)="recordApproval()">
+                <ion-icon name="finger-print-outline" aria-hidden="true" /> Record the owners’ approval
+              </button>
+            }
+            @if (b.broughtForward && v.elapsed > 0) {
+              <button type="button" class="btn btn-ghost" (click)="opening()">Spending before Humo PM</button>
+            }
           </ng-container>
         }
       </ui-record-header>
 
       @switch (b.status) {
         @case ('draft') {
-          <p class="banner surface">A draft: change the lines as needed, then put it to the AGM. The owners approve it by resolution.</p>
+          <p class="banner surface">
+            @if (b.broughtForward) {
+              Captured part-way through the year: check the lines against the budget the owners approved, enter the spending before Humo Property Management, then record their approval.
+            } @else if (meetingsConnected) {
+              A draft: change the lines as needed, then put it to the AGM. The owners approve it by resolution.
+            } @else {
+              A draft: change the lines as needed. When the owners have approved it at the AGM, record their approval.
+            }
+          </p>
         }
         @case ('proposed') {
           <p class="banner surface info">
@@ -68,6 +89,9 @@ import { BUDGET_TONE } from './budget-view';
               <a [routerLink]="['/governance/meetings', b.approved!.meetingId]">{{ b.approved!.resolutionRef }}</a>
             } @else {
               {{ b.approved!.resolutionRef }}
+            }
+            @if (b.approved!.recordedBy) {
+              <span class="muted">· recorded by {{ b.approved!.recordedBy }}</span>
             }
           </p>
         }
@@ -224,6 +248,8 @@ export class BudgetPage {
   private readonly feedback = inject(FeedbackService);
   private readonly scope = inject(ScopeService);
   private readonly session = inject(SessionService);
+  /** On the live system meetings aren't on the API yet: the owners' approval is recorded by hand (D28). */
+  protected readonly meetingsConnected = !notConnected(inject(NOT_CONNECTED), '/governance/meetings');
 
   private readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('budgetId')!)), { initialValue: this.route.snapshot.paramMap.get('budgetId')! });
   /** undefined = loading; false = not found. */
@@ -233,7 +259,7 @@ export class BudgetPage {
   /** This scheme's AGMs whose agenda is still open. */
   private readonly agms = loadable(() => {
     const s = this.view()?.scheme.id;
-    return s ? this.meetings.list([s]).pipe(map((p) => p.items.map((x) => x.meeting).filter((m) => m.type === 'agm' && m.stage === 'draft'))) : of([]);
+    return s && this.meetingsConnected ? this.meetings.list([s]).pipe(map((p) => p.items.map((x) => x.meeting).filter((m) => m.type === 'agm' && m.stage === 'draft'))) : of([]);
   });
 
   protected readonly formatDate = formatDate;
@@ -329,6 +355,14 @@ export class BudgetPage {
       next: () => this.feedback.success(`${l.line.category} removed`),
       error: () => this.feedback.error(`${l.line.category} wasn’t removed.`),
     });
+  }
+
+  protected recordApproval(): void {
+    recordApprovalForm(this.drawer, this.data, this.view()!);
+  }
+
+  protected opening(): void {
+    openingForm(this.drawer, this.data, this.view()!);
   }
 
   protected propose(): void {

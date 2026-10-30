@@ -2,18 +2,17 @@
 
 **Purpose:** what's next, in order, and what the product owner has asked for in later versions. Approved decisions stay in [docs/17](17-decisions.md); items here become decisions when they're scheduled.
 
-**Last updated:** 29 October 2026.
+**Last updated:** 30 October 2026.
 
 ## 1. Version 1: the live system as complete as the prototype
 
-The prototype (`npm start`) runs every screen on simulated data. The live system (`npm run start:api`) runs only what's on Humo's API. Nine data sources aren't on the API yet (Platform › Document templates joined it on 26 October 2026; timelines and notes, and payables (slice 3b, D27), on 28 October; Staff on 29 October). Screens that read them fail rather than fall back to simulated data, by design (docs/18 R-6).
+The prototype (`npm start`) runs every screen on simulated data. The live system (`npm run start:api`) runs only what's on Humo's API. Eight data sources aren't on the API yet (Platform › Document templates joined it on 26 October 2026; timelines and notes, and payables (slice 3b, D27), on 28 October; Staff on 29 October; Budgets, and the financial year end from Compliance, on 30 October, D28). Screens that read them fail rather than fall back to simulated data, by design (docs/18 R-6).
 
 | Not on the API yet | Screens it breaks | Slice |
 |---|---|---|
-| `BudgetDataSource` | Finance › Budgets | Budgets |
 | `ReportDataSource` | Reports | Reporting |
 | `MeetingDataSource`, `ResolutionDataSource` | Governance › Meetings and resolutions | Governance |
-| `ComplianceDataSource` | Compliance | Compliance |
+| `ComplianceDataSource` (all but the financial year end) | Compliance | Compliance |
 | `RulesDataSource` | Scheme rules and breaches | Governance |
 | `OpsDataSource` | Platform operations | Platform |
 | `ContractorNetwork` | Quotes from the Humo Contractor network | Contractor |

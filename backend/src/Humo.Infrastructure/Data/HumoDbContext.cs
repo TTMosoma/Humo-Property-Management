@@ -58,6 +58,7 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
     public DbSet<SupplierInvoiceRow> SupplierInvoices => Set<SupplierInvoiceRow>();
     public DbSet<PaymentBatchRow> PaymentBatches => Set<PaymentBatchRow>();
     public DbSet<StaffCoverRow> StaffCovers => Set<StaffCoverRow>();
+    public DbSet<BudgetRow> Budgets => Set<BudgetRow>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Notice> Notices => Set<Notice>();
     public DbSet<NoticeRead> NoticeReads => Set<NoticeRead>();
@@ -540,6 +541,17 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.HasIndex(x => new { x.SupplierId, x.Number }).IsUnique();
             e.HasIndex(x => new { x.SchemeId, x.Status });
             e.HasOne<SupplierRow>().WithMany().HasForeignKey(x => x.SupplierId);
+        });
+
+        builder.Entity<BudgetRow>(e =>
+        {
+            e.ToTable("Budgets");
+            e.Property(x => x.Year).HasMaxLength(10);
+            e.Property(x => x.Status).HasMaxLength(20);
+            e.Property(x => x.CreatedBy).HasMaxLength(120);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => new { x.SchemeId, x.From }).IsUnique();
+            e.HasOne<Scheme>().WithMany().HasForeignKey(x => x.SchemeId);
         });
 
         builder.Entity<StaffCoverRow>(e =>

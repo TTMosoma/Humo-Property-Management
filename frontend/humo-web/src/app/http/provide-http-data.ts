@@ -67,17 +67,16 @@ import { HttpStaffDataSource } from './http-staff';
 import { HttpPackageLimitsDataSource } from './http-package-limits';
 import { HttpOwnerInvoiceDataSource } from './http-owner-invoices';
 import { HttpDocumentTemplateDataSource, HttpPlatformTemplateDataSource, HttpSettingsDataSource } from './http-settings';
-import { notConnected } from './not-connected';
+import { notConnected, partlyConnected } from './not-connected';
+import { HttpBudgetDataSource, HttpComplianceProfiles } from './http-budgets';
 
 /** Ports whose HTTP adapters come with later backend slices. Remove each from this list as its adapter lands. */
 const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
   [PaymentGateway, 'PaymentGateway'],
   [MeetingDataSource, 'MeetingDataSource'],
   [ResolutionDataSource, 'ResolutionDataSource'],
-  [ComplianceDataSource, 'ComplianceDataSource'],
   [ReportDataSource, 'ReportDataSource'],
   [OpsDataSource, 'OpsDataSource'],
-  [BudgetDataSource, 'BudgetDataSource'],
   [RulesDataSource, 'RulesDataSource'],
   [ContractorNetwork, 'ContractorNetwork'],
 ];
@@ -127,7 +126,6 @@ export function provideHttpData(): EnvironmentProviders {
     {
       provide: NOT_CONNECTED,
       useValue: [
-        '/finance/budgets',
         '/reports',
         '/governance/meetings',
         '/governance/resolutions',
@@ -157,6 +155,14 @@ export function provideHttpData(): EnvironmentProviders {
     { provide: JobDataSource, useClass: HttpJobDataSource },
     { provide: SupplierDataSource, useClass: HttpSupplierDataSource },
     { provide: PayablesDataSource, useClass: HttpPayablesDataSource },
+    // Budgets (D28), and the scheme's financial year end, the part of Compliance already on the API.
+    { provide: BudgetDataSource, useClass: HttpBudgetDataSource },
+    HttpComplianceProfiles,
+    {
+      provide: ComplianceDataSource,
+      useFactory: (p: HttpComplianceProfiles) => partlyConnected<ComplianceDataSource>('ComplianceDataSource', { profiles: (ids: string[]) => p.profiles(ids) }),
+      deps: [HttpComplianceProfiles],
+    },
     // Staff: the team, workload and away cover.
     { provide: StaffDataSource, useClass: HttpStaffDataSource },
     ...pending,

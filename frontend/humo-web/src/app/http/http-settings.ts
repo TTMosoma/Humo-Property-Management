@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Observable, map, throwError } from 'rxjs';
 import {
   AgencyDetails,
@@ -6,6 +6,7 @@ import {
   ApiError,
   BillingSettings,
   ClientApproval,
+  ComplianceProfile,
   DocumentBrandingDetails,
   DocumentTemplate,
   DocumentTemplateDataSource,
@@ -25,6 +26,7 @@ import {
   TrustAccount,
   withDefaultRules,
 } from '../domain';
+import { HttpComplianceProfiles } from './http-budgets';
 import { HttpPort } from './http-port';
 
 /**
@@ -34,6 +36,8 @@ import { HttpPort } from './http-port';
  */
 @Injectable()
 export class HttpSettingsDataSource extends HttpPort implements SettingsDataSource {
+  private readonly profiles = inject(HttpComplianceProfiles);
+
   /** The API stores only the rules an agency changed; the rest are Humo's defaults. */
   agency(): Observable<AgencySettings> {
     return this.live<AgencySettings>('/settings/agency', ['settings', 'organisations']).pipe(map((a) => ({ ...a, notifications: withDefaultRules(a.notifications) })));
@@ -90,8 +94,8 @@ export class HttpSettingsDataSource extends HttpPort implements SettingsDataSour
     return this.command('POST', `/settings/trust-accounts/${schemeId}/payfast/remove`, { reason }, ['settings', 'accounts']);
   }
 
-  updateComplianceProfile(): Observable<void> {
-    return throwError(() => new ApiError('server', 'Compliance profiles aren’t on Humo’s API yet'));
+  updateComplianceProfile(profile: ComplianceProfile): Observable<void> {
+    return this.profiles.update(profile);
   }
 
   preferences(): Observable<PersonalPreferences> {

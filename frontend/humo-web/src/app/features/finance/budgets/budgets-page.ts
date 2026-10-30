@@ -1,7 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { BUDGET_STATUS_LABELS, BudgetDataSource, BudgetView, todaySA } from '../../../domain';
+import { catchError, of, take } from 'rxjs';
+import { BUDGET_STATUS_LABELS, BudgetDataSource, BudgetView, ComplianceDataSource, ComplianceProfile, todaySA } from '../../../domain';
 import { loadable } from '../../../core/data/loadable';
 import { ScopeNotice } from '../../../core/scope/scope-notice';
 import { ScopeService } from '../../../core/scope/scope.service';
@@ -27,7 +28,7 @@ import { BUDGET_TONE } from './budget-view';
   template: `
     <ui-page-header eyebrow="Finance" title="Budgets" subtitle="Each scheme’s budget, what’s been spent against it so far, and next year’s for the AGM. Actuals come from levies billed and supplier invoices.">
       @if (canManage()) {
-        <button type="button" class="btn btn-primary" (click)="draft()"><ion-icon name="add-outline" aria-hidden="true" /> Draft next year’s budget</button>
+        <button type="button" class="btn btn-primary" (click)="draft()"><ion-icon name="add-outline" aria-hidden="true" /> New budget</button>
       }
     </ui-page-header>
     <app-scope-notice />
@@ -79,6 +80,7 @@ import { BUDGET_TONE } from './budget-view';
 export class BudgetsPage {
   private readonly router = inject(Router);
   private readonly data = inject(BudgetDataSource);
+  private readonly compliance = inject(ComplianceDataSource);
   private readonly drawer = inject(DrawerService);
   private readonly scope = inject(ScopeService);
   private readonly session = inject(SessionService);
@@ -125,6 +127,13 @@ export class BudgetsPage {
   }
 
   protected draft(): void {
-    newBudgetForm(this.drawer, this.data, this.router, this.scope.accessible(), this.scope.scopeId() ?? undefined);
+    const schemes = this.scope.accessible();
+    // Each scheme's year end, for the form; if it can't be read, the form starts at February and the API checks it.
+    this.compliance
+      .profiles(schemes.map((s) => s.id))
+      .pipe(take(1), catchError(() => of([] as ComplianceProfile[])))
+      .subscribe((profiles) =>
+        newBudgetForm(this.drawer, this.data, this.router, schemes, Object.fromEntries(profiles.map((x) => [x.schemeId, x.financialYearEnd])), this.scope.scopeId() ?? undefined),
+      );
   }
 }

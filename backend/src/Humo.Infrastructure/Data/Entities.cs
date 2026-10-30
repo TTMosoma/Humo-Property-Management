@@ -141,6 +141,9 @@ public sealed class Scheme
     public string Province { get; set; } = "";
     /// <summary>The fewest trustees the board should have (the scheme's rules; 3 by default).</summary>
     public int TrusteeMinimum { get; set; } = 3;
+    /// <summary>The month (1–12) the financial year ends, on its last day. Null until it's set (D28); budgets and compliance follow it.</summary>
+    public int? FinancialYearEnd { get; set; }
+    public bool HasLifts { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
 }
 
@@ -1127,6 +1130,32 @@ public sealed class SupplierInvoiceRow
     public Guid? BatchId { get; set; }
     public DateTimeOffset? PaidAt { get; set; }
     public int Version { get; set; } = 1;
+}
+
+/// <summary>
+/// A scheme's budget for one financial year (D28): lines by category, approved by the owners at the AGM. Recorded by
+/// hand until meetings are on the API. A year captured part-way carries the spending before Humo PM (BroughtForward).
+/// </summary>
+public sealed class BudgetRow
+{
+    public Guid Id { get; set; }
+    public Guid OrganisationId { get; set; }
+    public Guid SchemeId { get; set; }
+    public int Version { get; set; } = 1;
+    /// <summary>"2025/26", or "2025" for a calendar year.</summary>
+    public string Year { get; set; } = "";
+    public DateOnly From { get; set; }
+    public DateOnly To { get; set; }
+    /// <summary>draft, proposed or approved.</summary>
+    public string Status { get; set; } = "draft";
+    /// <summary>JSON list of lines (category, kind, annual).</summary>
+    public string Lines { get; set; } = "[]";
+    public string CreatedBy { get; set; } = "";
+    public DateTimeOffset UpdatedAt { get; set; }
+    /// <summary>JSON: when and by which resolution the owners approved it, and who recorded it.</summary>
+    public string? Approved { get; set; }
+    /// <summary>JSON: spending before Humo PM, up to a date, by category.</summary>
+    public string? BroughtForward { get; set; }
 }
 
 /// <summary>
