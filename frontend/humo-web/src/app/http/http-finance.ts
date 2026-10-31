@@ -29,6 +29,7 @@ import {
   PaymentOptions,
   ReceiptDataSource,
   ReceiptView,
+  ReverseInput,
   StatementImportBatch,
   StatementImportResult,
   StatementMapping,
@@ -108,6 +109,10 @@ export class HttpReceiptDataSource extends HttpPort implements ReceiptDataSource
   unallocate(receiptId: string, expectedVersion?: number): Observable<void> {
     return this.command('POST', `/receipts/${receiptId}/unallocate`, { expectedVersion }, ['receipts', 'accounts', 'units', 'people']);
   }
+  reverse(receiptId: string, input: ReverseInput, expectedVersion?: number): Observable<void> {
+    return this.command('POST', `/receipts/${receiptId}/reverse`, { ...input, expectedVersion }, ['receipts', 'accounts', 'collections', 'work-items']);
+  }
+
 
   moveToSuspense(receiptId: string, expectedVersion?: number): Observable<void> {
     return this.command('POST', `/receipts/${receiptId}/suspense`, { expectedVersion }, ['receipts']);

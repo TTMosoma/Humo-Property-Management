@@ -52,6 +52,13 @@
 - **Duplicates:** an exact duplicate of a receipt already there is refused.
 - **Mapping:** imports can't proceed without a column mapping.
 - **Removal:** an allocated receipt can't be removed. Reverse the allocation first.
+- **Correcting an allocated payment (31 October 2026).** The ledger is never edited.
+  - **Undo allocation** is a quick correction: it takes the payment off as if never posted, but only while no statement for that month (or later) has gone out for the account, and never for a Payfast payment.
+  - **Reverse…** (with a reason: wrong amount, returned unpaid by the bank, or something else with a note): the payment line stays and a *reversal* line dated today takes it off, so statements already sent still match and the next one shows both. The receipt goes back to *To allocate*.
+  - **Move to another account**: reversed on the wrong account and allocated to the right one in the same step, with the reason "allocated to the wrong account".
+  - A reversal cancels its payment's credit rather than being a new charge, so arrears keep their age. The owners who sign in are told, in the app and by email. Each one is in the audit log with its reason.
+  - A **Payfast** payment can't be undone, moved or reversed: Payfast confirmed it against that account. An administrator corrects it with a journal adjustment.
+  - API: `POST /receipts/{id}/reverse` (`reason`, `note`, `moveToAccountId`).
 
 **Not in v1 (backlog):**
 - live bank feeds;

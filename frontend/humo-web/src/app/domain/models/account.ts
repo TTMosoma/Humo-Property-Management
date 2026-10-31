@@ -28,7 +28,8 @@ export interface Account {
   statementBy: 'email' | 'post' | 'portal';
 }
 
-export type TransactionType = 'levy' | 'special-levy' | 'utility' | 'interest' | 'payment' | 'adjustment';
+/** reversal: a payment taken off the account again, with the reason; the payment line stays (docs/22 §1). */
+export type TransactionType = 'levy' | 'special-levy' | 'utility' | 'interest' | 'payment' | 'adjustment' | 'reversal';
 
 export interface Transaction {
   id: string;

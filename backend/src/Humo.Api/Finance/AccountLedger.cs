@@ -30,7 +30,7 @@ public sealed class AccountLedger(HumoDbContext db, TimeProvider clock)
         var saved = await db.Ledger.Where(e => e.AccountId == account.Id).ToListAsync(ct);
         var lines = saved.Where(e => db.Entry(e).State != EntityState.Deleted)
             .Concat(db.Ledger.Local.Where(e => e.AccountId == account.Id && db.Entry(e).State == EntityState.Added))
-            .Select(e => new LedgerLine(e.Date, e.Amount)).ToList();
+            .Select(e => new LedgerLine(e.Date, e.Amount, e.Type == TransactionTypes.Reversal)).ToList();
         Apply(account, lines, Today);
     }
 
@@ -48,8 +48,8 @@ public sealed class AccountLedger(HumoDbContext db, TimeProvider clock)
         var ids = schemeIds?.ToList();
         var accounts = await db.LevyAccounts.Where(a => ids == null || ids.Contains(a.SchemeId)).ToListAsync(ct);
         var accountIds = accounts.Select(a => a.Id).ToList();
-        var lines = (await db.Ledger.Where(e => accountIds.Contains(e.AccountId)).Select(e => new { e.AccountId, e.Date, e.Amount }).ToListAsync(ct))
-            .ToLookup(e => e.AccountId, e => new LedgerLine(e.Date, e.Amount));
+        var lines = (await db.Ledger.Where(e => accountIds.Contains(e.AccountId)).Select(e => new { e.AccountId, e.Date, e.Amount, e.Type }).ToListAsync(ct))
+            .ToLookup(e => e.AccountId, e => new LedgerLine(e.Date, e.Amount, e.Type == TransactionTypes.Reversal));
         foreach (var a in accounts) Apply(a, lines[a.Id].ToList(), Today);
         await db.SaveChangesAsync(ct);
         return accounts.Count;

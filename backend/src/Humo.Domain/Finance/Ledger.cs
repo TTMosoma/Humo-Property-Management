@@ -1,7 +1,8 @@
 namespace Humo.Domain.Finance;
 
 /// <summary>A ledger line as the rules need it: charges are positive, payments and credits negative.</summary>
-public sealed record LedgerLine(DateOnly Date, decimal Amount);
+/// <param name="Reverses">A payment reversed: it cancels that payment's credit rather than being a new charge, so the debt the payment had settled ages from when it was raised.</param>
+public sealed record LedgerLine(DateOnly Date, decimal Amount, bool Reverses = false);
 
 public sealed record Ageing(decimal Current, decimal D30, decimal D60, decimal D90, decimal D120)
 {
@@ -28,6 +29,8 @@ public static class TransactionTypes
     public const string Adjustment = "adjustment";
     /// <summary>The balance brought forward from the agency's previous system (data migration).</summary>
     public const string Opening = "opening";
+    /// <summary>A payment taken off the account again (allocated to the wrong account, returned by the bank…), with the reason. The payment line stays.</summary>
+    public const string Reversal = "reversal";
 }
 
 /// <summary>
@@ -44,9 +47,10 @@ public static class Ledger
     public static Ageing Age(IEnumerable<LedgerLine> lines, DateOnly today)
     {
         var ordered = lines.OrderBy(l => l.Date).ToList();
-        var credit = -ordered.Where(l => l.Amount < 0).Sum(l => l.Amount);
+        // A reversal cancels its payment's credit; it isn't a new charge.
+        var credit = -ordered.Where(l => l.Amount < 0).Sum(l => l.Amount) - ordered.Where(l => l.Reverses).Sum(l => l.Amount);
         decimal current = 0, d30 = 0, d60 = 0, d90 = 0, d120 = 0;
-        foreach (var charge in ordered.Where(l => l.Amount > 0))
+        foreach (var charge in ordered.Where(l => l.Amount > 0 && !l.Reverses))
         {
             // Oldest first: credits settle what's been owed longest.
             var settled = Math.Min(credit, charge.Amount);

@@ -1,4 +1,4 @@
-import { ReceiptDataSource, ReceiptView, Scheme, todaySA } from '../../domain';
+import { REVERSAL_REASON_LABELS, ReceiptDataSource, ReceiptView, ReversalReason, Scheme, UnitSummary, todaySA } from '../../domain';
 import { DrawerService } from '../../ui/drawer/drawer.service';
 import { formatRand } from '../../ui/format/money';
 import { REASON_FIELD, openForm } from '../shared/form-drawer';
@@ -36,5 +36,53 @@ export function removeReceiptForm(drawer: DrawerService, data: ReceiptDataSource
     success: () => 'Receipt removed.',
     done,
     failure: 'The receipt wasn’t removed',
+  });
+}
+
+/**
+ * Reverses an allocated payment with the reason (docs/22 §1): the payment line stays on the account and a reversal
+ * line takes it off today, so statements already sent stay true. The receipt waits to be allocated again.
+ */
+export function reverseReceiptForm(drawer: DrawerService, data: ReceiptDataSource, v: ReceiptView): void {
+  const on = v.allocatedTo.map((a) => a.account.accountNo).join(', ');
+  openForm(drawer, {
+    eyebrow: `${v.scheme.name} · ${formatRand(v.receipt.amount)}`,
+    title: 'Reverse this payment',
+    intro: `It comes off ${on} today, with your reason, and goes back to “To allocate”. The payment line stays, so statements already sent still match; the next one shows both. The owner is told if they use the portal. Paid into the wrong account? Use “Move to another account” instead.`,
+    fields: [
+      {
+        key: 'reason', label: 'Why', type: 'select', required: true,
+        options: (Object.keys(REVERSAL_REASON_LABELS) as ReversalReason[]).filter((r) => r !== 'wrong-account').map((r) => ({ value: r, label: REVERSAL_REASON_LABELS[r] })),
+      },
+      { key: 'note', label: 'Note', type: 'textarea', requiredIf: (f) => f['reason'] === 'other', help: 'On the account and in the audit log, e.g. the bank’s return reason.' },
+    ],
+    initial: { reason: 'wrong-amount' },
+    submitLabel: 'Reverse payment',
+    submit: (f) => data.reverse(v.receipt.id, { reason: f['reason'] as ReversalReason, note: f['note'] || undefined }, v.receipt.version),
+    success: () => `Reversed. ${formatRand(v.receipt.amount)} is back in “To allocate”.`,
+    failure: 'The payment wasn’t reversed',
+  });
+}
+
+/** Allocated to the wrong account: reversed there and allocated to the right one in one step, with the reason. */
+export function moveReceiptForm(drawer: DrawerService, data: ReceiptDataSource, v: ReceiptView, units: UnitSummary[]): void {
+  const current = new Set(v.allocatedTo.map((a) => a.account.id));
+  const options = units
+    .filter((u) => !current.has(u.account.id))
+    .map((u) => ({ value: u.account.id, label: `${u.account.accountNo} · ${u.owners.map((o) => o.displayName).join(' & ') || 'no owner on record'}` }));
+  openForm(drawer, {
+    eyebrow: `${v.scheme.name} · ${formatRand(v.receipt.amount)}`,
+    title: 'Move to another account',
+    intro: `It’s reversed on ${v.allocatedTo.map((a) => a.account.accountNo).join(', ')} and allocated to the account you choose, both today and with the reason “allocated to the wrong account”. Both owners are told if they use the portal.`,
+    fields: [
+      // Nothing chosen until they pick: the first account in the list isn't a guess.
+      { key: 'accountId', label: 'The right account', type: 'select', required: true, options: [{ value: '', label: 'Choose the account…' }, ...options] },
+      { key: 'note', label: 'Note', type: 'textarea', help: 'Optional, e.g. “Reference was KC042, not KC024”.' },
+    ],
+    initial: { accountId: '' },
+    submitLabel: 'Move payment',
+    submit: (f) => data.reverse(v.receipt.id, { reason: 'wrong-account', note: f['note'] || undefined, moveToAccountId: f['accountId'] }, v.receipt.version),
+    success: (_r, f) => `Moved to ${options.find((o) => o.value === f['accountId'])?.label.split(' · ')[0] ?? 'the right account'}.`,
+    failure: 'The payment wasn’t moved',
   });
 }

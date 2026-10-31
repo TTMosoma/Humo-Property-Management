@@ -49,10 +49,10 @@ public static class TimelineEndpoints
         {
             var accountLink = $"{unitLink}/account";
             var lines = await db.Ledger.AsNoTracking().Where(e => e.AccountId == account.Id).ToListAsync(ct);
-            foreach (var e in lines.Where(e => e.Type is TransactionTypes.Payment or TransactionTypes.Adjustment))
-                events.Add(new($"ev-{e.Id}", At(e.Date), "payment", prefix + (e.Type == TransactionTypes.Payment ? "Payment received" : "Adjustment"),
+            foreach (var e in lines.Where(e => e.Type is TransactionTypes.Payment or TransactionTypes.Adjustment or TransactionTypes.Reversal))
+                events.Add(new($"ev-{e.Id}", At(e.Date), "payment", prefix + (e.Type switch { TransactionTypes.Payment => "Payment received", TransactionTypes.Reversal => "Payment reversed", _ => "Adjustment" }),
                     e.Reference is { Length: > 0 } r ? $"Reference “{r}”" : e.Description, null, -e.Amount, accountLink));
-            foreach (var month in lines.Where(e => e.Type is not (TransactionTypes.Payment or TransactionTypes.Adjustment)).GroupBy(e => e.Date.ToString("yyyy-MM", CultureInfo.InvariantCulture)))
+            foreach (var month in lines.Where(e => e.Type is not (TransactionTypes.Payment or TransactionTypes.Adjustment or TransactionTypes.Reversal)).GroupBy(e => e.Date.ToString("yyyy-MM", CultureInfo.InvariantCulture)))
             {
                 var first = month.OrderBy(e => e.Date).First();
                 events.Add(new($"ev-charges-{account.Id}-{month.Key}", At(first.Date), "charge", prefix + $"{Month(month.Key)} charges raised",
