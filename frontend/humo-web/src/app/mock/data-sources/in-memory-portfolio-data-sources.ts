@@ -1,6 +1,9 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, defer, map, switchMap, throwError } from 'rxjs';
-import { AccountDataSource, ApiError, CheckoutSession, PaymentOptions, NewReceipt, StatementImportBatch, StatementImportResult, StatementLine, StatementMapping, StatementPreview, mappingProblems, parseCsv, readStatement, AccountDetail, FieldErrors, ListQuery, MatchView, NewRelationship, Note, Page, Person, PersonDataSource, PersonDetails, PersonSummary, ReceiptDataSource, ReceiptView, StatementView, TimelineDataSource, TimelineEvent, Unit, UnitDataSource, UnitDetails, UnitSummary, periodLabel, roundRands, todaySA, saDate } from '../../domain';
+import { AccountDataSource, ApiError, CheckoutSession, PaymentOptions, NewReceipt, StatementImportBatch, StatementImportResult, StatementLine, StatementMapping, StatementPreview, mappingProblems, parseCsv, readStatement, AccountDetail, FieldErrors, ListQuery, MatchView, NewRelationship, Note, Page, Person, PersonDataSource, PersonDetails, PersonSummary, ReceiptDataSource, ReceiptView, StatementView, TimelineDataSource, TimelineEvent, Unit, UnitDataSource, UnitDetails, UnitSummary, periodLabel, roundRands, todaySA, saDate,
+  REVERSAL_REASON_LABELS,
+  ReverseInput,
+} from '../../domain';
 import { CommsStore } from '../db/comms-store';
 import { ReceiptImportStore } from '../db/receipt-import-store';
 import { LevyStore } from '../db/levy-store';
@@ -431,6 +434,28 @@ export class InMemoryReceiptDataSource extends ReceiptDataSource {
     const amount = allocations.reduce((n, a) => n + a.amount, 0);
     const to = allocations.map((a) => this.db.accounts.get(a.accountId)?.accountNo ?? a.accountId).join(', ');
     return this.command({ action: `Allocated receipt to ${to}`, amount, ...this.receiptSpec(receiptId, expectedVersion) }, () => this.db.allocate(receiptId, allocations, rememberPayer, this.session.current.identity.name));
+  }
+
+  reverse(receiptId: string, input: ReverseInput, expectedVersion?: number): Observable<void> {
+    const r = this.db.receipts.find((x) => x.id === receiptId);
+    const note = input.note?.trim() ?? '';
+    const why = input.reason === 'other' ? note : `${REVERSAL_REASON_LABELS[input.reason]?.toLowerCase() ?? ''}${note ? `: ${note}` : ''}`;
+    return this.command(
+      {
+        action: `Reversed receipt (${why})`,
+        ...this.receiptSpec(receiptId, expectedVersion),
+        validate: (): FieldErrors | null => {
+          if (!r || r.status !== 'allocated') return { receiptId: 'It isn’t allocated.' };
+          if (r.source === 'payfast') return { receiptId: 'Payfast confirmed this payment against this account: it can’t be moved or reversed here.' };
+          if (!REVERSAL_REASON_LABELS[input.reason]) return { reason: 'Choose why it’s being reversed.' };
+          if (input.reason === 'other' && note.length < 5) return { note: 'Say why, in a few words.' };
+          if (input.moveToAccountId && input.reason !== 'wrong-account') return { moveToAccountId: 'Moving it is for a payment allocated to the wrong account.' };
+          if (input.moveToAccountId && r.allocations.some((a) => a.accountId === input.moveToAccountId)) return { moveToAccountId: 'That’s the account it’s on now.' };
+          return null;
+        },
+      },
+      () => this.db.reverse(receiptId, why, input.moveToAccountId, this.session.current.identity.name),
+    );
   }
 
   unallocate(receiptId: string, expectedVersion?: number): Observable<void> {

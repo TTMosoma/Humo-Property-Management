@@ -6,6 +6,7 @@ import { Unit } from '../models/unit';
 import { PaymentOptions } from '../models/account';
 import { CheckoutSession } from './commercial-data-sources';
 import { NewReceipt, StatementImportBatch, StatementImportResult, StatementMapping, StatementPreview } from '../models/bank-statement';
+import { ReverseInput } from '../models/receipt';
 import {
   AccountDetail,
   MatchView,
@@ -99,7 +100,14 @@ export abstract class ReceiptDataSource {
   abstract suggestedFor(accountId: string): Observable<ReceiptView[]>;
   /** `expectedVersion`: the record's version as shown; the API answers 409 (conflict) if it has changed since. */
   abstract allocate(receiptId: string, allocations: { accountId: string; amount: number }[], rememberPayer: boolean, expectedVersion?: number): Observable<void>;
+  /** A quick correction: only while no statement shows the payment, and never a Payfast payment. Otherwise reverse it. */
   abstract unallocate(receiptId: string, expectedVersion?: number): Observable<void>;
+  /**
+   * Reverses an allocated payment with a reason: the payment line stays and a reversal line dated today takes it off
+   * the account; the receipt waits to be allocated again, or (wrong account) moves to the right one in the same step.
+   * The owners who sign in are told. A Payfast payment can't be reversed.
+   */
+  abstract reverse(receiptId: string, input: ReverseInput, expectedVersion?: number): Observable<void>;
   abstract moveToSuspense(receiptId: string, expectedVersion?: number): Observable<void>;
   // ---- docs/22 §1: receipt capture and bank-statement import (flag `receipt-capture`, Receipts.Allocate)
   /** A receipt captured by hand. Exact duplicates (scheme, date, amount, reference) are refused. Returns its id. */

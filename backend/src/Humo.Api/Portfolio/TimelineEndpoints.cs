@@ -63,15 +63,15 @@ public static class TimelineEndpoints
         {
             var accountLink = $"{unitLink}/account";
             var lines = await db.Ledger.AsNoTracking().Where(e => e.AccountId == account.Id).ToListAsync(ct);
-            foreach (var e in lines.Where(e => e.Type is TransactionTypes.Payment or TransactionTypes.Adjustment))
+            foreach (var e in lines.Where(e => e.Type is TransactionTypes.Payment or TransactionTypes.Adjustment or TransactionTypes.Reversal))
             {
                 var (at, allDay) = Posted(e.Date, e.CreatedAt);
                 var detail = e.Reference is { Length: > 0 } r ? $"Reference “{r}”" : e.Description;
                 if (allDay is true && DateOf(e.CreatedAt) > e.Date) detail += $" · put on the account {Short(e.CreatedAt)}";
-                events.Add(new($"ev-{e.Id}", at, "payment", prefix + (e.Type == TransactionTypes.Payment ? "Payment received" : "Adjustment"),
+                events.Add(new($"ev-{e.Id}", at, "payment", prefix + (e.Type switch { TransactionTypes.Payment => "Payment received", TransactionTypes.Reversal => "Payment reversed", _ => "Adjustment" }),
                     detail, null, -e.Amount, accountLink, allDay));
             }
-            foreach (var month in lines.Where(e => e.Type is not (TransactionTypes.Payment or TransactionTypes.Adjustment)).GroupBy(e => e.Date.ToString("yyyy-MM", CultureInfo.InvariantCulture)))
+            foreach (var month in lines.Where(e => e.Type is not (TransactionTypes.Payment or TransactionTypes.Adjustment or TransactionTypes.Reversal)).GroupBy(e => e.Date.ToString("yyyy-MM", CultureInfo.InvariantCulture)))
             {
                 var firstDate = month.Min(e => e.Date);
                 var (at, allDay) = Posted(firstDate, month.Where(e => e.Date == firstDate).Min(e => e.CreatedAt));

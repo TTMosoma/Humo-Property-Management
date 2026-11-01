@@ -449,13 +449,13 @@ export class MockDb {
 
     const byPeriod = new Map<string, RawTransaction[]>();
     for (const t of transactions) {
-      if (t.type === 'payment' || t.type === 'adjustment') {
+      if (t.type === 'payment' || t.type === 'adjustment' || t.type === 'reversal') {
         events.push({
           id: 'ev-' + t.id,
           at: t.date,
           allDay: true,
           kind: 'payment',
-          title: t.type === 'payment' ? 'Payment received' : 'Adjustment',
+          title: t.type === 'payment' ? 'Payment received' : t.type === 'reversal' ? 'Payment reversed' : 'Adjustment',
           detail: t.reference ? `Reference “${t.reference}”` : t.description,
           amount: -t.amount,
           link: accountLink,
@@ -572,6 +572,36 @@ export class MockDb {
     receipt.allocatedBy = undefined;
     this.syncReceiptWork();
     this.touch();
+  }
+
+  /** A payment reversed with its reason: a reversal line today on each account; the receipt waits again, or moves (docs/22 §1). */
+  reverse(receiptId: string, why: string, moveToAccountId: string | undefined, by: string): void {
+    const receipt = this.receipts.find((r) => r.id === receiptId);
+    if (!receipt || receipt.status !== 'allocated') return;
+    const today = new Date().toISOString().slice(0, 10);
+    for (const a of receipt.allocations) {
+      const account = this.accounts.get(a.accountId)!;
+      this.push(this.extraTx, account.id, {
+        id: `${receipt.id}-${account.id}-rev-${Date.now()}`,
+        accountId: account.id,
+        date: today,
+        type: 'reversal',
+        description: `Payment reversed: ${why}`,
+        reference: receipt.reference,
+        amount: a.amount,
+        receiptId: receipt.id,
+      });
+      this.rebalance(account, a.amount);
+    }
+    receipt.status = 'unallocated';
+    receipt.allocations = [];
+    receipt.allocatedBy = undefined;
+    if (moveToAccountId) this.allocate(receipt.id, [{ accountId: moveToAccountId, amount: receipt.amount }], false, by);
+    else {
+      receipt.version++;
+      this.syncReceiptWork();
+      this.touch();
+    }
   }
 
   /** The label receipts carry for a scheme's trust account ("FNB Trust ••4471"). */

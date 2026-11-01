@@ -183,4 +183,90 @@ public sealed class ReceiptTests : IDisposable
         Assert.True((await (await fynbos.PostAsJsonAsync("/api/receipts", body)).FieldErrors()).TryGetProperty("schemeId", out _));
         Assert.Equal(HttpStatusCode.NotFound, (await fynbos.GetAsync($"/api/accounts/{s.Account42}")).StatusCode);
     }
+
+    // ---- Reversing a payment (docs/22 §1): reverse, never delete; a reason, always.
+
+    private async Task<Guid> Allocated(Setup s, Guid account, decimal amount, string reference = "KC042 LEVY")
+    {
+        var id = await Id(await s.Finance.PostAsJsonAsync("/api/receipts", new { schemeId = s.Kc.ToString(), date = "2026-10-18", amount, reference }));
+        Assert.Equal(HttpStatusCode.NoContent, (await s.Finance.PostAsJsonAsync($"/api/receipts/{id}/allocate",
+            new { allocations = new[] { new { accountId = account.ToString(), amount } }, rememberPayer = false, expectedVersion = 1 })).StatusCode);
+        return id;
+    }
+
+    private Task<int> Version(Guid receipt) => api.Db(db => db.Receipts.Where(r => r.Id == receipt).Select(r => r.Version).SingleAsync());
+
+    [Fact]
+    public async Task A_payment_on_the_wrong_account_is_reversed_and_moved_in_one_step_and_the_history_stays()
+    {
+        var s = await Scheme();
+        await Charge(s.Account42, 100, 1850);
+        await Charge(s.Account12, 70, 2400);
+        // Sipho's payment, allocated to unit 12 by mistake.
+        var receipt = await Allocated(s, s.Account12, 1850);
+        var version = await Version(receipt);
+
+        // Moving needs the wrong-account reason, and an account other than the one it's on.
+        Assert.True((await (await s.Finance.PostAsJsonAsync($"/api/receipts/{receipt}/reverse", new { reason = "wrong-amount", moveToAccountId = s.Account42.ToString(), expectedVersion = version })).FieldErrors()).TryGetProperty("moveToAccountId", out _));
+        Assert.True((await (await s.Finance.PostAsJsonAsync($"/api/receipts/{receipt}/reverse", new { reason = "wrong-account", moveToAccountId = s.Account12.ToString(), expectedVersion = version })).FieldErrors()).TryGetProperty("moveToAccountId", out _));
+        Assert.Equal(HttpStatusCode.NoContent, (await s.Finance.PostAsJsonAsync($"/api/receipts/{receipt}/reverse",
+            new { reason = "wrong-account", note = "Reference was KC042", moveToAccountId = s.Account42.ToString(), expectedVersion = version })).StatusCode);
+
+        var accounts = await api.Db(db => db.LevyAccounts.ToDictionaryAsync(a => a.Id));
+        // Unit 12 owes its levy again, aged from when it was raised (60 days), not as a new charge today.
+        Assert.Equal((2400m, 2400m, 0m), (accounts[s.Account12].Balance, accounts[s.Account12].AgeingD60, accounts[s.Account12].AgeingCurrent));
+        Assert.Equal(0m, accounts[s.Account42].Balance);
+        // Nothing deleted: the payment and its reversal on 12, the payment on 42.
+        var lines = await api.Db(db => db.Ledger.Where(e => e.ReceiptId == receipt).Select(e => new { e.AccountId, e.Type, e.Amount, e.Description, e.CreatedAt }).ToListAsync());
+        lines = [.. lines.OrderBy(l => l.CreatedAt)];
+        Assert.Equal([(s.Account12, "payment", -1850m), (s.Account12, "reversal", 1850m), (s.Account42, "payment", -1850m)], lines.Select(l => (l.AccountId, l.Type, l.Amount)).ToList());
+        Assert.Contains("allocated to the wrong account: Reference was KC042", lines[1].Description);
+        var r = await api.Db(db => db.Receipts.Include(x => x.Allocations).SingleAsync(x => x.Id == receipt));
+        Assert.Equal(("allocated", s.Account42), (r.Status, Assert.Single(r.Allocations).AccountId));
+        Assert.True(await api.Db(db => db.Audit.AnyAsync(e => e.Action.Contains("allocated to the wrong account"))));
+    }
+
+    [Fact]
+    public async Task Undo_is_only_for_a_payment_no_statement_shows_and_a_reversal_needs_a_reason_and_tells_the_owner()
+    {
+        var s = await Scheme();
+        await Charge(s.Account42, 10, 1850);
+        // Before any statement: the quick undo takes it off as if never posted.
+        var quick = await Allocated(s, s.Account42, 1850);
+        Assert.Equal(HttpStatusCode.NoContent, (await s.Finance.PostAsJsonAsync($"/api/receipts/{quick}/unallocate", new { expectedVersion = await Version(quick) })).StatusCode);
+        Assert.Equal(0, await api.Db(db => db.Ledger.CountAsync(e => e.ReceiptId == quick)));
+
+        // Sipho signs in.
+        var sipho = await api.Db(async db =>
+        {
+            var person = await db.People.SingleAsync(p => p.Email == "sipho@mail.example");
+            var u = new HumoUser { Id = Guid.CreateVersion7(), UserName = "sipho@mail.example", Email = "sipho@mail.example", NormalizedEmail = "SIPHO@MAIL.EXAMPLE", Name = "Sipho Khumalo",
+                Kind = IdentityKinds.Customer, Status = IdentityStatuses.Active, PersonId = person.Id.ToString() };
+            db.Users.Add(u);
+            await db.SaveChangesAsync();
+            return u.Id;
+        });
+        Assert.Equal(HttpStatusCode.NoContent, (await s.Finance.PostAsJsonAsync($"/api/receipts/{quick}/allocate",
+            new { allocations = new[] { new { accountId = s.Account42.ToString(), amount = 1850 } }, rememberPayer = false, expectedVersion = await Version(quick) })).StatusCode);
+        // October's statement has gone out: undo is refused, reversing with a reason isn't.
+        await api.Db(async db =>
+        {
+            db.IssuedStatements.Add(new IssuedStatement { Id = Guid.CreateVersion7(), AccountId = s.Account42, SchemeId = s.Kc, OrganisationId = s.Org, Period = "2026-10", Snapshot = "{}", IssuedAt = DateTimeOffset.UtcNow, IssuedBy = "test" });
+            return await db.SaveChangesAsync();
+        });
+        Assert.Contains("reverse it with a reason", (await (await s.Finance.PostAsJsonAsync($"/api/receipts/{quick}/unallocate", new { expectedVersion = await Version(quick) })).FieldErrors()).GetProperty("receiptId").GetString());
+        Assert.True((await (await s.Finance.PostAsJsonAsync($"/api/receipts/{quick}/reverse", new { reason = "", expectedVersion = await Version(quick) })).FieldErrors()).TryGetProperty("reason", out _));
+        Assert.True((await (await s.Finance.PostAsJsonAsync($"/api/receipts/{quick}/reverse", new { reason = "other", expectedVersion = await Version(quick) })).FieldErrors()).TryGetProperty("note", out _));
+        Assert.Equal(HttpStatusCode.NoContent, (await s.Finance.PostAsJsonAsync($"/api/receipts/{quick}/reverse", new { reason = "returned", expectedVersion = await Version(quick) })).StatusCode);
+        Assert.Equal("unallocated", await api.Db(db => db.Receipts.Where(r => r.Id == quick).Select(r => r.Status).SingleAsync()));
+        Assert.Equal(1850m, await api.Db(db => db.LevyAccounts.Where(a => a.Id == s.Account42).Select(a => a.Balance).SingleAsync()));
+        var notice = await api.Db(db => db.Notices.SingleAsync(n => n.ToIdentityId == sipho));
+        Assert.Contains("returned unpaid by the bank", notice.Detail);
+
+        // A Payfast payment was confirmed against its account: neither undo nor reverse.
+        await api.Db(async db => { (await db.Receipts.SingleAsync(r => r.Id == quick)).Source = "payfast"; return await db.SaveChangesAsync(); });
+        Assert.Equal(HttpStatusCode.NoContent, (await s.Finance.PostAsJsonAsync($"/api/receipts/{quick}/allocate",
+            new { allocations = new[] { new { accountId = s.Account42.ToString(), amount = 1850 } }, rememberPayer = false, expectedVersion = await Version(quick) })).StatusCode);
+        Assert.Contains("Payfast", (await (await s.Finance.PostAsJsonAsync($"/api/receipts/{quick}/reverse", new { reason = "wrong-amount", expectedVersion = await Version(quick) })).FieldErrors()).GetProperty("receiptId").GetString());
+    }
 }

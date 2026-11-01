@@ -100,7 +100,7 @@ export function buildStatement(accountId: string, opening: number, raw: RawTrans
   const [y, m] = period.split('-').map(Number);
   const open = round2(opening + before);
   const charges = sum(['levy', 'special-levy', 'utility']);
-  const payments = sum(['payment']);
+  const payments = sum(['payment', 'reversal']);
   const adjustments = sum(['adjustment']);
   const interest = sum(['interest']);
   return {

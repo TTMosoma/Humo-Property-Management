@@ -41,3 +41,20 @@ export interface PayerRule {
   accountId: string;
   createdBy: string;
 }
+
+/** Why an allocated payment is reversed (docs/22 §1). It's on the account's reversal line and in the audit log. */
+export type ReversalReason = 'wrong-account' | 'wrong-amount' | 'returned' | 'other';
+
+export const REVERSAL_REASON_LABELS: Record<ReversalReason, string> = {
+  'wrong-account': 'Allocated to the wrong account',
+  'wrong-amount': 'Allocated with the wrong amount',
+  returned: 'Returned unpaid by the bank',
+  other: 'Something else (say what)',
+};
+
+export interface ReverseInput {
+  reason: ReversalReason;
+  note?: string;
+  /** Wrong account: the account it pays instead, allocated in the same step. */
+  moveToAccountId?: string;
+}

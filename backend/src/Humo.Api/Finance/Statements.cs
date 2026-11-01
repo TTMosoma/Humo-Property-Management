@@ -55,7 +55,8 @@ public sealed class StatementService(HumoDbContext db, Commercial.CommercialReco
         var opening = Ledger.Round2(ledger.Where(e => string.CompareOrdinal(e.Date.ToString("yyyy-MM", CultureInfo.InvariantCulture), period) < 0).Sum(e => e.Amount));
         decimal Sum(params string[] types) => Ledger.Round2(lines.Where(l => types.Contains(l.Type)).Sum(l => l.Amount));
         var charges = Sum(ChargeTypes);
-        var payments = Sum(TransactionTypes.Payment);
+        // Payments net of any reversed in the month.
+        var payments = Sum(TransactionTypes.Payment, TransactionTypes.Reversal);
         var adjustments = Sum(TransactionTypes.Adjustment, TransactionTypes.Opening);
         var interest = Sum(TransactionTypes.Interest);
         var due = new DateOnly(int.Parse(period[..4], CultureInfo.InvariantCulture), int.Parse(period[5..7], CultureInfo.InvariantCulture), Math.Clamp(dueDay, 1, 28));

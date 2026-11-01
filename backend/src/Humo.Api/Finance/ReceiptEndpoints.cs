@@ -17,6 +17,9 @@ public sealed record MatchViewDto(string AccountId, int Confidence, IReadOnlyLis
 
 public sealed record AllocateRequest(List<AllocationDto> Allocations, bool RememberPayer, int? ExpectedVersion);
 public sealed record VersionRequest(int? ExpectedVersion);
+/// <param name="Reason">wrong-account, wrong-amount, returned or other.</param>
+/// <param name="MoveToAccountId">Wrong account: the account it pays instead, allocated in the same step.</param>
+public sealed record ReverseRequest(string? Reason, string? Note, string? MoveToAccountId, int? ExpectedVersion);
 public sealed record RemoveReceiptRequest(string Reason, int? ExpectedVersion);
 public sealed record NewReceiptRequest(string SchemeId, string Date, decimal Amount, string Reference, string? Payer);
 public sealed record StatementRequest(string FileName, string Csv, StatementMapping Mapping);
@@ -44,6 +47,7 @@ public static class ReceiptEndpoints
         g.MapPost("/receipts", Capture);
         g.MapPost("/receipts/{id:guid}/allocate", Allocate);
         g.MapPost("/receipts/{id:guid}/unallocate", Unallocate);
+        g.MapPost("/receipts/{id:guid}/reverse", Reverse);
         g.MapPost("/receipts/{id:guid}/suspense", Suspense);
         g.MapPost("/receipts/{id:guid}/remove", Remove);
         g.MapGet("/schemes/{schemeId:guid}/statement-mapping", Mapping);
@@ -250,6 +254,7 @@ public static class ReceiptEndpoints
     {
         if (await current.GetAsync(ct) is not { } me) return Results.Unauthorized();
         if (await Visible(me, db, id, ct) is not { } receipt) return Problems.NotFound();
+        var shown = await OnAStatementAsync(db, receipt, ct);
         return await commands.RunAsync(new CommandSpec($"Reversed the allocation of receipt {Commercial.CommercialEndpoints.Rand(receipt.Amount)} (“{receipt.Reference}”)", Permission)
         {
             Resource = "Receipt",
@@ -258,10 +263,16 @@ public static class ReceiptEndpoints
             Feature = Feature,
             ExpectedVersion = body.ExpectedVersion,
             CurrentVersion = receipt.Version,
-            Validate = () => receipt.Status != "allocated" ? new() { ["receiptId"] = "It isn’t allocated." } : [],
+            Validate = () => receipt.Status != "allocated" ? new() { ["receiptId"] = "It isn’t allocated." }
+                : receipt.Source == "payfast" ? new() { ["receiptId"] = PayfastFixed }
+                : shown ? new() { ["receiptId"] = "A statement showing this payment has gone out: reverse it with a reason instead." }
+                : [],
         }, async _ =>
         {
-            var lines = await db.Ledger.Where(e => e.ReceiptId == receipt.Id).ToListAsync(ct);
+            // A quick correction: the payment lines since any earlier reversal come off, as if never posted.
+            var all = await db.Ledger.Where(e => e.ReceiptId == receipt.Id).ToListAsync(ct);
+            var since = all.Where(e => e.Type == TransactionTypes.Reversal).Select(e => (DateTimeOffset?)e.CreatedAt).Max();
+            var lines = all.Where(e => e.Type == TransactionTypes.Payment && (since is null || e.CreatedAt > since)).ToList();
             db.Ledger.RemoveRange(lines);
             db.ReceiptAllocations.RemoveRange(receipt.Allocations);
             foreach (var accountId in lines.Select(l => l.AccountId).Distinct())
@@ -269,6 +280,102 @@ public static class ReceiptEndpoints
             receipt.Status = "unallocated";
             receipt.AllocatedBy = null;
             receipt.Version++;
+            return Results.NoContent();
+        }, ct);
+    }
+
+    private const string PayfastFixed = "Payfast confirmed this payment against this account: it can’t be moved or reversed here. An administrator corrects it with a journal adjustment, with the reason.";
+
+    public static readonly Dictionary<string, string> ReversalReasons = new()
+    {
+        ["wrong-account"] = "allocated to the wrong account", ["wrong-amount"] = "allocated with the wrong amount", ["returned"] = "returned unpaid by the bank", ["other"] = "other",
+    };
+
+    /// <summary>Whether a statement already issued for one of the accounts shows this payment (its month, or later, as part of the balance).</summary>
+    private static async Task<bool> OnAStatementAsync(HumoDbContext db, Receipt receipt, CancellationToken ct)
+    {
+        var accounts = await db.Ledger.Where(e => e.ReceiptId == receipt.Id && e.Type == TransactionTypes.Payment).Select(e => e.AccountId).Distinct().ToListAsync(ct);
+        var month = receipt.Date.ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture);
+        return (await db.IssuedStatements.Where(s => accounts.Contains(s.AccountId) && s.ReplacedAt == null).Select(s => s.Period).ToListAsync(ct)).Any(p => string.CompareOrdinal(p, month) >= 0);
+    }
+
+    /// <summary>
+    /// Reverses an allocated payment, with the reason (docs/22 §1): the payment lines stay, and a reversal line dated today
+    /// takes each one off its account, so statements already sent stay true and the next one shows both. The receipt is
+    /// waiting to be allocated again, or (wrong account) allocated to the right one in the same step. The account holders
+    /// who sign in are told. A Payfast payment can't be reversed: Payfast confirmed it against that account.
+    /// </summary>
+    private static async Task<IResult> Reverse(Guid id, ReverseRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, AccountLedger ledger, Platform.Notices notices,
+        CancellationToken ct)
+    {
+        if (await current.GetAsync(ct) is not { } me) return Results.Unauthorized();
+        if (await Visible(me, db, id, ct) is not { } receipt) return Problems.NotFound();
+        var reason = body.Reason ?? "";
+        var note = (body.Note ?? "").Trim();
+        var lines = await db.Ledger.Where(e => e.ReceiptId == receipt.Id && (e.Type == TransactionTypes.Payment || e.Type == TransactionTypes.Reversal)).ToListAsync(ct);
+        // What each account still holds of this receipt: payments less anything reversed before.
+        var held = lines.GroupBy(e => e.AccountId).Select(g => (AccountId: g.Key, Net: Ledger.Round2(g.Sum(e => e.Amount)))).Where(x => x.Net < 0).ToList();
+        var heldIds = held.Select(h => h.AccountId).ToList();
+        var accounts = await db.LevyAccounts.Where(a => heldIds.Contains(a.Id)).ToDictionaryAsync(a => a.Id, ct);
+        var moveTo = Guid.TryParse(body.MoveToAccountId, out var mid) ? await db.LevyAccounts.FirstOrDefaultAsync(a => a.Id == mid && a.SchemeId == receipt.SchemeId, ct) : null;
+        var label = ReversalReasons.GetValueOrDefault(reason, "");
+        var why = reason == "other" ? note : $"{label}{(note.Length > 0 ? $": {note}" : "")}";
+        var from = string.Join(", ", accounts.Values.Select(a => a.AccountNo));
+
+        return await commands.RunAsync(new CommandSpec($"Reversed receipt {Commercial.CommercialEndpoints.Rand(receipt.Amount)} (“{receipt.Reference}”) on {from}{(moveTo is null ? "" : $" and allocated it to {moveTo.AccountNo}")}: {why}", Permission)
+        {
+            Resource = "Receipt",
+            ResourceId = id.ToString(),
+            SchemeId = receipt.SchemeId,
+            Feature = Feature,
+            ExpectedVersion = body.ExpectedVersion,
+            CurrentVersion = receipt.Version,
+            Validate = () =>
+            {
+                if (receipt.Status != "allocated" || held.Count == 0) return new() { ["receiptId"] = "It isn’t allocated." };
+                if (receipt.Source == "payfast") return new() { ["receiptId"] = PayfastFixed };
+                if (!ReversalReasons.ContainsKey(reason)) return new() { ["reason"] = "Choose why it’s being reversed." };
+                if (reason == "other" && note.Length < 5) return new() { ["note"] = "Say why, in a few words: it’s on the account and in the audit log." };
+                if (body.MoveToAccountId is not null)
+                {
+                    if (reason != "wrong-account") return new() { ["moveToAccountId"] = "Moving it to another account is for a payment allocated to the wrong account." };
+                    if (moveTo is null) return new() { ["moveToAccountId"] = "Choose an account in this receipt’s scheme." };
+                    if (heldIds.Contains(moveTo.Id)) return new() { ["moveToAccountId"] = "That’s the account it’s on now: choose the right one." };
+                }
+                return [];
+            },
+        }, async actor =>
+        {
+            foreach (var (accountId, net) in held)
+                await ledger.PostAsync(accounts[accountId], ledger.Today, TransactionTypes.Reversal, $"Payment reversed: {why}", -net, actor.Human.Name, receipt.Reference, receipt.Id, ct);
+            db.ReceiptAllocations.RemoveRange(receipt.Allocations);
+            if (moveTo is not null)
+            {
+                db.ReceiptAllocations.Add(new ReceiptAllocation { ReceiptId = receipt.Id, AccountId = moveTo.Id, Amount = receipt.Amount });
+                await ledger.PostAsync(moveTo, ledger.Today, TransactionTypes.Payment, $"Payment received {receipt.Date:d MMMM yyyy} — thank you", -receipt.Amount, actor.Human.Name, receipt.Reference, receipt.Id, ct);
+                receipt.AllocatedBy = actor.Human.Name;
+            }
+            else
+            {
+                receipt.Status = "unallocated";
+                receipt.AllocatedBy = null;
+            }
+            receipt.Version++;
+            // The owners whose accounts changed, if they sign in: in the app and by email.
+            var holders = accounts.Values.Select(a => a.HolderPersonId).Concat([moveTo?.HolderPersonId]).Where(h => h is not null).Select(h => h!.Value.ToString()).Distinct().ToList();
+            var users = await db.Users.Where(u => u.PersonId != null && holders.Contains(u.PersonId) && u.Status == Domain.Access.IdentityStatuses.Active).ToListAsync(ct);
+            foreach (var u in users)
+            {
+                var mine = accounts.Values.FirstOrDefault(a => a.HolderPersonId?.ToString() == u.PersonId);
+                if (mine is not null)
+                    notices.ToPerson(u.Id, actor.Human.Id, $"A payment on {mine.AccountNo} was reversed",
+                        $"The payment of {Commercial.CommercialEndpoints.Rand(-held.First(h => h.AccountId == mine.Id).Net)} received {receipt.Date:d MMMM yyyy} (reference “{receipt.Reference}”) was taken off {mine.AccountNo}: {why}. Your balance is now {Commercial.CommercialEndpoints.Rand(mine.Balance)}. Questions? Reply to your managing agent.",
+                        "/my/account");
+                else if (moveTo is not null && moveTo.HolderPersonId?.ToString() == u.PersonId)
+                    notices.ToPerson(u.Id, actor.Human.Id, $"A payment was added to {moveTo.AccountNo}",
+                        $"The payment of {Commercial.CommercialEndpoints.Rand(receipt.Amount)} received {receipt.Date:d MMMM yyyy} (reference “{receipt.Reference}”) is now on {moveTo.AccountNo}. Your balance is now {Commercial.CommercialEndpoints.Rand(moveTo.Balance)}.",
+                        "/my/account");
+            }
             return Results.NoContent();
         }, ct);
     }

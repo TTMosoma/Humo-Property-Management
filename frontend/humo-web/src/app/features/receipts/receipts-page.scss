@@ -407,3 +407,19 @@
 .danger {
   color: var(--c-danger);
 }
+
+// Undo, move or reverse an allocated payment (docs/22 §1).
+.reverse-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-left: auto;
+}
+
+.muted {
+  color: var(--c-text-muted);
+}
+
+.small {
+  font-size: var(--fs-xs);
+}
