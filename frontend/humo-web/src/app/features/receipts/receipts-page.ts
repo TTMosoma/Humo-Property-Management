@@ -2,8 +2,8 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, u
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { catchError, debounceTime, map, of, switchMap } from 'rxjs';
-import { MatchView, ReceiptDataSource, ReceiptView, UnitDataSource, UnitSummary, sumRands } from '../../domain';
+import { catchError, debounceTime, map, of, switchMap, take } from 'rxjs';
+import { MatchView, ReceiptDataSource, ReceiptView, UnitDataSource, UnitSummary, fieldErrorsOf, sumRands } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { loadable } from '../../core/data/loadable';
 import { ScopeNotice } from '../../core/scope/scope-notice';
@@ -18,7 +18,7 @@ import { accountStatus, links } from '../accounts/account-view';
 import { FeatureFlags } from '../../core/flags/feature-flags';
 import { SessionService } from '../../core/session/session.service';
 import { DrawerService } from '../../ui/drawer/drawer.service';
-import { captureReceiptForm, removeReceiptForm } from './receipt-forms';
+import { captureReceiptForm, removeReceiptForm, moveReceiptForm, reverseReceiptForm } from './receipt-forms';
 
 interface SplitLine {
   accountId: string;
@@ -207,11 +207,28 @@ export class ReceiptsPage {
     });
   }
 
+  /** A quick correction while no statement shows the payment; after that the API says to reverse it with a reason. */
   protected undo(v: ReceiptView): void {
     this.receipts.unallocate(v.receipt.id, v.receipt.version).subscribe({
       next: () => this.feedback.info(`${formatRand(v.receipt.amount)} is back in “To allocate”`),
-      error: () => this.fail(),
+      error: (e: unknown) => {
+        const reason = Object.values(fieldErrorsOf(e))[0];
+        if (reason) this.feedback.error(reason);
+        else this.fail();
+      },
     });
+  }
+
+  protected reverse(v: ReceiptView): void {
+    reverseReceiptForm(this.drawer, this.receipts, v);
+  }
+
+  /** The scheme's accounts to choose from, then the form. */
+  protected move(v: ReceiptView): void {
+    this.units
+      .list([v.scheme.id], { pageSize: 2000 })
+      .pipe(take(1))
+      .subscribe({ next: (p) => moveReceiptForm(this.drawer, this.receipts, v, p.items), error: () => this.fail() });
   }
 
   protected onKey(e: KeyboardEvent): void {

@@ -81,8 +81,16 @@
                 </div>
               }
             </div>
-            @if (!v.receipt.autoMatched) {
-              <button type="button" class="btn btn-secondary btn-sm" (click)="undo(v)">Undo allocation</button>
+            @if (canCapture() && v.receipt.source !== 'payfast') {
+              <div class="reverse-actions">
+                @if (!v.receipt.autoMatched) {
+                  <button type="button" class="btn btn-secondary btn-sm" (click)="undo(v)">Undo allocation</button>
+                }
+                <button type="button" class="btn btn-ghost btn-sm" (click)="move(v)">Move to another account</button>
+                <button type="button" class="btn btn-ghost btn-sm" (click)="reverse(v)">Reverse…</button>
+              </div>
+            } @else if (v.receipt.source === 'payfast') {
+              <span class="muted small">Paid by card through Payfast: confirmed against this account.</span>
             }
           </div>
         } @else {
