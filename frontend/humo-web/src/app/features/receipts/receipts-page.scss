@@ -350,7 +350,8 @@
   flex: 1;
 }
 
-.done,
+// Not `.done`: the empty states' host carries that class (kind="done") and would pick it up.
+.allocated-note,
 .suspense-note {
   display: flex;
   gap: var(--s-3);
@@ -365,7 +366,7 @@
   }
 }
 
-.done {
+.allocated-note {
   color: var(--c-text-2);
   background: var(--c-success-soft);
 
