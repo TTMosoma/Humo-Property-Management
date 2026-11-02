@@ -113,6 +113,7 @@ Sections 11 to 16 use the development seed instead of a hand-made agency.
 - [ ] **A failure stays on screen** (D30): *Add a passkey* › *This device*, then close the Windows Hello prompt. **Expect:** a red message, "The passkey wasn't created", that doesn't disappear.
 - [ ] **The same at sign-in** (D30): in a private window, sign in as someone with no passkey by email link and answer *Yes, it's mine*. **Expect:** the explanation, four choices and *Not now*.
 - [ ] **Not on a shared computer** (D30): in a new private window, sign in by email link and answer *No, it's shared*. **Expect:** straight into Humo PM, with no passkey screen. In that same window, sign out and sign in by email link again. **Expect:** no question and no passkey screen.
+- [ ] **The password manager note** (D30): Settings › Security › *Add a passkey*. **Expect:** under the four choices, a note says that if Windows Hello or another prompt appears instead of your password manager, your password manager isn't handling this site, and to check its settings or close the prompt.
 - [ ] **Removing a passkey** (D30): remove one of two passkeys. **Expect:** Mailpit has "A passkey was removed from your Humo account".
 
 ## 11. Trust accounts
