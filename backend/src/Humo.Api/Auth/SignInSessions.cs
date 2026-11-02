@@ -91,6 +91,10 @@ public sealed class SignInSessions(HumoDbContext db, SessionBuilder sessions, Ti
     public async Task<bool> IsTrustedBrowserAsync(HumoUser user, CancellationToken ct) =>
         await BrowserAnswerAsync(user, ct) is { Trusted: true };
 
+    /// <summary>Has the person said this browser is shared? Then a passkey isn't offered on it (D30).</summary>
+    public async Task<bool> IsSharedBrowserAsync(HumoUser user, CancellationToken ct) =>
+        await BrowserAnswerAsync(user, ct) is { Trusted: false };
+
     /// <summary>Has this browser already answered the question, so it needn't be asked again?</summary>
     public async Task<bool> BrowserAnsweredAsync(HumoUser user, CancellationToken ct) =>
         await BrowserAnswerAsync(user, ct) is not null;

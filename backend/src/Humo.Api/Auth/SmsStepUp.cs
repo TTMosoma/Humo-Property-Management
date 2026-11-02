@@ -107,8 +107,8 @@ public static class SmsStepUp
         return (row, null, null);
     }
 
-    /// <summary>Once they have a passkey, their mobile changes only with it (a fresh passkey, never an SMS code).</summary>
-    private static async Task<bool> PasskeyNeeded(Actor actor, UserManager<HumoUser> users, TimeProvider clock) =>
+    /// <summary>Once they have a passkey, their mobile and their passkeys change only with it (a fresh passkey, never an SMS code).</summary>
+    internal static async Task<bool> PasskeyNeeded(Actor actor, UserManager<HumoUser> users, TimeProvider clock) =>
         (await users.GetPasskeysAsync(actor.Human)).Count > 0 && !(actor.StepUpAt is { } at && clock.GetUtcNow() - at < CommandRunner.StepUpFresh);
 
     private static async Task<IResult> SendMobileCode(MobileCodeRequest body, CurrentActor current, UserManager<HumoUser> users, HumoDbContext db, ISmsSender sms,

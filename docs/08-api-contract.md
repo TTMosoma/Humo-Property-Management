@@ -45,6 +45,7 @@ Status: **frontend contract frozen after the P1 and P2 readiness cleanups** (Oct
 | Impersonate | `startImpersonation` / `endImpersonation` | The server session holds the impersonation; ending always succeeds |
 | Sign out | `signOut(product)` | Ends the Humo session for every product; the browser forgets it even if the call fails |
 | Sign in | Identity provider redirect (passkey or Humo Mobile) | `SessionDataSource.signIn` is a prototype stand-in |
+| Add a passkey (D30) | `POST /me/passkeys/options`, then `POST /me/passkeys` `{ credential, tool }`. `403 step-up-required` if they have a passkey and haven't confirmed with it in the last 5 minutes; `400 passkey-rejected` if the credential is refused | `SecurityDataSource.addPasskey`, `SessionDataSource.registerPasskey` |
 
 For HTTP, add an app initializer that waits for the first `/me` response before the shell renders.
 

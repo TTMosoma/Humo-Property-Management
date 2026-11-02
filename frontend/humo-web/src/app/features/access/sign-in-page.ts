@@ -3,12 +3,13 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { Subscription, map } from 'rxjs';
-import { SessionDataSource, SignInError } from '../../domain';
+import { PasskeyTool, SessionDataSource, SignInError } from '../../domain';
 import { HUMO_PRODUCTS } from '../../core/product/product';
 import { SessionService } from '../../core/session/session.service';
 import { Logo } from '../../ui/brand/logo';
+import { PasskeySetup } from '../security/passkey-setup';
 
-type Step = 'start' | 'passkey' | 'no-passkey' | 'paused' | 'link-sent' | 'enter-code' | 'redeeming' | 'link-failed' | 'unavailable' | 'ask-trust' | 'add-passkey' | 'creating-passkey';
+type Step = 'start' | 'passkey' | 'no-passkey' | 'paused' | 'link-sent' | 'enter-code' | 'redeeming' | 'link-failed' | 'unavailable' | 'ask-trust' | 'add-passkey';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const RESEND_AFTER_S = 30;
@@ -40,7 +41,7 @@ const STORY = {
  */
 @Component({
   selector: 'app-sign-in-page',
-  imports: [IonIcon, Logo],
+  imports: [IonIcon, Logo, PasskeySetup],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './sign-in-page.html',
   styleUrl: './sign-in-page.scss',
@@ -63,7 +64,7 @@ export class SignInPage {
 
   protected readonly step = signal<Step>(this.mode === 'link' ? 'enter-code' : 'start');
   /** Why creating a passkey after an email-link sign-in failed (not shown when they just closed the prompt). */
-  protected readonly passkeyError = signal('');
+  protected readonly createPasskey = (tool: PasskeyTool) => this.sessions.registerPasskey(tool);
   protected readonly email = signal('');
   protected readonly emailError = signal('');
   /** The email the passkey prompt was for ('' when the browser chose). */
@@ -231,8 +232,8 @@ export class SignInPage {
     this.pending?.unsubscribe();
     this.step.set('redeeming');
     this.pending = this.sessions.completeSignInLink(token, code).subscribe({
-      // Signed in by email: ask about this computer, then offer a passkey, so next time is one touch (newcomers get their first one here).
-      next: (askTrust) => this.signedIn(askTrust, 'add-passkey'),
+      // Signed in by email: ask about this computer, then offer a passkey, so next time is one touch (newcomers get their first one here). Never on a shared computer.
+      next: (r) => this.signedIn(r.askBrowserTrust, r.sharedBrowser ? 'done' : 'add-passkey'),
       error: (e: unknown) => {
         if (e instanceof SignInError && e.code === 'wrong-code') {
           this.codeError.set(e.message);
@@ -253,6 +254,7 @@ export class SignInPage {
 
   protected answerTrust(trusted: boolean): void {
     this.pending?.unsubscribe();
+    if (!trusted) this.afterTrust = 'done';
     // An answer that doesn't reach the server is asked again next time, so carry on either way.
     this.pending = this.sessions.answerBrowserTrust(trusted).subscribe({ complete: () => this.carryOn(), error: () => this.carryOn() });
   }
@@ -260,21 +262,6 @@ export class SignInPage {
   private carryOn(): void {
     if (this.afterTrust === 'add-passkey') this.step.set('add-passkey');
     else this.done();
-  }
-
-  protected createPasskey(): void {
-    this.pending?.unsubscribe();
-    this.passkeyError.set('');
-    this.step.set('creating-passkey');
-    this.pending = this.sessions.registerPasskey().subscribe({
-      next: () => this.done(),
-      error: (e: unknown) => {
-        this.step.set('add-passkey');
-        if (!(e instanceof SignInError && e.code === 'cancelled')) {
-          this.passkeyError.set('The passkey wasn’t created. You can carry on and add one later in Settings › Security.');
-        }
-      },
-    });
   }
 
   private countdown(): void {

@@ -37,6 +37,43 @@ public sealed class AdminSafeguardTests : IDisposable
     }
 
     [Fact]
+    public async Task Adding_another_passkey_needs_an_existing_one_and_an_email_link_isnt_enough()
+    {
+        // D30: someone who only gets into the inbox can sign in by link, but can't add their own passkey.
+        var org = await api.Customer("Acacia");
+        var thandeka = await api.Person("thandeka@acacia.example", Roles.AgencyAdmin, org);
+        var admin = await api.SignedIn("thandeka@acacia.example");
+        var credential = new { credential = new { id = "x" }, tool = "phone" };
+
+        // The first passkey needs no proof: there's nothing to prove it with. The junk credential gets as far as the attestation.
+        Assert.Equal(HttpStatusCode.OK, (await admin.PostAsync("/api/me/passkeys/options", null)).StatusCode);
+        Assert.Equal("passkey-rejected", await (await admin.PostAsJsonAsync("/api/me/passkeys", credential)).ProblemCode());
+
+        await Passkeys(thandeka);
+        Assert.Equal("step-up-required", await (await admin.PostAsync("/api/me/passkeys/options", null)).ProblemCode());
+        Assert.Equal("step-up-required", await (await admin.PostAsJsonAsync("/api/me/passkeys", credential)).ProblemCode());
+        Assert.True(await api.Db(db => db.Audit.AnyAsync(a => a.Action == "Tried to add a passkey without confirming with an existing one" && a.Result == "denied")));
+
+        await admin.StepUp();
+        Assert.Equal(HttpStatusCode.OK, (await admin.PostAsync("/api/me/passkeys/options", null)).StatusCode);
+        Assert.Equal("passkey-rejected", await (await admin.PostAsJsonAsync("/api/me/passkeys", credential)).ProblemCode());
+    }
+
+    [Fact]
+    public async Task Removing_a_passkey_tells_the_person()
+    {
+        var org = await api.Customer("Acacia");
+        var thandeka = await api.Person("thandeka@acacia.example", Roles.AgencyAdmin, org);
+        await Passkeys(thandeka);
+        var admin = await api.SignedIn("thandeka@acacia.example");
+        await admin.StepUp();
+        var profile = await (await admin.GetAsync("/api/me/security")).Json();
+        var id = profile.GetProperty("passkeys").EnumerateArray().First().GetProperty("id").GetString();
+        Assert.Equal(HttpStatusCode.NoContent, (await admin.PostAsync($"/api/me/security/passkeys/{id}/remove", null)).StatusCode);
+        Assert.True(await api.Db(db => db.Notices.AnyAsync(n => n.ToIdentityId == thandeka && n.Title == "A passkey was removed from your Humo account")));
+    }
+
+    [Fact]
     public async Task Support_removes_a_customers_passkeys_with_a_reason_and_a_fresh_passkey_and_it_is_logged()
     {
         var org = await api.Customer("Acacia");

@@ -22,6 +22,13 @@
   <ui-skeleton variant="tiles" [count]="4" />
 } @else {
   @let p = profile()!;
+  @if (problem(); as message) {
+    <div class="problem surface" role="alert">
+      <ion-icon name="alert-circle-outline" aria-hidden="true" />
+      <div class="problem-text"><strong>Something went wrong</strong><p>{{ message }}</p></div>
+      <button type="button" class="btn btn-ghost btn-sm" (click)="problem.set(null)">Dismiss</button>
+    </div>
+  }
   <div class="layout">
     <div class="col">
       <!-- Identity -->
@@ -51,9 +58,12 @@
             <p class="muted small">Sign in and verify with Windows Hello, Face ID, Touch ID or your phone’s screen lock.</p>
           </div>
           <button type="button" class="btn btn-secondary btn-sm" (click)="addPasskey()" [disabled]="session.isImpersonating()">
-            <ion-icon name="add-outline" aria-hidden="true" /> Add a passkey
+            <ion-icon [name]="adding() ? 'close-outline' : 'add-outline'" aria-hidden="true" /> {{ adding() ? 'Close' : 'Add a passkey' }}
           </button>
         </header>
+        @if (adding()) {
+          <app-passkey-setup class="setup" [create]="createPasskey" (added)="passkeyAdded($event)" />
+        }
         <ul class="list">
           @for (k of p.passkeys; track k.id) {
             <li>

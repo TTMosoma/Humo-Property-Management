@@ -205,7 +205,9 @@ public sealed partial class SessionTests : IDisposable
     {
         var first = await Complete(await RequestLink(HumoApiFactory.AdminEmail));
         Assert.Equal(HttpStatusCode.OK, first.StatusCode);
-        Assert.True((await first.Json()).GetProperty("askBrowserTrust").GetBoolean());
+        var unanswered = await first.Json();
+        Assert.True(unanswered.GetProperty("askBrowserTrust").GetBoolean());
+        Assert.False(unanswered.GetProperty("sharedBrowser").GetBoolean());
 
         Assert.Equal(HttpStatusCode.NoContent, (await client.PostAsJsonAsync("/api/me/security/browser", new { trusted = true })).StatusCode);
 
@@ -220,7 +222,10 @@ public sealed partial class SessionTests : IDisposable
         Assert.Equal(HttpStatusCode.NoContent, (await client.PostAsJsonAsync("/api/me/security/browser", new { trusted = false })).StatusCode);
 
         var again = await Complete(await RequestLink(HumoApiFactory.AdminEmail));
-        Assert.False((await again.Json()).GetProperty("askBrowserTrust").GetBoolean());
+        var answer = await again.Json();
+        Assert.False(answer.GetProperty("askBrowserTrust").GetBoolean());
+        // D30: no passkey is offered on a browser the person said is shared.
+        Assert.True(answer.GetProperty("sharedBrowser").GetBoolean());
         var device = Assert.Single((await (await client.GetAsync("/api/me/security")).Json()).GetProperty("devices").EnumerateArray().ToList());
         Assert.False(device.GetProperty("trusted").GetBoolean());
 
