@@ -62,9 +62,11 @@ Checkpoint 10 builds the remaining pages that showed the "Not built yet" card: C
 
 **Trustees are relationships** between a person and the scheme. Quorum, trustee approvers and the "trustees" audience all read the same records, so a board change applies everywhere at once.
 
+**On every plan (D29).** The register needs the `trustee-management` feature, which Essentials includes; scheme rules are Professional and up, and meetings and resolutions stay Enterprise (or the Meetings & AGMs add-on). Without Governance there's no resolutions register, so an election's resolution is typed from the signed minutes.
+
 | Action | Rules |
 |---|---|
-| **Add a trustee** | An owner (individual) in the scheme who isn't on the board. Either *elected* (must cite a passed resolution of the scheme) or *co-opted* by the board until the next AGM. One chairperson. |
+| **Add a trustee** | An owner (individual) in the scheme who isn't on the board. Either *elected* (must cite a passed resolution of the scheme, or with no Governance the resolution as in the minutes) or *co-opted* by the board until the next AGM. One chairperson. |
 | **End term** | Date and reason (resigned, sold their unit, not re-elected, removed, passed away). Their trustee access in Humo Property Management ends too. They stay under *Former trustees*. |
 | **Portfolio** | Chairperson, Treasurer, Secretary, Trustee. |
 | **Board size** | The minimum (default 3). |
@@ -73,6 +75,8 @@ Checkpoint 10 builds the remaining pages that showed the "Not built yet" card: C
 - **Seed:** four Acacia boards start below the minimum (company owners can't be trustees), so the flow can be shown.
 
 ## 6. Scheme rules (`/governance/rules`) and the breach log
+
+**Professional and up (D29):** the `scheme-rules` feature. Without Meetings & AGMs there's no resolutions register, so an adoption, amendment or repeal cites the resolution as in the signed minutes, with the date it was passed.
 
 **Rules register (per scheme):**
 - Every rule has a number, category, current wording, adoption date and **the resolution that adopted it**, plus its earlier versions.

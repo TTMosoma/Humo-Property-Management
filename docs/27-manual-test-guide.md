@@ -171,7 +171,17 @@ npm --prefix frontend/humo-web run e2e:screens
 - [ ] Schedule an **AGM** 20 days ahead; Finance › Budgets › next year's draft › *Put it to the AGM*. **Expect:** it uses the AGM's *Budget and levies* item. *Send notice*: every owner gets it (with the proxy line). Record attendance (owners present: 2 or more), then a passed resolution on that item. **Expect:** the budget is *Approved*, citing the resolution.
 - [ ] Trustee boards › *Appoint* as elected. **Expect:** the *Resolution* list holds passed resolutions only.
 - [ ] Reports. **Expect:** the *Resolutions register* is there.
-- [ ] As Annette (Fynbos, Essentials). **Expect:** no Governance menu; budgets keep *Record the owners' approval*.
+- [ ] As Annette (Fynbos, Essentials). **Expect:** Governance shows *Trustee boards* only (D29); budgets keep *Record the owners' approval*.
+
+## 19. What each package adds (D29)
+
+- [ ] Sign in as `annette@fynbos.example` (Fynbos, Essentials). **Expect:** the Governance menu has *Trustee boards* and nothing else. `/governance` opens Trustee boards; `/governance/meetings` says it isn't on your plan.
+- [ ] Trustee boards › Protea Gardens › *Add a trustee*: Fatima Isaacs, Chairperson, *Elected by the owners*. **Expect:** the Resolution field is a text box. Type "AGM 12 March 2026, resolution 4" and save. **Expect:** she's on the board with that reference.
+- [ ] *Invite to Humo PM* on her row. **Expect:** Mailpit has the invitation.
+- [ ] As a Professional agency admin without Meetings & AGMs: Governance. **Expect:** *Trustee boards* and *Scheme rules*; no Meetings or Resolutions.
+- [ ] Prototype (`npm start`), as Thandeka after removing Acacia's add-on (as `terry@humo.co.za`: Platform › Customers › Acacia › *Manage features*): Scheme rules › a rule › *Amend*. **Expect:** the Resolution is a text box with a *Passed on* date; the new wording shows that reference.
+- [ ] As `terry@humo.co.za`: Platform › Pricing & add-ons. **Expect:** the add-on is called *Meetings & AGMs*; no package lists *Advanced permissions*.
+- [ ] As Thandeka (Acacia, Enterprise): *Add a trustee* › *Elected*. **Expect:** the Resolution is still chosen from the scheme's passed resolutions.
 
 ## 18. Times on a history, and who was told after a cooling-off
 

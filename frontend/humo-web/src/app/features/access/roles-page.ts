@@ -31,8 +31,7 @@ const SCOPE_TEXT: Record<string, string> = {
 
 /**
  * Settings › Roles & permissions. Explains Humo's access model and shows the
- * default permissions of each customer role. Read-only for now: fixed roles
- * first, custom roles later (Enterprise plan).
+ * permissions of each customer role. Read-only: roles are fixed (D4, D29).
  */
 @Component({
   selector: 'app-roles-page',

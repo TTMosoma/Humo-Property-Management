@@ -45,7 +45,7 @@ public sealed class CommercialApiTests : IDisposable
     }
 
     [Fact]
-    public async Task The_trustee_board_needs_Governance_and_the_account_manager_switches_it_on_for_their_own_customer()
+    public async Task Meetings_need_Governance_the_trustee_board_doesnt_and_the_account_manager_switches_it_on_for_their_own_customer()
     {
         var mashoto = await api.Person("mashoto@humo.co.za", Roles.AccountManager, null);
         await api.Person("dumisani@humo.co.za", Roles.AccountManager, null);
@@ -53,8 +53,12 @@ public sealed class CommercialApiTests : IDisposable
         await api.Person("thandeka@acacia.example", Roles.AgencyAdmin, org);
         var agency = await api.SignedIn("thandeka@acacia.example");
         var kc = (await (await agency.PostAsJsonAsync("/api/schemes", new { name = "Kingfisher Court", code = "KC", type = "Sectional Title", suburb = "Morningside", city = "Sandton", province = "Gauteng" })).Json()).GetProperty("id").GetString();
+        // The trustee register is on every plan (D29): the command passes the entitlement check and reaches validation.
         var appoint = new { type = "appoint", personId = Guid.NewGuid().ToString(), portfolio = "Chairperson", how = "co-opted", since = "2026-03-01" };
-        Assert.Equal("not-entitled", await (await agency.PostAsJsonAsync($"/api/boards/{kc}/actions", appoint)).ProblemCode());
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, (await agency.PostAsJsonAsync($"/api/boards/{kc}/actions", appoint)).StatusCode);
+        // Meetings are Governance.
+        var meeting = new { schemeId = kc, type = "trustee" };
+        Assert.Equal("not-entitled", await (await agency.PostAsJsonAsync("/api/meetings", meeting)).ProblemCode());
 
         var grant = new { change = new { type = "add-on", addOnId = "governance", enabled = true, reason = "Trustees asked for board tools" }, expectedVersion = 1 };
         // Another Account Manager's customer: refused, and audited.
@@ -69,13 +73,13 @@ public sealed class CommercialApiTests : IDisposable
         Assert.Equal(HttpStatusCode.Conflict, (await am.PostAsJsonAsync($"/api/platform/customers/{org}/subscription", grant)).StatusCode);
 
         var customer = await Ok(await am.GetAsync($"/api/platform/customers/{org}"));
-        Assert.Equal("Governance add-on", customer.GetProperty("entitlements").EnumerateArray().Single(e => e.GetProperty("feature").GetString() == "meetings").GetProperty("sourceLabel").GetString());
+        Assert.Equal("Meetings & AGMs add-on", customer.GetProperty("entitlements").EnumerateArray().Single(e => e.GetProperty("feature").GetString() == "meetings").GetProperty("sourceLabel").GetString());
         // Manage features doesn't change what they pay: no catalogue price, so it's included in the agreed price.
         var view = await Ok(await am.GetAsync($"/api/platform/customers/{org}/commercial"));
         Assert.Equal("included", view.GetProperty("agreement").GetProperty("addOns")[0].GetProperty("priceSource").GetString());
 
-        // The board is now part of their plan: the command passes the entitlement check and reaches validation.
-        Assert.Equal(HttpStatusCode.UnprocessableEntity, (await agency.PostAsJsonAsync($"/api/boards/{kc}/actions", appoint)).StatusCode);
+        // Meetings are now part of their plan: the command passes the entitlement check and reaches validation.
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, (await agency.PostAsJsonAsync("/api/meetings", meeting)).StatusCode);
         // The other manager's refusal is audited; asking for step-up and the stale version change nothing.
         var audit = await api.Db(db => db.Audit.Where(a => a.Resource == "Subscription").Select(a => a.Result).ToListAsync());
         Assert.Equal(["denied", "success"], audit);

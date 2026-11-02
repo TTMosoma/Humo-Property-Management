@@ -468,12 +468,12 @@ export const routes: Routes = [
       // ---------------- Governance & Compliance ----------------
       {
         path: 'governance',
-        data: { section: 'Governance', feature: 'governance' },
+        data: { section: 'Governance' },
         children: [
-          { path: '', pathMatch: 'full', redirectTo: 'meetings' },
+          { path: '', pathMatch: 'full', redirectTo: 'trustees' },
           {
             path: 'meetings',
-            data: { permission: 'Governance.View', breadcrumb: 'Meetings' },
+            data: { permission: 'Governance.View', breadcrumb: 'Meetings', ...GOVERNANCE },
             children: [
               { path: '', title: 'Meetings', loadComponent: () => import('./features/governance/meetings-page').then((m) => m.MeetingsPage) },
               { path: 'new', redirectTo: () => inject(Router).parseUrl('/governance/meetings?new=1') },
@@ -501,12 +501,13 @@ export const routes: Routes = [
           {
             path: 'resolutions',
             title: 'Resolutions & actions',
-            data: { permission: 'Governance.View', breadcrumb: 'Resolutions & actions' },
+            data: { permission: 'Governance.View', breadcrumb: 'Resolutions & actions', ...GOVERNANCE },
             loadComponent: () => import('./features/governance/resolutions-page').then((m) => m.ResolutionsPage),
           },
           {
             path: 'trustees',
-            data: { permission: 'Governance.View', breadcrumb: 'Trustee boards' },
+            // On every plan (D29).
+            data: { permission: 'Governance.View', breadcrumb: 'Trustee boards', feature: 'trustee-management' },
             children: [
               { path: '', title: 'Trustee boards', loadComponent: () => import('./features/governance/trustees-page').then((m) => m.TrusteesPage) },
               {
@@ -519,7 +520,8 @@ export const routes: Routes = [
           },
           {
             path: 'rules',
-            data: { permission: 'Governance.View', breadcrumb: 'Scheme rules' },
+            // Professional and up (D29).
+            data: { permission: 'Governance.View', breadcrumb: 'Scheme rules', feature: 'scheme-rules' },
             children: [
               { path: '', title: 'Scheme rules', loadComponent: () => import('./features/governance/rules-page').then((m) => m.RulesPage) },
               {

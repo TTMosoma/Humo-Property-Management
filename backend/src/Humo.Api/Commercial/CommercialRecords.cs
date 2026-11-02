@@ -42,6 +42,7 @@ public sealed class CommercialRecords(HumoDbContext db, TimeProvider clock)
         if (keys.Contains(CatalogueKey))
         {
             await RemoveNeverSoldAsync(db, ct);
+            await RenameAddOnsAsync(db, ct);
             await AddNewAddOnsAsync(db, ct);
             await AddNewPackageTermsAsync(db, ct);
         }
@@ -58,6 +59,34 @@ public sealed class CommercialRecords(HumoDbContext db, TimeProvider clock)
     /// ever included stays (retired), so history keeps its name.
     /// </summary>
     private static readonly string[] Withdrawn = ["storage", "custom-document-templates"];
+
+    /// <summary>
+    /// Add-ons renamed by a decision, from the name they had to the starting catalogue's (D29: "Governance" became
+    /// "Meetings &amp; AGMs" when the trustee register moved to every plan). Only while the stored name is still the old
+    /// one, so a later rename in Pricing &amp; add-ons stands. Invoices keep the name they were issued with.
+    /// </summary>
+    private static readonly Dictionary<string, string> Renamed = new() { ["governance"] = "Governance" };
+
+    private static async Task RenameAddOnsAsync(HumoDbContext db, CancellationToken ct)
+    {
+        var row = await db.PlatformSettings.FirstAsync(s => s.Key == CatalogueKey, ct);
+        if (System.Text.Json.Nodes.JsonNode.Parse(row.Value) is not System.Text.Json.Nodes.JsonObject cat || cat["addOns"] is not System.Text.Json.Nodes.JsonArray addOns) return;
+        var initial = InitialCatalogue.Load().AddOns.ToDictionary(a => a.Id);
+        var changed = 0;
+        foreach (var a in addOns.OfType<System.Text.Json.Nodes.JsonObject>())
+        {
+            var id = a["id"]?.GetValue<string>() ?? "";
+            if (!Renamed.TryGetValue(id, out var was) || a["name"]?.GetValue<string>() != was || !initial.TryGetValue(id, out var now)) continue;
+            a["name"] = now.Name;
+            a["description"] = now.Description;
+            a["features"] = new System.Text.Json.Nodes.JsonArray([.. now.Features.Select(f => (System.Text.Json.Nodes.JsonNode)f)]);
+            changed++;
+        }
+        if (changed == 0) return;
+        row.Value = cat.ToJsonString();
+        row.Version++;
+        await db.SaveChangesAsync(ct);
+    }
 
     /// <summary>
     /// Add-ons new in Humo's starting catalogue (e.g. the SMS bundle) join a catalogue that's already stored. Nothing

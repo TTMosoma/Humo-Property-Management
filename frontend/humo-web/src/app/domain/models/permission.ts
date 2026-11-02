@@ -198,8 +198,8 @@ const TRUSTEE_VIEW: Permission[] = [
 ];
 
 /**
- * Default permissions per role. Prototype assumption: fixed roles first;
- * custom roles (an agency editing these) are a later, Enterprise-plan feature.
+ * Permissions per role. Roles are fixed (D4): agencies don't edit them, and
+ * custom roles aren't sold (D29).
  *
  * System.Impersonate, Platform.Customers.ActivateWithoutApproval and
  * Portfolio.BrowseAgency (D1) are deliberately absent from every role — they're granted to named individuals

@@ -124,7 +124,7 @@ export class BreachPage {
   protected readonly view = computed<BreachView | undefined>(() => this.result.value() || undefined);
 
   protected readonly formatDate = formatDate;
-  protected readonly canEnforce = computed(() => this.session.can('Rules.Enforce') && this.session.hasFeature('governance') && !this.session.readOnly());
+  protected readonly canEnforce = computed(() => this.session.can('Rules.Enforce') && this.session.hasFeature('scheme-rules') && !this.session.readOnly());
 
   protected readonly status = computed(() => {
     const s = this.view()?.breach.status;

@@ -42,6 +42,7 @@ Each entry records:
 | D24 | Approving with one authoriser: a trustee on Humo approves; with none on Humo, the agency approves alone under the trustees’ written permission, with a passkey, after a 24-hour cooling-off | Approvals |
 | D25 | Owners pay levies online through each scheme’s own Payfast account, paid out to its trust account; the scheme pays Payfast’s fee | Finance, owner portal |
 | D26 | Confirming without a passkey to hand (e.g. a public computer): your phone’s passkey by QR code first; a code by SMS to your own confirmed mobile as a fallback, for approvals only | Identity, approvals |
+| D29 | Packages: the trustee register on every plan; scheme rules in Professional; meetings and AGMs stay Enterprise (the add-on is renamed “Meetings & AGMs”); advanced permissions dropped | Governance, commercial |
 | D30 | Adding a passkey: once you have one, adding another needs it, with no exception for an email-link sign-in; you’re told every time; you choose where it lives | Identity, security |
 
 ---
@@ -642,6 +643,27 @@ Approved on 18 October 2026 by Terry Mosoma (product owner). Options and reasons
 - API: `GET /budgets`, `GET /budgets/{id}`, `POST /budgets` (this year's or next year's), `POST /budgets/{id}/actions` (set or remove a line; `record-approval`; `set-opening`; `propose` is refused until meetings are on the API); `GET /settings/compliance-profiles`, `PUT /settings/compliance-profiles/{schemeId}`.
 - Approval cards for quotes and invoices show the job's budget line with what's been spent and committed.
 - Levies actual is what the ledger billed in the year (plus the levies before Humo PM for a captured year), not an estimate from the levy roll.
+
+## D29 — What each package adds (2 November 2026)
+
+**Status:** approved by the product owner (Terry Mosoma).
+
+**The problem:** the trustee register was part of Governance, which is Enterprise only. But every plan relies on it. Trustee access comes from the board register (D2). When an agency approves alone, the trustees on record are told (D24), and the smaller agencies that approve alone are on Essentials or Professional. They had no way to record trustees, so nobody could be told.
+
+Reviewing what each package adds over the one below, Enterprise's own features were thin: several aren't built, and "advanced permissions" (custom roles) contradicts D4.
+
+**Decision:**
+1. **Trustee management is in every plan** (Essentials, so Professional and Enterprise too): Governance › Trustee boards, with adding and ending terms, portfolios, the board's minimum and inviting trustees to Humo PM.
+2. **Scheme rules and the breach log are in Professional** (and Enterprise): day-to-day work for the agency, not board work.
+3. **Meetings stay Enterprise:** trustee meetings, AGMs and SGMs, resolutions and actions. The Governance add-on that sells them to Professional agencies is renamed **"Meetings & AGMs"** (its id stays `governance`, so agreements and invoices are unaffected; invoices already issued keep the name they had).
+4. **Advanced permissions is dropped.** Roles are fixed (D4); there are no custom roles to sell.
+5. **Without Meetings & AGMs, a resolution is typed** from the signed minutes (e.g. "AGM 12 March 2026, resolution 4"), with the date it was passed, when electing a trustee or adopting, amending or repealing a rule. With it, the resolution is chosen from the register, as before.
+
+**Consequences:**
+- `contracts/entitlements.json`: `trustee-management` moves to Essentials; a new `scheme-rules` feature is in Professional; `permissions-advanced` is removed.
+- API: `POST /boards/{schemeId}/actions` needs `trustee-management`, not `governance`. Scheme rules aren't on the API yet; when they are, they need `scheme-rules`.
+- At start-up a stored catalogue whose add-on is still called "Governance" gets the new name, description and features. A name Humo has given it since stands.
+- The Governance menu shows *Trustee boards* on every plan and *Scheme rules* from Professional; `/governance` opens Trustee boards.
 
 ---
 

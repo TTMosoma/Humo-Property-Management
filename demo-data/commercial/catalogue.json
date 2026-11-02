@@ -143,12 +143,11 @@
   "addOns": [
     {
       "id": "governance",
-      "name": "Governance",
-      "description": "Trustee boards, meetings, AGMs and resolutions.",
+      "name": "Meetings & AGMs",
+      "description": "Trustee meetings, AGMs and SGMs, resolutions and actions.",
       "kind": "feature",
       "features": [
         "governance",
-        "trustee-management",
         "meetings",
         "agm-sgm"
       ],

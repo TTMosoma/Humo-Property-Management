@@ -41,4 +41,33 @@ public sealed class CatalogueUpgradeTests : IDisposable
         });
         Assert.DoesNotContain("custom-document-templates", await AddOnIds());
     }
+
+    [Fact]
+    public async Task The_Governance_add_on_becomes_Meetings_and_AGMs_unless_Humo_renamed_it_since()
+    {
+        JsonNode Governance(JsonNode cat) => cat["addOns"]!.AsArray().Single(a => a!["id"]!.GetValue<string>() == "governance")!;
+        Task<JsonNode> Stored() => api.Db(async db => Governance(JsonNode.Parse((await db.PlatformSettings.SingleAsync(s => s.Key == CommercialRecords.CatalogueKey)).Value)!));
+        Task Store(string name) => api.Db(async db =>
+        {
+            var row = await db.PlatformSettings.SingleAsync(s => s.Key == CommercialRecords.CatalogueKey);
+            var cat = JsonNode.Parse(row.Value)!;
+            Governance(cat)["name"] = name;
+            Governance(cat)["features"] = new JsonArray("governance", "trustee-management", "meetings", "agm-sgm");
+            row.Value = cat.ToJsonString();
+            return await db.SaveChangesAsync();
+        });
+        Task Start() => api.Db(async db => { await CommercialRecords.SeedAsync(db); return 0; });
+
+        // Stored before D29: renamed, and the trustee register (now on every plan) leaves its features.
+        await Store("Governance");
+        await Start();
+        var renamed = await Stored();
+        Assert.Equal("Meetings & AGMs", renamed["name"]!.GetValue<string>());
+        Assert.Equal(["governance", "meetings", "agm-sgm"], renamed["features"]!.AsArray().Select(f => f!.GetValue<string>()).ToList());
+
+        // A name Humo chose since stands.
+        await Store("Board tools");
+        await Start();
+        Assert.Equal("Board tools", (await Stored())["name"]!.GetValue<string>());
+    }
 }

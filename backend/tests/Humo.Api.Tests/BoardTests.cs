@@ -54,6 +54,25 @@ public sealed class BoardTests : IDisposable
     }
 
     [Fact]
+    public async Task An_essentials_agency_keeps_its_trustee_register_and_an_election_cites_the_minutes()
+    {
+        // D29: the register is on every plan, so approving alone can tell the trustees on record (D24).
+        var org = await api.Customer("Fynbos", "essentials");
+        await api.Person("annette@fynbos.example", Roles.AgencyAdmin, org);
+        var admin = await api.SignedIn("annette@fynbos.example");
+        var scheme = await Id(await admin.PostAsJsonAsync("/api/schemes", new { name = "Flamingo Pointe", code = "FP", type = "Sectional Title", suburb = "Umhlanga", city = "Durban", province = "KwaZulu-Natal" }));
+        var unit = await Id(await admin.PostAsJsonAsync($"/api/schemes/{scheme}/units", new { number = "3", description = "2-bed", sizeM2 = 90, participationQuota = 1, monthlyLevy = 1800, occupancy = "owner-occupied" }));
+        var owner = await Id(await admin.PostAsJsonAsync("/api/people", new
+        {
+            details = new { firstName = "Nandi", lastName = "Zulu", kind = "individual", email = "nandi@mail.example", phone = "082 555 0101", preferredChannel = "email" },
+            link = new { type = "owner", schemeId = scheme.ToString(), unitId = unit.ToString(), since = "2020-02-01" },
+        }));
+        Assert.Equal(HttpStatusCode.NoContent, (await Act(admin, scheme, new { type = "appoint", personId = owner.ToString(), portfolio = "Chairperson", how = "elected", resolutionId = "AGM 12 March 2026, resolution 4", since = "2026-03-12" })).StatusCode);
+        var trustee = await api.Db(db => db.Relationships.SingleAsync(r => r.SchemeId == scheme && r.Type == "trustee"));
+        Assert.Equal((owner, "AGM 12 March 2026, resolution 4"), (trustee.PersonId, trustee.ResolutionRef));
+    }
+
+    [Fact]
     public async Task Board_rules_hold()
     {
         var s = await SchemeWithOwner();

@@ -118,8 +118,8 @@ export const NAV: NavSection[] = [
         children: [
           { id: 'meetings', label: 'Meetings', route: '/governance/meetings', permission: 'Governance.View', feature: 'governance', keywords: 'agm sgm trustee meeting agenda minutes' },
           { id: 'resolutions', label: 'Resolutions & actions', route: '/governance/resolutions', permission: 'Governance.View', feature: 'governance' },
-          { id: 'trustee-boards', label: 'Trustee boards', route: '/governance/trustees', permission: 'Governance.View', feature: 'governance' },
-          { id: 'rules', label: 'Scheme rules', route: '/governance/rules', permission: 'Governance.View', feature: 'governance', keywords: 'conduct rules enforcement' },
+          { id: 'trustee-boards', label: 'Trustee boards', route: '/governance/trustees', permission: 'Governance.View', feature: 'trustee-management' },
+          { id: 'rules', label: 'Scheme rules', route: '/governance/rules', permission: 'Governance.View', feature: 'scheme-rules', keywords: 'conduct rules enforcement' },
         ],
       },
       { id: 'compliance', label: 'Compliance', icon: 'shield-checkmark-outline', route: '/compliance', permission: 'Compliance.View', feature: 'compliance', badge: 'compliance', badgeTone: 'attention', keywords: 'csos insurance statutory deadlines' },
