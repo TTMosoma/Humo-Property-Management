@@ -166,6 +166,14 @@ npm --prefix frontend/humo-web run e2e:screens
 - [ ] Reports. **Expect:** the *Resolutions register* is there.
 - [ ] As Annette (Fynbos, Essentials). **Expect:** no Governance menu; budgets keep *Record the owners' approval*.
 
+## 18. Times on a history, and who was told after a cooling-off
+
+- [ ] As Priya (Finance): Finance › Receipts, capture a payment dated today and allocate it to Kingfisher Court unit 42. Open the unit's *History*. **Expect:** "Payment received" shows the time you allocated it, not 08:00.
+- [ ] Capture one dated five days ago and allocate it. **Expect:** it sits on that date with no time, and the detail says when it was put on the account.
+- [ ] On the same history, "… became the owner". **Expect:** a date, no time.
+- [ ] Let an approval made alone take effect after its cooling-off (§ approvals, D24) on a scheme with trustees on record. **Expect:** the approver's notice and the audit entry say "Trustees told:" with each name and how (email address or mobile).
+- [ ] The same on a scheme with no trustees on record (e.g. Flamingo Pointe). **Expect:** "… has no trustees on record, so no trustee was told. Tell the trustees yourself."
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.

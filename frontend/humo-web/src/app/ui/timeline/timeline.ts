@@ -49,7 +49,16 @@ const TIME = new Intl.DateTimeFormat('en-ZA', { hour: '2-digit', minute: '2-digi
               @if (e.detail) {
                 <p class="detail">{{ e.detail }}</p>
               }
-              <div class="meta">{{ time(e.at) }}@if (e.actor) { · {{ e.actor }} }</div>
+              @if (!e.allDay || e.actor) {
+                <div class="meta">
+                  @if (!e.allDay) {
+                    {{ time(e.at) }}
+                  }
+                  @if (e.actor) {
+                    {{ e.allDay ? '' : ' · ' }}{{ e.actor }}
+                  }
+                </div>
+              }
             </div>
           </li>
         }

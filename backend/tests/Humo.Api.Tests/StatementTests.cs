@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
@@ -528,6 +529,37 @@ public sealed class StatementTests : IDisposable
         var person = (await Ok(await s.Admin.GetAsync($"/api/people/{sipho}/timeline"))).EnumerateArray().ToList();
         Assert.Contains(person, e => e.GetProperty("title").GetString() == "KC 42 · November 2026 charges raised");
         Assert.Contains(person, e => e.GetProperty("kind").GetString() == "call" && e.GetProperty("detail").GetString() == "Called about the November levy");
+    }
+
+    [Fact]
+    public async Task Timeline_lines_show_the_time_they_were_posted_and_date_only_events_show_no_time()
+    {
+        var s = await Scheme();
+        await Owner(s);
+        var unit = await api.Db(db => db.LevyAccounts.Where(a => a.Id == s.Account42).Select(a => a.UnitId).SingleAsync());
+        var now = api.Clock.GetUtcNow();
+        var today = DateOnly.FromDateTime(now.ToOffset(TimeSpan.FromHours(2)).DateTime);
+        var postedToday = Guid.CreateVersion7();
+        var backDated = Guid.CreateVersion7();
+        await api.Db(async db =>
+        {
+            db.Ledger.Add(new LedgerEntry { Id = postedToday, AccountId = s.Account42, Date = today, Type = "payment", Description = "Payment", Reference = "KC042", Amount = -500, CreatedAt = now, CreatedBy = "test" });
+            db.Ledger.Add(new LedgerEntry { Id = backDated, AccountId = s.Account42, Date = today.AddDays(-5), Type = "payment", Description = "Payment", Reference = "KC042 EFT", Amount = -300, CreatedAt = now, CreatedBy = "test" });
+            return await db.SaveChangesAsync();
+        });
+        var events = (await Ok(await s.Admin.GetAsync($"/api/units/{unit}/timeline"))).EnumerateArray().ToDictionary(e => e.GetProperty("id").GetString()!);
+
+        // Allocated the day it's dated: the moment it went on the account, not a made-up 08:00.
+        var paid = events[$"ev-{postedToday}"];
+        Assert.Equal(now, DateTimeOffset.Parse(paid.GetProperty("at").GetString()!, CultureInfo.InvariantCulture));
+        Assert.False(paid.TryGetProperty("allDay", out var flag) && flag.ValueKind == JsonValueKind.True);
+        // Reached the bank five days ago: shown on that date with no time, and when it went on the account.
+        var late = events[$"ev-{backDated}"];
+        Assert.True(late.GetProperty("allDay").GetBoolean());
+        Assert.StartsWith($"{today.AddDays(-5):yyyy-MM-dd}T00:00:00", late.GetProperty("at").GetString());
+        Assert.Contains("put on the account", late.GetProperty("detail").GetString());
+        // Became the owner: a date, not a time.
+        Assert.True(events.Values.Single(e => e.GetProperty("title").GetString() == "Sipho Khumalo became the owner").GetProperty("allDay").GetBoolean());
     }
 
     [Fact]

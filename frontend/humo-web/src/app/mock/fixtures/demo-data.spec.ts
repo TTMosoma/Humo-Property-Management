@@ -22,12 +22,17 @@ describe('Demo data integrity', () => {
   const baseline = DEMO_DATA.manifest.baselineDate;
 
   beforeEach(() => {
+    // The board-level figures are as at the baseline: Acacia's WhatsApp add-on, for one, starts on 1 November 2026.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(`${baseline}T08:00:00+02:00`));
     localStorage.clear();
     localStorage.setItem('humo.latency', 'off');
     TestBed.configureTestingModule({ providers: [provideMockData(), provideRouter([])] });
     platform = TestBed.inject(PlatformStore);
     access = TestBed.inject(AccessStore);
   });
+
+  afterEach(() => vi.useRealTimers());
 
   const isAccountManager = (id: string) => {
     const who = access.identity(id);
