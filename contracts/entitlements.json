@@ -201,7 +201,14 @@
       "key": "trustee-management",
       "module": "governance",
       "label": "Trustee management",
-      "description": "Boards, terms and trustee roles.",
+      "description": "The trustee register: boards, terms and portfolios. On every plan (D29).",
+      "baseline": false
+    },
+    {
+      "key": "scheme-rules",
+      "module": "governance",
+      "label": "Scheme rules",
+      "description": "Each scheme’s conduct rules and the breach log, with warning letters. Professional and up (D29).",
       "baseline": false
     },
     {
@@ -251,13 +258,6 @@
       "module": "reporting",
       "label": "Advanced analytics",
       "description": "Portfolio trends and benchmarks.",
-      "baseline": false
-    },
-    {
-      "key": "permissions-advanced",
-      "module": "platform",
-      "label": "Advanced permissions",
-      "description": "Custom roles and fine-grained access.",
       "baseline": false
     },
     {
@@ -323,7 +323,8 @@
         "finance-basic",
         "invoicing-basic",
         "audit-log",
-        "mobile-approvals"
+        "mobile-approvals",
+        "trustee-management"
       ]
     },
     {
@@ -345,6 +346,7 @@
         "maintenance-advanced",
         "reporting-financial",
         "budgets",
+        "scheme-rules",
         "team-management",
         "document-templates-premium",
         "document-branding"
@@ -358,12 +360,10 @@
       "extends": "professional",
       "features": [
         "governance",
-        "trustee-management",
         "meetings",
         "agm-sgm",
         "compliance",
         "reporting-advanced",
-        "permissions-advanced",
         "integrations",
         "api",
         "automation",

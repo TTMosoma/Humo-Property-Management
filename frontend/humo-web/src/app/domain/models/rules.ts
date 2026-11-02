@@ -83,10 +83,20 @@ export interface RulesView {
   openBreaches: Record<string, number>;
 }
 
+/**
+ * A change cites the owners' resolution: `resolutionId` from the register, or without Governance (D29) `resolutionRef`
+ * as in the signed minutes, with the date it was passed (`adoptedOn`).
+ */
+export interface RuleResolution {
+  resolutionId: string;
+  resolutionRef?: string;
+  adoptedOn?: string;
+}
+
 export type RuleAction =
-  | { type: 'add'; number: string; title: string; category: RuleCategory; text: string; resolutionId: string }
-  | { type: 'amend'; ruleId: string; text: string; resolutionId: string }
-  | { type: 'repeal'; ruleId: string; resolutionId: string }
+  | ({ type: 'add'; number: string; title: string; category: RuleCategory; text: string } & RuleResolution)
+  | ({ type: 'amend'; ruleId: string; text: string } & RuleResolution)
+  | ({ type: 'repeal'; ruleId: string } & RuleResolution)
   | { type: 'share' }
   /** Upload the registered rules as a PDF (the file goes with the request). */
   | { type: 'upload'; fileName: string; mimeType: string; sizeBytes: number; adoptedOn: string; resolutionRef: string; shareWithOwners: boolean };

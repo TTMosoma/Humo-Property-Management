@@ -364,6 +364,12 @@ describe('Commercial management', () => {
     });
 
     it('Support can’t see commercial terms; the Executive can see but not change them', async () => {
+      // Before Acacia's WhatsApp add-on starts on 1 November 2026.
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2026-10-20T08:00:00+02:00'));
+      onTestFinished(() => {
+        vi.useRealTimers();
+      });
       auth.signIn('p-lerato');
       await expect(run(data.customer('acacia'))).rejects.toBeInstanceOf(PolicyError);
 

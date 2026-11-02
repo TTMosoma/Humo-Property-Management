@@ -48,6 +48,7 @@ export type Feature =
   // Governance & compliance
   | 'governance'
   | 'trustee-management'
+  | 'scheme-rules'
   | 'meetings'
   | 'agm-sgm'
   | 'compliance'
@@ -57,7 +58,6 @@ export type Feature =
   | 'reporting-advanced'
   | 'analytics-advanced'
   // Platform & security
-  | 'permissions-advanced'
   | 'integrations'
   | 'api'
   | 'automation'
@@ -115,7 +115,8 @@ export const FEATURES: FeatureDef[] = [
   { key: 'document-branding', module: 'documents', label: 'Document branding', description: 'Your logo, colours and font on the documents you send.' },
   { key: 'document-templates-custom', module: 'documents', label: 'Custom document templates', description: 'Your organisation’s own template: layout, colours, wording and legal text.' },
   { key: 'governance', module: 'governance', label: 'Governance', description: 'Trustee workflows in one place.' },
-  { key: 'trustee-management', module: 'governance', label: 'Trustee management', description: 'Boards, terms and trustee roles.' },
+  { key: 'trustee-management', module: 'governance', label: 'Trustee management', description: 'The trustee register: boards, terms and portfolios. On every plan (D29).' },
+  { key: 'scheme-rules', module: 'governance', label: 'Scheme rules', description: 'Each scheme’s conduct rules and the breach log, with warning letters. Professional and up (D29).' },
   { key: 'meetings', module: 'governance', label: 'Meetings', description: 'Agendas, packs, minutes, resolutions and actions.' },
   { key: 'agm-sgm', module: 'governance', label: 'AGM / SGM', description: 'Notices, quorum, proxies and voting.' },
   { key: 'compliance', module: 'compliance', label: 'Compliance', description: 'Statutory deadlines and evidence across schemes.' },
@@ -123,7 +124,6 @@ export const FEATURES: FeatureDef[] = [
   { key: 'reporting-financial', module: 'reporting', label: 'Financial reporting', description: 'Income statement, balance sheet, levy roll.' },
   { key: 'reporting-advanced', module: 'reporting', label: 'Advanced reporting', description: 'Custom reports, scheduling and exports.' },
   { key: 'analytics-advanced', module: 'reporting', label: 'Advanced analytics', description: 'Portfolio trends and benchmarks.' },
-  { key: 'permissions-advanced', module: 'platform', label: 'Advanced permissions', description: 'Custom roles and fine-grained access.' },
   { key: 'integrations', module: 'platform', label: 'Integrations', description: 'Accounting and banking connectors.' },
   { key: 'api', module: 'platform', label: 'API access', description: 'Programmatic access to Humo Property Management data.' },
   { key: 'automation', module: 'platform', label: 'Automation', description: 'Rules that create tasks and send reminders.' },
@@ -160,7 +160,7 @@ export const PACKAGES: Package[] = [
     tagline: 'For smaller agencies getting their portfolio in order.',
     features: [
       'agency-management', 'schemes', 'units', 'owners-tenants', 'resident-portal', 'documents', 'communications',
-      'maintenance-basic', 'reporting-basic', 'finance-basic', 'invoicing-basic', 'audit-log', 'mobile-approvals',
+      'maintenance-basic', 'reporting-basic', 'finance-basic', 'invoicing-basic', 'audit-log', 'mobile-approvals', 'trustee-management',
     ],
   },
   {
@@ -171,7 +171,7 @@ export const PACKAGES: Package[] = [
     extends: 'essentials',
     features: [
       'levies', 'billing', 'statements', 'payment-allocation', 'debtors', 'credit-control', 'payables', 'suppliers', 'contractors',
-      'maintenance-advanced', 'reporting-financial', 'budgets', 'team-management', 'document-templates-premium', 'document-branding',
+      'maintenance-advanced', 'reporting-financial', 'budgets', 'scheme-rules', 'team-management', 'document-templates-premium', 'document-branding',
     ],
   },
   {
@@ -181,7 +181,7 @@ export const PACKAGES: Package[] = [
     tagline: 'Governance, compliance and scale.',
     extends: 'professional',
     features: [
-      'governance', 'trustee-management', 'meetings', 'agm-sgm', 'compliance', 'reporting-advanced', 'permissions-advanced',
+      'governance', 'meetings', 'agm-sgm', 'compliance', 'reporting-advanced',
       'integrations', 'api', 'automation', 'analytics-advanced', 'document-templates-custom',
     ],
   },
@@ -200,7 +200,7 @@ export interface AddOn {
 }
 
 export const ADD_ONS: AddOn[] = [
-  { id: 'governance', name: 'Governance', description: 'Trustee boards, meetings, AGMs and resolutions.', features: ['governance', 'trustee-management', 'meetings', 'agm-sgm'] },
+  { id: 'governance', name: 'Meetings & AGMs', description: 'Trustee meetings, AGMs and SGMs, resolutions and actions.', features: ['governance', 'meetings', 'agm-sgm'] },
   { id: 'compliance', name: 'Compliance', description: 'Statutory deadlines across every scheme, generated from your records.', features: ['compliance'] },
   { id: 'advanced-reporting', name: 'Advanced Reporting', description: 'Custom and scheduled reports, analytics.', features: ['reporting-advanced', 'analytics-advanced'] },
   { id: 'api-access', name: 'API Access', description: 'Programmatic access to Humo Property Management data.', features: ['api'] },

@@ -2,7 +2,7 @@ import { Router } from '@angular/router';
 import { BreachView, RULE_CATEGORY_LABELS, ResolutionView, RuleCategory, RulesDataSource, RulesView, SchemeRule, UnitSummary, warningLetter, todaySA } from '../../domain';
 import { DrawerService } from '../../ui/drawer/drawer.service';
 import { formatDate } from '../../ui/format/money';
-import { openForm } from '../shared/form-drawer';
+import { FormField, openForm } from '../shared/form-drawer';
 import { resolutionOptions } from './board-forms';
 
 const today = () => todaySA();
@@ -58,7 +58,28 @@ export function uploadRulesForm(drawer: DrawerService, data: RulesDataSource, v:
   });
 }
 
-export function addRuleForm(drawer: DrawerService, data: RulesDataSource, v: RulesView, resolutions: ResolutionView[]): void {
+/**
+ * The resolution a change cites: chosen from the register, or without Governance (`resolutions` null, D29) typed as
+ * in the signed minutes with the date it was passed.
+ */
+function resolutionFields(resolutions: ResolutionView[] | null, required: boolean): FormField[] {
+  if (resolutions)
+    return [
+      required
+        ? { key: 'resolutionId', label: 'Resolution', type: 'select', required: true, options: resolutionOptions(resolutions) }
+        : { key: 'resolutionId', label: 'Adopted by', type: 'select', options: [{ value: '', label: 'Captured from the registered rules' }, ...resolutionOptions(resolutions)] },
+    ];
+  return [
+    { key: 'resolutionRef', label: required ? 'Resolution' : 'Adopted by', type: 'text', required, half: true,
+      help: required ? 'As in the signed minutes, e.g. “AGM 12 March 2026, special resolution 2”.' : 'Leave empty when capturing the registered rules.' },
+    { key: 'adoptedOn', label: 'Passed on', type: 'date', required, half: true },
+  ];
+}
+
+const cites = (f: Record<string, string>) =>
+  f['resolutionRef'] !== undefined ? { resolutionId: '', resolutionRef: f['resolutionRef'], adoptedOn: f['adoptedOn'] || undefined } : { resolutionId: f['resolutionId'] };
+
+export function addRuleForm(drawer: DrawerService, data: RulesDataSource, v: RulesView, resolutions: ResolutionView[] | null): void {
   openForm(drawer, {
     eyebrow: `${v.scheme.name} · Scheme rules`,
     title: 'Add a rule',
@@ -68,41 +89,41 @@ export function addRuleForm(drawer: DrawerService, data: RulesDataSource, v: Rul
       { key: 'category', label: 'Category', type: 'select', required: true, half: true, options: CATEGORY_OPTIONS },
       { key: 'title', label: 'Title', type: 'text', required: true, placeholder: 'e.g. Electric vehicle charging' },
       { key: 'text', label: 'Wording', type: 'textarea', required: true },
-      { key: 'resolutionId', label: 'Adopted by', type: 'select', options: [{ value: '', label: 'Captured from the registered rules' }, ...resolutionOptions(resolutions)] },
+      ...resolutionFields(resolutions, false),
     ],
     initial: { category: 'other', resolutionId: '' },
     submitLabel: 'Add the rule',
-    submit: (f) => data.actRules(v.scheme.id, { type: 'add', number: f['number'], title: f['title'], category: f['category'] as RuleCategory, text: f['text'], resolutionId: f['resolutionId'] }),
+    submit: (f) => data.actRules(v.scheme.id, { type: 'add', number: f['number'], title: f['title'], category: f['category'] as RuleCategory, text: f['text'], ...cites(f) }),
     success: () => 'Rule added. Share the rule book so owners have the current version.',
     failure: 'The rule wasn’t added',
   });
 }
 
-export function amendRuleForm(drawer: DrawerService, data: RulesDataSource, v: RulesView, rule: SchemeRule, resolutions: ResolutionView[]): void {
+export function amendRuleForm(drawer: DrawerService, data: RulesDataSource, v: RulesView, rule: SchemeRule, resolutions: ResolutionView[] | null): void {
   openForm(drawer, {
     eyebrow: `${v.scheme.name} · Rule ${rule.number}`,
     title: `Amend: ${rule.title}`,
     intro: 'Conduct rules change by special resolution of the owners. The earlier wording stays in the rule’s history.',
     fields: [
       { key: 'text', label: 'New wording', type: 'textarea', required: true },
-      { key: 'resolutionId', label: 'Resolution', type: 'select', required: true, options: resolutionOptions(resolutions) },
+      ...resolutionFields(resolutions, true),
     ],
     initial: { text: rule.versions[0].text },
     submitLabel: 'Amend the rule',
-    submit: (f) => data.actRules(v.scheme.id, { type: 'amend', ruleId: rule.id, text: f['text'], resolutionId: f['resolutionId'] }),
+    submit: (f) => data.actRules(v.scheme.id, { type: 'amend', ruleId: rule.id, text: f['text'], ...cites(f) }),
     success: () => 'Amended. Share the rule book so owners have the current version.',
     failure: 'The rule wasn’t amended',
   });
 }
 
-export function repealRuleForm(drawer: DrawerService, data: RulesDataSource, v: RulesView, rule: SchemeRule, resolutions: ResolutionView[]): void {
+export function repealRuleForm(drawer: DrawerService, data: RulesDataSource, v: RulesView, rule: SchemeRule, resolutions: ResolutionView[] | null): void {
   openForm(drawer, {
     eyebrow: `${v.scheme.name} · Rule ${rule.number}`,
     title: `Repeal: ${rule.title}`,
     intro: 'It stays in the register as repealed, with its history.',
-    fields: [{ key: 'resolutionId', label: 'Resolution', type: 'select', required: true, options: resolutionOptions(resolutions) }],
+    fields: resolutionFields(resolutions, true),
     submitLabel: 'Repeal the rule',
-    submit: (f) => data.actRules(v.scheme.id, { type: 'repeal', ruleId: rule.id, resolutionId: f['resolutionId'] }),
+    submit: (f) => data.actRules(v.scheme.id, { type: 'repeal', ruleId: rule.id, ...cites(f) }),
     success: () => 'Repealed.',
     failure: 'The rule wasn’t repealed',
   });

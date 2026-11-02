@@ -251,7 +251,7 @@ public sealed class CommercialRulesTests
         Assert.True(On(e, "units"));            // inherited from Essentials
         Assert.True(On(e, "levies"));           // Professional
         Assert.False(On(e, "compliance"));      // Enterprise only
-        Assert.Equal("Governance add-on", e.Single(x => x.Feature == "meetings").SourceLabel);
+        Assert.Equal("Meetings & AGMs add-on", e.Single(x => x.Feature == "meetings").SourceLabel);
 
         e = EntitlementEngine.Resolve(Sub("active", new FeatureOverride("compliance", true, "Trial", "Mashoto", "", "2026-10-31T00:00:00+02:00"),
             new FeatureOverride("api", true, "Old trial", "Mashoto", "", "2026-10-01T00:00:00+02:00")), now, addOns);

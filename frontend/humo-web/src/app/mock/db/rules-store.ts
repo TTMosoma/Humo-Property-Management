@@ -9,6 +9,7 @@ import {
   NewBreach,
   RULE_CATEGORY_LABELS,
   RuleAction,
+  RuleResolution,
   RuleBook,
   RuleCategory,
   RulesView,
@@ -115,12 +116,26 @@ export class RulesStore {
     return r && r.schemeId === schemeId && r.outcome === 'passed' ? r : undefined;
   }
 
+  /** What a change cites: the register's resolution, or one typed from the minutes (D29). */
+  private cited(schemeId: string, a: RuleResolution): { adoptedAt: string; resolutionRef: string; resolutionId?: string } | undefined {
+    if (a.resolutionId) {
+      const res = this.resolution(schemeId, a.resolutionId);
+      return res && { adoptedAt: (res.decidedAt ?? res.proposedAt).slice(0, 10), resolutionRef: res.ref, resolutionId: res.id };
+    }
+    return a.resolutionRef?.trim() && a.adoptedOn ? { adoptedAt: a.adoptedOn, resolutionRef: a.resolutionRef.trim() } : undefined;
+  }
+
   checkRules(schemeId: string, a: RuleAction): FieldErrors | null {
     if (!this.db.schemes.has(schemeId)) return { schemeId: 'No such scheme.' };
     const e: FieldErrors = {};
     const uploadLimitMb = this.ops.config.uploadLimitMb;
-    const needsResolution = (id: string) => {
-      if (!this.resolution(schemeId, id)) e['resolutionId'] = 'Rules change only by resolution of the owners: choose the passed resolution.';
+    const needsResolution = (r: RuleResolution) => {
+      if (r.resolutionId || r.resolutionRef === undefined) {
+        if (!this.resolution(schemeId, r.resolutionId)) e['resolutionId'] = 'Rules change only by resolution of the owners: choose the passed resolution.';
+        return;
+      }
+      if (r.resolutionRef.trim().length < 3) e['resolutionRef'] = 'Rules change only by resolution of the owners: give the resolution as in the minutes.';
+      if (!r.adoptedOn || !/^\d{4}-\d{2}-\d{2}$/.test(r.adoptedOn) || r.adoptedOn > iso(new Date())) e['adoptedOn'] = 'When was it passed? Not in the future.';
     };
     switch (a.type) {
       case 'add':
@@ -129,21 +144,21 @@ export class RulesStore {
         if (a.title.trim().length < 3) e['title'] = 'Give the rule a short title.';
         if (a.text.trim().length < 20) e['text'] = 'Write the rule as adopted.';
         // No resolution: the rule is being captured from the registered rules (onboarding).
-        if (a.resolutionId) needsResolution(a.resolutionId);
+        if (a.resolutionId || a.resolutionRef?.trim()) needsResolution(a);
         break;
       case 'amend': {
         const r = this.rules.find((x) => x.id === a.ruleId && x.schemeId === schemeId);
         if (!r || r.status !== 'in-force') return { ruleId: 'That rule isn’t in force.' };
         if (a.text.trim() === r.versions[0].text) e['text'] = 'The wording hasn’t changed.';
         else if (a.text.trim().length < 20) e['text'] = 'Write the rule as amended.';
-        needsResolution(a.resolutionId);
+        needsResolution(a);
         break;
       }
       case 'repeal': {
         const r = this.rules.find((x) => x.id === a.ruleId && x.schemeId === schemeId);
         if (!r || r.status !== 'in-force') return { ruleId: 'That rule isn’t in force.' };
         if (this.breaches.some((b) => b.ruleId === r.id && b.status !== 'resolved')) e['resolutionId'] = 'Resolve the open breaches of this rule first.';
-        else needsResolution(a.resolutionId);
+        else needsResolution(a);
         break;
       }
       case 'share':
@@ -168,7 +183,7 @@ export class RulesStore {
     const today = iso(new Date());
     switch (a.type) {
       case 'add': {
-        const res = a.resolutionId ? this.resolution(schemeId, a.resolutionId) : undefined;
+        const res = this.cited(schemeId, a);
         const id = `rule-${++this.seq}`;
         this.rules.push({
           id,
@@ -178,24 +193,24 @@ export class RulesStore {
           title: a.title.trim(),
           category: a.category,
           status: 'in-force',
-          versions: [{ text: a.text.trim(), adoptedAt: res ? (res.decidedAt ?? res.proposedAt).slice(0, 10) : today, resolutionRef: res?.ref ?? `Captured from the registered rules by ${by}`, resolutionId: res?.id }],
+          versions: [{ text: a.text.trim(), adoptedAt: res?.adoptedAt ?? today, resolutionRef: res?.resolutionRef ?? `Captured from the registered rules by ${by}`, resolutionId: res?.resolutionId }],
         });
         this.commit();
         return id;
       }
       case 'amend': {
         const r = this.rules.find((x) => x.id === a.ruleId)!;
-        const res = this.resolution(schemeId, a.resolutionId)!;
-        r.versions.unshift({ text: a.text.trim(), adoptedAt: (res.decidedAt ?? res.proposedAt).slice(0, 10), resolutionRef: res.ref, resolutionId: res.id });
+        const res = this.cited(schemeId, a)!;
+        r.versions.unshift({ text: a.text.trim(), ...res });
         r.version++;
         this.commit();
         return;
       }
       case 'repeal': {
         const r = this.rules.find((x) => x.id === a.ruleId)!;
-        const res = this.resolution(schemeId, a.resolutionId)!;
+        const res = this.cited(schemeId, a)!;
         r.status = 'repealed';
-        r.repealed = { at: (res.decidedAt ?? res.proposedAt).slice(0, 10), resolutionRef: res.ref };
+        r.repealed = { at: res.adoptedAt, resolutionRef: res.resolutionRef };
         r.version++;
         this.commit();
         return;

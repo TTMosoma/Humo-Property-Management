@@ -88,4 +88,12 @@ describe('Scheme rules: registered rules PDF', () => {
     auth.signIn('p-priya'); // Finance: no Meetings.Manage
     await expect(upload()).rejects.toBeInstanceOf(PolicyError);
   });
+
+  it('without Governance, a rule is amended citing the resolution as in the minutes (D29)', async () => {
+    const rule = store.view(KC)!.rules.find((r) => r.status === 'in-force')!;
+    const amend = (over: object) => run(rules.actRules(KC, { type: 'amend', ruleId: rule.id, text: 'Visitors park in the marked bays only, and for no longer than 24 hours.', resolutionId: '', ...over }));
+    await expect(amend({ resolutionRef: 'AGM 12 March 2026, special resolution 2' })).rejects.toMatchObject({ fieldErrors: { adoptedOn: expect.any(String) } });
+    await amend({ resolutionRef: 'AGM 12 March 2026, special resolution 2', adoptedOn: '2026-03-12' });
+    expect(store.view(KC)!.rules.find((r) => r.id === rule.id)!.versions[0]).toMatchObject({ adoptedAt: '2026-03-12', resolutionRef: 'AGM 12 March 2026, special resolution 2' });
+  });
 });

@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { map, of, take } from 'rxjs';
-import { BREACH_STATUS_LABELS, BreachStatus, BreachView, RULE_CATEGORY_LABELS, ResolutionDataSource, RulesDataSource, SchemeRule, UnitDataSource, formatBytes, RulesView, todaySA } from '../../domain';
+import { Observable, map, of, take } from 'rxjs';
+import { BREACH_STATUS_LABELS, BreachStatus, BreachView, RULE_CATEGORY_LABELS, ResolutionDataSource, ResolutionView, RulesDataSource, SchemeRule, UnitDataSource, formatBytes, RulesView, todaySA } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { loadable } from '../../core/data/loadable';
 import { ScopeNotice } from '../../core/scope/scope-notice';
@@ -286,8 +286,8 @@ export class RulesPage {
   protected readonly statusLabel = (b: BreachView) => BREACH_STATUS_LABELS[b.breach.status];
   protected readonly tone = (b: BreachView) => BREACH_TONE[b.breach.status];
 
-  protected readonly canManage = computed(() => this.session.can('Meetings.Manage') && this.session.hasFeature('governance') && !this.session.readOnly());
-  protected readonly canEnforce = computed(() => this.session.can('Rules.Enforce') && this.session.hasFeature('governance') && !this.session.readOnly());
+  protected readonly canManage = computed(() => this.session.can('Meetings.Manage') && this.session.hasFeature('scheme-rules') && !this.session.readOnly());
+  protected readonly canEnforce = computed(() => this.session.can('Rules.Enforce') && this.session.hasFeature('scheme-rules') && !this.session.readOnly());
 
   protected setScheme(id: string): void {
     this.state.update((s) => ({ ...s, scheme: id }));
@@ -310,7 +310,9 @@ export class RulesPage {
     void this.router.navigate(['/governance/rules/breaches', b.breach.id]);
   }
 
-  private passed() {
+  /** The scheme's passed resolutions; null without Governance, when the resolution is typed from the minutes (D29). */
+  private passed(): Observable<ResolutionView[] | null> {
+    if (!this.session.hasFeature('governance')) return of(null);
     return this.resolutions.list([this.schemeId()], { pageSize: 500 }).pipe(
       take(1),
       map((p) => p.items),

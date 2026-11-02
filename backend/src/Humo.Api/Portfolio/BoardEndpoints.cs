@@ -86,7 +86,8 @@ public static class BoardEndpoints
             Resource = "Trustee board",
             ResourceId = schemeId.ToString(),
             SchemeId = schemeId,
-            Feature = "governance",
+            // The register is on every plan (D29): approving alone tells the trustees on record (D24).
+            Feature = "trustee-management",
             Validate = () => Check(a, trustees, target, candidates, reads.Today, cited),
         }, async actor =>
         {

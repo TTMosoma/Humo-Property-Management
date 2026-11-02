@@ -11,7 +11,8 @@ export const resolutionOptions = (rs: ResolutionView[]) =>
     .sort((a, b) => (b.resolution.decidedAt ?? '').localeCompare(a.resolution.decidedAt ?? ''))
     .map((r) => ({ value: r.resolution.id, label: `${r.resolution.ref} · ${r.resolution.title}` }));
 
-export function appointForm(drawer: DrawerService, data: BoardDataSource, b: BoardView, candidates: BoardCandidate[], resolutions: ResolutionView[]): void {
+/** `resolutions`: the scheme's register, or null without Governance, when the election's resolution is typed from the minutes. */
+export function appointForm(drawer: DrawerService, data: BoardDataSource, b: BoardView, candidates: BoardCandidate[], resolutions: ResolutionView[] | null): void {
   openForm(drawer, {
     eyebrow: `${b.scheme.name} · Trustee board`,
     title: 'Add a trustee',
@@ -30,9 +31,11 @@ export function appointForm(drawer: DrawerService, data: BoardDataSource, b: Boa
           { value: 'co-opted', label: 'Co-opted by the board until the next AGM' },
         ],
       },
-      { key: 'resolutionId', label: 'Resolution', type: 'select', required: true, options: resolutionOptions(resolutions), showIf: (v) => v['how'] === 'elected',
-        help: resolutionOptions(resolutions).length ? 'The passed resolution that elected them.' : 'No passed resolutions at this scheme yet: record the election at its meeting first, or co-opt them until the AGM.',
-      },
+      resolutions
+        ? { key: 'resolutionId', label: 'Resolution', type: 'select', required: true, options: resolutionOptions(resolutions), showIf: (v) => v['how'] === 'elected',
+            help: resolutionOptions(resolutions).length ? 'The passed resolution that elected them.' : 'No passed resolutions at this scheme yet: record the election at its meeting first, or co-opt them until the AGM.',
+          }
+        : { key: 'resolutionId', label: 'Resolution', type: 'text', required: true, showIf: (v) => v['how'] === 'elected', help: 'As in the signed minutes, e.g. “AGM 12 March 2026, resolution 4”.' },
     ],
     initial: { portfolio: 'Trustee', since: today(), how: b.nextAgm ? 'co-opted' : 'elected' },
     submitLabel: 'Add to the board',

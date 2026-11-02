@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { forkJoin, map, take } from 'rxjs';
+import { forkJoin, map, of, take } from 'rxjs';
 import { AccessDataSource, BoardDataSource, BoardView, ResolutionDataSource, TrusteeView } from '../../domain';
 import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
@@ -145,7 +145,7 @@ export class BoardPage {
   protected readonly view = computed<BoardView | undefined>(() => this.result.value() || undefined);
 
   protected readonly formatDate = formatDate;
-  protected readonly canManage = computed(() => this.session.can('Meetings.Manage') && this.session.hasFeature('governance') && !this.session.readOnly());
+  protected readonly canManage = computed(() => this.session.can('Meetings.Manage') && this.session.hasFeature('trustee-management') && !this.session.readOnly());
 
   /** D3: trustees without a Humo sign-in are invited from the board, for schemes the inviter covers. */
   protected readonly canInvite = computed(
@@ -198,9 +198,10 @@ export class BoardPage {
 
   protected appoint(): void {
     const b = this.view()!;
-    forkJoin([this.data.candidates(b.scheme.id).pipe(take(1)), this.resolutions.list([b.scheme.id], { pageSize: 500 }).pipe(take(1), map((p) => p.items))]).subscribe(([c, r]) =>
-      appointForm(this.drawer, this.data, b, c, r),
-    );
+    // Without Governance there's no resolutions register: the election's resolution is typed from the minutes.
+    const governance = this.session.hasFeature('governance');
+    const resolutions = governance ? this.resolutions.list([b.scheme.id], { pageSize: 500 }).pipe(take(1), map((p) => p.items)) : of(null);
+    forkJoin([this.data.candidates(b.scheme.id).pipe(take(1)), resolutions]).subscribe(([c, r]) => appointForm(this.drawer, this.data, b, c, r));
   }
 
   protected end(t: TrusteeView): void {
