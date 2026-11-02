@@ -656,6 +656,7 @@ A passkey can sign in and confirm payments and bank details, so adding one is a 
 4. **The person is told:** every passkey added or removed sends a notice and an email saying what to do if it wasn't them. Attempts without the proof are in the audit log.
 5. **They choose where it lives:** this device, phone or tablet, security key, or password manager or browser. This is a preference: the browser and device make the final offer, and a password manager add-on can step in first. The choice names the passkey in their list and email.
 6. **Failures stay on screen** until dismissed, saying what happened and what to do. A toast alone isn't enough.
+7. **No passkey is offered at sign-in on a shared computer.** Answering "No, it's shared", or signing in on a browser already answered that way, goes straight in. A passkey can still be added in Settings › Security, e.g. on a phone by QR code.
 
 **Consequences:** while impersonating, staff can't add a passkey (`impersonating`).
 

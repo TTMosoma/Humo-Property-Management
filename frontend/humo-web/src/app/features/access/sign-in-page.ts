@@ -232,8 +232,8 @@ export class SignInPage {
     this.pending?.unsubscribe();
     this.step.set('redeeming');
     this.pending = this.sessions.completeSignInLink(token, code).subscribe({
-      // Signed in by email: ask about this computer, then offer a passkey, so next time is one touch (newcomers get their first one here).
-      next: (askTrust) => this.signedIn(askTrust, 'add-passkey'),
+      // Signed in by email: ask about this computer, then offer a passkey, so next time is one touch (newcomers get their first one here). Never on a shared computer.
+      next: (r) => this.signedIn(r.askBrowserTrust, r.sharedBrowser ? 'done' : 'add-passkey'),
       error: (e: unknown) => {
         if (e instanceof SignInError && e.code === 'wrong-code') {
           this.codeError.set(e.message);
@@ -254,6 +254,7 @@ export class SignInPage {
 
   protected answerTrust(trusted: boolean): void {
     this.pending?.unsubscribe();
+    if (!trusted) this.afterTrust = 'done';
     // An answer that doesn't reach the server is asked again next time, so carry on either way.
     this.pending = this.sessions.answerBrowserTrust(trusted).subscribe({ complete: () => this.carryOn(), error: () => this.carryOn() });
   }

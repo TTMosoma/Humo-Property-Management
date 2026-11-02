@@ -1,7 +1,7 @@
 import { Injectable, Injector, inject } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Observable, delay, map, of, switchMap, throwError, timer } from 'rxjs';
-import { AccessDataSource, ApiError, AuditDataSource, MobileStatus, AuditEvent, AuditQuery, CurrentSession, FieldErrors, HUMO_EMAIL_DOMAIN, IMPERSONATION_REASONS, Identity, ImpersonationSession, ListQuery, NewAssignment, PASSKEY_TOOLS, Page, PasskeyTool, PolicyError, ROLE_LABELS, SENSITIVE_ACTION_LABELS, SecurityDataSource, SecurityProfile, SessionDataSource, SignInError, StepUpAuthenticator, StepUpMethod, StepUpRequest, StepUpResult, activeAssignments, isHumoRole, AGENCY_STAFF, RESIDENT_INVITES, todaySA } from '../../domain';
+import { AccessDataSource, ApiError, AuditDataSource, MobileStatus, AuditEvent, AuditQuery, CurrentSession, FieldErrors, HUMO_EMAIL_DOMAIN, IMPERSONATION_REASONS, Identity, ImpersonationSession, LinkSignIn, ListQuery, NewAssignment, PASSKEY_TOOLS, Page, PasskeyTool, PolicyError, ROLE_LABELS, SENSITIVE_ACTION_LABELS, SecurityDataSource, SecurityProfile, SessionDataSource, SignInError, StepUpAuthenticator, StepUpMethod, StepUpRequest, StepUpResult, activeAssignments, isHumoRole, AGENCY_STAFF, RESIDENT_INVITES, todaySA } from '../../domain';
 import { PrototypeStateService } from '../../core/prototype/prototype-state.service';
 import { AccessStore } from '../db/access-store';
 import { MockDb } from '../db/mock-db';
@@ -613,7 +613,7 @@ export class InMemorySessionDataSource extends SessionDataSource {
     return timer(700).pipe(map(() => code));
   }
 
-  completeSignInLink(token: string, code: string): Observable<boolean> {
+  completeSignInLink(token: string, code: string): Observable<LinkSignIn> {
     return timer(600).pipe(
       switchMap(() => {
         const result = this.auth.redeemLink(token, code.trim());
@@ -624,7 +624,7 @@ export class InMemorySessionDataSource extends SessionDataSource {
         if (!who || who.status !== 'active') return throwError(() => new SignInError('link-expired', 'This sign-in link has expired or was already used'));
         this.auth.signIn(who.id);
         this.audit('Signed in to Humo with an email link');
-        return of(!this.auth.browserAnswered(who.id));
+        return of({ askBrowserTrust: !this.auth.browserAnswered(who.id), sharedBrowser: this.auth.browserShared(who.id) });
       }),
     );
   }

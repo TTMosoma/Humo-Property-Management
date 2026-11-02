@@ -64,6 +64,12 @@ export const SIGNED_OUT_SESSION: CurrentSession = (() => {
   };
 })();
 
+/** What a sign-in link answers, beyond signing the person in. */
+export interface LinkSignIn {
+  askBrowserTrust: boolean;
+  sharedBrowser: boolean;
+}
+
 export abstract class SessionDataSource {
   /** Live: emits the current session, and again whenever it changes. */
   abstract current(): Observable<CurrentSession>;
@@ -91,11 +97,13 @@ export abstract class SessionDataSource {
   abstract sendSignInLink(email: string): Observable<string>;
   /**
    * Signs in with the token from a sign-in link and the code from the screen that
-   * asked for it. Resolves with `askBrowserTrust` (see signInWithPasskey). Fails with
+   * asked for it. Resolves with `askBrowserTrust` (see signInWithPasskey) and
+   * `sharedBrowser`: this browser was already answered as shared, so no passkey is
+   * offered on it (D30). Fails with
    * SignInError('wrong-code') while tries remain, and with SignInError('link-expired')
    * once the link is used, too old or out of tries.
    */
-  abstract completeSignInLink(token: string, code: string): Observable<boolean>;
+  abstract completeSignInLink(token: string, code: string): Observable<LinkSignIn>;
   /**
    * Answers "is this your own computer?" for this browser, once. A computer the
    * person owns keeps a passkey sign-in signed in longer. The answer can be removed

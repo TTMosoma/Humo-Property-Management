@@ -30,7 +30,7 @@ public sealed record AddPasskeyRequest(JsonElement Credential, string? Tool);
 public sealed record PasskeySignInRequest(JsonElement Credential);
 
 /// <summary>After a sign-in: whether this browser still has to answer "is this your own computer?"</summary>
-public sealed record SignInResultDto(bool AskBrowserTrust);
+public sealed record SignInResultDto(bool AskBrowserTrust, bool SharedBrowser = false);
 public sealed record SwitchAssignmentRequest(string AssignmentId);
 
 /// <summary>
@@ -159,7 +159,7 @@ public static class AuthEndpoints
         await db.SaveChangesAsync(ct);
         // A link sign-in is never trusted: it proves control of an inbox, not of a device (docs/17 session policy).
         await sessions.StartAsync(user, SessionPolicy.LinkMethod, trusted: false, signIn, ct);
-        return Results.Ok(new SignInResultDto(!await sessions.BrowserAnsweredAsync(user, ct)));
+        return Results.Ok(new SignInResultDto(!await sessions.BrowserAnsweredAsync(user, ct), await sessions.IsSharedBrowserAsync(user, ct)));
     }
 
     // ---- Passkeys ----

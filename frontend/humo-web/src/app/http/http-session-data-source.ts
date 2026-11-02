@@ -1,7 +1,7 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, InjectionToken, inject } from '@angular/core';
 import { Observable, ReplaySubject, catchError, from, map, of, switchMap, tap, throwError } from 'rxjs';
-import { CurrentSession, Identity, PasskeyTool, SIGNED_OUT_SESSION, SessionDataSource, SignInError, SignInFailure } from '../domain';
+import { CurrentSession, Identity, LinkSignIn, PasskeyTool, SIGNED_OUT_SESSION, SessionDataSource, SignInError, SignInFailure } from '../domain';
 
 /** Where the Humo API lives. Same origin by default (Caddy routes /api to the .NET service; doc 25). */
 export const API_BASE_URL = new InjectionToken<string>('API_BASE_URL', { factory: () => '/api' });
@@ -64,9 +64,9 @@ export class HttpSessionDataSource extends SessionDataSource {
     );
   }
 
-  completeSignInLink(token: string, code: string): Observable<boolean> {
-    return this.http.post<SignInResult>(`${this.base}/auth/link/complete`, { token, code }, { withCredentials: true }).pipe(
-      switchMap((result) => this.reload().pipe(map(() => result.askBrowserTrust))),
+  completeSignInLink(token: string, code: string): Observable<LinkSignIn> {
+    return this.http.post<LinkSignIn>(`${this.base}/auth/link/complete`, { token, code }, { withCredentials: true }).pipe(
+      switchMap((result) => this.reload().pipe(map(() => result))),
       catchError((e: unknown) => throwError(() => signInError(e, 'link-expired'))),
     );
   }

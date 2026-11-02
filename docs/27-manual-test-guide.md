@@ -111,7 +111,8 @@ Sections 11 to 16 use the development seed instead of a hand-made agency.
 - [ ] **Another passkey needs the first** (D30): as Thandeka, *Add a passkey* › *Phone or tablet*. **Expect:** it asks you to confirm with your passkey, then *Confirmed. Now create the new passkey*. *Create the passkey* opens the QR code prompt.
 - [ ] **An email link isn't enough** (D30): as Thandeka, signed in by email link, *Add a passkey* › any option, then *Cancel* the confirmation. **Expect:** a red message stays on screen, "We couldn't confirm it's you", until you dismiss it, and nothing is added.
 - [ ] **A failure stays on screen** (D30): *Add a passkey* › *This device*, then close the Windows Hello prompt. **Expect:** a red message, "The passkey wasn't created", that doesn't disappear.
-- [ ] **The same at sign-in** (D30): sign in as Annette by email link with no passkey (remove hers first in the database, or use another new person). **Expect:** the explanation and four choices, and *Not now*.
+- [ ] **The same at sign-in** (D30): in a private window, sign in as someone with no passkey by email link and answer *Yes, it's mine*. **Expect:** the explanation, four choices and *Not now*.
+- [ ] **Not on a shared computer** (D30): in a new private window, sign in by email link and answer *No, it's shared*. **Expect:** straight into Humo PM, with no passkey screen. In that same window, sign out and sign in by email link again. **Expect:** no question and no passkey screen.
 - [ ] **Removing a passkey** (D30): remove one of two passkeys. **Expect:** Mailpit has "A passkey was removed from your Humo account".
 
 ## 11. Trust accounts

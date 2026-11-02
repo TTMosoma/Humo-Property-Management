@@ -106,6 +106,10 @@ export class MockAuthSession {
     return identityId in this.browserAnswers();
   }
 
+  browserShared(identityId: string): boolean {
+    return this.browserAnswers()[identityId] === false;
+  }
+
   answerBrowser(identityId: string, trusted: boolean): void {
     safeStorage.set(KEYS.browser, JSON.stringify({ ...this.browserAnswers(), [identityId]: trusted }));
   }
