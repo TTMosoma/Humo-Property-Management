@@ -107,6 +107,7 @@ Sections 11 to 16 use the development seed instead of a hand-made agency.
 4. **Two people at once:** sign Thandeka in in a normal window and Priya in a private window (or another browser). Maker and checker needs both.
 
 - [ ] **A form that needs a passkey you don't have** (fixed 31 October 2026): as someone without one, Settings › Agency › Trust accounts › *Change* › *Change account*. **Expect:** the dialog says you have no passkey; *Set up a passkey* opens Security with the form closed, so *Add a passkey* is in view.
+- [ ] **Your first passkey** (fixed 2 November 2026): as someone without one (e.g. `annette@fynbos.example`, signed in by email link), Settings › Security › *Add a passkey*. **Expect:** Windows Hello asks straight away (no "verify with your passkey" dialog); the passkey is listed and the audit log has *Added a passkey*.
 
 ## 11. Trust accounts
 

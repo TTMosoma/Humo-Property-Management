@@ -93,7 +93,14 @@ export class SecurityPage {
   protected addPasskey(): void {
     const id = this.identityId();
     const name = this.session.isHumo() ? 'Studio laptop (new)' : 'This device';
-    this.run('Add a passkey for this device (Windows Hello)', () => this.data.addPasskey(id, name, 'Windows Hello'), 'Passkey added. You can now use Windows Hello on this device.');
+    const add = () => this.data.addPasskey(id, name, 'Windows Hello');
+    const done = 'Passkey added. You can now use Windows Hello on this device.';
+    // A first passkey can't be verified with a passkey: the email link that signed them in is the proof.
+    if (!this.profile()?.passkeys.length) {
+      add().subscribe({ next: () => this.feedback.success(done), error: () => this.feedback.error('The passkey wasn’t added. Nothing was changed.') });
+      return;
+    }
+    this.run('Add a passkey for this device (Windows Hello)', add, done);
   }
 
   protected removePasskey(passkeyId: string, name: string): void {
