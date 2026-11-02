@@ -107,6 +107,13 @@ Sections 11 to 16 use the development seed instead of a hand-made agency.
 4. **Two people at once:** sign Thandeka in in a normal window and Priya in a private window (or another browser). Maker and checker needs both.
 
 - [ ] **A form that needs a passkey you don't have** (fixed 31 October 2026): as someone without one, Settings › Agency › Trust accounts › *Change* › *Change account*. **Expect:** the dialog says you have no passkey; *Set up a passkey* opens Security with the form closed, so *Add a passkey* is in view.
+- [ ] **Your first passkey** (D30): as someone without one (e.g. `annette@fynbos.example`, signed in by email link), Settings › Security › *Add a passkey*. **Expect:** the explanation of why Humo is careful, and four choices. Choose *This device*. **Expect:** Windows Hello asks straight away, with no "Additional verification" dialog. The passkey is listed as *This device*, the audit log has *Added a passkey (This device)*, and Mailpit has "A passkey was added to your Humo account".
+- [ ] **Another passkey needs the first** (D30): as Thandeka, *Add a passkey* › *Phone or tablet*. **Expect:** it asks you to confirm with your passkey, then *Confirmed. Now create the new passkey*. *Create the passkey* opens the QR code prompt.
+- [ ] **An email link isn't enough** (D30): as Thandeka, signed in by email link, *Add a passkey* › any option, then *Cancel* the confirmation. **Expect:** a red message stays on screen, "We couldn't confirm it's you", until you dismiss it, and nothing is added.
+- [ ] **A failure stays on screen** (D30): *Add a passkey* › *This device*, then close the Windows Hello prompt. **Expect:** a red message, "The passkey wasn't created", that doesn't disappear.
+- [ ] **The same at sign-in** (D30): in a private window, sign in as someone with no passkey by email link and answer *Yes, it's mine*. **Expect:** the explanation, four choices and *Not now*.
+- [ ] **Not on a shared computer** (D30): in a new private window, sign in by email link and answer *No, it's shared*. **Expect:** straight into Humo PM, with no passkey screen. In that same window, sign out and sign in by email link again. **Expect:** no question and no passkey screen.
+- [ ] **Removing a passkey** (D30): remove one of two passkeys. **Expect:** Mailpit has "A passkey was removed from your Humo account".
 
 ## 11. Trust accounts
 
@@ -175,6 +182,14 @@ npm --prefix frontend/humo-web run e2e:screens
 - [ ] Prototype (`npm start`), as Thandeka after removing Acacia's add-on (as `terry@humo.co.za`: Platform › Customers › Acacia › *Manage features*): Scheme rules › a rule › *Amend*. **Expect:** the Resolution is a text box with a *Passed on* date; the new wording shows that reference.
 - [ ] As `terry@humo.co.za`: Platform › Pricing & add-ons. **Expect:** the add-on is called *Meetings & AGMs*; no package lists *Advanced permissions*.
 - [ ] As Thandeka (Acacia, Enterprise): *Add a trustee* › *Elected*. **Expect:** the Resolution is still chosen from the scheme's passed resolutions.
+
+## 18. Times on a history, and who was told after a cooling-off
+
+- [ ] As Priya (Finance): Finance › Receipts, capture a payment dated today and allocate it to Kingfisher Court unit 42. Open the unit's *History*. **Expect:** "Payment received" shows the time you allocated it, not 08:00.
+- [ ] Capture one dated five days ago and allocate it. **Expect:** it sits on that date with no time, and the detail says when it was put on the account.
+- [ ] On the same history, "… became the owner". **Expect:** a date, no time.
+- [ ] Let an approval made alone take effect after its cooling-off (§ approvals, D24) on a scheme with trustees on record. **Expect:** the approver's notice and the audit entry say "Trustees told:" with each name and how (email address or mobile).
+- [ ] The same on a scheme with no trustees on record (e.g. Flamingo Pointe). **Expect:** "… has no trustees on record, so no trustee was told. Tell the trustees yourself."
 
 ## Reporting back
 

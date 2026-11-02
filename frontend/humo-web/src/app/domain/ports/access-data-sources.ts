@@ -4,7 +4,7 @@ import { ListQuery, Page } from './list-query';
 import { AuditEvent, AuditQuery, ImpersonationMode, ImpersonationReason, ImpersonationSession } from '../models/audit';
 import { AssignmentScope, Identity, RoleAssignment } from '../models/identity';
 import { HumoTeamAction, HumoTeamMember, NewHumoMember, PendingHumoGrant } from '../models/humo-team';
-import { MobileStatus, Passkey, SecurityProfile, StepUpMethod, StepUpRequest, StepUpResult } from '../models/security';
+import { MobileStatus, Passkey, PasskeyTool, SecurityProfile, StepUpMethod, StepUpRequest, StepUpResult } from '../models/security';
 
 export interface NewAssignment {
   role: RoleAssignment['role'];
@@ -112,7 +112,8 @@ export abstract class AuditDataSource {
 /** The signed-in identity's own credentials, trusted devices and sessions. */
 export abstract class SecurityDataSource {
   abstract profile(identityId: string): Observable<SecurityProfile>;
-  abstract addPasskey(identityId: string, name: string, provider: string): Observable<void>;
+  /** Fails with SignInError, as SessionDataSource.registerPasskey does. */
+  abstract addPasskey(identityId: string, tool: PasskeyTool): Observable<void>;
   abstract removePasskey(identityId: string, passkeyId: string): Observable<void>;
   abstract removeDevice(identityId: string, deviceId: string): Observable<void>;
   abstract signOutSession(identityId: string, sessionId: string): Observable<void>;

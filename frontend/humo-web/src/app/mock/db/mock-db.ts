@@ -449,12 +449,13 @@ export class MockDb {
 
     const byPeriod = new Map<string, RawTransaction[]>();
     for (const t of transactions) {
-      if (t.type === 'payment' || t.type === 'adjustment') {
+      if (t.type === 'payment' || t.type === 'adjustment' || t.type === 'reversal') {
         events.push({
           id: 'ev-' + t.id,
           at: t.date,
+          allDay: true,
           kind: 'payment',
-          title: t.type === 'payment' ? 'Payment received' : 'Adjustment',
+          title: t.type === 'payment' ? 'Payment received' : t.type === 'reversal' ? 'Payment reversed' : 'Adjustment',
           detail: t.reference ? `Reference “${t.reference}”` : t.description,
           amount: -t.amount,
           link: accountLink,
@@ -470,6 +471,7 @@ export class MockDb {
       events.push({
         id: `ev-charges-${account.id}-${period}`,
         at: lines[0].date,
+        allDay: true,
         kind: 'charge',
         title: `${periodLabel(period, false)} charges raised`,
         detail: lines.map((l) => l.description.split(' — ')[0]).join(' · ') + (interest ? ' (incl. interest)' : ''),
@@ -480,6 +482,7 @@ export class MockDb {
       events.push({
         id: `ev-statement-${account.id}-${period}`,
         at: new Date(y, m - 1, 1, 8).toISOString(),
+        allDay: true,
         kind: 'statement',
         title: `${periodLabel(period, false)} statement ${account.statementBy === 'post' ? 'posted' : account.statementBy === 'portal' ? 'published to the portal' : 'emailed'} to ${holder.displayName}`,
         link: `${accountLink}/statements/${period}`,

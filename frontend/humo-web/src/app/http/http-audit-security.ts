@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, from, map, switchMap, tap, throwError } from 'rxjs';
-import { AuditDataSource, AuditEvent, AuditQuery, ListQuery, MobileStatus, Page, SecurityDataSource, SecurityProfile, SessionDataSource } from '../domain';
+import { AuditDataSource, AuditEvent, AuditQuery, ListQuery, MobileStatus, Page, PasskeyTool, SecurityDataSource, SecurityProfile, SessionDataSource } from '../domain';
 import { HttpPort, toApiErrorFromHttp } from './http-port';
 import { HttpSessionDataSource } from './http-session-data-source';
 
@@ -64,8 +64,8 @@ export class HttpSecurityDataSource extends HttpPort implements SecurityDataSour
     return this.live<SecurityProfile>('/me/security', ['session']);
   }
 
-  addPasskey(): Observable<void> {
-    return this.session.registerPasskey().pipe(tap(() => this.dataChanges.notify('session')));
+  addPasskey(_identityId: string, tool: PasskeyTool): Observable<void> {
+    return this.session.registerPasskey(tool).pipe(tap(() => this.dataChanges.notify('session')));
   }
 
   mobile(): Observable<MobileStatus> {

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
@@ -6,11 +6,14 @@ import { Observable, catchError, map, of, switchMap } from 'rxjs';
 import {
   AuditDataSource,
   AuditEvent,
+  PasskeyTool,
+  PasskeyToolOption,
   Permission,
   ROLE_LABELS,
   SENSITIVE_ACTION_LABELS,
   SecurityDataSource,
   SensitiveAction,
+  describeFailure,
 } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { loadable } from '../../core/data/loadable';
@@ -22,6 +25,7 @@ import { PageHeader } from '../../ui/page-header/page-header';
 import { ErrorState } from '../../ui/states/error-state';
 import { Skeleton } from '../../ui/states/skeleton';
 import { StatusPill } from '../../ui/status-pill/status-pill';
+import { PasskeySetup } from './passkey-setup';
 
 /**
  * Settings › Security: the signed-in identity's own credentials. Passkeys and
@@ -30,7 +34,7 @@ import { StatusPill } from '../../ui/status-pill/status-pill';
  */
 @Component({
   selector: 'app-security-page',
-  imports: [PageHeader, StatusPill, ErrorState, Skeleton, IonIcon, RouterLink],
+  imports: [PageHeader, StatusPill, ErrorState, Skeleton, IonIcon, RouterLink, PasskeySetup],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './security-page.html',
   styleUrl: './security-page.scss',
@@ -41,6 +45,11 @@ export class SecurityPage {
   private readonly stepUp = inject(StepUpService);
   private readonly feedback = inject(FeedbackService);
   protected readonly session = inject(SessionService);
+
+  protected readonly adding = signal(false);
+  protected readonly problem = signal<string | null>(null);
+  /** Creates the passkey for the person at the keyboard. */
+  protected readonly createPasskey = (tool: PasskeyTool) => this.data.addPasskey(this.identityId(), tool);
 
   /** Always the human at the keyboard — never the impersonated user. */
   private readonly identityId = computed(() => this.session.actor().id);
@@ -91,15 +100,19 @@ export class SecurityPage {
   });
 
   protected addPasskey(): void {
-    const id = this.identityId();
-    const name = this.session.isHumo() ? 'Studio laptop (new)' : 'This device';
-    this.run('Add a passkey for this device (Windows Hello)', () => this.data.addPasskey(id, name, 'Windows Hello'), 'Passkey added. You can now use Windows Hello on this device.');
+    this.problem.set(null);
+    this.adding.update((open) => !open);
+  }
+
+  protected passkeyAdded(tool: PasskeyToolOption): void {
+    this.adding.set(false);
+    void this.feedback.success(`Passkey added: ${tool.label}. We’ve emailed you about it.`);
   }
 
   protected removePasskey(passkeyId: string, name: string): void {
     const p = this.profile();
     if (p && p.passkeys.length === 1 && !p.devices.some((d) => d.humoMobile)) {
-      this.feedback.error('Keep at least one way to verify — add another passkey or set up Humo Mobile first.');
+      this.fail('Keep at least one way to verify — add another passkey or set up Humo Mobile first.');
       return;
     }
     this.run(`Remove the passkey “${name}”`, () => this.data.removePasskey(this.identityId(), passkeyId), `Removed “${name}”.`);
@@ -118,9 +131,16 @@ export class SecurityPage {
   }
 
   private run(detail: string, action: () => Observable<void>, done: string): void {
+    this.problem.set(null);
     this.stepUp.guard({ action: 'change-security', detail }, action).subscribe({
       next: () => this.feedback.success(done),
-      error: () => this.feedback.error('That change didn’t save. Nothing was changed.'),
+      error: (e: unknown) => this.fail(describeFailure(e, 'That change didn’t save')),
     });
+  }
+
+  /** Stays on the page until dismissed; the toast only draws the eye to it. */
+  private fail(message: string): void {
+    this.problem.set(message);
+    void this.feedback.error(message);
   }
 }

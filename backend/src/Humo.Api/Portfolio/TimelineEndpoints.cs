@@ -9,8 +9,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Humo.Api.Portfolio;
 
-/// <summary>As the frontend's <c>TimelineEvent</c> (pattern P4).</summary>
-public sealed record TimelineEventDto(string Id, string At, string Kind, string Title, string? Detail = null, string? Actor = null, decimal? Amount = null, string? Link = null);
+/// <summary>As the frontend's <c>TimelineEvent</c> (pattern P4). <c>AllDay</c>: only the date is known, so no time is shown.</summary>
+public sealed record TimelineEventDto(string Id, string At, string Kind, string Title, string? Detail = null, string? Actor = null, decimal? Amount = null, string? Link = null,
+    bool? AllDay = null);
 public sealed record NewNoteRequest(string? UnitId, string? PersonId, string? Kind, string? Text);
 public sealed record PaymentReportRequest(string? Text);
 
@@ -35,8 +36,21 @@ public static class TimelineEndpoints
     private static string Month(string period) =>
         new DateTime(int.Parse(period[..4], CultureInfo.InvariantCulture), int.Parse(period[5..7], CultureInfo.InvariantCulture), 1).ToString("MMMM yyyy", CultureInfo.InvariantCulture);
 
-    /// <summary>A calendar date as a moment: 08:00 South African time, so it sorts sensibly against timestamps.</summary>
-    private static string At(DateOnly d) => new DateTimeOffset(d.ToDateTime(new TimeOnly(8, 0)), TimeSpan.FromHours(2)).ToString("O");
+    private static readonly TimeSpan SouthAfrica = TimeSpan.FromHours(2);
+
+    /// <summary>A calendar date with no time of day: the start of that day in South Africa, so it sorts below the day's timed events.</summary>
+    private static string Day(DateOnly d) => new DateTimeOffset(d.ToDateTime(TimeOnly.MinValue), SouthAfrica).ToString("O");
+
+    private static DateOnly DateOf(DateTimeOffset t) => DateOnly.FromDateTime(t.ToOffset(SouthAfrica).DateTime);
+
+    /// <summary>
+    /// When a ledger line happened: the moment it was posted, if that was on the day it's dated. A line posted on a later
+    /// day (a payment allocated after it reached the bank, imported or opening history) shows on its own date, with no time.
+    /// </summary>
+    private static (string At, bool? AllDay) Posted(DateOnly date, DateTimeOffset postedAt) =>
+        DateOf(postedAt) == date ? (postedAt.ToString("O"), null) : (Day(date), true);
+
+    private static string Short(DateTimeOffset t) => t.ToOffset(SouthAfrica).ToString("d MMM yyyy, HH:mm", CultureInfo.InvariantCulture);
 
     private static TimelineEventDto FromNote(NoteRow n, string? prefix = null) =>
         new(n.Id.ToString(), n.At.ToString("O"), n.Kind, prefix + (n.Kind == "call" ? "Call logged" : "Note"), n.Text, n.Author);
@@ -50,13 +64,19 @@ public static class TimelineEndpoints
             var accountLink = $"{unitLink}/account";
             var lines = await db.Ledger.AsNoTracking().Where(e => e.AccountId == account.Id).ToListAsync(ct);
             foreach (var e in lines.Where(e => e.Type is TransactionTypes.Payment or TransactionTypes.Adjustment or TransactionTypes.Reversal))
-                events.Add(new($"ev-{e.Id}", At(e.Date), "payment", prefix + (e.Type switch { TransactionTypes.Payment => "Payment received", TransactionTypes.Reversal => "Payment reversed", _ => "Adjustment" }),
-                    e.Reference is { Length: > 0 } r ? $"Reference “{r}”" : e.Description, null, -e.Amount, accountLink));
+            {
+                var (at, allDay) = Posted(e.Date, e.CreatedAt);
+                var detail = e.Reference is { Length: > 0 } r ? $"Reference “{r}”" : e.Description;
+                if (allDay is true && DateOf(e.CreatedAt) > e.Date) detail += $" · put on the account {Short(e.CreatedAt)}";
+                events.Add(new($"ev-{e.Id}", at, "payment", prefix + (e.Type switch { TransactionTypes.Payment => "Payment received", TransactionTypes.Reversal => "Payment reversed", _ => "Adjustment" }),
+                    detail, null, -e.Amount, accountLink, allDay));
+            }
             foreach (var month in lines.Where(e => e.Type is not (TransactionTypes.Payment or TransactionTypes.Adjustment or TransactionTypes.Reversal)).GroupBy(e => e.Date.ToString("yyyy-MM", CultureInfo.InvariantCulture)))
             {
-                var first = month.OrderBy(e => e.Date).First();
-                events.Add(new($"ev-charges-{account.Id}-{month.Key}", At(first.Date), "charge", prefix + $"{Month(month.Key)} charges raised",
-                    string.Join(" · ", month.Select(e => e.Description.Split(" — ")[0]).Distinct()), null, Ledger.Round2(month.Sum(e => e.Amount)), accountLink));
+                var firstDate = month.Min(e => e.Date);
+                var (at, allDay) = Posted(firstDate, month.Where(e => e.Date == firstDate).Min(e => e.CreatedAt));
+                events.Add(new($"ev-charges-{account.Id}-{month.Key}", at, "charge", prefix + $"{Month(month.Key)} charges raised",
+                    string.Join(" · ", month.Select(e => e.Description.Split(" — ")[0]).Distinct()), null, Ledger.Round2(month.Sum(e => e.Amount)), accountLink, allDay));
             }
             foreach (var s in await db.IssuedStatements.AsNoTracking().Where(s => s.AccountId == account.Id).ToListAsync(ct))
                 events.Add(new($"ev-statement-{s.Id}", s.IssuedAt.ToString("O"), "statement", prefix + $"{Month(s.Period)} statement issued", null, s.IssuedBy, null,
@@ -69,9 +89,9 @@ public static class TimelineEndpoints
         foreach (var r in rels)
         {
             var who = names.GetValueOrDefault(r.PersonId, "Someone");
-            events.Add(new($"ev-rel-{r.Id}", At(r.Since), "status", prefix + $"{who} became the {r.Type}", null, null, null, $"/people/{r.PersonId}"));
+            events.Add(new($"ev-rel-{r.Id}", Day(r.Since), "status", prefix + $"{who} became the {r.Type}", null, null, null, $"/people/{r.PersonId}", true));
             if (r.Until is { } until)
-                events.Add(new($"ev-rel-end-{r.Id}", At(until.AddDays(1)), "status", prefix + $"{who} is no longer the {r.Type}", r.EndReason, null, null, $"/people/{r.PersonId}"));
+                events.Add(new($"ev-rel-end-{r.Id}", Day(until.AddDays(1)), "status", prefix + $"{who} is no longer the {r.Type}", r.EndReason, null, null, $"/people/{r.PersonId}", true));
         }
         events.AddRange((await db.Notes.AsNoTracking().Where(n => n.UnitId == unit.Id).ToListAsync(ct)).Select(n => FromNote(n, prefix)));
         return events;

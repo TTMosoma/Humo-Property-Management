@@ -141,48 +141,67 @@ public sealed class SoleAuthority(HumoDbContext db, TimeProvider clock, Platform
         item.DecidedById = item.HeldById;
         item.DecidedAt = Now;
         if (handlers.FirstOrDefault(h => h.Type == item.Type) is { } handler) await handler.DecidedAsync(item, actor, true, item.Comment, ct);
-        audit.Record($"Approval {item.Ref} took effect after the cooling-off: approved alone by {item.HeldBy} under the trustees’ permission (D24)", "success",
-            category: "security", organisationId: item.OrganisationId, schemeId: item.SchemeId, resource: "Approval", resourceId: item.Id.ToString(), system: "Humo cooling-off");
 
         var scheme = await db.Schemes.AsNoTracking().FirstAsync(s => s.Id == item.SchemeId, ct);
         var org = await db.Organisations.AsNoTracking().FirstAsync(o => o.Id == item.OrganisationId, ct);
         var what = $"{item.Ref}: {item.Title}";
-        var prefs = await db.PersonalPreferences.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == user.Id, ct);
-        var channels = (prefs?.Work ?? "email,portal").Split(',', StringSplitOptions.RemoveEmptyEntries);
-        // The approver: in the app always; by email and SMS as they chose for their work (WhatsApp once it's on Humo).
-        notices.ToPerson(user.Id, null, $"In effect: {what}", $"Your approval of {what} took effect after the 24-hour cooling-off. The trustees of {scheme.Name} on record have been told.",
-            item.Route, sendEmail: channels.Contains("email"));
-        if (channels.Contains("sms") && MobileNumber.TryNormalise(user.PhoneNumber, out var mobile))
-            await TextAsync(mobile, $"Humo PM: your approval of {item.Ref} ({scheme.Name}) is now in effect after the 24-hour cooling-off.", item.OrganisationId, ct);
-        await db.SaveChangesAsync(ct);
-        await notices.SendEmailsAsync(ct);
 
-        // The trustees: the agency acted on the board's behalf.
+        // The trustees: the agency acted on the board's behalf. Who was told, and how, goes in the audit log and to the approver.
+        var told = new List<string>();
+        var notTold = new List<string>();
         foreach (var t in trustees)
         {
             var text = $"{org.ShortName} approved {what} for {scheme.Name} on the board’s behalf, under the trustees’ written permission. It took effect today after a 24-hour cooling-off. If the board didn’t agree to this, contact {org.ShortName} straight away.";
+            var how = new List<string>();
             if (Settings.SettingsEndpoints.IsEmail(t.Email))
             {
                 try
                 {
                     await email.SendAsync(new EmailMessage(t.Email.Trim(), $"Approved on the board’s behalf: {item.Title}", $"Dear {t.DisplayName},\n\n{text}\n\n{org.ShortName}"), ct);
+                    how.Add($"email ({t.Email.Trim()})");
                 }
                 catch (Exception e) when (e is not OperationCanceledException)
                 {
                     logger.LogError(e, "The mail server didn’t accept the cooling-off notice for {Ref}", item.Ref);
                 }
             }
-            if ((t.PreferredChannel == "sms" || !Settings.SettingsEndpoints.IsEmail(t.Email)) && MobileNumber.TryNormalise(t.Phone, out var phone))
-                await TextAsync(phone, $"{org.ShortName}: {item.Ref} ({scheme.Name}) was approved on the board’s behalf and is now in effect. Not agreed? Contact {org.ShortName}.", item.OrganisationId, ct);
+            if ((t.PreferredChannel == "sms" || !Settings.SettingsEndpoints.IsEmail(t.Email)) && MobileNumber.TryNormalise(t.Phone, out var phone)
+                && await TextAsync(phone, $"{org.ShortName}: {item.Ref} ({scheme.Name}) was approved on the board’s behalf and is now in effect. Not agreed? Contact {org.ShortName}.", item.OrganisationId, ct))
+                how.Add($"SMS ({phone})");
+            if (how.Count > 0) told.Add($"{t.DisplayName} by {string.Join(" and ", how)}");
+            else notTold.Add(t.DisplayName);
         }
+        var trusteesTold = Told(scheme.Name, told, notTold);
+        audit.Record($"Approval {item.Ref} took effect after the cooling-off: approved alone by {item.HeldBy} under the trustees’ permission (D24). {trusteesTold}", "success",
+            category: "security", organisationId: item.OrganisationId, schemeId: item.SchemeId, resource: "Approval", resourceId: item.Id.ToString(), system: "Humo cooling-off");
+
+        var prefs = await db.PersonalPreferences.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == user.Id, ct);
+        var channels = (prefs?.Work ?? "email,portal").Split(',', StringSplitOptions.RemoveEmptyEntries);
+        // The approver: in the app always; by email and SMS as they chose for their work (WhatsApp once it's on Humo).
+        notices.ToPerson(user.Id, null, $"In effect: {what}", $"Your approval of {what} took effect after the 24-hour cooling-off. {trusteesTold}",
+            item.Route, sendEmail: channels.Contains("email"));
+        if (channels.Contains("sms") && MobileNumber.TryNormalise(user.PhoneNumber, out var mobile))
+            await TextAsync(mobile, $"Humo PM: your approval of {item.Ref} ({scheme.Name}) is now in effect after the 24-hour cooling-off.", item.OrganisationId, ct);
         await db.SaveChangesAsync(ct);
+        await notices.SendEmailsAsync(ct);
     }
 
-    private async Task TextAsync(string to, string text, Guid organisationId, CancellationToken ct)
+    /// <summary>Who among the trustees on record was told, and how; or that there's nobody on record to tell.</summary>
+    public static string Told(string scheme, IReadOnlyList<string> told, IReadOnlyList<string> notTold)
+    {
+        if (told.Count == 0 && notTold.Count == 0)
+            return $"{scheme} has no trustees on record, so no trustee was told. Tell the trustees yourself.";
+        var text = told.Count > 0 ? $"Trustees told: {string.Join("; ", told)}." : "No trustee could be told.";
+        return notTold.Count > 0 ? $"{text} Not told (no working email or mobile on record): {string.Join(", ", notTold)}. Tell them yourself." : text;
+    }
+
+    /// <summary>True when the provider accepted it.</summary>
+    private async Task<bool> TextAsync(string to, string text, Guid organisationId, CancellationToken ct)
     {
         var receipt = await sms.SendAsync(new SmsMessage(to, text), ct);
         if (receipt.Accepted) await usage.RecordAsync(organisationId, "sms", Messaging.MessageUsage.SmsUnits(text, receipt.Parts), ct);
         else logger.LogWarning("The SMS provider refused a cooling-off notice: {Error}", receipt.Error);
+        return receipt.Accepted;
     }
 
     public TrusteePermissionDto ToDto(TrusteePermission p) => new(p.Id.ToString(), p.SchemeId.ToString(), p.FileId.ToString(), p.Summary,

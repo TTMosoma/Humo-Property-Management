@@ -1,0 +1,60 @@
+@if (problem(); as p) {
+  <div class="problem" role="alert">
+    <ion-icon name="alert-circle-outline" aria-hidden="true" />
+    <div class="problem-text">
+      <strong>{{ p.title }}</strong>
+      <p>{{ p.detail }}</p>
+    </div>
+    <button type="button" class="btn btn-ghost btn-sm" (click)="dismiss()">Dismiss</button>
+  </div>
+}
+
+@switch (phase()) {
+  @case ('waiting') {
+    <p class="status" role="status">
+      <span class="spinner" aria-hidden="true"></span>
+      <span>{{ tool()?.waiting }}</span>
+    </p>
+  }
+  @case ('confirming') {
+    <p class="status" role="status">
+      <span class="spinner" aria-hidden="true"></span>
+      <span>Confirm it’s you with the passkey you already have.</span>
+    </p>
+  }
+  @case ('confirmed') {
+    <div class="confirmed">
+      <p role="status"><ion-icon name="checkmark-outline" aria-hidden="true" /> Confirmed. Now create the new passkey: {{ tool()?.label }}.</p>
+      <div class="confirmed-actions">
+        <button type="button" class="btn btn-primary" (click)="choose(tool()!)">Create the passkey</button>
+        <button type="button" class="btn btn-ghost" (click)="back()">Choose another option</button>
+      </div>
+    </div>
+  }
+  @default {
+    <div class="why">
+      <strong><ion-icon name="shield-checkmark-outline" aria-hidden="true" /> A passkey is a key to your account</strong>
+      <p>Whoever holds it can sign in as you and confirm payments and bank details. To stop that being misused:</p>
+      <ul>
+        <li>If you already have a passkey, you must confirm with it first, so someone who only gets into your email can’t add their own.</li>
+        <li>We email you every time a passkey is added or removed, and it’s recorded in the audit log.</li>
+        <li>Only add one on a device or account that’s yours. Humo will never phone or message you asking you to add one.</li>
+      </ul>
+    </div>
+
+    <p class="choose-label" id="passkey-tool-label">Where should this passkey live?</p>
+    <div class="tools" role="group" aria-labelledby="passkey-tool-label">
+      @for (t of tools; track t.id) {
+        <button type="button" class="tool" (click)="choose(t)">
+          <span class="tool-icon"><ion-icon [name]="t.icon" aria-hidden="true" /></span>
+          <span class="tool-text">
+            <span class="tool-name">{{ t.label }}</span>
+            <span class="tool-detail">{{ t.detail }}</span>
+          </span>
+          <ion-icon class="tool-go" name="chevron-forward-outline" aria-hidden="true" />
+        </button>
+      }
+    </div>
+    <p class="note">Your browser and device show the final prompt and may offer other places too. A password manager add-on may step in first; dismiss it if you’d rather use something else.</p>
+  }
+}

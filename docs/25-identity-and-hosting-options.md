@@ -34,7 +34,7 @@ Backend slice 1 can now start (doc 24). Running all of this is Humo's job: [26-o
 - **No passwords.** People are invited by email. They confirm with a one-time code and register a passkey. Password sign-in stays switched off.
 - **Session:** a secure, HttpOnly, same-site cookie. The SPA and the API share one origin (`/api` behind the reverse proxy), so tokens never live in the browser. The cookie carries the identity and the active assignment, and switching role re-issues it (doc 24 §7).
 - **Step-up:** the API asks for a fresh passkey assertion and records its time in the session. A command that needs step-up checks that time (doc 24 C7).
-- **Recovery:** a lost passkey is replaced by a one-time email code plus an administrator's check. For the sole System Administrator, there is a sealed recovery procedure (doc 26 §8).
+- **Recovery:** someone who has lost every passkey asks Humo Support, who remove them after checking it's the person; they then add a new one (D30). An email link alone can't add a passkey to an account that has one. For the sole System Administrator, there is a sealed recovery procedure (doc 26 §8).
 - **Humo Contractor** and future products use the same sign-in (D5 criterion 2). The API acts as the sign-in authority for all of them. If a second product needs its own server, add an OpenID Connect layer (e.g. OpenIddict, open source) on top of the same identities.
 
 **Limits to know about:**

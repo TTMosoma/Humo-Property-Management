@@ -129,7 +129,17 @@ public sealed class SoleAuthorityTests : IDisposable
         Assert.Contains(await api.Db(db => db.Notices.Where(n => n.ToIdentityId == s.AdminId).Select(n => n.Title).ToListAsync()), t => t.StartsWith("In effect:"));
         Assert.Contains(api.Email.Sent, e => e.To == "sipho@mail.example" && e.Subject.StartsWith("Approved on the board’s behalf"));
         Assert.Contains(api.Email.Sent, e => e.To == "thandeka@acacia.example" && e.Subject.StartsWith("In effect:"));
-        Assert.Contains(await api.Db(db => db.Audit.Select(a => a.Action).ToListAsync()), a => a.Contains("took effect after the cooling-off"));
+        Assert.Contains(await api.Db(db => db.Audit.Select(a => a.Action).ToListAsync()), a => a.Contains("took effect after the cooling-off") && a.Contains("Trustees told: Sipho Khumalo by email (sipho@mail.example)"));
+        Assert.Contains("Trustees told: Sipho Khumalo by email (sipho@mail.example).",
+            await api.Db(db => db.Notices.Where(n => n.ToIdentityId == s.AdminId && n.Title.StartsWith("In effect:")).Select(n => n.Detail).SingleAsync()));
+    }
+
+    [Fact]
+    public void The_approver_is_told_who_was_told_or_that_no_trustee_is_on_record()
+    {
+        Assert.StartsWith("Flamingo Pointe has no trustees on record, so no trustee was told.", SoleAuthority.Told("Flamingo Pointe", [], []));
+        Assert.Equal("Trustees told: Ann by email (ann@mail.example); Ben by SMS (+27821234567). Not told (no working email or mobile on record): Cara. Tell them yourself.",
+            SoleAuthority.Told("Flamingo Pointe", ["Ann by email (ann@mail.example)", "Ben by SMS (+27821234567)"], ["Cara"]));
     }
 
     [Fact]

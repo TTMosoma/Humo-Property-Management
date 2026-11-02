@@ -8,6 +8,8 @@ export interface TimelineEvent {
   id: string;
   /** ISO timestamp. */
   at: string;
+  /** Only the date is known (a back-dated payment, when someone became the owner): no time is shown. */
+  allDay?: boolean;
   kind: TimelineKind;
   title: string;
   detail?: string;
