@@ -234,22 +234,8 @@
             <h1 #heading tabindex="-1">You’re signed in. Set up a passkey?</h1>
             <p class="sub">Next time, sign in with your fingerprint, face or screen lock instead of waiting for an email. It takes a few seconds, and nothing is shared with Humo but a key for this account.</p>
             <p class="hint">Only on your own device. On a shared or borrowed computer, skip this step.</p>
-            <div class="stack">
-              <button type="button" class="btn btn-primary big" (click)="createPasskey()"><ion-icon name="finger-print-outline" aria-hidden="true" /> Create a passkey</button>
-              <button type="button" class="btn btn-ghost" (click)="done()">Not now</button>
-            </div>
-            @if (passkeyError()) {
-              <p class="hint" role="alert">{{ passkeyError() }}</p>
-            }
-          </div>
-        }
-
-        @case ('creating-passkey') {
-          <div class="centre">
-            <div class="passkey-anim" aria-hidden="true"><ion-icon name="finger-print-outline" /></div>
-            <h1 #heading tabindex="-1">Create your passkey</h1>
-            <p class="sub" role="status">Confirm with your fingerprint, face or screen lock.</p>
-            <p class="waiting"><span class="spinner" aria-hidden="true"></span> Waiting for your device…</p>
+            <app-passkey-setup [create]="createPasskey" (added)="done()" />
+            <button type="button" class="btn btn-ghost" (click)="done()">Not now</button>
           </div>
         }
 

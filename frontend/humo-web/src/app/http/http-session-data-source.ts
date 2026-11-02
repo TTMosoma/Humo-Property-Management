@@ -1,7 +1,7 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, InjectionToken, inject } from '@angular/core';
 import { Observable, ReplaySubject, catchError, from, map, of, switchMap, tap, throwError } from 'rxjs';
-import { CurrentSession, Identity, SIGNED_OUT_SESSION, SessionDataSource, SignInError, SignInFailure } from '../domain';
+import { CurrentSession, Identity, PasskeyTool, SIGNED_OUT_SESSION, SessionDataSource, SignInError, SignInFailure } from '../domain';
 
 /** Where the Humo API lives. Same origin by default (Caddy routes /api to the .NET service; doc 25). */
 export const API_BASE_URL = new InjectionToken<string>('API_BASE_URL', { factory: () => '/api' });
@@ -77,13 +77,13 @@ export class HttpSessionDataSource extends SessionDataSource {
     );
   }
 
-  registerPasskey(): Observable<void> {
-    if (!webAuthnJson()) return throwError(() => new SignInError('no-passkey', 'This browser can’t create passkeys'));
+  registerPasskey(tool: PasskeyTool): Observable<void> {
+    if (!webAuthnJson()) return throwError(() => new SignInError('passkey-unsupported', 'This browser can’t create passkeys'));
     return this.http.post<PublicKeyCredentialCreationOptionsJSON>(`${this.base}/me/passkeys/options`, null, { withCredentials: true }).pipe(
-      switchMap((options) => from(navigator.credentials.create({ publicKey: PublicKeyCredential.parseCreationOptionsFromJSON(options) }))),
-      switchMap((credential) => this.http.post(`${this.base}/me/passkeys`, { credential: (credential as PublicKeyCredential).toJSON() }, { withCredentials: true })),
+      switchMap((options) => from(navigator.credentials.create({ publicKey: PublicKeyCredential.parseCreationOptionsFromJSON(forTool(options, tool)) }))),
+      switchMap((credential) => this.http.post(`${this.base}/me/passkeys`, { credential: (credential as PublicKeyCredential).toJSON(), tool }, { withCredentials: true })),
       map(() => undefined),
-      catchError((e: unknown) => throwError(() => signInError(e, 'no-passkey'))),
+      catchError((e: unknown) => throwError(() => signInError(e, 'passkey-rejected'))),
     );
   }
 
@@ -98,6 +98,18 @@ interface SignInResult {
   askBrowserTrust: boolean;
 }
 
+/** Tells the browser which authenticator to offer first. "manager" adds nothing, so it lists all it can. Only the browser sees this; the API's checks don't depend on it. */
+export function forTool(options: PublicKeyCredentialCreationOptionsJSON, tool: PasskeyTool): PublicKeyCredentialCreationOptionsJSON {
+  const offer: Partial<Record<PasskeyTool, { attachment: AuthenticatorAttachment; hint: string }>> = {
+    device: { attachment: 'platform', hint: 'client-device' },
+    phone: { attachment: 'cross-platform', hint: 'hybrid' },
+    key: { attachment: 'cross-platform', hint: 'security-key' },
+  };
+  const chosen = offer[tool];
+  if (!chosen) return options;
+  return { ...options, hints: [chosen.hint], authenticatorSelection: { ...options.authenticatorSelection, authenticatorAttachment: chosen.attachment } };
+}
+
 /** Browsers that read and write WebAuthn options as JSON (all current major browsers). */
 function webAuthnJson(): boolean {
   return typeof PublicKeyCredential !== 'undefined' && 'parseRequestOptionsFromJSON' in PublicKeyCredential;
@@ -110,9 +122,12 @@ function webAuthnJson(): boolean {
 function signInError(e: unknown, fallback: SignInFailure): SignInError {
   if (e instanceof SignInError) return e;
   if (e instanceof DOMException && (e.name === 'NotAllowedError' || e.name === 'AbortError')) return new SignInError('cancelled', 'The passkey prompt was closed');
+  if (e instanceof DOMException && e.name === 'InvalidStateError') return new SignInError('passkey-exists', 'That authenticator already has a passkey for this account');
+  if (e instanceof DOMException && (e.name === 'NotSupportedError' || e.name === 'ConstraintError')) return new SignInError('passkey-unsupported', 'This browser or device can’t create that passkey');
   if (e instanceof HttpErrorResponse) {
     const code = (e.error as { code?: string } | null)?.code;
-    if (code === 'paused' || code === 'link-expired' || code === 'no-passkey' || code === 'wrong-code') return new SignInError(code, e.error?.title ?? code);
+    if (code === 'paused' || code === 'link-expired' || code === 'no-passkey' || code === 'wrong-code' || code === 'passkey-rejected') return new SignInError(code, e.error?.title ?? code);
+    if (code === 'step-up-required') return new SignInError('passkey-verify', e.error?.title ?? code);
     if (e.status === 0 || e.status >= 500 || e.status === 404) return new SignInError('unavailable', 'Sign-in can’t be reached right now');
   }
   return new SignInError(fallback, 'Sign-in didn’t go through');

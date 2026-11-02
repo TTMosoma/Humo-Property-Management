@@ -5,6 +5,7 @@ import { Entitlement, Subscription } from '../models/entitlement';
 import { Identity, RoleAssignment } from '../models/identity';
 import { Organisation } from '../models/organisation';
 import { Permission } from '../models/permission';
+import { PasskeyTool } from '../models/security';
 
 /**
  * "Who am I, right now?" — the session bootstrap (`GET /me` on the API).
@@ -103,12 +104,13 @@ export abstract class SessionDataSource {
    */
   abstract answerBrowserTrust(trusted: boolean): Observable<void>;
   /**
-   * Creates a passkey on this device for the signed-in person (offered right
+   * Creates a passkey in the chosen tool for the signed-in person (offered right
    * after an email-link sign-in, so newcomers get their first passkey).
-   * Fails with SignInError('cancelled') if they close the prompt.
+   * Fails with SignInError: 'cancelled' if they close the prompt, 'passkey-verify'
+   * if they have a passkey and must confirm with it first (D30).
    * PRODUCTION: WebAuthn navigator.credentials.create() with the API's options (D14).
    */
-  abstract registerPasskey(): Observable<void>;
+  abstract registerPasskey(tool: PasskeyTool): Observable<void>;
   /** Prototype only: identities offered in "Sign in as". */
   abstract demoIdentities(): Observable<Identity[]>;
 }
@@ -118,12 +120,16 @@ export abstract class SessionDataSource {
  * - no-passkey: no passkey for that account on this device (or no such account: deliberately the same answer)
  * - no-passkeys: the account has no passkey at all (or there's no such account): the sign-in goes straight to an emailed link
  * - cancelled: the person dismissed the passkey prompt
+ * - passkey-verify: adding a passkey needs a fresh confirmation with one they already have (D30)
+ * - passkey-exists: the chosen authenticator already holds a passkey for this account
+ * - passkey-unsupported: this browser or device can't create that kind of passkey
+ * - passkey-rejected: the API refused the new passkey
  * - paused: the account is suspended or closed
  * - link-expired: the sign-in link was used already, is too old, or its code was entered wrongly too often
  * - wrong-code: the code doesn't match the screen that asked for the link (tries remain)
  * - unavailable: sign-in can't be reached (e.g. the identity provider isn't connected yet)
  */
-export type SignInFailure = 'no-passkey' | 'no-passkeys' | 'cancelled' | 'paused' | 'link-expired' | 'wrong-code' | 'unavailable';
+export type SignInFailure = 'no-passkey' | 'no-passkeys' | 'cancelled' | 'paused' | 'link-expired' | 'wrong-code' | 'unavailable' | 'passkey-verify' | 'passkey-exists' | 'passkey-unsupported' | 'passkey-rejected';
 
 export class SignInError extends ApiError {
   constructor(

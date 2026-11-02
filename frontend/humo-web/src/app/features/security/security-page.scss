@@ -228,3 +228,32 @@
     grid-template-columns: 1fr;
   }
 }
+
+.setup {
+  margin-bottom: var(--s-4);
+}
+
+.problem {
+  display: flex;
+  gap: var(--s-3);
+  align-items: flex-start;
+  margin-bottom: var(--s-5);
+  padding: var(--s-4);
+  border-left: 3px solid var(--c-danger);
+
+  > ion-icon {
+    flex: none;
+    font-size: 20px;
+    color: var(--c-danger);
+  }
+}
+
+.problem-text {
+  flex: 1;
+  min-width: 0;
+
+  p {
+    margin: 4px 0 0;
+    font-size: var(--fs-sm);
+  }
+}

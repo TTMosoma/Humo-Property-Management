@@ -106,6 +106,25 @@ export interface ActiveSession {
   current: boolean;
 }
 
+/** Where a new passkey should live (D30). The browser and device make the final offer; this says what to offer first. */
+export type PasskeyTool = 'device' | 'phone' | 'key' | 'manager';
+
+export interface PasskeyToolOption {
+  id: PasskeyTool;
+  label: string;
+  detail: string;
+  icon: string;
+  /** Shown while the browser's prompt is open. */
+  waiting: string;
+}
+
+export const PASSKEY_TOOLS: readonly PasskeyToolOption[] = [
+  { id: 'device', label: 'This device', detail: 'Windows Hello, Face ID, Touch ID or your screen lock. Best on a computer or phone that’s yours.', icon: 'laptop-outline', waiting: 'Confirm with your fingerprint, face or screen lock.' },
+  { id: 'phone', label: 'Phone or tablet', detail: 'Scan a QR code. Works from any computer, and the passkey stays on your phone.', icon: 'phone-portrait-outline', waiting: 'Scan the QR code with your phone or tablet, then confirm on it.' },
+  { id: 'key', label: 'Security key', detail: 'A USB or NFC key such as a YubiKey.', icon: 'key-outline', waiting: 'Insert or tap your security key, then touch it when it flashes.' },
+  { id: 'manager', label: 'Password manager or browser', detail: 'Shows everything your browser offers, e.g. Google Password Manager, iCloud Keychain, 1Password or Bitwarden.', icon: 'globe-outline', waiting: 'Choose where to save it in the prompt, then confirm.' },
+];
+
 export interface SecurityProfile {
   identityId: string;
   passkeys: Passkey[];

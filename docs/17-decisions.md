@@ -42,6 +42,7 @@ Each entry records:
 | D24 | Approving with one authoriser: a trustee on Humo approves; with none on Humo, the agency approves alone under the trustees’ written permission, with a passkey, after a 24-hour cooling-off | Approvals |
 | D25 | Owners pay levies online through each scheme’s own Payfast account, paid out to its trust account; the scheme pays Payfast’s fee | Finance, owner portal |
 | D26 | Confirming without a passkey to hand (e.g. a public computer): your phone’s passkey by QR code first; a code by SMS to your own confirmed mobile as a fallback, for approvals only | Identity, approvals |
+| D30 | Adding a passkey: once you have one, adding another needs it, with no exception for an email-link sign-in; you’re told every time; you choose where it lives | Identity, security |
 
 ---
 
@@ -643,6 +644,20 @@ Approved on 18 October 2026 by Terry Mosoma (product owner). Options and reasons
 - Levies actual is what the ledger billed in the year (plus the levies before Humo PM for a captured year), not an estimate from the levy roll.
 
 ---
+
+## D30 — Adding a passkey (2 November 2026)
+
+A passkey can sign in and confirm payments and bank details, so adding one is a way to take over an account.
+
+**Decision:**
+1. **Once someone has a passkey, adding another needs it**, on this device or by phone QR code. The API enforces this on `POST /me/passkeys/options` and `POST /me/passkeys` (`step-up-required`). There's no exception after an email-link sign-in: that proves only control of an inbox, and D26 already treats an inbox as not enough.
+2. **A first passkey needs no proof**, as there's nothing to prove it with.
+3. **Lost every passkey:** Humo Support removes them after checking it's the person (`Platform.Users.ResetPasskeys`, with a reason and an audit entry). They then add a new first passkey. This replaces self-service recovery by email link.
+4. **The person is told:** every passkey added or removed sends a notice and an email saying what to do if it wasn't them. Attempts without the proof are in the audit log.
+5. **They choose where it lives:** this device, phone or tablet, security key, or password manager or browser. This is a preference: the browser and device make the final offer, and a password manager add-on can step in first. The choice names the passkey in their list and email.
+6. **Failures stay on screen** until dismissed, saying what happened and what to do. A toast alone isn't enough.
+
+**Consequences:** while impersonating, staff can't add a passkey (`impersonating`).
 
 ## Still open (needs domain expertise before slice 2)
 

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Humo.Api.Commands;
+using Humo.Api.Platform;
 using Humo.Infrastructure.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
@@ -16,7 +17,7 @@ public sealed record BrowserTrustRequest(bool Trusted);
 /// <summary>
 /// Settings › Security: the signed-in person's own passkeys, trusted browsers and sessions. Removing a passkey and
 /// signing out other sessions need step-up (Security.ManageOwn). Adding a passkey is the WebAuthn ceremony itself
-/// (POST /me/passkeys). Humo Mobile devices come later (D5).
+/// (POST /me/passkeys), which needs an existing passkey once they have one (D30). Humo Mobile devices come later (D5).
 /// </summary>
 public static class SecurityEndpoints
 {
@@ -60,7 +61,7 @@ public static class SecurityEndpoints
             active.Select(s => new ActiveSessionDto(s.Id.ToString(), s.Device, "", "", s.Ip, s.StartedAt.ToString("O"), s.LastActiveAt.ToString("O"), s.Id == here?.Id)).ToList()));
     }
 
-    private static async Task<IResult> RemovePasskey(string id, CurrentActor current, CommandRunner commands, UserManager<HumoUser> users, CancellationToken ct)
+    private static async Task<IResult> RemovePasskey(string id, CurrentActor current, CommandRunner commands, UserManager<HumoUser> users, Notices notices, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         var me = actor.Human;
@@ -78,6 +79,9 @@ public static class SecurityEndpoints
         }, async _ =>
         {
             await users.RemovePasskeyAsync(me, target.CredentialId);
+            notices.ToPerson(me.Id, null, "A passkey was removed from your Humo account",
+                $"“{target.Name ?? "Passkey"}” can no longer sign in as you. If this wasn’t you, sign in now, sign out every other session in Settings › Security, and tell your administrator or Humo Support straight away.",
+                "/settings/security");
             return Results.NoContent();
         }, ct);
     }

@@ -1,0 +1,164 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  text-align: left;
+}
+
+.problem {
+  display: flex;
+  gap: var(--s-3);
+  align-items: flex-start;
+  padding: var(--s-3) var(--s-4);
+  background: var(--c-danger-soft);
+  border: 1px solid var(--c-danger);
+  border-radius: var(--r);
+
+  > ion-icon {
+    flex: none;
+    margin-top: 2px;
+    font-size: 20px;
+    color: var(--c-danger);
+  }
+}
+
+.problem-text {
+  flex: 1;
+  min-width: 0;
+  color: var(--c-text);
+
+  p {
+    margin: 4px 0 0;
+    font-size: var(--fs-sm);
+  }
+}
+
+.why {
+  padding: var(--s-3) var(--s-4);
+  font-size: var(--fs-sm);
+  color: var(--c-text);
+  background: var(--c-sec-soft);
+  border-left: 3px solid var(--c-sec);
+  border-radius: var(--r);
+
+  strong {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  p {
+    margin: 4px 0;
+  }
+
+  ul {
+    margin: 0;
+    padding-left: var(--s-5);
+  }
+
+  li + li {
+    margin-top: 4px;
+  }
+}
+
+.choose-label {
+  margin: 0;
+  font-weight: var(--fw-semibold);
+  color: var(--c-text);
+}
+
+.tools {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.tool {
+  display: flex;
+  gap: var(--s-3);
+  align-items: center;
+  width: 100%;
+  padding: var(--s-3) var(--s-4);
+  text-align: left;
+  color: var(--c-text);
+  cursor: pointer;
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r);
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--c-primary);
+  }
+}
+
+.tool-icon {
+  flex: none;
+  font-size: 22px;
+  line-height: 0;
+}
+
+.tool-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.tool-name {
+  font-weight: var(--fw-medium);
+}
+
+.tool-detail {
+  font-size: var(--fs-sm);
+  color: var(--c-text-muted);
+}
+
+.tool-go {
+  flex: none;
+  color: var(--c-text-muted);
+}
+
+.note {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--c-text-muted);
+}
+
+.status {
+  display: flex;
+  gap: var(--s-3);
+  align-items: center;
+  margin: 0;
+  color: var(--c-text);
+}
+
+.spinner {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--c-border);
+  border-top-color: var(--c-primary);
+  border-radius: 50%;
+  animation: passkey-spin 0.9s linear infinite;
+}
+
+@keyframes passkey-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.confirmed p {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin: 0 0 var(--s-3);
+  color: var(--c-text);
+}
+
+.confirmed-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}

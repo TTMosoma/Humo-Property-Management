@@ -4,6 +4,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Humo.Api.Audit;
+using Humo.Api.Commands;
+using Humo.Api.Platform;
 using Humo.Api.Session;
 using Humo.Domain.Access;
 using Humo.Infrastructure.Data;
@@ -22,6 +24,8 @@ public sealed record CompleteLinkRequest(string Token, string? Code);
 public sealed record LinkSentDto(string Code);
 public sealed record PasskeyOptionsRequest(string? Email);
 public sealed record PasskeyCredentialRequest(JsonElement Credential);
+/// <summary>A new passkey, and where the person chose to keep it: device, phone, key or manager (D30).</summary>
+public sealed record AddPasskeyRequest(JsonElement Credential, string? Tool);
 /// <summary>"This is my own computer" was ticked on the sign-in screen (the browser is then trusted for 30 days).</summary>
 public sealed record PasskeySignInRequest(JsonElement Credential);
 
@@ -192,32 +196,72 @@ public static class AuthEndpoints
         return Results.Ok(new SignInResultDto(!await sessions.BrowserAnsweredAsync(user, ct)));
     }
 
-    /// <summary>Options for navigator.credentials.create(), for the signed-in person's new passkey.</summary>
-    private static async Task<IResult> PasskeyCreationOptions(ClaimsPrincipal principal, UserManager<HumoUser> users, SignInManager<HumoUser> signIn)
+    /// <summary>
+    /// Options for navigator.credentials.create(), for the signed-in person's new passkey. A passkey can sign in and confirm payments, so once
+    /// someone has one, adding another needs it (D30): getting into their inbox, or finding their browser unlocked, isn't enough.
+    /// </summary>
+    private static async Task<IResult> PasskeyCreationOptions(CurrentActor current, UserManager<HumoUser> users, SignInManager<HumoUser> signIn, TimeProvider clock, CancellationToken ct)
     {
-        var user = await users.GetUserAsync(principal);
-        if (user is null) return Results.Unauthorized();
-        var json = await signIn.MakePasskeyCreationOptionsAsync(new PasskeyUserEntity { Id = user.Id.ToString(), Name = user.Email!, DisplayName = user.Name });
+        if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
+        if (actor.Impersonation is not null) return OnlyThePerson();
+        if (await SmsStepUp.PasskeyNeeded(actor, users, clock)) return Problems.Policy("step-up-required", CommandRunner.StepUpTitle);
+        var me = actor.Human;
+        var json = await signIn.MakePasskeyCreationOptionsAsync(new PasskeyUserEntity { Id = me.Id.ToString(), Name = me.Email!, DisplayName = me.Name });
         return Results.Content(json, "application/json");
     }
 
-    private static async Task<IResult> AddPasskey(PasskeyCredentialRequest body, ClaimsPrincipal principal, UserManager<HumoUser> users, SignInManager<HumoUser> signIn, HumoDbContext db, AuditLog audit, CancellationToken ct)
+    private static async Task<IResult> AddPasskey(AddPasskeyRequest body, ClaimsPrincipal principal, CurrentActor current, CommandRunner commands, UserManager<HumoUser> users, SignInManager<HumoUser> signIn,
+        HumoDbContext db, AuditLog audit, Notices notices, TimeProvider clock, SignInSessions sessions, CancellationToken ct)
     {
-        var user = await users.GetUserAsync(principal);
-        if (user is null) return Results.Unauthorized();
+        if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
+        if (actor.Impersonation is not null) return OnlyThePerson();
+        var me = actor.Human;
+        if (await SmsStepUp.PasskeyNeeded(actor, users, clock))
+        {
+            audit.Record("Tried to add a passkey without confirming with an existing one", "denied", me, category: "security", resource: "Passkey");
+            await db.SaveChangesAsync(ct);
+            return Problems.Policy("step-up-required", CommandRunner.StepUpTitle);
+        }
         var result = await signIn.PerformPasskeyAttestationAsync(body.Credential.GetRawText());
         if (!result.Succeeded)
         {
-            audit.Record("Adding a passkey failed", "denied", user, reason: result.Failure?.Message);
+            audit.Record("Adding a passkey failed", "denied", me, category: "security", resource: "Passkey", reason: result.Failure?.Message);
             await db.SaveChangesAsync(ct);
-            return Results.Problem(title: "The passkey wasn't added", detail: result.Failure?.Message, statusCode: StatusCodes.Status400BadRequest);
+            return Results.Problem(title: "Humo didn’t accept that passkey", detail: result.Failure?.Message, statusCode: StatusCodes.Status400BadRequest, extensions: new Dictionary<string, object?> { ["code"] = "passkey-rejected" });
         }
-        var added = await users.AddOrUpdatePasskeyAsync(user, result.Passkey);
-        if (!added.Succeeded) return Results.Problem(title: "The passkey wasn't added", statusCode: StatusCodes.Status400BadRequest);
-        audit.Record("Added a passkey", "success", user, resource: "Passkey");
-        await db.SaveChangesAsync(ct);
-        return Results.NoContent();
+        var label = PasskeyToolLabel(body.Tool);
+        var passkey = result.Passkey;
+        passkey.Name = label;
+        var hasOne = (await users.GetPasskeysAsync(me)).Count > 0;
+        var from = (await sessions.CurrentAsync(principal, ct))?.Device;
+        return await commands.RunAsync(new CommandSpec($"Added a passkey ({label})", "Security.ManageOwn")
+        {
+            Resource = "Passkey",
+            Category = "security",
+            StepUp = hasOne,
+        }, async _ =>
+        {
+            var added = await users.AddOrUpdatePasskeyAsync(me, passkey);
+            if (!added.Succeeded) throw new CommandRefused("passkey-rejected", "The passkey couldn’t be saved");
+            var at = clock.GetUtcNow().ToOffset(TimeSpan.FromHours(2)).ToString("d MMM yyyy, HH:mm", CultureInfo.InvariantCulture);
+            notices.ToPerson(me.Id, null, "A passkey was added to your Humo account",
+                $"“{label}” was added on {at}{(string.IsNullOrEmpty(from) ? "" : $", from {from}")}. A passkey can sign in as you and confirm payments and bank details. If this was you, there’s nothing to do. If it wasn’t, sign in now, remove it in Settings › Security, sign out every other session, and tell your administrator or Humo Support straight away.",
+                "/settings/security");
+            return Results.NoContent();
+        }, ct);
     }
+
+    /// <summary>What the person chose it for, so their list and their email say something they recognise. Anything else is just a passkey.</summary>
+    private static string PasskeyToolLabel(string? tool) => tool switch
+    {
+        "device" => "This device",
+        "phone" => "Phone or tablet",
+        "key" => "Security key",
+        "manager" => "Password manager or browser",
+        _ => "Passkey",
+    };
+
+    private static IResult OnlyThePerson() => Problems.Policy("impersonating", "Only the person themselves can add a passkey.");
 
     // ---- Session ----
 

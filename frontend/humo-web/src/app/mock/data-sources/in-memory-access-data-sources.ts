@@ -1,7 +1,7 @@
 import { Injectable, Injector, inject } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Observable, delay, map, of, switchMap, throwError, timer } from 'rxjs';
-import { AccessDataSource, ApiError, AuditDataSource, MobileStatus, AuditEvent, AuditQuery, CurrentSession, FieldErrors, HUMO_EMAIL_DOMAIN, IMPERSONATION_REASONS, Identity, ImpersonationSession, ListQuery, NewAssignment, Page, PolicyError, ROLE_LABELS, SENSITIVE_ACTION_LABELS, SecurityDataSource, SecurityProfile, SessionDataSource, SignInError, StepUpAuthenticator, StepUpMethod, StepUpRequest, StepUpResult, activeAssignments, isHumoRole, AGENCY_STAFF, RESIDENT_INVITES, todaySA } from '../../domain';
+import { AccessDataSource, ApiError, AuditDataSource, MobileStatus, AuditEvent, AuditQuery, CurrentSession, FieldErrors, HUMO_EMAIL_DOMAIN, IMPERSONATION_REASONS, Identity, ImpersonationSession, ListQuery, NewAssignment, PASSKEY_TOOLS, Page, PasskeyTool, PolicyError, ROLE_LABELS, SENSITIVE_ACTION_LABELS, SecurityDataSource, SecurityProfile, SessionDataSource, SignInError, StepUpAuthenticator, StepUpMethod, StepUpRequest, StepUpResult, activeAssignments, isHumoRole, AGENCY_STAFF, RESIDENT_INVITES, todaySA } from '../../domain';
 import { PrototypeStateService } from '../../core/prototype/prototype-state.service';
 import { AccessStore } from '../db/access-store';
 import { MockDb } from '../db/mock-db';
@@ -453,11 +453,14 @@ export class InMemorySecurityDataSource extends SecurityDataSource {
     return this.security$.pipe(switchMap((all) => this.respond(all[identityId])));
   }
 
-  addPasskey(identityId: string, name: string, provider: string): Observable<void> {
-    return this.change(identityId, `Added a passkey (${provider})`, (p) => ({
+  addPasskey(identityId: string, tool: PasskeyTool): Observable<void> {
+    const hasOne = !!this.store.security()[identityId]?.passkeys.length;
+    if (hasOne && !this.auth.stepUpFresh()) return throwError(() => new SignInError('passkey-verify', 'Confirm with your passkey first'));
+    const name = PASSKEY_TOOLS.find((t) => t.id === tool)?.label ?? 'Passkey';
+    return this.change(identityId, `Added a passkey (${name})`, (p) => ({
       ...p,
-      passkeys: [...p.passkeys, { id: `pk-${Date.now()}`, name, provider, createdAt: new Date().toISOString(), lastUsedAt: null }],
-    }));
+      passkeys: [...p.passkeys, { id: `pk-${Date.now()}`, name, provider: name, createdAt: new Date().toISOString(), lastUsedAt: null }],
+    }), hasOne);
   }
 
   removePasskey(identityId: string, passkeyId: string): Observable<void> {
@@ -477,9 +480,9 @@ export class InMemorySecurityDataSource extends SecurityDataSource {
     return this.change(identityId, 'Signed out all other sessions', (p) => ({ ...p, sessions: p.sessions.filter((s) => s.current) }));
   }
 
-  private change(identityId: string, action: string, apply: (p: SecurityProfile) => SecurityProfile): Observable<void> {
+  private change(identityId: string, action: string, apply: (p: SecurityProfile) => SecurityProfile, stepUp?: boolean): Observable<void> {
     return this.gateway
-      .command({ action, resource: 'Security settings', category: 'security', permission: 'Security.ManageOwn' }, () => this.store.updateSecurity(identityId, apply))
+      .command({ action, resource: 'Security settings', category: 'security', permission: 'Security.ManageOwn', stepUp }, () => this.store.updateSecurity(identityId, apply))
       .pipe(map(() => undefined));
   }
 }
@@ -638,15 +641,17 @@ export class InMemorySessionDataSource extends SessionDataSource {
   }
 
   /** SIMULATED (docs/18 R-8): a moment at the sensor, then a passkey for this device. */
-  registerPasskey(): Observable<void> {
+  registerPasskey(tool: PasskeyTool): Observable<void> {
     const id = this.auth.actor().id;
+    if (this.store.security()[id]?.passkeys.length && !this.auth.stepUpFresh()) return throwError(() => new SignInError('passkey-verify', 'Confirm with your passkey first'));
+    const name = PASSKEY_TOOLS.find((t) => t.id === tool)?.label ?? 'Passkey';
     return timer(1200).pipe(
       map(() => {
         this.store.updateSecurity(id, (p) => ({
           ...p,
-          passkeys: [...p.passkeys, { id: `pk-${Date.now()}`, name: 'This device', provider: 'Windows Hello', createdAt: new Date().toISOString(), lastUsedAt: null }],
+          passkeys: [...p.passkeys, { id: `pk-${Date.now()}`, name, provider: name, createdAt: new Date().toISOString(), lastUsedAt: null }],
         }));
-        this.audit('Added a passkey');
+        this.audit(`Added a passkey (${name})`);
       }),
     );
   }
