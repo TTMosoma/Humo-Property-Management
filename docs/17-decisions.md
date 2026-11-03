@@ -44,6 +44,7 @@ Each entry records:
 | D26 | Confirming without a passkey to hand (e.g. a public computer): your phone’s passkey by QR code first; a code by SMS to your own confirmed mobile as a fallback, for approvals only | Identity, approvals |
 | D29 | Packages: the trustee register on every plan; scheme rules in Professional; meetings and AGMs stay Enterprise (the add-on is renamed “Meetings & AGMs”); advanced permissions dropped | Governance, commercial |
 | D30 | Adding a passkey: once you have one, adding another needs it, with no exception for an email-link sign-in; you’re told every time; you choose where it lives | Identity, security |
+| D31 | Amending or repealing a rule with Meetings & AGMs: a resolution that isn’t in the register can be typed from the minutes (changes D29 point 5) | Governance |
 
 ---
 
@@ -681,6 +682,19 @@ A passkey can sign in and confirm payments and bank details, so adding one is a 
 7. **No passkey is offered at sign-in on a shared computer.** Answering "No, it's shared", or signing in on a browser already answered that way, goes straight in. A passkey can still be added in Settings › Security, e.g. on a phone by QR code.
 
 **Consequences:** while impersonating, staff can't add a passkey (`impersonating`).
+
+---
+
+## D31 — A rule's resolution that isn't in the register (3 November 2026)
+
+An agency with Meetings & AGMs could only cite a resolution from the register. A resolution passed before the agency joined Humo PM, or at a meeting not recorded here, isn't in it, so the rule couldn't be amended or repealed without recording a meeting after the fact.
+
+**Decision:** this changes D29 point 5 for rules.
+1. **Amending or repealing a rule:** the Resolution list also offers *Not in the register: type it from the minutes*, with the date it was passed. The rule's history shows the reference as typed, and the audit log records who entered it.
+2. **Nothing is chosen for them:** the list starts on *Choose the resolution*.
+3. **Unchanged:** a resolution must still be cited, and a typed one needs a date that isn't in the future. Electing a trustee and adding a rule work as D29 says.
+
+**Consequences:** Humo PM doesn't check a typed resolution against any record, so it relies on the signed minutes the agency keeps. The API already accepted a typed resolution on every package, so only the form changes.
 
 ## Still open (needs domain expertise before slice 2)
 

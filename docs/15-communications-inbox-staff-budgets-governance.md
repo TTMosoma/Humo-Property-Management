@@ -81,7 +81,7 @@ Checkpoint 10 builds the remaining pages that showed the "Not built yet" card: C
 **Rules register (per scheme):**
 - Every rule has a number, category, current wording, adoption date and **the resolution that adopted it**, plus its earlier versions.
 - **Add:** cites a passed resolution, or is *captured from the registered rules* during onboarding.
-- **Amend / Repeal:** must cite a passed resolution. Repealed rules stay in the register.
+- **Amend / Repeal:** must cite a passed resolution. With Meetings & AGMs, one that isn't in the register can be typed from the minutes with its date (D31). Repealed rules stay in the register.
 - **Share with owners:** publishes the rule book as a readable document in Documents (visible to owners and residents) and archives the previous copy. The page warns when rules have changed since the last share.
 - **Upload rules PDF** (added 12 Oct 2026): the scheme’s **registered rules** as a PDF, the official document.
   - **Captured with it:** when the rules took effect, and how they were adopted (“Registered with the CSOS”, or the AGM resolution).

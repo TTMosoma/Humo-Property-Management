@@ -58,17 +58,28 @@ export function uploadRulesForm(drawer: DrawerService, data: RulesDataSource, v:
   });
 }
 
+/** The Resolution list's choice for one that isn't in the register, e.g. passed before the agency joined (D31). */
+const NOT_IN_REGISTER = 'not-in-register';
+
 /**
- * The resolution a change cites: chosen from the register, or without Governance (`resolutions` null, D29) typed as
- * in the signed minutes with the date it was passed.
+ * The resolution a change cites: chosen from the register, or typed as in the signed minutes with the date it was
+ * passed, either because it isn't in the register (D31) or because there's no register (`resolutions` null, D29).
  */
 function resolutionFields(resolutions: ResolutionView[] | null, required: boolean): FormField[] {
-  if (resolutions)
+  if (resolutions && required) {
+    const passed = resolutionOptions(resolutions);
+    const typing = (v: Record<string, string>) => v['resolutionId'] === NOT_IN_REGISTER;
     return [
-      required
-        ? { key: 'resolutionId', label: 'Resolution', type: 'select', required: true, options: resolutionOptions(resolutions) }
-        : { key: 'resolutionId', label: 'Adopted by', type: 'select', options: [{ value: '', label: 'Captured from the registered rules' }, ...resolutionOptions(resolutions)] },
+      { key: 'resolutionId', label: 'Resolution', type: 'select', required: true,
+        // Nothing is chosen for them: a first entry to leave also makes a list of one choosable.
+        options: [{ value: '', label: 'Choose the resolution' }, ...passed, { value: NOT_IN_REGISTER, label: 'Not in the register: type it from the minutes' }],
+        help: passed.length ? undefined : 'No passed resolutions are recorded at this scheme yet.' },
+      { key: 'resolutionRef', label: 'As in the minutes', type: 'text', required: true, half: true, showIf: typing, help: 'E.g. “AGM 12 March 2026, special resolution 2”.' },
+      { key: 'adoptedOn', label: 'Passed on', type: 'date', required: true, half: true, showIf: typing },
     ];
+  }
+  if (resolutions)
+    return [{ key: 'resolutionId', label: 'Adopted by', type: 'select', options: [{ value: '', label: 'Captured from the registered rules' }, ...resolutionOptions(resolutions)] }];
   return [
     { key: 'resolutionRef', label: required ? 'Resolution' : 'Adopted by', type: 'text', required, half: true,
       help: required ? 'As in the signed minutes, e.g. “AGM 12 March 2026, special resolution 2”.' : 'Leave empty when capturing the registered rules.' },
@@ -76,8 +87,11 @@ function resolutionFields(resolutions: ResolutionView[] | null, required: boolea
   ];
 }
 
-const cites = (f: Record<string, string>) =>
-  f['resolutionRef'] !== undefined ? { resolutionId: '', resolutionRef: f['resolutionRef'], adoptedOn: f['adoptedOn'] || undefined } : { resolutionId: f['resolutionId'] };
+const cites = (f: Record<string, string>) => {
+  // What they typed before choosing from the list again stays in the form's values, so the list decides.
+  if (f['resolutionId'] && f['resolutionId'] !== NOT_IN_REGISTER) return { resolutionId: f['resolutionId'] };
+  return f['resolutionRef'] !== undefined ? { resolutionId: '', resolutionRef: f['resolutionRef'], adoptedOn: f['adoptedOn'] || undefined } : { resolutionId: '' };
+};
 
 export function addRuleForm(drawer: DrawerService, data: RulesDataSource, v: RulesView, resolutions: ResolutionView[] | null): void {
   openForm(drawer, {
