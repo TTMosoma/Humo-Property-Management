@@ -12,6 +12,9 @@ public interface IPdfRenderer
 {
     /// <summary>Opens <paramref name="url"/>, waits for the page to say it's ready (<c>[data-print-ready]</c>) and prints it to A4.</summary>
     Task<byte[]> RenderAsync(string url, CancellationToken ct = default);
+
+    /// <summary>Prints a page the API wrote itself, with everything in it escaped (a scheme's rule book), to A4.</summary>
+    Task<byte[]> RenderHtmlAsync(string html, CancellationToken ct = default);
 }
 
 public sealed class DocumentOptions
@@ -46,6 +49,22 @@ public sealed class ChromiumPdfRenderer(IOptions<DocumentOptions> options, ILogg
             await page.GotoAsync(url, new() { Timeout = timeout });
             await page.WaitForSelectorAsync("[data-print-ready]", new() { Timeout = timeout, State = WaitForSelectorState.Attached });
             if (await page.QuerySelectorAsync("[data-print-error]") is not null) throw new InvalidOperationException("The print page couldn’t load the document.");
+            await page.EmulateMediaAsync(new() { Media = Media.Print });
+            return await page.PdfAsync(new() { Format = "A4", PrintBackground = true, PreferCSSPageSize = true });
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    public async Task<byte[]> RenderHtmlAsync(string html, CancellationToken ct = default)
+    {
+        var b = await BrowserAsync(ct);
+        var page = await b.NewPageAsync(new() { ViewportSize = new() { Width = 794, Height = 1123 }, JavaScriptEnabled = false });
+        try
+        {
+            await page.SetContentAsync(html, new() { Timeout = (float)options.Value.RenderTimeout.TotalMilliseconds });
             await page.EmulateMediaAsync(new() { Media = Media.Print });
             return await page.PdfAsync(new() { Format = "A4", PrintBackground = true, PreferCSSPageSize = true });
         }

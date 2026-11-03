@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { firstValueFrom } from 'rxjs';
-import { AccessDataSource, AccountDataSource, ApiError, BudgetDataSource, ComplianceDataSource, JobDataSource, describeFailure, MeetingDataSource, PayablesDataSource, PlatformTemplateDataSource, PolicyError, SchemeDataSource, SessionDataSource, SettingsDataSource, SignInError, StaffDataSource, StepUpAuthenticator, SupplierDataSource, TimelineDataSource, ReportDataSource, RulesDataSource, OpsDataSource } from '../domain';
+import { AccessDataSource, AccountDataSource, BudgetDataSource, ComplianceDataSource, JobDataSource, describeFailure, MeetingDataSource, PayablesDataSource, PlatformTemplateDataSource, PolicyError, SchemeDataSource, SessionDataSource, SettingsDataSource, SignInError, StaffDataSource, StepUpAuthenticator, SupplierDataSource, TimelineDataSource, ReportDataSource, RulesDataSource, OpsDataSource } from '../domain';
 import { NOT_CONNECTED, notConnected } from '../core/availability/not-connected';
 import { provideHttpData } from './provide-http-data';
 
@@ -49,10 +49,32 @@ describe('Production data layer (provideHttpData)', () => {
   });
 
   it('ports without an API yet say so', async () => {
-    await expect(firstValueFrom(TestBed.inject(RulesDataSource).breaches(['s-1']))).rejects.toBeInstanceOf(ApiError);
     // Compliance is partly on the API: the financial year end is, the rest isn't yet.
     await expect(firstValueFrom(TestBed.inject(ComplianceDataSource).list(['s-1']))).rejects.toMatchObject({ kind: 'server' });
   });
+  it('sends scheme rules and the registered rules PDF to the API (D29)', async () => {
+    const rules = TestBed.inject(RulesDataSource);
+    const added = firstValueFrom(rules.actRules('s-1', { type: 'add', number: '1', title: 'Pets', category: 'pets', text: 'A rule about pets, as adopted.', resolutionId: '' }));
+    const add = http.expectOne({ method: 'POST', url: '/api/rules/s-1/actions' });
+    expect(add.request.body.type).toBe('add');
+    add.flush({ id: 'r-1' });
+    await expect(added).resolves.toBe('r-1');
+
+    const amended = firstValueFrom(rules.actRules('s-1', { type: 'amend', ruleId: 'r-1', text: 'New wording of the rule.', resolutionId: 'res-1' }));
+    http.expectOne({ method: 'POST', url: '/api/rules/s-1/actions' }).flush(null, { status: 204, statusText: 'No Content' });
+    await expect(amended).resolves.toBeUndefined();
+
+    const upload = { type: 'upload', fileName: 'rules.pdf', mimeType: 'application/pdf', sizeBytes: 4, adoptedOn: '2026-01-01', resolutionRef: 'Registered with the CSOS', shareWithOwners: true } as const;
+    await expect(firstValueFrom(rules.actRules('s-1', upload))).rejects.toMatchObject({ kind: 'validation' });
+    const uploaded = firstValueFrom(rules.actRules('s-1', upload, new File(['%PDF'], 'rules.pdf', { type: 'application/pdf' })));
+    const post = http.expectOne({ method: 'POST', url: '/api/rules/s-1/upload' });
+    const form = post.request.body as FormData;
+    expect(form.get('shareWithOwners')).toBe('true');
+    expect(form.get('resolutionRef')).toBe('Registered with the CSOS');
+    post.flush({ id: 'doc-1' });
+    await expect(uploaded).resolves.toBe('doc-1');
+  });
+
   it('sets up and publishes a customer’s custom template over HTTP (D12, D23)', async () => {
     const templates = TestBed.inject(PlatformTemplateDataSource);
     const created = firstValueFrom(templates.createCustomTemplate('org-1', 'levy-statement'));
@@ -106,7 +128,8 @@ describe('Production data layer (provideHttpData)', () => {
     await added;
 
     const routes = TestBed.inject(NOT_CONNECTED);
-    expect(notConnected(routes, '/governance/rules')).toBe(true);
+    expect(notConnected(routes, '/compliance')).toBe(true);
+    expect(notConnected(routes, '/governance/rules')).toBe(false);
     expect(notConnected(routes, '/governance/meetings')).toBe(false);
     expect(notConnected(routes, '/reports')).toBe(false);
     expect(notConnected(routes, '/finance/budgets/b-1')).toBe(false);

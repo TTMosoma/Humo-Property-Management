@@ -72,11 +72,11 @@ import { HttpBudgetDataSource, HttpComplianceProfiles } from './http-budgets';
 import { HttpReportDataSource } from './http-reports';
 import { HttpFeatureSwitches } from './http-flags';
 import { HttpMeetingDataSource, HttpResolutionDataSource } from './http-governance';
+import { HttpRulesDataSource } from './http-rules';
 
 /** Ports whose HTTP adapters come with later backend slices. Remove each from this list as its adapter lands. */
 const NOT_YET: [abstract new (...args: never[]) => object, string][] = [
   [PaymentGateway, 'PaymentGateway'],
-  [RulesDataSource, 'RulesDataSource'],
   [ContractorNetwork, 'ContractorNetwork'],
 ];
 
@@ -125,7 +125,6 @@ export function provideHttpData(): EnvironmentProviders {
     {
       provide: NOT_CONNECTED,
       useValue: [
-        '/governance/rules',
         '/compliance',
         '/platform/flags',
         '/platform/health',
@@ -163,6 +162,7 @@ export function provideHttpData(): EnvironmentProviders {
     { provide: ReportDataSource, useClass: HttpReportDataSource },
     // Governance: meetings, resolutions and their actions.
     { provide: MeetingDataSource, useClass: HttpMeetingDataSource },
+    { provide: RulesDataSource, useClass: HttpRulesDataSource },
     { provide: ResolutionDataSource, useClass: HttpResolutionDataSource },
     // Feature switches come from the API; the rest of platform operations isn't on it yet.
     HttpFeatureSwitches,

@@ -661,7 +661,7 @@ Reviewing what each package adds over the one below, Enterprise's own features w
 
 **Consequences:**
 - `contracts/entitlements.json`: `trustee-management` moves to Essentials; a new `scheme-rules` feature is in Professional; `permissions-advanced` is removed.
-- API: `POST /boards/{schemeId}/actions` needs `trustee-management`, not `governance`. Scheme rules aren't on the API yet; when they are, they need `scheme-rules`.
+- API: `POST /boards/{schemeId}/actions` needs `trustee-management`, not `governance`. Scheme rules on the API need `scheme-rules` (added 2 November 2026).
 - At start-up a stored catalogue whose add-on is still called "Governance" gets the new name, description and features. A name Humo has given it since stands.
 - The Governance menu shows *Trustee boards* on every plan and *Scheme rules* from Professional; `/governance` opens Trustee boards.
 

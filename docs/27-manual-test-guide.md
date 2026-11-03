@@ -191,6 +191,24 @@ npm --prefix frontend/humo-web run e2e:screens
 - [ ] Let an approval made alone take effect after its cooling-off (§ approvals, D24) on a scheme with trustees on record. **Expect:** the approver's notice and the audit entry say "Trustees told:" with each name and how (email address or mobile).
 - [ ] The same on a scheme with no trustees on record (e.g. Flamingo Pointe). **Expect:** "… has no trustees on record, so no trustee was told. Tell the trustees yourself."
 
+## 20. Scheme rules and the breach log on the API (D29)
+
+Restart the API, then load the demo rules once: `dotnet run --project backend/src/Humo.Api -- seed-demo`. It says "Acacia: scheme rules added to 2 schemes".
+
+- [ ] As Thandeka: Governance › Scheme rules. **Expect:** the register, not *Coming to Humo Property Management*: Pets, Parking and so on, each "Adopted 01 Jun 2019 · Registered rules". Reload. **Expect:** still there.
+- [ ] *Amend* a rule and change its wording. **Expect:** with Meetings & AGMs, the Resolution is chosen from the passed resolutions; without it, a text box with *Passed on*. Save. **Expect:** the new wording shows with that resolution, and *1 earlier version* opens the old wording.
+- [ ] *Add a rule* with no resolution. **Expect:** it says "Captured from the registered rules by" you. Add another with the same number. **Expect:** refused: amend it instead.
+- [ ] *Share with owners*. **Expect:** after a few seconds, "Owners and residents have the rule book"; *open it* shows a PDF of the rules in force. Amend a rule the same way with today's date. **Expect:** the page says the rules have changed since the copy was shared.
+- [ ] *Upload rules PDF*, shared with owners, with *Registered with the CSOS*. **Expect:** it's listed under *Registered rules*, and Documents has it under Rules with the rule book archived. Upload a second, staff-only. **Expect:** the first is listed as an earlier version and owners keep it.
+- [ ] Breach log: *Log a breach* on Unit 42, against the owner. **Expect:** it opens as *Reported*, nothing is sent, and the page says who it's with (the scheme's portfolio manager).
+- [ ] *Send a warning* by email, 14 days. **Expect:** Mailpit has the letter with "Please put this right by" and the date above *Kind regards*; the history links to it in Communications › Sent; Tasks has "Check whether Unit 42 has put right", due on that date.
+- [ ] Log a breach and try to send a final warning first. **Expect:** *Send a warning* is the only letter offered.
+- [ ] From *Warning sent*: *Send a final warning*, then *Refer to the trustees*. **Expect:** the check task closes and a "Decide on breach" task appears; trustees with a sign-in get a notification and an email. *Send a final warning* is gone.
+- [ ] *Record the outcome*. **Expect:** *Resolved*, and the "Decide on breach" task is done. *Reopen* with a note. **Expect:** *Reported* again.
+- [ ] *Repeal* a rule with an open breach. **Expect:** refused: resolve the open breaches first. Resolve them and repeal it. **Expect:** it stays in the register, marked repealed.
+- [ ] As Priya (Finance): Scheme rules and a breach. **Expect:** you can read both, with no *Add a rule*, *Amend*, *Log a breach* or *Send a warning*.
+- [ ] As Annette (Fynbos, Essentials): `/governance/rules`. **Expect:** it says it isn't on your plan. In the browser console, `await (await fetch('/api/breaches')).json()`. **Expect:** `not-entitled`.
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.
