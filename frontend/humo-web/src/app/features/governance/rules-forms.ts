@@ -71,7 +71,6 @@ function resolutionFields(resolutions: ResolutionView[] | null, required: boolea
     const typing = (v: Record<string, string>) => v['resolutionId'] === NOT_IN_REGISTER;
     return [
       { key: 'resolutionId', label: 'Resolution', type: 'select', required: true,
-        // Nothing is chosen for them: a first entry to leave also makes a list of one choosable.
         options: [{ value: '', label: 'Choose the resolution' }, ...passed, { value: NOT_IN_REGISTER, label: 'Not in the register: type it from the minutes' }],
         help: passed.length ? undefined : 'No passed resolutions are recorded at this scheme yet.' },
       { key: 'resolutionRef', label: 'As in the minutes', type: 'text', required: true, half: true, showIf: typing, help: 'E.g. “AGM 12 March 2026, special resolution 2”.' },

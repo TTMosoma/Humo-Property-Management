@@ -162,11 +162,12 @@ export class PersonPage {
     const p = this.person();
     if (!p) return [];
     const owned = p.relationships.filter((r) => r.relationship.type === 'owner').length;
-    const trustee = p.relationships.filter((r) => r.relationship.type === 'trustee').length;
+    const today = todaySA();
+    const trusteeOf = p.relationships.filter((r) => r.relationship.type === 'trustee' && (!r.relationship.until || r.relationship.until >= today)).map((r) => r.scheme.name);
     const facts: KeyFact[] = [{ label: 'Units owned', value: String(owned) }];
     if (owned) facts.push({ label: 'Total balance', value: formatRand(p.balance), tone: p.balance > 0 ? 'warning' : p.balance < 0 ? 'success' : 'default' });
     if (p.relationships.some((r) => r.relationship.type === 'tenant')) facts.push({ label: 'Renting', value: String(p.relationships.filter((r) => r.relationship.type === 'tenant').length) });
-    if (trustee) facts.push({ label: 'Trustee of', value: `${trustee} scheme${trustee > 1 ? 's' : ''}` });
+    if (trusteeOf.length) facts.push({ label: 'Trustee of', value: trusteeOf.join(', ') });
     return facts;
   });
 

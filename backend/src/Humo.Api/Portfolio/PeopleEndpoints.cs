@@ -265,9 +265,9 @@ public static partial class PeopleEndpoints
     }
 
     /// <summary>
-    /// An owner's or tenant's portal access follows the units they're on (as a trustee's follows the board, D2): someone
-    /// who signs in gets access to each unit they own or rent now, and loses it to a unit once they're no longer on it.
-    /// Only for people who already sign in; inviting someone new stays a separate step.
+    /// Portal access follows the record: someone who signs in gets access to each unit they own or rent now and each board
+    /// they sit on (D2), whichever came first, and loses it once they're no longer on it. Only for people who already sign
+    /// in; inviting someone new stays a separate step.
     /// </summary>
     public static async Task SyncResidentAccessAsync(HumoDbContext db, PortfolioReads reads, Guid personId, string by, CancellationToken ct)
     {
@@ -276,13 +276,17 @@ public static partial class PeopleEndpoints
             .Where(u => u.PersonId == key && u.Kind == IdentityKinds.Customer && u.Status != IdentityStatuses.Deactivated).ToListAsync(ct);
         if (users.Count == 0) return;
         // As this change leaves them: added and changed links count, removed ones don't.
-        var rels = (await db.Relationships.Where(r => r.PersonId == personId && r.UnitId != null && (r.Type == "owner" || r.Type == "tenant")).ToListAsync(ct))
-            .Concat(db.Relationships.Local.Where(r => r.PersonId == personId && r.UnitId != null && (r.Type == "owner" || r.Type == "tenant")))
+        var current = (await db.Relationships.Where(r => r.PersonId == personId && (r.Type == "owner" || r.Type == "tenant" || r.Type == "trustee")).ToListAsync(ct))
+            .Concat(db.Relationships.Local.Where(r => r.PersonId == personId && (r.Type == "owner" || r.Type == "tenant" || r.Type == "trustee")))
             .Distinct().Where(r => db.Entry(r).State != EntityState.Deleted).Where(reads.IsCurrent).ToList();
+        var rels = current.Where(r => r.Type != "trustee" && r.UnitId != null).ToList();
+        var seats = current.Where(r => r.Type == "trustee").ToList();
         var unitIds = rels.Select(r => r.UnitId!.Value).Distinct().ToList();
         var units = await db.Units.Where(u => unitIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, ct);
-        var schemeIds = units.Values.Select(u => u.SchemeId).Distinct().ToList();
+        var schemeIds = units.Values.Select(u => u.SchemeId).Concat(seats.Select(r => r.SchemeId)).Distinct().ToList();
         var schemes = await db.Schemes.Where(s => schemeIds.Contains(s.Id)).ToDictionaryAsync(s => s.Id, ct);
+        // Someone can work at another agency under the same sign-in: this record only speaks for its own.
+        var organisation = await db.People.Where(p => p.Id == personId).Select(p => p.OrganisationId).FirstOrDefaultAsync(ct);
         var now = DateTimeOffset.UtcNow;
         foreach (var user in users)
         {
@@ -307,6 +311,32 @@ public static partial class PeopleEndpoints
                 a.EndedBy = $"{by} (no longer {(a.Role == Roles.Owner ? "an owner" : "a tenant")} of the unit)";
                 a.EndedAt = now;
                 a.Version++;
+            }
+            foreach (var seat in seats.Where(r => schemes.ContainsKey(r.SchemeId)))
+            {
+                var scheme = schemes[seat.SchemeId];
+                if (user.Assignments.Any(a => a.Role == Roles.Trustee && a.Status == AssignmentStatuses.Active && a.SchemeIds.Contains(scheme.Id.ToString()))) continue;
+                if (!user.Memberships.Any(m => m.OrganisationId == scheme.OrganisationId && m.Status != MembershipStatuses.Ended))
+                    db.Memberships.Add(new Membership { Id = Guid.CreateVersion7(), UserId = user.Id, OrganisationId = scheme.OrganisationId, Since = now });
+                db.RoleAssignments.Add(new RoleAssignment
+                {
+                    Id = Guid.CreateVersion7(), UserId = user.Id, Role = Roles.Trustee, ScopeType = ScopeTypes.Schemes, OrganisationId = scheme.OrganisationId, SchemeIds = [scheme.Id.ToString()],
+                    Label = $"{scheme.Name} · {seat.Portfolio ?? "Trustee"}", GrantedBy = $"{by} (board appointment)", GrantedAt = now,
+                });
+            }
+            foreach (var a in user.Assignments.Where(a => a.Status == AssignmentStatuses.Active && a.Role == Roles.Trustee && a.OrganisationId == organisation).ToList())
+            {
+                var kept = a.SchemeIds.Where(s => seats.Any(r => r.SchemeId.ToString() == s)).ToList();
+                if (kept.Count == a.SchemeIds.Count) continue;
+                a.Version++;
+                if (kept.Count > 0)
+                {
+                    a.SchemeIds = kept;
+                    continue;
+                }
+                a.Status = AssignmentStatuses.Ended;
+                a.EndedBy = $"{by} (left the board)";
+                a.EndedAt = now;
             }
         }
     }

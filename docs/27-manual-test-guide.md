@@ -213,6 +213,17 @@ Restart the API, then load the demo rules once: `dotnet run --project backend/sr
 - [ ] As Priya (Finance): Scheme rules and a breach. **Expect:** you can read both, with no *Add a rule*, *Amend*, *Log a breach* or *Send a warning*.
 - [ ] As Annette (Fynbos, Essentials): `/governance/rules`. **Expect:** it says it isn't on your plan. In the browser console, `await (await fetch('/api/breaches')).json()`. **Expect:** `not-entitled`.
 
+## 21. Trustee access follows the board, and lists show what's chosen
+
+Restart the API first.
+
+- [ ] Wait a minute after the restart, then sign in as `johanna@mail.example` (owner of Die Eike unit 9, on its board, invited earlier as an owner only). **Expect:** the role switcher offers Owner and Trustee, and *Trustee* opens the trustee view of Die Eike.
+- [ ] As Thandeka: Portfolio › People › Johanna Visser. **Expect:** the header says "Trustee of Die Eike", naming the scheme rather than a count.
+- [ ] Add a new owner at Kingfisher Court; *Appoint* them to its board; then *Invite* them from their People record as an owner. Open the invitation from Mailpit in a private window. **Expect:** the role switcher offers both Owner and Trustee.
+- [ ] Governance › Scheme rules › Breach log › *Log a breach*. **Expect:** Rule and Unit start on *Choose…*. Save without choosing. **Expect:** "Rule is needed." Choose the first rule in the list. **Expect:** it's accepted, with no need to pick another one first.
+- [ ] Maintenance › a newly reported job. **Expect:** Priority and Trade show the job's own values; if the scheme has no portfolio manager, *Assigned to* starts on *Choose…*.
+- [ ] Any form with a list set in advance, e.g. People › *Add an owner, tenant or trustee*. **Expect:** the preset Scheme shows, with no *Choose…*.
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.

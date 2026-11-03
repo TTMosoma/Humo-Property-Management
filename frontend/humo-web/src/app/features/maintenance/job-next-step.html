@@ -15,17 +15,18 @@
         <div class="form-grid">
           <label>Assigned to
             <select [value]="assignee()" (change)="assignee.set($any($event.target).value)">
+              @if (!assignee()) { <option value="" selected>Choose…</option> }
               @for (s of staff(); track s.id) { <option [value]="s.id" [selected]="s.id === assignee()">{{ s.name }}</option> }
             </select>
           </label>
           <label>Priority
             <select [value]="priority()" (change)="priority.set($any($event.target).value)">
-              @for (p of priorities; track p) { <option [value]="p">{{ priorityLabel[p] }}</option> }
+              @for (p of priorities; track p) { <option [value]="p" [selected]="p === priority()">{{ priorityLabel[p] }}</option> }
             </select>
           </label>
           <label>Trade
             <select [value]="category()" (change)="category.set($any($event.target).value)">
-              @for (t of trades; track t) { <option [value]="t">{{ t }}</option> }
+              @for (t of trades; track t) { <option [value]="t" [selected]="t === category()">{{ t }}</option> }
             </select>
           </label>
         </div>

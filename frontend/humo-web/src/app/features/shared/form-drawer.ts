@@ -114,10 +114,10 @@ export function openForm<R>(drawer: DrawerService, spec: FormSpec<R>): void {
               }
               @case ('select') {
                 <select [attr.id]="'f-' + f.key" (change)="set(f.key, $event)" [attr.aria-invalid]="!!errors()[f.key]">
-                  @if (!f.required) {
-                    <option value="" [selected]="!values()[f.key]">—</option>
+                  @if (blankOption(f); as blank) {
+                    <option value="" [selected]="!isChosen(f)">{{ blank }}</option>
                   }
-                  @for (o of f.optionsFor ? f.optionsFor(values()) : (f.options ?? []); track o.value) {
+                  @for (o of optionsOf(f); track o.value) {
                     <option [value]="o.value" [selected]="o.value === values()[f.key]">{{ o.label }}</option>
                   }
                 </select>
@@ -187,6 +187,25 @@ export class FormDrawer {
 
   private readonly files: Record<string, File> = {};
 
+  protected optionsOf(f: FormField): { value: string; label: string }[] {
+    return f.optionsFor ? f.optionsFor(this.values()) : (f.options ?? []);
+  }
+
+  protected isChosen(f: FormField): boolean {
+    return this.optionsOf(f).some((o) => o.value === this.values()[f.key]);
+  }
+
+  /**
+   * The list's empty first entry, if it needs one. With nothing chosen a browser shows the first option as if it were,
+   * and picking that option changes nothing, so the form would say it's still needed. A list with its own empty entry
+   * needs no other.
+   */
+  protected blankOption(f: FormField): string | null {
+    if (this.optionsOf(f).some((o) => o.value === '')) return null;
+    if (!f.required) return '—';
+    return this.isChosen(f) ? null : 'Choose…';
+  }
+
   protected set(key: string, e: Event): void {
     this.apply(key, (e.target as HTMLInputElement).value);
   }
@@ -221,7 +240,7 @@ export class FormDrawer {
     // The quick checks the browser can do; the API checks everything again.
     const missing = Object.fromEntries(
       this.visibleFields()
-        .filter((f) => f.required && !(values[f.key] ?? '').trim())
+        .filter((f) => f.required && (!(values[f.key] ?? '').trim() || (f.type === 'select' && !this.isChosen(f))))
         .map((f) => [f.key, `${f.label} is needed.`]),
     );
     if (Object.keys(missing).length) {

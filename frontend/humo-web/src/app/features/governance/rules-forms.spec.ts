@@ -6,13 +6,9 @@ import { amendRuleForm, repealRuleForm } from './rules-forms';
 
 // Ionic's components can't load in the test runner: a stand-in icon.
 vi.mock('@ionic/angular/standalone', async () => {
-  const { Component, input } = await import('@angular/core');
-  // eslint-disable-next-line @angular-eslint/component-selector -- stands in for Ionic's own element
-  @Component({ selector: 'ion-icon', template: '' })
-  class IonIcon {
-    readonly name = input<string>();
-  }
-  return { IonIcon };
+  const { Component } = await import('@angular/core');
+  // No decorator syntax: its helper isn't loaded yet when this runs ahead of the imports, in specs sharing form-drawer.
+  return { IonIcon: Component({ selector: 'ion-icon', template: '', inputs: ['name'] })(class {}) };
 });
 
 const rule = { id: 'r-1', number: '2.1', title: 'Parking', versions: [{ text: 'Old wording of the parking rule.' }] } as unknown as SchemeRule;

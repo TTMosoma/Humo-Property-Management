@@ -147,6 +147,8 @@ public static partial class AccessEndpoints
                 user.PersonId = person.Id.ToString();
             }
             Grant(db, user, orgId, a, actor.User.Name, clock.GetUtcNow());
+            // Invited as an owner but already on the board, say: they get every role the record gives them.
+            if (person is not null) await Portfolio.PeopleEndpoints.SyncResidentAccessAsync(db, reads, person.Id, actor.User.Name, ct);
             if (user.Status == IdentityStatuses.Invited) await SendInvitation(db, email, app.Value, clock, user, org.ShortName, logs, ct);
             return Results.Created($"/api/access/identities/{user.Id}", new { id = user.Id.ToString() });
         }, ct);

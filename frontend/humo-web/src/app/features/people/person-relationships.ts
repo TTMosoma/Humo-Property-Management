@@ -19,7 +19,7 @@ import { accountStatus, links } from '../accounts/account-view';
     <ul>
       @for (r of person().relationships; track r.relationship.id) {
         <li [class]="r.relationship.type">
-          <span class="type">{{ r.relationship.type === 'trustee' ? r.relationship.portfolio : r.relationship.type === 'owner' ? 'Owner' : 'Tenant' }}</span>
+          <span class="type">{{ r.relationship.type === 'trustee' ? (r.relationship.portfolio ?? 'Trustee') : r.relationship.type === 'owner' ? 'Owner' : 'Tenant' }}</span>
           <div class="where">
             <a [routerLink]="links.scheme(r.scheme)" (click)="navigated.emit()">{{ r.scheme.name }}</a>
             @if (r.unit; as u) {

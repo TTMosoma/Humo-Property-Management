@@ -66,4 +66,96 @@ public sealed class ResidentAccessTests : IDisposable
         access = await Access(user);
         Assert.Equal([units[1].ToString()], access.Where(a => a.Status == AssignmentStatuses.Active).Select(a => a.Unit).ToList());
     }
+
+    private sealed record Owner(Guid Org, HttpClient Admin, Guid Scheme, Guid Unit, Guid Person);
+
+    /// <summary>Someone who owns a unit and has no sign-in yet.</summary>
+    private async Task<Owner> AnOwner()
+    {
+        var org = await api.Customer("Acacia");
+        await api.Person("thandeka@acacia.example", Roles.AgencyAdmin, org);
+        var admin = await api.SignedIn("thandeka@acacia.example");
+        var scheme = Guid.Parse((await (await admin.PostAsJsonAsync("/api/schemes", new { name = "Die Eike", code = "DE", type = "Sectional Title", suburb = "Morningside", city = "Sandton", province = "Gauteng" })).Json())
+            .GetProperty("id").GetString()!);
+        var unit = Guid.Parse((await (await admin.PostAsJsonAsync($"/api/schemes/{scheme}/units", new { number = "9", description = "2-bed", sizeM2 = 80, participationQuota = 1, monthlyLevy = 2150, occupancy = "owner-occupied" })).Json())
+            .GetProperty("id").GetString()!);
+        var person = Guid.Parse((await (await admin.PostAsJsonAsync("/api/people", new
+        {
+            details = new { firstName = "Johanna", lastName = "Visser", kind = "individual", email = "johanna@mail.example", phone = "084 990 3346", preferredChannel = "email" },
+            link = new { type = "owner", schemeId = scheme.ToString(), unitId = unit.ToString(), since = Day(-30) },
+        })).Json()).GetProperty("id").GetString()!);
+        return new Owner(org, admin, scheme, unit, person);
+    }
+
+    private Task<HttpResponseMessage> Appoint(Owner o) =>
+        o.Admin.PostAsJsonAsync($"/api/boards/{o.Scheme}/actions", new { type = "appoint", personId = o.Person.ToString(), portfolio = "Trustee", how = "co-opted", since = Day(-1) });
+
+    private Task<HttpResponseMessage> InviteAsOwner(Owner o) => o.Admin.PostAsJsonAsync("/api/access/invitations", new
+    {
+        organisationId = o.Org.ToString(), name = "Johanna Visser", email = "johanna@mail.example", personId = o.Person.ToString(),
+        assignment = new { role = Roles.Owner, scope = new { type = "unit", organisationId = o.Org.ToString(), schemeIds = new[] { o.Scheme.ToString() }, unitId = o.Unit.ToString() }, label = "Die Eike · Unit 9" },
+    });
+
+    private async Task<List<string>> ActiveRoles(string email)
+    {
+        var me = await (await (await api.SignedIn(email)).GetAsync("/api/me")).Json();
+        return [.. me.GetProperty("assignments").EnumerateArray().Select(a => a.GetProperty("role").GetString()!).Order()];
+    }
+
+    [Fact]
+    public async Task Invited_as_an_owner_while_already_on_the_board_they_can_work_as_either()
+    {
+        var o = await AnOwner();
+        Assert.Equal(HttpStatusCode.NoContent, (await Appoint(o)).StatusCode);
+
+        await o.Admin.StepUp();
+        Assert.Equal(HttpStatusCode.Created, (await InviteAsOwner(o)).StatusCode);
+
+        Assert.Equal([Roles.Owner, Roles.Trustee], await ActiveRoles("johanna@mail.example"));
+    }
+
+    [Fact]
+    public async Task Someone_who_already_signs_in_gets_their_board_seat_within_the_minute_and_leaving_ends_it()
+    {
+        var o = await AnOwner();
+        await o.Admin.StepUp();
+        Assert.Equal(HttpStatusCode.Created, (await InviteAsOwner(o)).StatusCode);
+
+        // A seat on record with no access to match, as an invitation sent before this fix left it.
+        await api.Db(async db =>
+        {
+            db.Relationships.Add(new Relationship { Id = Guid.CreateVersion7(), PersonId = o.Person, Type = "trustee", SchemeId = o.Scheme, Since = DateOnly.Parse(Day(-400)), AppointmentHow = "elected" });
+            await db.SaveChangesAsync();
+            return true;
+        });
+        using (var scope = api.Services.CreateScope())
+            await PeopleEndpoints.SyncAllResidentAccessAsync(scope.ServiceProvider.GetRequiredService<HumoDbContext>(), scope.ServiceProvider.GetRequiredService<PortfolioReads>(), CancellationToken.None);
+        Assert.Equal([Roles.Owner, Roles.Trustee], await ActiveRoles("johanna@mail.example"));
+
+        // Leaving next week: still a trustee until then, and still an owner afterwards.
+        var seat = await api.Db(db => db.Relationships.Where(r => r.PersonId == o.Person && r.Type == "trustee").Select(r => r.Id).SingleAsync());
+        var end = await o.Admin.PostAsJsonAsync($"/api/boards/{o.Scheme}/actions", new { type = "end", relationshipId = seat.ToString(), on = Day(7), reason = "Resigned at the AGM" });
+        Assert.Equal(HttpStatusCode.NoContent, end.StatusCode);
+        Assert.Equal([Roles.Owner, Roles.Trustee], await ActiveRoles("johanna@mail.example"));
+
+        api.Clock.Advance(TimeSpan.FromDays(8));
+        using (var scope = api.Services.CreateScope())
+            await PeopleEndpoints.SyncAllResidentAccessAsync(scope.ServiceProvider.GetRequiredService<HumoDbContext>(), scope.ServiceProvider.GetRequiredService<PortfolioReads>(), CancellationToken.None);
+        Assert.Equal([Roles.Owner], await ActiveRoles("johanna@mail.example"));
+    }
+
+    [Fact]
+    public async Task Appointing_someone_who_signs_in_gives_trustee_access_once_and_ending_today_takes_it_away()
+    {
+        var o = await AnOwner();
+        await o.Admin.StepUp();
+        Assert.Equal(HttpStatusCode.Created, (await InviteAsOwner(o)).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await Appoint(o)).StatusCode);
+        Assert.Equal([Roles.Owner, Roles.Trustee], await ActiveRoles("johanna@mail.example"));
+
+        var seat = await api.Db(db => db.Relationships.Where(r => r.PersonId == o.Person && r.Type == "trustee").Select(r => r.Id).SingleAsync());
+        var end = await o.Admin.PostAsJsonAsync($"/api/boards/{o.Scheme}/actions", new { type = "end", relationshipId = seat.ToString(), on = Day(0), reason = "Resigned at the AGM" });
+        Assert.Equal(HttpStatusCode.NoContent, end.StatusCode);
+        Assert.Equal([Roles.Owner], await ActiveRoles("johanna@mail.example"));
+    }
 }
