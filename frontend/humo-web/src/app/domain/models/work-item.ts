@@ -24,7 +24,8 @@ export type WorkItemType =
   | 'resolution-approval'
   | 'document-expiry'
   | 'owner-message'
-  | 'follow-up';
+  | 'follow-up'
+  | 'rule-breach';
 
 /** 'cooling-off': approved alone under the trustees' permission, in effect after 24 hours (D24). */
 export type WorkItemStatus = 'open' | 'done' | 'approved' | 'rejected' | 'cooling-off';
@@ -112,6 +113,7 @@ export const WORK_TYPE_LABELS: Record<WorkItemType, string> = {
   'document-expiry': 'Document expiry',
   'owner-message': 'Message',
   'follow-up': 'Follow-up',
+  'rule-breach': 'Rule breach',
 };
 
 /** Which part of Humo Property Management a work item belongs to (used for grouping and filters). */
@@ -133,6 +135,7 @@ export const WORK_TYPE_AREA: Record<WorkItemType, 'Finance' | 'Maintenance' | 'G
   'document-expiry': 'Compliance',
   'owner-message': 'Communication',
   'follow-up': 'Communication',
+  'rule-breach': 'Governance',
 };
 
 export function urgencyOf(item: Pick<WorkItem, 'dueAt'>, now = new Date()): Urgency {

@@ -66,7 +66,7 @@ public static class WorkItemEndpoints
             if (w.Kind == "approval" && w.Status == "open" && w.SchemeId is { } scheme && w.Type is "quote-approval" or "invoice-approval"
                 && await JobCategoryAsync(w, db, ct) is { } category)
                 dto = dto with { Budget = await budgets.LineForAsync(scheme, category, ct) };
-            list.Add(dto);
+            if (WorkItemAccess.CanSee(actor, w, dto.ApproverRoles)) list.Add(dto);
         }
         return Results.Ok(list);
     }
@@ -77,11 +77,17 @@ public static class WorkItemEndpoints
     private static Task<IResult> Reopen(WorkIdsRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, CancellationToken ct) =>
         Change(body.Ids, "Reopened", current, commands, db, (w, _) => { w.Status = "open"; w.DecidedBy = null; w.DecidedAt = null; }, ct, onlyTasks: true);
 
-    private static Task<IResult> Assign(AssignRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, CancellationToken ct) =>
-        Change(body.Ids, body.AssigneeId is null ? "Unassigned" : "Assigned", current, commands, db, (w, _) => w.AssigneeId = body.AssigneeId, ct, onlyTasks: false);
+    private static async Task<IResult> Assign(AssignRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, StaffCovers staff, CancellationToken ct)
+    {
+        if (await current.GetAsync(ct) is not { OrganisationId: { } org }) return Results.Unauthorized();
+        // D32: a rule breach goes only to someone who can act on it.
+        var canTakeBreaches = body.AssigneeId is null || await staff.CanEnforceRulesAsync(org, body.AssigneeId, ct);
+        return await Change(body.Ids, body.AssigneeId is null ? "Unassigned" : "Assigned", current, commands, db, (w, _) => w.AssigneeId = body.AssigneeId, ct, onlyTasks: false,
+            refuse: items => !canTakeBreaches && items.Any(w => w.Type == WorkItemAccess.RuleBreach) ? "A rule breach can only go to someone who enforces the rules: a portfolio manager or an administrator." : null);
+    }
 
     private static async Task<IResult> Change(List<string>? ids, string verb, CurrentActor current, CommandRunner commands, HumoDbContext db, Action<WorkItemRow, Actor> apply,
-        CancellationToken ct, bool onlyTasks)
+        CancellationToken ct, bool onlyTasks, Func<List<WorkItemRow>, string?>? refuse = null)
     {
         if (await current.GetAsync(ct) is not { } me) return Results.Unauthorized();
         var keys = (ids ?? []).Select(s => Guid.TryParse(s, out var g) ? g : Guid.Empty).ToList();
@@ -90,8 +96,9 @@ public static class WorkItemEndpoints
         return await commands.RunAsync(new CommandSpec($"{verb} {items.Count} work item{(items.Count == 1 ? "" : "s")}: {string.Join(", ", items.Select(i => i.Ref))}", "Work.Manage")
         {
             Resource = "Work item",
-            Validate = () => items.Count != keys.Count || items.Count == 0 ? new() { ["ids"] = "Some of these aren’t yours to change." }
-                : onlyTasks && items.Any(i => i.Kind == "approval") ? new() { ["ids"] = "Approvals are decided, not completed." } : [],
+            Validate = () => items.Count != keys.Count || items.Count == 0 || !items.All(w => WorkItemAccess.CanSee(me, w)) ? new() { ["ids"] = "Some of these aren’t yours to change." }
+                : onlyTasks && items.Any(i => i.Kind == "approval") ? new() { ["ids"] = "Approvals are decided, not completed." }
+                : refuse?.Invoke(items) is { } reason ? new() { ["ids"] = reason } : [],
         }, actor =>
         {
             foreach (var w in items) apply(w, actor);

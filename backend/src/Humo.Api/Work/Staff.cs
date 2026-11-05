@@ -90,8 +90,32 @@ public sealed class StaffCovers(HumoDbContext db, TimeProvider clock)
         var staff = c.StaffId.ToString();
         var items = await db.WorkItems.Where(w => w.OrganisationId == c.OrganisationId && w.Status == "open" && w.AssigneeId == staff && w.Kind != "approval").ToListAsync(ct);
         if (items.Count == 0) return;
-        foreach (var w in items) w.AssigneeId = c.CoverId.ToString();
+        foreach (var w in items) w.AssigneeId = w.Type == WorkItemAccess.RuleBreach ? await RuleBreachCoverAsync(c, ct) : c.CoverId.ToString();
         c.MovedIds = JsonSerializer.Serialize(Moved(c).Concat(items.Select(w => w.Id)).Distinct());
+    }
+
+    /// <summary>Whether this person holds a role that acts on rule breaches.</summary>
+    public async Task<bool> CanEnforceRulesAsync(Guid organisationId, string? userId, CancellationToken ct)
+    {
+        if (!Guid.TryParse(userId, out var id)) return false;
+        var roles = await db.RoleAssignments.Where(a => a.UserId == id && a.OrganisationId == organisationId && a.Status == AssignmentStatuses.Active).Select(a => a.Role).ToListAsync(ct);
+        return roles.Any(r => AccessCatalogue.PermissionsOf(r).Contains("Rules.Enforce"));
+    }
+
+    /// <summary>D32: rule breaches go to the cover only if they can act on them (Finance can't). If not, an administrator takes them; with no other administrator they stay put.</summary>
+    public async Task<string> RuleBreachCoverAsync(StaffCoverRow c, CancellationToken ct)
+    {
+        if (await CanEnforceRulesAsync(c.OrganisationId, c.CoverId.ToString(), ct)) return c.CoverId.ToString();
+        return await OtherAdministratorAsync(c, ct) ?? c.StaffId.ToString();
+    }
+
+    private async Task<string?> OtherAdministratorAsync(StaffCoverRow c, CancellationToken ct)
+    {
+        var id = await db.RoleAssignments
+            .Where(a => a.OrganisationId == c.OrganisationId && a.Role == Roles.AgencyAdmin && a.Status == AssignmentStatuses.Active && a.UserId != c.StaffId)
+            .Join(db.Users.Where(u => u.Status == IdentityStatuses.Active), a => a.UserId, u => u.Id, (a, _) => a)
+            .OrderBy(a => a.Id).Select(a => (Guid?)a.UserId).FirstOrDefaultAsync(ct);
+        return id?.ToString();
     }
 
     /// <summary>The cover is over: what's still open with the cover moves back.</summary>
@@ -99,7 +123,9 @@ public sealed class StaffCovers(HumoDbContext db, TimeProvider clock)
     {
         var moved = Moved(c);
         var cover = c.CoverId.ToString();
-        foreach (var w in await db.WorkItems.Where(w => moved.Contains(w.Id) && w.Status == "open" && w.AssigneeId == cover).ToListAsync(ct))
+        var administrator = await OtherAdministratorAsync(c, ct);
+        foreach (var w in await db.WorkItems.Where(w => moved.Contains(w.Id) && w.Status == "open"
+            && (w.AssigneeId == cover || (w.Type == WorkItemAccess.RuleBreach && w.AssigneeId == administrator))).ToListAsync(ct))
             w.AssigneeId = c.StaffId.ToString();
         c.EndedAt = Now;
     }
@@ -149,8 +175,8 @@ public static class StaffEndpoints
         var (team, items, _) = await staff.SummariesAsync(org, ct);
         if (team.FirstOrDefault(s => s.Id == staffId.ToString()) is not { } s) return Problems.NotFound();
         var since = staff.Now.AddDays(-14);
-        var open = items.Where(w => w.Status == "open" && w.AssigneeId == s.Id).OrderBy(w => w.DueAt).Select(WorkItemEndpoints.ToDto).ToList();
-        var done = items.Where(w => w.Status != "open" && w.DecidedAt >= since && (w.DecidedById == staffId || (w.AssigneeId == s.Id && w.Status == "done")))
+        var open = items.Where(w => w.Status == "open" && w.AssigneeId == s.Id && WorkItemAccess.CanSee(actor, w)).OrderBy(w => w.DueAt).Select(WorkItemEndpoints.ToDto).ToList();
+        var done = items.Where(w => w.Status != "open" && w.DecidedAt >= since && (w.DecidedById == staffId || (w.AssigneeId == s.Id && w.Status == "done")) && WorkItemAccess.CanSee(actor, w))
             .OrderByDescending(w => w.DecidedAt).Take(15).Select(WorkItemEndpoints.ToDto).ToList();
         return Results.Ok(new StaffDetailDto(s.Id, s.IdentityId, s.Name, s.Initials, s.Title, s.Email, s.Roles, s.AllSchemes, s.Schemes, s.OpenTasks, s.OverdueTasks, s.OpenMessages,
             s.ApprovalsWaiting, s.Away, s.Covering, open, done));
