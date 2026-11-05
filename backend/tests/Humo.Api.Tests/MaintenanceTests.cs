@@ -78,6 +78,21 @@ public sealed class MaintenanceTests : IDisposable
     });
 
     [Fact]
+    public async Task Finance_opens_a_job_from_its_invoice_but_cant_browse_or_log_them()
+    {
+        var s = await Scheme();
+        var reference = await Ref(await s.Admin.PostAsJsonAsync("/api/jobs", new { schemeId = s.Kc.ToString(), location = "Block A stairwell", title = "Burst pipe in stairwell", description = "Water on the stairs.", category = "Plumbing", priority = "urgent" }));
+        await api.Person("priya@acacia.example", Roles.Finance, s.Org);
+        var finance = await api.SignedIn("priya@acacia.example");
+
+        Assert.Equal(HttpStatusCode.OK, (await finance.GetAsync($"/api/jobs/{reference}")).StatusCode);
+        Assert.Empty((await (await finance.GetAsync($"/api/jobs?schemeIds={s.Kc}")).Json()).GetProperty("items").EnumerateArray());
+        Assert.Empty((await (await finance.GetAsync($"/api/jobs/search?q=burst&schemeIds={s.Kc}")).Json()).EnumerateArray());
+        var log = await finance.PostAsJsonAsync("/api/jobs", new { schemeId = s.Kc.ToString(), location = "Roof", title = "Roof leak", description = "Drip.", category = "Plumbing", priority = "normal" });
+        Assert.Equal("forbidden", await log.ProblemCode());
+    }
+
+    [Fact]
     public async Task A_job_runs_from_report_to_invoice_within_delegated_authority()
     {
         var s = await Scheme();

@@ -37,6 +37,7 @@ public static class BoardEndpoints
     private static async Task<IResult> List(string[]? schemeIds, CurrentActor current, PortfolioReads reads, HumoDbContext db, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
+        if (!actor.Can("Governance.View")) return Results.Ok(Array.Empty<BoardSummaryDto>());
         var schemes = (await reads.ReadableSchemes(actor, schemeIds, ct)).Where(s => s.Status is not ("archived" or "prospect")).ToList();
         var result = new List<BoardSummaryDto>();
         foreach (var s in schemes)
@@ -51,14 +52,14 @@ public static class BoardEndpoints
     private static async Task<IResult> Get(Guid schemeId, CurrentActor current, PortfolioReads reads, HumoDbContext db, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
-        var scheme = (await reads.ReadableSchemes(actor, [schemeId.ToString()], ct)).FirstOrDefault();
+        var scheme = actor.Can("Governance.View") ? (await reads.ReadableSchemes(actor, [schemeId.ToString()], ct)).FirstOrDefault() : null;
         return scheme is null ? Problems.NotFound() : Results.Ok(await Board(scheme, reads, db, ct));
     }
 
     private static async Task<IResult> Candidates(Guid schemeId, CurrentActor current, PortfolioReads reads, HumoDbContext db, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
-        var scheme = (await reads.ReadableSchemes(actor, [schemeId.ToString()], ct)).FirstOrDefault();
+        var scheme = actor.Can("Governance.View") ? (await reads.ReadableSchemes(actor, [schemeId.ToString()], ct)).FirstOrDefault() : null;
         return scheme is null ? Problems.NotFound() : Results.Ok(await CandidatesOf(scheme.Id, reads, db, ct));
     }
 

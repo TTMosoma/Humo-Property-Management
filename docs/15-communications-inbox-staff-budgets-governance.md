@@ -134,6 +134,9 @@ Text written in this checkpoint follows [07 — Brand architecture](07-brand-arc
 | `GET /boards`, `GET /boards/{schemeId}`, `POST /boards/{schemeId}/actions` | `Governance.View` / `Meetings.Manage` |
 | `GET /rules/{schemeId}`, `POST /rules/{schemeId}/actions` | `Governance.View` / `Meetings.Manage` |
 | `GET /breaches`, `POST /breaches`, `POST /breaches/{id}/actions` | `Governance.View` / `Rules.Enforce` |
+| `GET /resolutions` | `Resolutions.View` (Finance has it without `Governance.View`, D32) |
+| `GET /work-items`, a colleague's `GET /staff/{id}` | Only the work the role may see (`WorkItemAccess`, D32) |
+| `GET /staff`, `GET /staff/{id}` | `Portfolio.Browse`, and `team-management` on the plan |
 
 Commands carry the record's version where one exists (409 on conflict), are validated server-side (field errors) and audited.
 

@@ -83,7 +83,7 @@ export class MobileTabBar {
     }
     // Field mode: staff who log jobs get "Report", which opens the request form photo-first.
     const report: Tab = { id: 'report', label: 'Report', icon: 'camera-outline', route: '/maintenance/new?capture=1' };
-    const canReport = this.session.can('Maintenance.Log') && this.session.hasFeature('maintenance-basic') && role !== 'finance' && this.flags.on('mobile.report-tab');
+    const canReport = this.session.can('Maintenance.Log') && this.session.hasFeature('maintenance-basic') && this.flags.on('mobile.report-tab');
     if (role === 'operations') {
       return [
         { id: 'home', label: 'Home', icon: 'grid-outline', route: '/dashboard' },

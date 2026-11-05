@@ -22,7 +22,7 @@ public sealed record SupplierStatusRequest(string? Status, string? Reason, int? 
 public sealed record DocumentRequest(string? Type);
 
 /// <summary>
-/// Jobs (Maintenance.View to read, Maintenance.Log to report, Maintenance.Manage to run them; residents report and confirm their own
+/// Jobs (Maintenance.Browse to list and search, Maintenance.View to open one, Maintenance.Log to report, Maintenance.Manage to run them; residents report and confirm their own
 /// with Resident.Requests) and suppliers (Suppliers.View / Suppliers.Manage), within the person's schemes.
 /// </summary>
 public static partial class MaintenanceEndpoints
@@ -74,7 +74,7 @@ public static partial class MaintenanceEndpoints
     private static async Task<IResult> List(string[]? schemeIds, int? page, int? pageSize, CurrentActor current, HumoDbContext db, MaintenanceService m, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
-        if (!actor.Can("Maintenance.View")) return Results.Ok(PortfolioReads.Page(new List<JobSummaryDto>(), page, pageSize));
+        if (!actor.Can("Maintenance.Browse")) return Results.Ok(PortfolioReads.Page(new List<JobSummaryDto>(), page, pageSize));
         var ids = await SchemesAsync(actor, db, schemeIds, ct);
         var rows = (await db.Jobs.Where(x => ids.Contains(x.SchemeId)).ToListAsync(ct)).OrderByDescending(x => x.ReportedAt).ToList();
         return Results.Ok(PortfolioReads.Page(await m.JobSummariesAsync(rows, ct), page, pageSize));
@@ -84,7 +84,7 @@ public static partial class MaintenanceEndpoints
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         var needle = (q ?? "").Trim().ToLowerInvariant();
-        if (!actor.Can("Maintenance.View") || needle.Length < 2) return Results.Ok(Array.Empty<JobSummaryDto>());
+        if (!actor.Can("Maintenance.Browse") || needle.Length < 2) return Results.Ok(Array.Empty<JobSummaryDto>());
         var ids = await SchemesAsync(actor, db, schemeIds, ct);
         var rows = (await db.Jobs.Where(x => ids.Contains(x.SchemeId)).ToListAsync(ct))
             .Where(x => $"{x.Ref} {x.Title}".ToLowerInvariant().Contains(needle) || MaintenanceService.Read(x).Location.ToLowerInvariant().Contains(needle))

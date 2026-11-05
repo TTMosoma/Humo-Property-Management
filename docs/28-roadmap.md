@@ -28,7 +28,7 @@ The Finance role can prepare **and** release supplier payments, and can **change
 **Recommendation:**
 - **Maker and checker** (built with slice 3b, D27): whoever prepares a payment batch neither approves nor releases it.
 - **Bank details** (built with slice 3b, D27): a changed bank account is held until someone else verifies it, and a batch made before the change can't be released.
-- **Narrower reads** (still open, its own decision): Finance keeps what it needs to answer owners and pay suppliers (accounts, statements, suppliers, maintenance jobs as read-only). It doesn't need governance or compliance screens.
+- **Narrower reads** (built, D32): Finance keeps what it needs to answer owners and pay suppliers (accounts, statements, suppliers, resolutions, and a job opened from its invoice). It has no breaches, meetings, boards or compliance.
 
 ## 3. Later versions (asked for by the product owner)
 

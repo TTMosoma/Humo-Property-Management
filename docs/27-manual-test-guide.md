@@ -211,7 +211,7 @@ Restart the API, then load the demo rules once: `dotnet run --project backend/sr
 - [ ] From *Warning sent*: *Send a final warning*, then *Refer to the trustees*. **Expect:** the check task closes and a "Decide on breach" task appears; trustees with a sign-in get a notification and an email. *Send a final warning* is gone.
 - [ ] *Record the outcome*. **Expect:** *Resolved*, and the "Decide on breach" task is done. *Reopen* with a note. **Expect:** *Reported* again.
 - [ ] *Repeal* a rule with an open breach. **Expect:** refused: resolve the open breaches first. Resolve them and repeal it. **Expect:** it stays in the register, marked repealed.
-- [ ] As Priya (Finance): Scheme rules and a breach. **Expect:** you can read both, with no *Add a rule*, *Amend*, *Log a breach* or *Send a warning*.
+- [ ] As Priya (Finance): `/governance/rules`. **Expect:** you don't have access (D32, see §22).
 - [ ] As Annette (Fynbos, Essentials): `/governance/rules`. **Expect:** it says it isn't on your plan. In the browser console, `await (await fetch('/api/breaches')).json()`. **Expect:** `not-entitled`.
 
 ## 21. Trustee access follows the board, and lists show what's chosen
@@ -226,6 +226,22 @@ Restart the API first.
 - [ ] Any form with a list set in advance, e.g. People › *Add an owner or tenant*. **Expect:** the preset Scheme shows, with no *Choose…*. Role offers Owner and Tenant only, and its help says trustees are appointed on the board.
 - [ ] Maintenance › *Log a request* › *Take or add a photo*, and pick a picture. **Expect:** the page stays put, the photo appears in the list, and the top bar stays visible.
 - [ ] In one tab, sign in as Johanna, sign out, then sign in as Thandeka with a passkey, without reloading the page. Open Schemes, then *Log a request*. **Expect:** every Acacia scheme is listed in both, with no "We couldn't load your schemes".
+
+## 22. What Finance can read, and the Staff lock (D32)
+
+Restart the API first, so the migration runs.
+
+- [ ] Sign in as `annette@fynbos.example` (Essentials): Portfolio › Staff, which shows a lock. **Expect:** it says Team management isn't on your plan, with no list of staff. In the browser console, `await (await fetch('/api/staff')).json()`. **Expect:** `not-entitled`.
+- [ ] Sign in as `priya@acacia.example` (Finance). **Expect:** the menu has *Suppliers* and *Resolutions*, with no Maintenance jobs, Meetings, Trustee boards, Scheme rules or Compliance. On Professional, *Resolutions* shows a lock.
+- [ ] As Priya: Tasks, then the *Team* tab. **Expect:** no "Check whether Unit … has put right" and no maintenance tasks. Approvals has *Verify bank details* for SafeGuard Security.
+- [ ] As Priya: in the browser console, `(await (await fetch('/api/work-items')).json()).map(w => w.type)`. **Expect:** no `rule-breach`, `follow-up` or `maintenance-triage`.
+- [ ] As Priya: open `/governance/rules`, `/governance/meetings` and `/maintenance` by typing the address. **Expect:** each says you don't have access.
+- [ ] As Priya: Finance › Payables, and open the job reference on an invoice that has one. **Expect:** the job opens, with no buttons to change it.
+- [ ] As Priya: open a scheme. **Expect:** no Maintenance, Meetings or Compliance tabs, and no *Open jobs* or *Next meeting* figures. The *+ New* menu has no *Log maintenance request*.
+- [ ] As Priya: Communications › Sent, with Kingfisher Court chosen. **Expect:** no warning letters, though Thandeka sees them there.
+- [ ] As Thandeka: Tasks › a "Check whether…" task › assign it to Priya. **Expect:** refused: it can only go to someone who enforces the rules. Assign it to Johan. **Expect:** it moves.
+- [ ] As Thandeka: Portfolio › Staff › Johan, and set Priya as his cover from today. **Expect:** his ordinary tasks move to Priya and his "Check whether…" tasks move to you. End the cover. **Expect:** they all go back to Johan.
+- [ ] As Johan: Tasks and Governance. **Expect:** everything as before, including *Log a breach* and the "Check whether…" tasks.
 
 ## Reporting back
 

@@ -34,6 +34,7 @@ export type Permission =
   | 'Finance.Export'
   // Maintenance
   | 'Maintenance.View'
+  | 'Maintenance.Browse'
   | 'Maintenance.Log'
   | 'Maintenance.Manage'
   | 'Suppliers.View'
@@ -44,6 +45,7 @@ export type Permission =
   | 'Documents.View'
   | 'Documents.Manage'
   | 'Governance.View'
+  | 'Resolutions.View'
   | 'Meetings.Manage'
   | 'Rules.Enforce'
   | 'Compliance.View'
@@ -127,7 +129,8 @@ export const PERMISSIONS: PermissionMeta[] = [
   { id: 'Budgets.Manage', area: 'Finance', label: 'Prepare budgets and put them to the AGM', mutates: true },
   { id: 'Payables.Release', area: 'Finance', label: 'Release payments from trust accounts', mutates: true, stepUp: true },
   { id: 'Finance.Export', area: 'Finance', label: 'Export financial and personal data', mutates: false, stepUp: true },
-  { id: 'Maintenance.View', area: 'Maintenance', label: 'View maintenance jobs and quotes', mutates: false },
+  { id: 'Maintenance.View', area: 'Maintenance', label: 'Open a maintenance job and its quotes', mutates: false },
+  { id: 'Maintenance.Browse', area: 'Maintenance', label: 'Browse and search the maintenance jobs', mutates: false },
   { id: 'Maintenance.Log', area: 'Maintenance', label: 'Log maintenance requests', mutates: true },
   { id: 'Maintenance.Manage', area: 'Maintenance', label: 'Run jobs: quotes, work orders, invoices', mutates: true },
   { id: 'Suppliers.View', area: 'Maintenance', label: 'View suppliers and their vetting', mutates: false },
@@ -136,7 +139,8 @@ export const PERMISSIONS: PermissionMeta[] = [
   { id: 'Communications.View', area: 'Records', label: 'See what was sent to a scheme’s people', mutates: false },
   { id: 'Documents.View', area: 'Records', label: 'Open the document library', mutates: false },
   { id: 'Documents.Manage', area: 'Records', label: 'Upload, edit and archive documents', mutates: true },
-  { id: 'Governance.View', area: 'Records', label: 'View meetings, resolutions, boards and rules', mutates: false },
+  { id: 'Governance.View', area: 'Records', label: 'View meetings, boards, rules and rule breaches', mutates: false },
+  { id: 'Resolutions.View', area: 'Records', label: 'View the resolutions register', mutates: false },
   { id: 'Meetings.Manage', area: 'Records', label: 'Schedule meetings and record decisions', mutates: true },
   { id: 'Rules.Enforce', area: 'Records', label: 'Log rule breaches and send warning letters', mutates: true },
   { id: 'Compliance.View', area: 'Records', label: 'View compliance items and deadlines', mutates: false },
@@ -188,13 +192,15 @@ export const PERMISSION_META: Record<Permission, PermissionMeta> = Object.fromEn
 >;
 
 const STAFF_BASE: Permission[] = [
-  'Work.View', 'Work.Manage', 'Messages.Reply', 'Portfolio.View', 'Portfolio.Browse', 'Notes.Add', 'Maintenance.View', 'Maintenance.Log', 'Suppliers.View',
-  'Communications.View', 'Documents.View', 'Governance.View', 'Compliance.View', 'Reports.View', 'Subscription.View', 'Security.ManageOwn',
+  'Work.View', 'Work.Manage', 'Messages.Reply', 'Portfolio.View', 'Portfolio.Browse', 'Notes.Add', 'Maintenance.View', 'Suppliers.View',
+  'Communications.View', 'Documents.View', 'Resolutions.View', 'Reports.View', 'Subscription.View', 'Security.ManageOwn',
 ];
+/** D32: the scheme's non-financial records, for everyone at the agency except Finance. */
+const SCHEME_RECORDS: Permission[] = ['Maintenance.Browse', 'Maintenance.Log', 'Governance.View', 'Compliance.View'];
 /** What trustees see of their scheme: the same records as staff, without the agency's tools. */
 const TRUSTEE_VIEW: Permission[] = [
-  'Work.View', 'Portfolio.View', 'Finance.View', 'Maintenance.View', 'Suppliers.View', 'Communications.View', 'Documents.View', 'Governance.View',
-  'Compliance.View', 'Reports.View',
+  'Work.View', 'Portfolio.View', 'Finance.View', 'Maintenance.View', 'Maintenance.Browse', 'Suppliers.View', 'Communications.View', 'Documents.View', 'Governance.View',
+  'Resolutions.View', 'Compliance.View', 'Reports.View',
 ];
 
 /**
@@ -207,19 +213,19 @@ const TRUSTEE_VIEW: Permission[] = [
  */
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   'agency-admin': [
-    ...STAFF_BASE, 'Approvals.Decide', 'Schemes.Manage', 'Units.Manage', 'People.Manage', 'Accounts.View', 'Finance.View', 'Billing.View', 'Billing.Run', 'Receipts.Allocate', 'Collections.Manage', 'Budgets.Manage', 'Rules.Enforce',
+    ...STAFF_BASE, ...SCHEME_RECORDS, 'Approvals.Decide', 'Schemes.Manage', 'Units.Manage', 'People.Manage', 'Accounts.View', 'Finance.View', 'Billing.View', 'Billing.Run', 'Receipts.Allocate', 'Collections.Manage', 'Budgets.Manage', 'Rules.Enforce',
     'Payables.Prepare', 'Payables.Release', 'Finance.Export', 'Maintenance.Manage', 'Suppliers.Manage', 'Suppliers.ChangeBankDetails',
     'Meetings.Manage', 'Documents.Manage', 'Compliance.Manage', 'Organisation.Manage', 'Documents.Configure', 'Notifications.Configure', 'Users.Manage', 'Users.ManageAdmins', 'Residents.Invite', 'Audit.View', 'Subscription.Request',
   ],
   'portfolio-manager': [
-    ...STAFF_BASE, 'Approvals.Decide', 'Units.Manage', 'People.Manage', 'Accounts.View', 'Finance.View', 'Billing.View', 'Collections.Manage', 'Budgets.Manage', 'Rules.Enforce', 'Maintenance.Manage', 'Suppliers.Manage',
+    ...STAFF_BASE, ...SCHEME_RECORDS, 'Approvals.Decide', 'Units.Manage', 'People.Manage', 'Accounts.View', 'Finance.View', 'Billing.View', 'Collections.Manage', 'Budgets.Manage', 'Rules.Enforce', 'Maintenance.Manage', 'Suppliers.Manage',
     'Meetings.Manage', 'Documents.Manage', 'Compliance.Manage', 'Notifications.Configure', 'Residents.Invite',
   ],
   finance: [
     ...STAFF_BASE, 'Approvals.Decide', 'Accounts.View', 'Finance.View', 'Billing.View', 'Billing.Run', 'Receipts.Allocate', 'Collections.Manage', 'Budgets.Manage', 'Payables.Prepare',
     'Payables.Release', 'Finance.Export', 'Suppliers.ChangeBankDetails', 'Documents.Manage',
   ],
-  operations: [...STAFF_BASE, 'Maintenance.Manage', 'Suppliers.Manage', 'Documents.Manage'],
+  operations: [...STAFF_BASE, ...SCHEME_RECORDS, 'Maintenance.Manage', 'Suppliers.Manage', 'Documents.Manage'],
   trustee: [...TRUSTEE_VIEW, 'Work.Manage', 'Approvals.Decide', 'Security.ManageOwn'],
   owner: ['Resident.Portal', 'Account.ViewOwn', 'Resident.Requests', 'Security.ManageOwn'],
   tenant: ['Resident.Portal', 'Resident.Requests', 'Security.ManageOwn'],

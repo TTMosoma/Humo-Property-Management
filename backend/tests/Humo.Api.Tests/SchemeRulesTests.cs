@@ -241,16 +241,26 @@ public sealed class SchemeRulesTests : IDisposable
     }
 
     [Fact]
-    public async Task Finance_can_read_the_log_but_not_enforce_or_change_rules()
+    public async Task Finance_has_no_access_to_rules_breaches_or_warning_letters()
     {
         var s = await Agency();
         var rule = await AddRule(s.Admin, s.Kc);
         var id = await Log(s.Admin, s, rule);
         await api.Person("priya@acacia.example", Roles.Finance, s.Org);
         var finance = await api.SignedIn("priya@acacia.example");
-        Assert.Equal(HttpStatusCode.OK, (await finance.GetAsync($"/api/breaches/{id}")).StatusCode);
+        Assert.Equal("forbidden", await (await finance.GetAsync($"/api/breaches/{id}")).ProblemCode());
+        Assert.Equal("forbidden", await (await finance.GetAsync($"/api/breaches?schemeIds={s.Kc}")).ProblemCode());
+        Assert.Equal("forbidden", await (await finance.GetAsync($"/api/rules/{s.Kc}")).ProblemCode());
         Assert.Equal("forbidden", await (await Breach(finance, id, new { type = "note", text = "A note" })).ProblemCode());
         Assert.Equal("forbidden", await (await Rule(finance, s.Kc, new { type = "share" })).ProblemCode());
+
+        // The warning letter is part of the breach; other things sent to the scheme still show.
+        const string letter = "Dear Sipho\n\nThe trustees have received a report about parking.\n\nKind regards\nOn behalf of the trustees";
+        Assert.Equal(HttpStatusCode.NoContent, (await Breach(s.Admin, id, new { type = "warn", final = false, remedyDays = 14, channel = "email", message = letter })).StatusCode);
+        var sent = await s.Admin.GetAsync($"/api/communications/sent?schemeIds={s.Kc}");
+        var message = Assert.Single((await sent.Json()).EnumerateArray()).GetProperty("message").GetProperty("id").GetString();
+        Assert.Empty((await (await finance.GetAsync($"/api/communications/sent?schemeIds={s.Kc}")).Json()).EnumerateArray());
+        Assert.Equal(HttpStatusCode.NotFound, (await finance.GetAsync($"/api/communications/sent/{message}")).StatusCode);
     }
 
     [Fact]

@@ -165,7 +165,7 @@ export const routes: Routes = [
               {
                 path: 'maintenance',
                 title: 'Maintenance',
-                data: { permission: 'Maintenance.View', breadcrumb: 'Maintenance' },
+                data: { permission: 'Maintenance.Browse', breadcrumb: 'Maintenance' },
                 loadComponent: () => import('./features/maintenance/jobs-page').then((m) => m.JobsPage),
               },
               {
@@ -361,7 +361,7 @@ export const routes: Routes = [
           {
             path: '',
             title: 'Jobs',
-            data: { permission: 'Maintenance.View' },
+            data: { permission: 'Maintenance.Browse' },
             loadComponent: () => import('./features/maintenance/jobs-page').then((m) => m.JobsPage),
           },
           {
@@ -501,7 +501,7 @@ export const routes: Routes = [
           {
             path: 'resolutions',
             title: 'Resolutions & actions',
-            data: { permission: 'Governance.View', breadcrumb: 'Resolutions & actions', ...GOVERNANCE },
+            data: { permission: 'Resolutions.View', breadcrumb: 'Resolutions & actions', ...GOVERNANCE },
             loadComponent: () => import('./features/governance/resolutions-page').then((m) => m.ResolutionsPage),
           },
           {

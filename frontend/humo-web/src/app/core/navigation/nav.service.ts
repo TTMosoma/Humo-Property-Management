@@ -47,10 +47,10 @@ export class NavService {
           if (children.length === 0) return null;
           // A whole module outside the plan collapses into one quiet locked entry.
           if (children.every((c) => c.locked)) {
-            return { ...children[0], id: node.id, label: node.label, icon: node.icon, badge: undefined, locked: true };
+            return { ...children[0], id: node.id, label: children.length === 1 && node.aloneUsesChildLabel ? children[0].label : node.label, icon: node.icon, badge: undefined, locked: true };
           }
           if (children.length === 1) {
-            return { ...children[0], label: node.label, icon: node.icon };
+            return { ...children[0], label: node.aloneUsesChildLabel ? children[0].label : node.label, icon: node.icon };
           }
           return { ...node, children };
         })

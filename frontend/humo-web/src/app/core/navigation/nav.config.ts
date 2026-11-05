@@ -94,8 +94,9 @@ export const NAV: NavSection[] = [
         id: 'maintenance',
         label: 'Maintenance',
         icon: 'construct-outline',
+        aloneUsesChildLabel: true,
         children: [
-          { id: 'jobs', label: 'Jobs', route: '/maintenance', permission: 'Maintenance.View', badge: 'jobs', badgeTone: 'attention', keywords: 'requests repairs work orders quotes' },
+          { id: 'jobs', label: 'Jobs', route: '/maintenance', permission: 'Maintenance.Browse', badge: 'jobs', badgeTone: 'attention', keywords: 'requests repairs work orders quotes' },
           { id: 'suppliers', label: 'Suppliers', route: '/suppliers', permission: 'Suppliers.View', feature: 'suppliers', keywords: 'contractors vendors plumber electrician' },
         ],
       },
@@ -115,9 +116,10 @@ export const NAV: NavSection[] = [
         id: 'governance',
         label: 'Governance',
         icon: 'library-outline',
+        aloneUsesChildLabel: true,
         children: [
           { id: 'meetings', label: 'Meetings', route: '/governance/meetings', permission: 'Governance.View', feature: 'governance', keywords: 'agm sgm trustee meeting agenda minutes' },
-          { id: 'resolutions', label: 'Resolutions & actions', route: '/governance/resolutions', permission: 'Governance.View', feature: 'governance' },
+          { id: 'resolutions', label: 'Resolutions & actions', route: '/governance/resolutions', permission: 'Resolutions.View', feature: 'governance' },
           { id: 'trustee-boards', label: 'Trustee boards', route: '/governance/trustees', permission: 'Governance.View', feature: 'trustee-management' },
           { id: 'rules', label: 'Scheme rules', route: '/governance/rules', permission: 'Governance.View', feature: 'scheme-rules', keywords: 'conduct rules enforcement' },
         ],

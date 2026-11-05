@@ -150,9 +150,13 @@ export class SchemeWorkspace {
       facts.push(
         { label: 'Collections (3 mo.)', value: `${h.collectionRate}%`, tone: collectionTone(h.collectionRate) === 'success' ? 'default' : collectionTone(h.collectionRate) },
         { label: 'Arrears', value: formatRand(h.arrears, { compact: true }), tone: h.accounts90Plus > 2 ? 'danger' : 'default', hint: `${h.accounts90Plus} accounts over 90 days` },
-        { label: 'Open jobs', value: h.overdueJobs ? `${h.openJobs} · ${h.overdueJobs} overdue` : String(h.openJobs), tone: h.overdueJobs ? 'warning' : 'default' },
-        { label: 'Next meeting', value: h.nextMeeting ? formatDate(h.nextMeeting.at, true) : 'None set', hint: h.nextMeeting?.type },
       );
+      if (this.session.can('Maintenance.Browse')) {
+        facts.push({ label: 'Open jobs', value: h.overdueJobs ? `${h.openJobs} · ${h.overdueJobs} overdue` : String(h.openJobs), tone: h.overdueJobs ? 'warning' : 'default' });
+      }
+      if (this.session.can('Governance.View')) {
+        facts.push({ label: 'Next meeting', value: h.nextMeeting ? formatDate(h.nextMeeting.at, true) : 'None set', hint: h.nextMeeting?.type });
+      }
     }
     return facts;
   });
@@ -185,7 +189,9 @@ export class SchemeWorkspace {
       { label: 'Compliance', path: 'compliance', count: count((t) => t === 'compliance-due' || t === 'document-expiry') },
       { label: 'Reports', path: 'reports' },
     ];
-    return staff ? tabs : tabs.filter((t) => !['units', 'people', 'communications'].includes(t.path));
+    // D32: Finance reaches a job from its invoice, and has no meetings or compliance tabs.
+    const allowed = tabs.filter((t) => (t.path !== 'maintenance' || this.session.canOpen('Maintenance.Browse')) && (t.path !== 'meetings' || this.session.canOpen('Governance.View')) && (t.path !== 'compliance' || this.session.canOpen('Compliance.View')));
+    return staff ? allowed : allowed.filter((t) => !['units', 'people', 'communications'].includes(t.path));
   });
 
   /** Visiting a scheme never silently changes scope; this button does. */
