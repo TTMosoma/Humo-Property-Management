@@ -239,7 +239,9 @@ Restart the API first, so the migration runs.
 - [ ] As Priya: Finance › Payables, and open the job reference on an invoice that has one. **Expect:** the job opens, with no buttons to change it.
 - [ ] As Priya: open a scheme. **Expect:** no Maintenance, Meetings or Compliance tabs, and no *Open jobs* or *Next meeting* figures. The *+ New* menu has no *Log maintenance request*.
 - [ ] As Priya: Communications › Sent, with Kingfisher Court chosen. **Expect:** no warning letters, though Thandeka sees them there.
-- [ ] As Thandeka: Tasks › a "Check whether…" task › assign it to Priya. **Expect:** refused: it can only go to someone who enforces the rules. Assign it to Johan. **Expect:** it moves.
+- [ ] As Thandeka: Tasks › *Team* › a "Check whether…" task › *Assign…*. **Expect:** Johan and you are offered, not Priya. Choose Johan. **Expect:** it moves to him. In the browser console, `await (await fetch('/api/work-items/assign', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: ['<the task id>'], assigneeId: '<Priya’s id>' }) })).json()`. **Expect:** refused: it can only go to someone who enforces the rules.
+- [ ] As Thandeka: Tasks › *Team* › an ordinary task › *Assign…*, and tick a task to use the bar's *Assign to…*. **Expect:** both list every staff member, including Priya, and the *Assignee* filter lists them too.
+- [ ] As Thandeka: Inbox › a conversation, and Maintenance › a new job. **Expect:** the assignee lists show your staff, and choosing one works.
 - [ ] As Thandeka: Portfolio › Staff › Johan, and set Priya as his cover from today. **Expect:** his ordinary tasks move to Priya and his "Check whether…" tasks move to you. End the cover. **Expect:** they all go back to Johan.
 - [ ] As Johan: Tasks and Governance. **Expect:** everything as before, including *Log a breach* and the "Check whether…" tasks.
 

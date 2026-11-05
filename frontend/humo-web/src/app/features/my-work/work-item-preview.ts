@@ -3,11 +3,12 @@ import { RouterLink } from '@angular/router';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { CdkMenu, CdkMenuItem, CdkMenuTrigger } from '@angular/cdk/menu';
 import { IonIcon } from '@ionic/angular/standalone';
+import { fieldErrorsOf } from '../../domain';
 import { AttentionService } from '../../core/attention/attention.service';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { ScopeService } from '../../core/scope/scope.service';
 import { SessionService } from '../../core/session/session.service';
-import { organisationTeam } from '../../core/session/team';
+import { canTakeRuleBreaches, organisationTeam } from '../../core/session/team';
 import { Drawer } from '../../ui/drawer/drawer';
 import { RandPipe, formatDate } from '../../ui/format/money';
 import { StatusPill } from '../../ui/status-pill/status-pill';
@@ -74,7 +75,7 @@ import { workItemView } from './work-item-view';
         <div class="menu-panel" cdkMenu>
           <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="assign(myStaffId())">Assign to me</button>
           <div class="menu-divider"></div>
-          @for (s of staff(); track s.id) {
+          @for (s of assignable(); track s.id) {
             <button type="button" class="menu-item" cdkMenuItem (cdkMenuItemTriggered)="assign(s.id)">
               {{ s.name }} <span class="menu-item-meta">{{ s.title }}</span>
             </button>
@@ -115,6 +116,7 @@ export class WorkItemPreview {
   protected readonly view = computed(() => (this.item() ? workItemView(this.item()!) : null));
   protected readonly scheme = computed(() => this.scope.findScheme(this.item()?.schemeId));
   protected readonly assignee = computed(() => this.team.nameOf(this.item()?.assigneeId));
+  protected readonly assignable = computed(() => (this.item()?.type === 'rule-breach' ? this.staff().filter(canTakeRuleBreaches) : this.staff()));
   protected readonly myStaffId = computed(() => this.session.identity().staffId ?? this.session.identity().id);
 
   protected complete(): void {
@@ -132,7 +134,7 @@ export class WorkItemPreview {
   protected assign(staffId: string): void {
     this.attention.assign([this.data.id], staffId).subscribe({
       next: () => this.feedback.success(`Assigned to ${this.team.nameOf(staffId)}`),
-      error: () => this.feedback.error('Couldn’t reassign. Try again.'),
+      error: (e) => this.feedback.error(fieldErrorsOf(e)['ids'] ?? 'Couldn’t reassign. Try again.'),
     });
   }
 }

@@ -1,13 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { CdkMenu, CdkMenuItem, CdkMenuTrigger } from '@angular/cdk/menu';
 import { IonIcon } from '@ionic/angular/standalone';
-import { WORK_TYPE_AREA, WorkItem, isOpen, urgencyOf } from '../../domain';
+import { WORK_TYPE_AREA, WorkItem, fieldErrorsOf, isOpen, urgencyOf } from '../../domain';
 import { AttentionService } from '../../core/attention/attention.service';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { ScopeNotice } from '../../core/scope/scope-notice';
 import { ScopeService } from '../../core/scope/scope.service';
 import { SessionService } from '../../core/session/session.service';
-import { organisationTeam } from '../../core/session/team';
+import { canTakeRuleBreaches, organisationTeam } from '../../core/session/team';
 import { BulkBar } from '../../ui/data-table/bulk-bar';
 import { CellDef, ColumnDef, DataTable } from '../../ui/data-table/data-table';
 import { FilterBar, FilterDef } from '../../ui/data-table/filter-bar';
@@ -50,6 +50,11 @@ export class TasksPage {
   protected readonly activeId = signal<string | null>(null);
   private readonly team = organisationTeam();
   protected readonly staff = this.team.staff;
+  /** Whoever the selected tasks can go to. */
+  protected readonly assignable = computed(() => {
+    const ids = new Set(this.selected());
+    return this.attention.visible().some((w) => ids.has(w.id) && w.type === 'rule-breach') ? this.staff().filter(canTakeRuleBreaches) : this.staff();
+  });
   protected readonly areaIcon = AREA_ICON;
 
   private readonly allTasks = computed(() => this.attention.visible().filter((w) => w.kind === 'task'));
@@ -204,7 +209,7 @@ export class TasksPage {
         this.selected.set([]);
         this.feedback.success(`${ids.length} reassigned to ${this.team.nameOf(staffId)}`);
       },
-      error: () => this.feedback.error('Couldn’t reassign. Try again.'),
+      error: (e) => this.feedback.error(fieldErrorsOf(e)['ids'] ?? 'Couldn’t reassign. Try again.'),
     });
   }
 }
