@@ -451,7 +451,7 @@ public static class SchemeRules
     {
         var manager = (await SchemeEndpoints.ToDtos([scheme], db, ct))[0].PortfolioManager?.IdentityId ?? writer.Human.Id.ToString();
         var cover = (await covers.OpenCoversAsync(scheme.OrganisationId, ct)).FirstOrDefault(c => covers.Active(c) && c.StaffId.ToString() == manager);
-        return cover?.CoverId.ToString() ?? manager;
+        return cover is null ? manager : await covers.RuleBreachCoverAsync(cover, ct);
     }
 
     private static async Task<IResult> ActOnBreach(Guid id, BreachActionRequest body, CurrentActor current, CommandRunner commands, PortfolioReads reads, HumoDbContext db, Communications comms, Notices notices,
@@ -585,7 +585,7 @@ public static class SchemeRules
     private static void AddTask(HumoDbContext db, BreachRow b, string suffix, string title, string detail, string personName, DateTimeOffset now, DateTimeOffset due, string route) =>
         db.WorkItems.Add(new WorkItemRow
         {
-            Id = Guid.CreateVersion7(), OrganisationId = b.OrganisationId, SchemeId = b.SchemeId, Ref = $"{b.Ref}-{suffix}", Kind = "task", Type = "follow-up", Title = title, Detail = $"{detail} ({personName})",
+            Id = Guid.CreateVersion7(), OrganisationId = b.OrganisationId, SchemeId = b.SchemeId, Ref = $"{b.Ref}-{suffix}", Kind = "task", Type = WorkItemAccess.RuleBreach, Title = title, Detail = $"{detail} ({personName})",
             CreatedAt = now, DueAt = due, AssigneeId = b.AssigneeId, ApproverRoles = "[]", Evidence = "[]", Route = route, SourceId = b.Id,
         });
 

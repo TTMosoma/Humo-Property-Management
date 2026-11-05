@@ -62,9 +62,9 @@ public static class ReportEndpoints
         new("age-analysis", "Age analysis", "arrears", "Arrears per scheme: current, 30, 60, 90 and 120+ days.", "Finance.View", "reporting-basic"),
         new("debtors", "Debtors list", "arrears", "Every account in arrears with its age and collection stage.", "Accounts.View", "reporting-financial"),
         new("collections", "Collection pipeline", "arrears", "How many accounts sit at each collection stage, per scheme.", "Billing.View", "credit-control"),
-        new("jobs-by-stage", "Jobs by stage", "maintenance", "Open maintenance jobs per scheme, by stage, with what’s overdue.", "Maintenance.View", "reporting-basic"),
+        new("jobs-by-stage", "Jobs by stage", "maintenance", "Open maintenance jobs per scheme, by stage, with what’s overdue.", "Maintenance.Browse", "reporting-basic"),
         new("supplier-performance", "Supplier performance", "maintenance", "Jobs, on-time rate, invoice vs quote and spend per supplier.", "Suppliers.View", "reporting-basic"),
-        new("resolutions", "Resolutions register", "governance", "Every resolution with its outcome and the progress of its actions.", "Governance.View", "governance"),
+        new("resolutions", "Resolutions register", "governance", "Every resolution with its outcome and the progress of its actions.", "Resolutions.View", "governance"),
         new("scheme-health", "Scheme health", "portfolio", "Collections, arrears, jobs and rating for every scheme.", "Portfolio.View", "reporting-basic"),
         new("occupancy", "Units & occupancy", "portfolio", "Owner-occupied, tenanted and vacant units per scheme.", "Portfolio.View", "reporting-basic"),
     ];

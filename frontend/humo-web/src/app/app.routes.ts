@@ -165,7 +165,7 @@ export const routes: Routes = [
               {
                 path: 'maintenance',
                 title: 'Maintenance',
-                data: { permission: 'Maintenance.View', breadcrumb: 'Maintenance' },
+                data: { permission: 'Maintenance.Browse', breadcrumb: 'Maintenance' },
                 loadComponent: () => import('./features/maintenance/jobs-page').then((m) => m.JobsPage),
               },
               {
@@ -243,11 +243,11 @@ export const routes: Routes = [
         path: 'staff',
         data: { section: 'Portfolio', breadcrumb: 'Staff' },
         children: [
-          { path: '', title: 'Staff', data: { permission: 'Portfolio.Browse' }, loadComponent: () => import('./features/staff/staff-page').then((m) => m.StaffPage) },
+          { path: '', title: 'Staff', data: { permission: 'Portfolio.Browse', feature: 'team-management' }, loadComponent: () => import('./features/staff/staff-page').then((m) => m.StaffPage) },
           {
             path: ':staffId',
             title: 'Staff member',
-            data: { permission: 'Portfolio.Browse', breadcrumb: 'Person' },
+            data: { permission: 'Portfolio.Browse', breadcrumb: 'Person', feature: 'team-management' },
             loadComponent: () => import('./features/staff/staff-member-page').then((m) => m.StaffMemberPage),
           },
         ],
@@ -361,7 +361,7 @@ export const routes: Routes = [
           {
             path: '',
             title: 'Jobs',
-            data: { permission: 'Maintenance.View' },
+            data: { permission: 'Maintenance.Browse' },
             loadComponent: () => import('./features/maintenance/jobs-page').then((m) => m.JobsPage),
           },
           {
@@ -501,7 +501,7 @@ export const routes: Routes = [
           {
             path: 'resolutions',
             title: 'Resolutions & actions',
-            data: { permission: 'Governance.View', breadcrumb: 'Resolutions & actions', ...GOVERNANCE },
+            data: { permission: 'Resolutions.View', breadcrumb: 'Resolutions & actions', ...GOVERNANCE },
             loadComponent: () => import('./features/governance/resolutions-page').then((m) => m.ResolutionsPage),
           },
           {

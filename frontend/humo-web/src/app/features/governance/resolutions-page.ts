@@ -146,7 +146,7 @@ export class ResolutionsPage {
   }
 
   protected open(r: ResolutionView): void {
-    if (r.meeting) void this.router.navigate(['/governance/meetings', r.meeting.id]);
+    if (r.meeting && this.session.can('Governance.View')) void this.router.navigate(['/governance/meetings', r.meeting.id]);
   }
 
   protected propose(): void {

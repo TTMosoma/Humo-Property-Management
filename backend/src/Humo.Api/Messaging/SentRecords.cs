@@ -185,7 +185,9 @@ public static class SentEndpoints
     {
         if (actor.OrganisationId is not { } org || !actor.Can("Communications.View")) return null;
         var schemes = await SchemeEndpoints.Visible(actor, db).Select(s => s.Id).ToListAsync(ct);
-        return db.SentMessages.Where(m => m.OrganisationId == org && schemes.Contains(m.SchemeId));
+        var visible = db.SentMessages.Where(m => m.OrganisationId == org && schemes.Contains(m.SchemeId));
+        // D32: a warning letter is part of the breach, so it stays with those who can read breaches.
+        return actor.Can("Governance.View") ? visible : visible.Where(m => m.SourceRoute == null || !m.SourceRoute.StartsWith("/governance/rules"));
     }
 
     private static async Task<IResult> List(string[]? schemeIds, CurrentActor current, HumoDbContext db, SentRecords sent, CancellationToken ct)

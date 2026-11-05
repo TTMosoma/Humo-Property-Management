@@ -19,7 +19,7 @@ public sealed record MeetingActionRequest(MeetingAction? Action, int? ExpectedVe
 public sealed record WrittenResolutionRequest(string? SchemeId, string? Title, string? Text, List<NewAction>? Actions);
 
 /// <summary>
-/// Governance › Meetings and resolutions on the API. Reading needs Governance.View within the person's schemes;
+/// Governance › Meetings and resolutions on the API. Reading needs Governance.View (resolutions: Resolutions.View, D32) within the person's schemes;
 /// scheduling and running meetings and proposing written resolutions need Meetings.Manage, on a plan with governance.
 /// The API enforces the lifecycle (what each stage allows), the notice period and quorum.
 /// </summary>
@@ -45,9 +45,9 @@ public static class GovernanceEndpoints
         r.MapPost("/written", ProposeWritten);
     }
 
-    private static async Task<List<Guid>?> SchemesAsync(Actor actor, HumoDbContext db, string[]? schemeIds, CancellationToken ct)
+    private static async Task<List<Guid>?> SchemesAsync(Actor actor, HumoDbContext db, string[]? schemeIds, CancellationToken ct, string permission = "Governance.View")
     {
-        if (actor.OrganisationId is null || !actor.Can("Governance.View")) return null;
+        if (actor.OrganisationId is null || !actor.Can(permission)) return null;
         var wanted = (schemeIds ?? []).Select(x => Guid.TryParse(x, out var g) ? g : Guid.Empty).ToHashSet();
         return [.. (await SchemeEndpoints.Visible(actor, db).Select(s => s.Id).ToListAsync(ct)).Where(wanted.Contains)];
     }
@@ -407,7 +407,7 @@ public static class GovernanceEndpoints
     private static async Task<IResult> Resolutions(string[]? schemeIds, int? page, int? pageSize, CurrentActor current, HumoDbContext db, Governance governance, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
-        if (await SchemesAsync(actor, db, schemeIds, ct) is not { } schemes) return Results.Ok(PortfolioReads.Page(new List<ResolutionViewDto>(), page, pageSize));
+        if (await SchemesAsync(actor, db, schemeIds, ct, "Resolutions.View") is not { } schemes) return Results.Ok(PortfolioReads.Page(new List<ResolutionViewDto>(), page, pageSize));
         var rows = (await db.Resolutions.Where(r => schemes.Contains(r.SchemeId)).ToListAsync(ct)).OrderBy(r => r.SchemeId).ThenByDescending(r => r.Number).ToList();
         return Results.Ok(PortfolioReads.Page(await governance.ResolutionViewsAsync(rows, ct), page, pageSize));
     }
@@ -415,7 +415,7 @@ public static class GovernanceEndpoints
     private static async Task<IResult> Assignees(string[]? schemeIds, CurrentActor current, HumoDbContext db, Governance governance, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
-        if (await SchemesAsync(actor, db, schemeIds, ct) is not { } ids) return Results.Ok(Array.Empty<AssigneeDto>());
+        if (await SchemesAsync(actor, db, schemeIds, ct, "Resolutions.View") is not { } ids) return Results.Ok(Array.Empty<AssigneeDto>());
         var all = new List<AssigneeDto>();
         foreach (var s in await db.Schemes.Where(x => ids.Contains(x.Id)).ToListAsync(ct))
             all.AddRange((await governance.AssigneesAsync(s, ct)).Where(x => all.All(y => y.Id != x.Id)));

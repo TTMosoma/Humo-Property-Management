@@ -45,6 +45,7 @@ Each entry records:
 | D29 | Packages: the trustee register on every plan; scheme rules in Professional; meetings and AGMs stay Enterprise (the add-on is renamed “Meetings & AGMs”); advanced permissions dropped | Governance, commercial |
 | D30 | Adding a passkey: once you have one, adding another needs it, with no exception for an email-link sign-in; you’re told every time; you choose where it lives | Identity, security |
 | D31 | Amending or repealing a rule with Meetings & AGMs: a resolution that isn’t in the register can be typed from the minutes (changes D29 point 5) | Governance |
+| D32 | What Finance can read: financial work and records, plus resolutions and a job opened from its invoice; no breaches, meetings, boards or compliance. A person doing both jobs holds both roles | Identity, finance, governance |
 
 ---
 
@@ -695,6 +696,30 @@ An agency with Meetings & AGMs could only cite a resolution from the register. A
 3. **Unchanged:** a resolution must still be cited, and a typed one needs a date that isn't in the future. Electing a trustee and adding a rule work as D29 says.
 
 **Consequences:** Humo PM doesn't check a typed resolution against any record, so it relies on the signed minutes the agency keeps. The API already accepted a typed resolution on every package, so only the form changes.
+
+---
+
+## D32 — What Finance can read (5 November 2026)
+
+**Status:** approved by the product owner (Terry Mosoma). This settles D27 point 6 and docs/28 §2.
+
+An accountant was shown the same records as a portfolio manager, including who broke which rule. That's distracting, and it's more than the job needs: a breach is a record of someone's conduct, and POPIA expects access to personal information to be limited to what the job needs.
+
+**Decision:**
+1. **Queue:** Finance's tasks and badges hold financial work only. The API sends each role only its own work items, and hides the rest from a colleague's staff page too.
+2. **Rule breaches:** no access for Finance, with no exception: not the log, the rules, the tasks or the warning letters. If fines ever go onto levy accounts, Finance will see the charge and its reference, not the breach history.
+3. **Breach tasks** have their own type. They go to the scheme's portfolio manager, then a cover who can enforce the rules, then an administrator, and can't be assigned to anyone else.
+4. **Resolutions:** read-only for Finance (`Resolutions.View`), because special levies, budgets and legal action rest on them. Meetings and trustee boards stay out (`Governance.View`).
+5. **Maintenance:** Finance opens a job from its invoice, read-only (`Maintenance.View`). It can't browse or search the jobs (`Maintenance.Browse`) or log a request (`Maintenance.Log`).
+6. **Compliance:** none for now (`Compliance.View`). Compliance isn't on the API yet; when it is, Finance should get the financial items only (audited statements, the CSOS return).
+7. **Doing both jobs:** someone at a small agency who does the books and runs schemes holds both roles and switches between them.
+8. **No view-only role.** "See everything, do nothing" is what this decision removes. The one real case is an external auditor, who would need time-limited read access to finance; build that when a customer asks.
+
+**Consequences:**
+- Roles are still fixed (D4). `contracts/role-permissions.json` gains `Maintenance.Browse` and `Resolutions.View`.
+- Finance can still prepare a budget, but putting it to the AGM falls to someone who runs meetings.
+- Finance keeps Inbox, Communications, Documents, Units and People, which it needs to answer owners. Operations keeps its current reads; reviewing them is a separate decision.
+- A migration relabels existing breach tasks. One already assigned to a Finance user disappears from their queue and stays visible to administrators.
 
 ## Still open (needs domain expertise before slice 2)
 

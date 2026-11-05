@@ -130,6 +130,25 @@ public sealed class GovernanceTests : IDisposable
     }
 
     [Fact]
+    public async Task Finance_reads_resolutions_but_not_meetings_or_boards()
+    {
+        var s = await Scheme();
+        await Created(await s.Admin.PostAsJsonAsync("/api/resolutions/written", new
+        {
+            schemeId = s.Kc.ToString(), title = "Special levy for the roof", text = "The trustees resolve to raise a special levy of R 500 per unit.", actions = Array.Empty<object>(),
+        }));
+        await api.Person("priya@acacia.example", Roles.Finance, s.Org);
+        var finance = await api.SignedIn("priya@acacia.example");
+
+        var resolutions = await (await finance.GetAsync($"/api/resolutions?schemeIds={s.Kc}")).Json();
+        Assert.Equal("Special levy for the roof", Assert.Single(resolutions.GetProperty("items").EnumerateArray()).GetProperty("resolution").GetProperty("title").GetString());
+        Assert.Empty((await (await finance.GetAsync($"/api/meetings?schemeIds={s.Kc}")).Json()).GetProperty("items").EnumerateArray());
+        Assert.Empty((await (await finance.GetAsync($"/api/boards?schemeIds={s.Kc}")).Json()).EnumerateArray());
+        Assert.Equal(HttpStatusCode.NotFound, (await finance.GetAsync($"/api/boards/{s.Kc}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await finance.GetAsync($"/api/boards/{s.Kc}/candidates")).StatusCode);
+    }
+
+    [Fact]
     public async Task A_written_resolution_is_decided_by_the_trustees_and_its_actions_start_when_it_passes()
     {
         var s = await Scheme();

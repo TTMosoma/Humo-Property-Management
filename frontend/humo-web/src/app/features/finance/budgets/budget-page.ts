@@ -49,7 +49,7 @@ import { BUDGET_TONE } from './budget-view';
           <ng-container recordActions>
             @if (b.status === 'draft') {
               <button type="button" class="btn btn-secondary" (click)="addLine()"><ion-icon name="add-outline" aria-hidden="true" /> Add a line</button>
-              @if (meetingsConnected) {
+              @if (meetingsConnected && canSeeMeetings) {
                 <button type="button" class="btn btn-primary" (click)="propose()"><ion-icon name="people-outline" aria-hidden="true" /> Put it to the AGM</button>
               }
             }
@@ -79,13 +79,13 @@ import { BUDGET_TONE } from './budget-view';
         }
         @case ('proposed') {
           <p class="banner surface info">
-            On the agenda of <a [routerLink]="['/governance/meetings', b.agm!.meetingId]">{{ b.agm!.meetingRef }}</a>. When the meeting passes a resolution on it, the budget is approved.
+            On the agenda of @if (canSeeMeetings) { <a [routerLink]="['/governance/meetings', b.agm!.meetingId]">{{ b.agm!.meetingRef }}</a> } @else { {{ b.agm!.meetingRef }} }. When the meeting passes a resolution on it, the budget is approved.
           </p>
         }
         @case ('approved') {
           <p class="banner surface ok">
             Approved {{ formatDate(b.approved!.at) }} ·
-            @if (b.approved!.meetingId) {
+            @if (b.approved!.meetingId && canSeeMeetings) {
               <a [routerLink]="['/governance/meetings', b.approved!.meetingId]">{{ b.approved!.resolutionRef }}</a>
             } @else {
               {{ b.approved!.resolutionRef }}
@@ -251,6 +251,8 @@ export class BudgetPage {
   /** On the live system meetings aren't on the API yet: the owners' approval is recorded by hand (D28). */
   // Governance is in Enterprise: without it the owners' approval is recorded by hand too.
   protected readonly meetingsConnected = !notConnected(inject(NOT_CONNECTED), '/governance/meetings') && this.session.hasFeature('governance');
+  /** D32: Finance prepares the budget; someone who runs meetings puts it to the AGM. */
+  protected readonly canSeeMeetings = this.session.can('Governance.View');
 
   private readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('budgetId')!)), { initialValue: this.route.snapshot.paramMap.get('budgetId')! });
   /** undefined = loading; false = not found. */

@@ -26,6 +26,8 @@ export interface NavGroup {
   id: string;
   label: string;
   icon: string;
+  /** With one link left for this role, show that link's name (Finance: "Suppliers", not "Maintenance"). */
+  aloneUsesChildLabel?: boolean;
   children: NavLink[];
 }
 

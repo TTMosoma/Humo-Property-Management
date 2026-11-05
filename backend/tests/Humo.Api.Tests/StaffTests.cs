@@ -58,6 +58,17 @@ public sealed class StaffTests : IDisposable
         c.PutAsJsonAsync($"/api/staff/{staff}/cover", new { coverId = cover.ToString(), from, to, reason });
 
     [Fact]
+    public async Task Essentials_has_no_staff_pages_even_by_calling_the_API_directly()
+    {
+        var org = await api.Customer("Fynbos", "essentials");
+        var adminId = await api.Person("annette@fynbos.example", Roles.AgencyAdmin, org);
+        var admin = await api.SignedIn("annette@fynbos.example");
+
+        Assert.Equal("not-entitled", await (await admin.GetAsync("/api/staff")).ProblemCode());
+        Assert.Equal("not-entitled", await (await admin.GetAsync($"/api/staff/{adminId}")).ProblemCode());
+    }
+
+    [Fact]
     public async Task The_team_shows_each_persons_schemes_and_workload()
     {
         var s = await Team();

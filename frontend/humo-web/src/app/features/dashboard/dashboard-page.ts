@@ -205,7 +205,7 @@ export class DashboardPage {
     if (this.session.isStaff()) {
       tiles.push({ id: 'inbox', label: 'Messages', value: String(c.inbox), sub: 'from owners, tenants and trustees', route: '/inbox', tone: c.inbox ? 'attention' : 'calm', icon: 'mail-outline' });
     }
-    if (this.session.hasFeature('compliance') && (this.session.isStaff() || role === 'trustee')) {
+    if (this.session.hasFeature('compliance') && this.session.can('Compliance.View')) {
       const open = h.reduce((n, x) => n + x.complianceOpenItems, 0);
       const overdue = h.filter((x) => x.compliance === 'overdue').length;
       tiles.push({ id: 'compliance', label: 'Compliance', value: String(open), sub: overdue ? `items due · ${overdue} scheme${overdue === 1 ? '' : 's'} overdue` : 'items due within 30 days or overdue', route: '/compliance', query: open ? { view: 'due' } : undefined, tone: open ? 'attention' : 'calm', icon: 'shield-half-outline' });

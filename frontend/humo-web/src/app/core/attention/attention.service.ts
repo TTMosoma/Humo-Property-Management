@@ -52,20 +52,23 @@ export class AttentionService {
     const me = new Set(this.session.selfIds());
     const mine = (w: WorkItem) => w.assigneeId !== null && me.has(w.assigneeId);
 
+    // The same rule as the API's WorkItemAccess, which is what enforces it.
     return this.all().filter((w) => {
       if (!accessible.has(w.schemeId)) return false;
+      // D32: conduct records stay with those who enforce the rules, even if a task was assigned elsewhere.
+      if (w.type === 'rule-breach' && !this.session.can('Rules.Enforce')) return false;
+      const decides = this.canDecide(w, m.role);
       switch (m.role) {
         case 'agency-admin':
           return true;
         case 'portfolio-manager':
-          if (NOT_FOR_PORTFOLIO_MANAGERS.includes(w.type)) return false;
-          return m.scope.schemeIds.includes(w.schemeId) || mine(w);
+          return !NOT_FOR_PORTFOLIO_MANAGERS.includes(w.type);
         case 'finance':
-          return FINANCE_TYPES.includes(w.type) || mine(w);
+          return FINANCE_TYPES.includes(w.type) || decides || mine(w);
         case 'operations':
-          return OPERATIONS_TYPES.includes(w.type) || mine(w);
+          return OPERATIONS_TYPES.includes(w.type) || decides || mine(w);
         case 'trustee':
-          return (w.kind === 'approval' && !!w.approverRoles?.includes('trustee')) || mine(w);
+          return decides || mine(w);
         default:
           return false;
       }
