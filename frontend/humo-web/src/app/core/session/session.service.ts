@@ -113,6 +113,8 @@ export class SessionService {
       case 'owner':
       case 'tenant':
         return '/my/home';
+      case 'past-resident':
+        return '/my/welcome';
       // Agency staff and trustees start on their dashboard: "what needs my attention?"
       default:
         return '/dashboard';

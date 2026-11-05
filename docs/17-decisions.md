@@ -46,6 +46,7 @@ Each entry records:
 | D30 | Adding a passkey: once you have one, adding another needs it, with no exception for an email-link sign-in; you’re told every time; you choose where it lives | Identity, security |
 | D31 | Amending or repealing a rule with Meetings & AGMs: a resolution that isn’t in the register can be typed from the minutes (changes D29 point 5) | Governance |
 | D32 | What Finance can read: financial work and records, plus resolutions and a job opened from its invoice; no breaches, meetings, boards or compliance. A person doing both jobs holds both roles | Identity, finance, governance |
+| D33 | Someone with no property left at an agency keeps a sign-in and sees who to contact, plus their own past statements, read-only (a *Former resident* role). Individuals can't add units | Identity, owner portal |
 
 ---
 
@@ -720,6 +721,31 @@ An accountant was shown the same records as a portfolio manager, including who b
 - Finance can still prepare a budget, but putting it to the AGM falls to someone who runs meetings.
 - Finance keeps Inbox, Communications, Documents, Units and People, which it needs to answer owners. Operations keeps its current reads; reviewing them is a separate decision.
 - A migration relabels existing breach tasks. One already assigned to a Finance user disappears from their queue and stays visible to administrators.
+
+---
+
+## D33 — Someone with no property left (5 November 2026)
+
+**Status:** approved by the product owner (Terry Mosoma).
+
+When someone's last role at an agency ended, Humo PM treated them as signed out, so they came back to the sign-in page with no explanation.
+
+**Decision:**
+1. **They stay signed in** and see: "You don't have any property registered under your name at the moment", with the agency's contact details in case it's a mistake.
+2. **They keep what's theirs, read-only:** the statements addressed to them, what they used to hold, and their own profile and security. Nothing of the scheme: no notices, jobs, documents or messages.
+3. **Individuals can't add units.** Humo PM stays a system for managing agencies.
+4. **This is a role, *Former resident* (`past-resident`).** It adds a fixed role (D4). Nobody grants it: it follows when someone with an owner, tenant or trustee role has no active role left at that agency, including when an ownership ends on a future date.
+5. **Only for people who had a resident role.** A staff member whose last role ends is unchanged.
+6. **An administrator can end it** in Users & access, and then it stays ended. If they become an owner again, they land on that role, and can still switch to see the past.
+7. **It doesn't use the agency's allowance** of people with a sign-in.
+8. **No landlord app link for now.** That app doesn't exist yet; ask before adding one.
+
+**Consequences:**
+- API: `GET /me/past-resident` and `GET /me/past-resident/statements/{id}/pdf`, with the new `Statements.ViewPast` permission.
+- A joint owner who wasn't the account holder has no statements to read, because none were addressed to them.
+- **Retention isn't decided:** there's no time limit on this access. It should follow the POPIA retention decision still blank in docs/26 §3.
+- An owner who sells one unit and keeps another isn't a former resident, so they don't see the sold unit's statements. That's a possible follow-up.
+- The simulation doesn't move anyone to this role when a role ends.
 
 ## Still open (needs domain expertise before slice 2)
 

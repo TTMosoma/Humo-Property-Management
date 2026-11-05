@@ -13,7 +13,8 @@ export type CustomerRole =
   | 'operations'
   | 'trustee'
   | 'owner'
-  | 'tenant';
+  | 'tenant'
+  | 'past-resident';
 
 export type HumoRole = 'system-admin' | 'humo-account-manager' | 'humo-support' | 'humo-executive' | 'humo-finance';
 
@@ -27,6 +28,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   trustee: 'Trustee',
   owner: 'Owner',
   tenant: 'Tenant',
+  'past-resident': 'Former resident',
   'system-admin': 'Humo System Administrator',
   'humo-account-manager': 'Humo Account Manager',
   'humo-support': 'Humo Support',
@@ -81,6 +83,11 @@ export const ROLE_META: Record<Role, RoleMeta> = {
   tenant: {
     role: 'tenant', family: 'resident', icon: 'key-outline', scopeKind: 'unit', grantedBy: 'agency-admin', privileged: false,
     summary: 'The unit they live in: maintenance requests and notices.',
+  },
+  // D33: nobody grants this. It follows from someone's last role at the agency ending, so it's in no picker.
+  'past-resident': {
+    role: 'past-resident', family: 'resident', icon: 'home-outline', scopeKind: 'unit', grantedBy: 'agency-admin', privileged: false,
+    summary: 'No property any more: their own past statements, read-only, and who to contact.',
   },
   'system-admin': {
     role: 'system-admin', family: 'humo', icon: 'shield-outline', scopeKind: 'platform', grantedBy: 'system-admin', privileged: true,

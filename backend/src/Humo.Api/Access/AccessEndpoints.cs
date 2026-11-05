@@ -277,7 +277,7 @@ public static partial class AccessEndpoints
             StepUp = true,
             Validate = () =>
             {
-                if (Roles.IsHumo(a.Role) || !AccessCatalogue.IsRole(a.Role)) return new() { ["role"] = "Choose a customer role." };
+                if (Roles.IsHumo(a.Role) || !AccessCatalogue.IsRole(a.Role) || a.Role == Roles.PastResident) return new() { ["role"] = "Choose a customer role." };
                 if (CheckScope(a) is { } s) return new() { [s.Field] = s.Message };
                 if (duplicate) return new() { ["role"] = $"{user.Name} already has this role here." };
                 // D2: trustee access is derived from the board register. It can't be given here without a seat on the board.

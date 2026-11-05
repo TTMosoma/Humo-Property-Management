@@ -117,6 +117,39 @@ export abstract class InboxDataSource {
  *   PUT   /staff/{staffId}/cover       away from–to, covered by a colleague (Users.Manage or Work.Manage)
  *   DELETE /staff/{staffId}/cover      back early
  */
+/** D33: someone with no property left at this agency. Reads only: GET /me/past-resident. */
+export abstract class PastResidentDataSource {
+  abstract view(): Observable<PastResidentView>;
+  /** Where a past statement's stored PDF downloads from; none in the simulation. */
+  pdfUrl(_statementId: string): string | undefined {
+    return undefined;
+  }
+}
+
+export interface PastHome {
+  scheme: string;
+  unit: string | null;
+  type: 'owner' | 'tenant' | 'trustee';
+  since: string;
+  until: string | null;
+}
+
+export interface PastStatement {
+  id: string;
+  period: string;
+  periodLabel: string;
+  accountNo: string;
+  scheme: string;
+  unit: string;
+  issuedOn: string;
+}
+
+export interface PastResidentView {
+  agency: { name: string; email: string | null; phone: string | null };
+  homes: PastHome[];
+  statements: PastStatement[];
+}
+
 export abstract class StaffDataSource {
   abstract list(): Observable<StaffSummary[]>;
   abstract get(staffId: string): Observable<StaffDetail | undefined>;

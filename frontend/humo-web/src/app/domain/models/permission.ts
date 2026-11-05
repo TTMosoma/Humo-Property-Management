@@ -53,6 +53,7 @@ export type Permission =
   | 'Reports.View'
   // Residents
   | 'Resident.Portal'
+  | 'Statements.ViewPast'
   | 'Resident.Requests'
   | 'Residents.Invite'
   // Agency administration
@@ -147,6 +148,7 @@ export const PERMISSIONS: PermissionMeta[] = [
   { id: 'Compliance.Manage', area: 'Records', label: 'Record compliance evidence and add compliance items', mutates: true },
   { id: 'Reports.View', area: 'Records', label: 'Run and view reports', mutates: false },
   { id: 'Resident.Portal', area: 'Residents', label: 'Use the resident portal for your own unit', mutates: false },
+  { id: 'Statements.ViewPast', area: 'Residents', label: 'Read your own past statements, with no property now', mutates: false },
   { id: 'Resident.Requests', area: 'Residents', label: 'Report problems and confirm fixes', mutates: true },
   { id: 'Organisation.Manage', area: 'Administration', label: 'Edit agency details and trust bank accounts', mutates: true },
   { id: 'Documents.Configure', area: 'Administration', label: 'Choose default document templates, branding and the agency’s custom template', mutates: true },
@@ -229,6 +231,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   trustee: [...TRUSTEE_VIEW, 'Work.Manage', 'Approvals.Decide', 'Security.ManageOwn'],
   owner: ['Resident.Portal', 'Account.ViewOwn', 'Resident.Requests', 'Security.ManageOwn'],
   tenant: ['Resident.Portal', 'Resident.Requests', 'Security.ManageOwn'],
+  'past-resident': ['Statements.ViewPast', 'Security.ManageOwn'],
   // Highest operational authority — but impersonation is still an individual grant.
   'system-admin': [
     'Platform.View', 'Platform.Customers.View', 'Platform.Customers.Manage', 'Platform.Customers.Approve', 'Platform.Customers.Users', 'Platform.Users.ResetPasskeys', 'Platform.Customers.AnyAccount', 'Platform.Subscriptions.View',

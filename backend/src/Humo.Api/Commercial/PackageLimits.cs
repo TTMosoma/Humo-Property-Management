@@ -56,7 +56,10 @@ public sealed class PackageLimits(HumoDbContext db, Commercial.CommercialRecords
         // A scheme that left the agency (closed or archived) no longer uses the allowance: its records stay, read-only.
         var schemeIds = await db.Schemes.AsNoTracking().Where(s => s.OrganisationId == organisationId && s.Status != "closed" && s.Status != "archived").Select(s => s.Id).ToListAsync(ct);
         var units = await db.Units.AsNoTracking().CountAsync(u => schemeIds.Contains(u.SchemeId), ct) + extraUnits;
-        var users = await db.Memberships.AsNoTracking().CountAsync(m => m.OrganisationId == organisationId && m.Status == MembershipStatuses.Active, ct) + extraUsers;
+        // D33: someone with no property left doesn't use the agency's allowance.
+        var formerResidents = await db.RoleAssignments.AsNoTracking().Where(a => a.OrganisationId == organisationId && a.Status == AssignmentStatuses.Active).GroupBy(a => a.UserId)
+            .Where(g => g.All(a => a.Role == Roles.PastResident)).Select(g => g.Key).ToListAsync(ct);
+        var users = await db.Memberships.AsNoTracking().CountAsync(m => m.OrganisationId == organisationId && m.Status == MembershipStatuses.Active && !formerResidents.Contains(m.UserId), ct) + extraUsers;
         var storedBytes = await StoredBytesAsync(organisationId, ct) + extraBytes;
         var unitsMeasure = Measure(units, terms?.IncludedUnits);
         var usersMeasure = Measure(users, terms?.IncludedUsers);

@@ -245,6 +245,22 @@ Restart the API first, so the migration runs.
 - [ ] As Thandeka: Portfolio › Staff › Johan, and set Priya as his cover from today. **Expect:** his ordinary tasks move to Priya and his "Check whether…" tasks move to you. End the cover. **Expect:** they all go back to Johan.
 - [ ] As Johan: Tasks and Governance. **Expect:** everything as before, including *Log a breach* and the "Check whether…" tasks.
 
+## 23. Editing a person, and someone with no property left (D33)
+
+Restart the API first. Use a test owner who has signed in (Add an owner at Kingfisher Court and *Invite* them, or use Johanna), and keep a private window signed in as them.
+
+- [ ] As Thandeka: People › the owner › *Edit contact details*: change the surname and mobile, and save. **Expect:** the page shows the new details, and the owner can still sign in and sees their unit.
+- [ ] Open that person's page in two tabs, save an edit in one, then save a different edit in the other. **Expect:** the second is refused because someone else changed it.
+- [ ] As Thandeka: on someone who is both owner and trustee, Governance › Trustee boards › end their term today. **Expect:** after a reload, the role switcher no longer offers Trustee, and *Owner* still works.
+- [ ] End the same person's ownership with a date next week. **Expect:** nothing changes for them yet.
+- [ ] End the ownership with today's or an earlier date, then reload as them. **Expect:** they stay signed in, on "You don't have any property registered under your name at the moment", with the agency's contact details and what they used to hold.
+- [ ] As them: the menu. **Expect:** Home and their profile and security only. Open `/my/account` by typing it. **Expect:** you don't have access, with a way home.
+- [ ] As a former owner who had a statement issued while they held the account. **Expect:** it's listed under *Your past statements*, and its PDF opens. The new owner's statement isn't listed.
+- [ ] Sign them out and back in. **Expect:** they land on the same page, not the sign-in page.
+- [ ] As Thandeka: add them as an owner again. **Expect:** after a reload they land on the owner's home, and the role switcher also offers *Former resident*.
+- [ ] As Thandeka: Settings › Users & access › that person. **Expect:** *Former resident* shows and can be ended, and isn't offered when adding a role. End it on someone with nothing else. **Expect:** they can no longer get in.
+- [ ] As Thandeka: record a sale on a unit whose owner is signed in, using *They replace the owner*, with a date that's already passed. **Expect:** the seller's next reload shows the new page straight away.
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.

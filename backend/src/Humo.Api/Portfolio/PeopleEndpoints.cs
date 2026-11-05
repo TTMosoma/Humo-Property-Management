@@ -89,13 +89,15 @@ public static partial class PeopleEndpoints
             Validate = () => actor.OrganisationId is null
                 ? new() { ["lastName"] = "People belong to a customer's directory: work in their organisation to add someone." }
                 : new[] { CheckPerson(d, emailTaken), linkErrors }.SelectMany(x => x).GroupBy(x => x.Key).ToDictionary(g => g.Key, g => g.First().Value),
-        }, _ =>
+        }, async _ =>
         {
             var person = new Person { Id = id, OrganisationId = actor.OrganisationId!.Value, CreatedAt = clock.GetUtcNow() };
             Apply(person, d);
             db.People.Add(person);
-            if (link is not null) Link(db, person.Id, link);
-            return Task.FromResult(Results.Created($"/api/people/{id}", new { id = id.ToString() }));
+            // Bought from someone: the seller's access ends now, not at the next minute's sweep.
+            if (link is not null)
+                foreach (var previous in Link(db, person.Id, link)) await SyncResidentAccessAsync(db, reads, previous, actor.Human.Name, ct);
+            return Results.Created($"/api/people/{id}", new { id = id.ToString() });
         }, ct);
     }
 
@@ -139,8 +141,9 @@ public static partial class PeopleEndpoints
             Validate = () => errors,
         }, async actor =>
         {
-            Link(db, id, link);
+            var replaced = Link(db, id, link);
             await SyncResidentAccessAsync(db, reads, id, actor.Human.Name, ct);
+            foreach (var previous in replaced) await SyncResidentAccessAsync(db, reads, previous, actor.Human.Name, ct);
             return Results.NoContent();
         }, ct);
     }
@@ -338,6 +341,15 @@ public static partial class PeopleEndpoints
                 a.EndedBy = $"{by} (left the board)";
                 a.EndedAt = now;
             }
+            // D33: nothing left at this agency, so they keep a way in: who to contact and their past statements.
+            // Once only: if an administrator ends it, it stays ended.
+            var here = user.Assignments.Concat(db.RoleAssignments.Local.Where(a => a.UserId == user.Id)).Distinct().Where(a => a.OrganisationId == organisation).ToList();
+            if (organisation != default && here.All(a => a.Role != Roles.PastResident && a.Status != AssignmentStatuses.Active) && here.Any(a => a.Role is Roles.Owner or Roles.Tenant or Roles.Trustee))
+                db.RoleAssignments.Add(new RoleAssignment
+                {
+                    Id = Guid.CreateVersion7(), UserId = user.Id, Role = Roles.PastResident, ScopeType = ScopeTypes.Schemes, OrganisationId = organisation, SchemeIds = [],
+                    Label = "No property at the moment", GrantedBy = $"{by} (no property left at the agency)", GrantedAt = now,
+                });
         }
     }
 
@@ -431,9 +443,13 @@ public static partial class PeopleEndpoints
         p.PostalAddress = string.IsNullOrWhiteSpace(d.PostalAddress) ? null : d.PostalAddress.Trim();
     }
 
-    /// <summary>Adds the relationship. A new owner becomes the levy account's holder when it has none (or the holder no longer owns it).</summary>
-    private static void Link(HumoDbContext db, Guid personId, NewRelationshipRequest l)
+    /// <summary>
+    /// Adds the relationship. A new owner becomes the levy account's holder when it has none (or the holder no longer owns it).
+    /// Returns the owners it replaced, whose access has to follow.
+    /// </summary>
+    private static List<Guid> Link(HumoDbContext db, Guid personId, NewRelationshipRequest l)
     {
+        var replaced = new List<Guid>();
         var rel = new Relationship
         {
             Id = Guid.CreateVersion7(), PersonId = personId, Type = l.Type, SchemeId = Guid.Parse(l.SchemeId),
@@ -447,12 +463,16 @@ public static partial class PeopleEndpoints
             {
                 // Sold or transferred: the previous owners' ownership ends the day before; the account and its history stay with the unit.
                 foreach (var old in db.Relationships.Where(r => r.UnitId == unitId && r.Type == "owner" && r.PersonId != personId && (r.Until == null || r.Until >= rel.Since)).ToList())
+                {
                     old.Until = rel.Since.AddDays(-1);
+                    replaced.Add(old.PersonId);
+                }
                 account.HolderPersonId = personId;
             }
             // The holder's ownership had ended (sold, and the buyer added afterwards): the new owner holds it.
             else if (account.HolderPersonId is not { } holder || !StillOwns(db, holder, unitId, rel.Since)) account.HolderPersonId = personId;
         }
+        return replaced;
     }
 
     /// <summary>Whether the person still owns the unit on that day (their ownership hasn't ended before it).</summary>

@@ -173,6 +173,7 @@ api.MapOrganisations();
 api.MapSchemes();
 api.MapUnits();
 api.MapPeople();
+Humo.Api.Portfolio.PastResidentEndpoints.MapPastResident(api);
 api.MapBoards();
 api.MapAccess();
 api.MapAccountRequests();

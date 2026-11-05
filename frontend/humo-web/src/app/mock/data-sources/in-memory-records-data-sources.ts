@@ -18,6 +18,8 @@ import {
   BudgetView,
   NewBudget,
   NewCover,
+  PastResidentDataSource,
+  PastResidentView,
   StaffDataSource,
   StaffDetail,
   StaffSummary,
@@ -479,6 +481,16 @@ export class InMemoryInboxDataSource extends InboxDataSource {
       },
       () => this.store.fromResident(person!, schemeId!, a?.scope.unitId, message),
     );
+  }
+}
+
+@Injectable()
+export class InMemoryPastResidentDataSource extends PastResidentDataSource {
+  private readonly respond = mockResponder();
+
+  /** The simulation has no one in this state: ending a role here doesn't move anyone to it. */
+  view(): Observable<PastResidentView> {
+    return this.respond({ agency: { name: 'your managing agent', email: null, phone: null }, homes: [], statements: [] });
   }
 }
 

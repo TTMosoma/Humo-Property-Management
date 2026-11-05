@@ -42,6 +42,7 @@ import {
   SecurityDataSource,
   SessionDataSource,
   SettingsDataSource,
+  PastResidentDataSource,
   StaffDataSource,
   StepUpAuthenticator,
   SupplierDataSource,
@@ -63,7 +64,7 @@ import { NOT_CONNECTED } from '../core/availability/not-connected';
 import { HttpSessionDataSource } from './http-session-data-source';
 import { HttpLibraryDataSource } from './http-library';
 import { HttpPayablesDataSource } from './http-payables';
-import { HttpStaffDataSource } from './http-staff';
+import { HttpPastResidentDataSource, HttpStaffDataSource } from './http-staff';
 import { HttpPackageLimitsDataSource } from './http-package-limits';
 import { HttpOwnerInvoiceDataSource } from './http-owner-invoices';
 import { HttpDocumentTemplateDataSource, HttpPlatformTemplateDataSource, HttpSettingsDataSource } from './http-settings';
@@ -173,6 +174,7 @@ export function provideHttpData(): EnvironmentProviders {
     },
     // Staff: the team, workload and away cover.
     { provide: StaffDataSource, useClass: HttpStaffDataSource },
+    { provide: PastResidentDataSource, useClass: HttpPastResidentDataSource },
     ...pending,
   ]);
 }

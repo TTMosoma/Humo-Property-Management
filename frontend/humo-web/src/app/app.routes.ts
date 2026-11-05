@@ -660,6 +660,12 @@ export const routes: Routes = [
         children: [
           { path: '', pathMatch: 'full', redirectTo: 'home' },
           {
+            path: 'welcome',
+            title: 'Home',
+            data: { permission: 'Statements.ViewPast' },
+            loadComponent: () => import('./features/my/past-resident-page').then((m) => m.PastResidentPage),
+          },
+          {
             path: 'home',
             title: 'Home',
             data: { permission: 'Resident.Portal' },

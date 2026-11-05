@@ -25,6 +25,7 @@ export const NAV: NavSection[] = [
     id: 'resident',
     nodes: [
       { id: 'my-home', label: 'Home', icon: 'home-outline', route: '/my/home', permission: 'Resident.Portal' },
+      { id: 'my-welcome', label: 'Home', icon: 'home-outline', route: '/my/welcome', permission: 'Statements.ViewPast' },
       { id: 'my-account', label: 'My account', icon: 'wallet-outline', route: '/my/account', permission: 'Account.ViewOwn', keywords: 'balance levy pay statement' },
       { id: 'my-requests', label: 'Maintenance', icon: 'construct-outline', route: '/my/requests', permission: 'Resident.Portal', keywords: 'repair report problem' },
       { id: 'my-documents', label: 'Documents', icon: 'folder-open-outline', route: '/my/documents', permission: 'Resident.Portal' },

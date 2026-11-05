@@ -21,6 +21,7 @@ import {
   OpsDataSource,
   CommunicationsDataSource,
   InboxDataSource,
+  PastResidentDataSource,
   StaffDataSource,
   BudgetDataSource,
   BoardDataSource,
@@ -82,7 +83,7 @@ import { GovernanceStore } from './db/governance-store';
 import { InMemoryBillingDataSource, InMemoryCollectionDataSource } from './data-sources/in-memory-finance-data-sources';
 import { BillingStore } from './db/billing-store';
 import { CollectionsStore } from './db/collections-store';
-import { InMemoryBoardDataSource, InMemoryRulesDataSource, InMemoryBudgetDataSource, InMemoryStaffDataSource, InMemoryInboxDataSource, InMemoryCommunicationsDataSource, InMemoryComplianceDataSource, InMemoryLibraryDataSource, InMemoryNoticeDataSource } from './data-sources/in-memory-records-data-sources';
+import { InMemoryBoardDataSource, InMemoryRulesDataSource, InMemoryBudgetDataSource, InMemoryPastResidentDataSource, InMemoryStaffDataSource, InMemoryInboxDataSource, InMemoryCommunicationsDataSource, InMemoryComplianceDataSource, InMemoryLibraryDataSource, InMemoryNoticeDataSource } from './data-sources/in-memory-records-data-sources';
 import { ComplianceStore } from './db/compliance-store';
 import { InboxStore } from './db/inbox-store';
 import { InMemorySettingsDataSource } from './data-sources/in-memory-settings-data-source';
@@ -143,6 +144,7 @@ export function provideMockData(): EnvironmentProviders {
     { provide: CommunicationsDataSource, useClass: InMemoryCommunicationsDataSource },
     { provide: InboxDataSource, useClass: InMemoryInboxDataSource },
     { provide: StaffDataSource, useClass: InMemoryStaffDataSource },
+    { provide: PastResidentDataSource, useClass: InMemoryPastResidentDataSource },
     { provide: BudgetDataSource, useClass: InMemoryBudgetDataSource },
     { provide: BoardDataSource, useClass: InMemoryBoardDataSource },
     { provide: RulesDataSource, useClass: InMemoryRulesDataSource },
