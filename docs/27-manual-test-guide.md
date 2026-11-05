@@ -222,7 +222,9 @@ Restart the API first.
 - [ ] Add a new owner at Kingfisher Court; *Appoint* them to its board; then *Invite* them from their People record as an owner. Open the invitation from Mailpit in a private window. **Expect:** the role switcher offers both Owner and Trustee.
 - [ ] Governance › Scheme rules › Breach log › *Log a breach*. **Expect:** Rule and Unit start on *Choose…*. Save without choosing. **Expect:** "Rule is needed." Choose the first rule in the list. **Expect:** it's accepted, with no need to pick another one first.
 - [ ] Maintenance › a newly reported job. **Expect:** Priority and Trade show the job's own values; if the scheme has no portfolio manager, *Assigned to* starts on *Choose…*.
-- [ ] Any form with a list set in advance, e.g. People › *Add an owner, tenant or trustee*. **Expect:** the preset Scheme shows, with no *Choose…*.
+- [ ] Any form with a list set in advance, e.g. People › *Add an owner or tenant*. **Expect:** the preset Scheme shows, with no *Choose…*. Role offers Owner and Tenant only, and its help says trustees are appointed on the board.
+- [ ] Maintenance › *Log a request* › *Take or add a photo*, and pick a picture. **Expect:** the page stays put, the photo appears in the list, and the top bar stays visible.
+- [ ] In one tab, sign in as Johanna, sign out, then sign in as Thandeka with a passkey, without reloading the page. Open Schemes, then *Log a request*. **Expect:** every Acacia scheme is listed in both, with no "We couldn't load your schemes".
 
 ## Reporting back
 

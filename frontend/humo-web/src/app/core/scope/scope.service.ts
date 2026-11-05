@@ -1,4 +1,5 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
+import { of } from 'rxjs';
 import { Scheme, SchemeDataSource, coversAllSchemes, isHumoRole } from '../../domain';
 import { loadable } from '../data/loadable';
 import { safeStorage } from '../prototype/safe-storage';
@@ -36,8 +37,8 @@ export class ScopeService {
   private readonly session = inject(SessionService);
   private readonly source = inject(SchemeDataSource);
 
-  /** Loaded once for the shell. Pages that list schemes show its state (and can retry it). */
-  private readonly schemes = loadable(() => this.source.list());
+  /** Loaded for the shell, once per person and role. Pages that list schemes show its state (and can retry it). */
+  private readonly schemes = loadable(() => (this.session.dataOwner() ? this.source.list() : of([] as Scheme[])));
   private readonly allSchemes = computed(() => this.schemes.value() ?? []);
   readonly status = this.schemes.status;
   readonly retry = () => this.schemes.retry();

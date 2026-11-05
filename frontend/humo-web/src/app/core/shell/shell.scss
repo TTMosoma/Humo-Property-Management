@@ -104,6 +104,9 @@ app-sidebar {
 }
 
 .content {
+  // Keeps absolutely positioned children (a hidden file input) inside this scroller. Outside it, focusing
+  // one makes the browser scroll the whole column, topbar included, off the screen.
+  position: relative;
   flex: 1;
   min-height: 0;
   overflow-y: auto;

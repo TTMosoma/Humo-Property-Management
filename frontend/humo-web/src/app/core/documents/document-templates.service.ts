@@ -1,6 +1,6 @@
 import { Injectable, computed, inject } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { catchError, of } from 'rxjs';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { catchError, of, switchMap } from 'rxjs';
 import {
   DocumentTemplate,
   DocumentTemplateDataSource,
@@ -34,8 +34,9 @@ export class DocumentTemplatesService {
   private readonly data = inject(DocumentTemplateDataSource);
   private readonly session = inject(SessionService);
 
-  readonly templates = toSignal(this.data.templates().pipe(catchError(() => of([] as DocumentTemplate[]))), { initialValue: [] as DocumentTemplate[] });
-  readonly settings = toSignal(this.data.settings().pipe(catchError(() => of(undefined))), { initialValue: undefined as OrganisationDocumentSettings | undefined });
+  private readonly owner$ = toObservable(this.session.dataOwner);
+  readonly templates = toSignal(this.owner$.pipe(switchMap((who) => (who ? this.data.templates().pipe(catchError(() => of([] as DocumentTemplate[]))) : of([] as DocumentTemplate[])))), { initialValue: [] as DocumentTemplate[] });
+  readonly settings = toSignal(this.owner$.pipe(switchMap((who) => (who ? this.data.settings().pipe(catchError(() => of(undefined))) : of(undefined)))), { initialValue: undefined as OrganisationDocumentSettings | undefined });
   readonly loaded = computed(() => this.templates().length > 0 && !!this.settings());
 
   /** Every template of a type with its availability (available / locked / planned / deprecated). */

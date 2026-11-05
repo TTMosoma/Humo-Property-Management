@@ -47,7 +47,7 @@ localStorage           (mock/simulation/simulation-storage.ts, keys humo.sim.*)
 | **Users** (Users & access: Users.Manage) | Invite with a first role and scope (step-up) | List, access drawer | Name, email, title | Invited (resend; prototype: "invitation accepted") · access suspended ⇄ restored · removed from agency (all roles end) | Add role with scope, end role (kept as history) |
 | **Schemes** (Schemes.Manage: Agency Administrator) | Add (starts onboarding) | List (+ Archived tab), workspace | Details (code unique per agency) | Onboarding → active → closed → archived → restore. Can't archive with money owed. | Portfolio manager = role assignment |
 | **Units** (Units.Manage: admin, portfolio manager) | Add to a scheme (opens a levy account) | List, unit page | Description, size, quota, levy, occupancy (number fixed) | — (not needed yet) | Owners and tenants from People |
-| **People** (People.Manage: admin, portfolio manager) | Add owner, tenant or trustee, linked to a unit or board | List, person page | Contact details | — | Add a role; end a role on a date (sold, moved out, stepped down) |
+| **People** (People.Manage: admin, portfolio manager) | Add owner or tenant, linked to a unit (trustees are appointed on the board, D2) | List, person page | Contact details | — | Add a role; end a role on a date (sold, moved out, stepped down) |
 | **Suppliers** (Suppliers.Manage) | Add (documents start missing) | List (+ Archived tab), supplier page | Details, trades, schemes | Active ⇄ on hold, archived ⇄ restored. Can't archive with open jobs. | Linked from Humo Contractor on quote acceptance |
 | Jobs, receipts, payables, subscriptions, quote requests | Already simulated (earlier slices) | | | | |
 
