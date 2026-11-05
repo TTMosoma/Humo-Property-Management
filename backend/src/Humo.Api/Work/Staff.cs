@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Humo.Api.Commands;
+using Humo.Api.Commercial;
 using Humo.Api.Portfolio;
 using Humo.Domain.Access;
 using Humo.Domain.Commercial;
@@ -120,6 +121,9 @@ public sealed class StaffCovers(HumoDbContext db, TimeProvider clock)
 
 public static class StaffEndpoints
 {
+    /// <summary>The plan's feature applies to reading too: feature flags only hide screens (CLAUDE.md).</summary>
+    private const string TeamManagement = "team-management";
+
     public static void MapStaff(this IEndpointRouteBuilder api)
     {
         var g = api.MapGroup("/staff").RequireAuthorization();
@@ -129,17 +133,19 @@ public static class StaffEndpoints
         g.MapDelete("/{staffId:guid}/cover", EndCover);
     }
 
-    private static async Task<IResult> List(CurrentActor current, StaffCovers staff, CancellationToken ct)
+    private static async Task<IResult> List(CurrentActor current, CommercialRecords commercial, StaffCovers staff, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         if (actor.OrganisationId is not { } org || !actor.Can("Portfolio.Browse")) return Results.Ok(Array.Empty<StaffSummaryDto>());
+        if (!await commercial.EntitledAsync(org, TeamManagement, ct)) return Problems.Policy("not-entitled", "Not included in the agency’s plan");
         return Results.Ok((await staff.SummariesAsync(org, ct)).Staff);
     }
 
-    private static async Task<IResult> Get(Guid staffId, CurrentActor current, StaffCovers staff, CancellationToken ct)
+    private static async Task<IResult> Get(Guid staffId, CurrentActor current, CommercialRecords commercial, StaffCovers staff, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         if (actor.OrganisationId is not { } org || !actor.Can("Portfolio.Browse")) return Problems.NotFound();
+        if (!await commercial.EntitledAsync(org, TeamManagement, ct)) return Problems.Policy("not-entitled", "Not included in the agency’s plan");
         var (team, items, _) = await staff.SummariesAsync(org, ct);
         if (team.FirstOrDefault(s => s.Id == staffId.ToString()) is not { } s) return Problems.NotFound();
         var since = staff.Now.AddDays(-14);
@@ -165,7 +171,7 @@ public static class StaffEndpoints
         {
             Resource = "Staff",
             ResourceId = staffId.ToString(),
-            Feature = "team-management",
+            Feature = TeamManagement,
             Validate = () =>
             {
                 var e = new Dictionary<string, string>();
@@ -203,7 +209,7 @@ public static class StaffEndpoints
         {
             Resource = "Staff",
             ResourceId = staffId.ToString(),
-            Feature = "team-management",
+            Feature = TeamManagement,
             Validate = () =>
                 staffId != me.Human.Id && !me.Can("Users.Manage") ? new() { ["staffId"] = "Only an agency administrator can end someone else’s cover." }
                 : covers.Count == 0 ? new() { ["staffId"] = "They aren’t away." }
