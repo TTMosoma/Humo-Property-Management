@@ -192,6 +192,41 @@ npm --prefix frontend/humo-web run e2e:screens
 - [ ] Let an approval made alone take effect after its cooling-off (§ approvals, D24) on a scheme with trustees on record. **Expect:** the approver's notice and the audit entry say "Trustees told:" with each name and how (email address or mobile).
 - [ ] The same on a scheme with no trustees on record (e.g. Flamingo Pointe). **Expect:** "… has no trustees on record, so no trustee was told. Tell the trustees yourself."
 
+## 20. Scheme rules and the breach log on the API (D29)
+
+Restart the API, then load the demo rules once: `dotnet run --project backend/src/Humo.Api -- seed-demo`. It says "Acacia: scheme rules added to 2 schemes".
+
+- [ ] As Thandeka: Governance › Scheme rules. **Expect:** the register, not *Coming to Humo Property Management*: Pets, Parking and so on, each "Adopted 01 Jun 2019 · Registered rules". Reload. **Expect:** still there.
+- [ ] *Amend* a rule and change its wording. Leave the Resolution on *Choose the resolution* and save. **Expect:** "Resolution is needed." The demo data has no passed resolutions, and the list says so.
+- [ ] Choose *Not in the register: type it from the minutes*. **Expect:** *As in the minutes* and *Passed on* appear. Type `AGM 12 March 2026, special resolution 2`, choose a date in the future and save. **Expect:** refused, not in the future. Choose a past date and save. **Expect:** the new wording shows with that reference, and *1 earlier version* opens the old wording.
+- [ ] To choose from the register, first create a passed resolution: Governance › Meetings › *Schedule* Kingfisher Court, trustee meeting, 10 days ahead; *Send notice*; *Record attendance* with two trustees; *Record a resolution* passed 2–0–0. Go to Scheme rules, which opens on the first scheme, and *Amend* a Die Eike rule. **Expect:** the resolution isn't in the list, because it belongs to Kingfisher Court. Set *Scheme* to Kingfisher Court and *Amend* a rule. **Expect:** that resolution is in the list, as `RES-KC-…` and its title. Choose it and save. **Expect:** the new wording cites it.
+- [ ] *Repeal* a rule with no open breaches, choosing *Not in the register*. **Expect:** it stays in the register as repealed, with that reference.
+- [ ] Without Meetings & AGMs (as `terry@humo.co.za`: Platform › Customers › Acacia › *Manage features* › package **Professional**, add-on off; set it back to **Enterprise** afterwards): *Amend* a rule. **Expect:** no list, just a text box with *Passed on*.
+- [ ] *Add a rule* with no resolution. **Expect:** it says "Captured from the registered rules by" you. Add another with the same number. **Expect:** refused: amend it instead.
+- [ ] *Share with owners*. **Expect:** after a few seconds, "Owners and residents have the rule book"; *open it* shows a PDF of the rules in force. Amend a rule the same way with today's date. **Expect:** the page says the rules have changed since the copy was shared.
+- [ ] *Upload rules PDF*, shared with owners, with *Registered with the CSOS*. **Expect:** it's listed under *Registered rules*, and Documents has it under Rules with the rule book archived. Upload a second, staff-only. **Expect:** the first is listed as an earlier version and owners keep it.
+- [ ] Breach log: *Log a breach* on Unit 42, against the owner. **Expect:** it opens as *Reported*, nothing is sent, and the page says who it's with (the scheme's portfolio manager).
+- [ ] *Send a warning* by email, 14 days. **Expect:** Mailpit has the letter with "Please put this right by" and the date above *Kind regards*; the history links to it in Communications › Sent; Tasks has "Check whether Unit 42 has put right", due on that date.
+- [ ] Log a breach and try to send a final warning first. **Expect:** *Send a warning* is the only letter offered.
+- [ ] From *Warning sent*: *Send a final warning*, then *Refer to the trustees*. **Expect:** the check task closes and a "Decide on breach" task appears; trustees with a sign-in get a notification and an email. *Send a final warning* is gone.
+- [ ] *Record the outcome*. **Expect:** *Resolved*, and the "Decide on breach" task is done. *Reopen* with a note. **Expect:** *Reported* again.
+- [ ] *Repeal* a rule with an open breach. **Expect:** refused: resolve the open breaches first. Resolve them and repeal it. **Expect:** it stays in the register, marked repealed.
+- [ ] As Priya (Finance): Scheme rules and a breach. **Expect:** you can read both, with no *Add a rule*, *Amend*, *Log a breach* or *Send a warning*.
+- [ ] As Annette (Fynbos, Essentials): `/governance/rules`. **Expect:** it says it isn't on your plan. In the browser console, `await (await fetch('/api/breaches')).json()`. **Expect:** `not-entitled`.
+
+## 21. Trustee access follows the board, and lists show what's chosen
+
+Restart the API first.
+
+- [ ] Wait a minute after the restart, then sign in as `johanna@mail.example` (owner of Die Eike unit 9, on its board, invited earlier as an owner only). **Expect:** the role switcher offers Owner and Trustee, and *Trustee* opens the trustee view of Die Eike.
+- [ ] As Thandeka: Portfolio › People › Johanna Visser. **Expect:** the header says "Trustee of Die Eike", naming the scheme rather than a count.
+- [ ] Add a new owner at Kingfisher Court; *Appoint* them to its board; then *Invite* them from their People record as an owner. Open the invitation from Mailpit in a private window. **Expect:** the role switcher offers both Owner and Trustee.
+- [ ] Governance › Scheme rules › Breach log › *Log a breach*. **Expect:** Rule and Unit start on *Choose…*. Save without choosing. **Expect:** "Rule is needed." Choose the first rule in the list. **Expect:** it's accepted, with no need to pick another one first.
+- [ ] Maintenance › a newly reported job. **Expect:** Priority and Trade show the job's own values; if the scheme has no portfolio manager, *Assigned to* starts on *Choose…*.
+- [ ] Any form with a list set in advance, e.g. People › *Add an owner or tenant*. **Expect:** the preset Scheme shows, with no *Choose…*. Role offers Owner and Tenant only, and its help says trustees are appointed on the board.
+- [ ] Maintenance › *Log a request* › *Take or add a photo*, and pick a picture. **Expect:** the page stays put, the photo appears in the list, and the top bar stays visible.
+- [ ] In one tab, sign in as Johanna, sign out, then sign in as Thandeka with a passkey, without reloading the page. Open Schemes, then *Log a request*. **Expect:** every Acacia scheme is listed in both, with no "We couldn't load your schemes".
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.

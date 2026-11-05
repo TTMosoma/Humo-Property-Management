@@ -1,3 +1,4 @@
+using Humo.Domain.Commercial;
 using Humo.Api.Finance;
 using Humo.Api.Portfolio;
 using Humo.Domain.Access;
@@ -109,6 +110,7 @@ public static class DevSeed
             {
                 report.Add($"{a.ShortName}: already there, left as it is.");
                 if (await SuppliersAsync(db, a, (await db.Organisations.FirstAsync(o => o.ShortName == a.ShortName, ct)).Id, now, ct) is { } later) report.Add(later);
+                if (await RulesAsync(db, a, (await db.Organisations.FirstAsync(o => o.ShortName == a.ShortName, ct)).Id, ct) is { } rules) report.Add(rules);
                 continue;
             }
             var org = new Organisation
@@ -214,6 +216,7 @@ public static class DevSeed
             await db.SaveChangesAsync(ct);
             report.Add($"{a.ShortName}: {a.Schemes.Length} scheme(s), {a.Schemes.Sum(s => s.Units.Length)} units, {people.Count} people, three months of levies.");
             if (await SuppliersAsync(db, a, org.Id, now, ct) is { } added) report.Add(added);
+            if (await RulesAsync(db, a, org.Id, ct) is { } rulesAdded) report.Add(rulesAdded);
         }
         return string.Join(Environment.NewLine, report);
     }
@@ -222,6 +225,56 @@ public static class DevSeed
     /// Suppliers with approved invoices ready to pay (slice 3b), one with bank details waiting for verification in My
     /// work. Also added to an agency seeded before they existed. Returns what it did, or null.
     /// </summary>
+    /// <summary>Humo PM's sample wording, not any scheme's registered rules.</summary>
+    private static readonly (string Number, string Title, string Category, string Text)[] SampleRules =
+    [
+        ("1.1", "Keeping pets", "pets", "An owner or occupier may keep a pet only with the trustees’ written consent. The trustees may set reasonable conditions, and may withdraw consent if the animal is a nuisance to other occupiers."),
+        ("2.1", "Parking in allocated bays", "parking", "Occupiers park only in the bays allocated to their section. Vehicles may not block driveways, gates or other bays."),
+        ("2.2", "Visitor parking", "parking", "Visitor bays are for visitors only and for no more than 24 hours at a time. Occupiers may not use visitor bays for their own vehicles."),
+        ("3.1", "Quiet hours", "noise", "Between 22:00 and 07:00 on weekdays, and 23:00 and 08:00 on weekends and public holidays, occupiers keep noise to a level that doesn’t disturb others."),
+        ("4.2", "Appearance of the building", "alterations", "Washing may not be hung where it is visible from outside the section. Awnings, satellite dishes and burglar bars must be of a type the trustees approved."),
+        ("5.1", "Refuse", "refuse", "Refuse is placed, in sealed bags, only in the bins provided at the refuse area. Large items are removed by the occupier at their own cost."),
+    ];
+
+    /// <summary>Scheme rules for the agencies whose plan has them (D29), and two reported breaches at the first scheme. Runs once per agency.</summary>
+    private static async Task<string?> RulesAsync(HumoDbContext db, AgencySeed a, Guid orgId, CancellationToken ct)
+    {
+        if (a.Package == "essentials" || await db.SchemeRules.AnyAsync(r => r.OrganisationId == orgId, ct)) return null;
+        var schemes = await db.Schemes.Where(s => s.OrganisationId == orgId).ToListAsync(ct);
+        foreach (var s in schemes)
+            foreach (var (number, title, category, text) in SampleRules)
+                db.SchemeRules.Add(new SchemeRuleRow
+                {
+                    Id = Guid.CreateVersion7(), OrganisationId = orgId, SchemeId = s.Id, Number = number, Title = title, Category = category, Status = "in-force",
+                    Versions = System.Text.Json.JsonSerializer.Serialize(new[] { new Governance.RuleVersion(text, "2019-06-01", "Registered rules", null) }, Json.Options),
+                });
+        await db.SaveChangesAsync(ct);
+
+        var first = schemes.First(s => s.Code == a.Schemes[0].Code);
+        var manager = a.Staff.FirstOrDefault(x => x.SchemeCode == first.Code) ?? a.Staff[0];
+        var assignee = await db.Users.FirstAsync(u => u.Email == manager.Email, ct);
+        var today = DateOnly.FromDateTime(DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromHours(2)).DateTime);
+        var units = await db.Units.Where(u => u.SchemeId == first.Id).OrderBy(u => u.AccountNo).Take(2).ToListAsync(ct);
+        var breaches = new[] { ("2.2", "A grey Polo has been parked in a visitor bay overnight most of this week.", 3), ("3.1", "Loud music past midnight on two Saturdays running; complaints from the units either side.", 9) };
+        var added = 0;
+        foreach (var (unit, (rule, text, days)) in units.Zip(breaches))
+        {
+            var owner = await db.Relationships.Where(r => r.UnitId == unit.Id && r.Type == "owner").Select(r => (Guid?)r.PersonId).FirstOrDefaultAsync(ct);
+            if (owner is null) continue;
+            var ruleId = await db.SchemeRules.Where(r => r.SchemeId == first.Id && r.Number == rule).Select(r => r.Id).FirstAsync(ct);
+            var number = 1001 + added++;
+            var at = DateTimeOffset.UtcNow.AddDays(-days);
+            db.Breaches.Add(new BreachRow
+            {
+                Id = Guid.CreateVersion7(), OrganisationId = orgId, SchemeId = first.Id, Number = number, Ref = $"BR-{number}", RuleId = ruleId, UnitId = unit.Id, PersonId = owner.Value, Description = text,
+                OccurredAt = today.AddDays(-days), ReportedBy = assignee.Name, Status = "open", AssigneeId = assignee.Id.ToString(),
+                Events = System.Text.Json.JsonSerializer.Serialize(new[] { new Governance.BreachEvent(at.ToString("O"), assignee.Name, "reported", $"Reported: {text}") }, Json.Options),
+            });
+        }
+        await db.SaveChangesAsync(ct);
+        return $"{a.ShortName}: scheme rules added to {schemes.Count} schemes, and {added} reported breaches.";
+    }
+
     private static async Task<string?> SuppliersAsync(HumoDbContext db, AgencySeed a, Guid orgId, DateTimeOffset now, CancellationToken ct)
     {
         if (a.Suppliers is not { Length: > 0 } seeds || await db.Suppliers.AnyAsync(s => s.OrganisationId == orgId, ct)) return null;

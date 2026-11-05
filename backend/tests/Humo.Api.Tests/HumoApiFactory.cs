@@ -214,6 +214,15 @@ public sealed class TestPdfRenderer(HumoApiFactory api) : Humo.Infrastructure.Do
     public ConcurrentQueue<string> Urls { get; } = new();
     public bool Failing { get; set; }
 
+    public ConcurrentQueue<string> Html { get; } = new();
+
+    public Task<byte[]> RenderHtmlAsync(string html, CancellationToken ct = default)
+    {
+        if (Failing) throw new InvalidOperationException("Chromium crashed");
+        Html.Enqueue(html);
+        return Task.FromResult(System.Text.Encoding.UTF8.GetBytes("%PDF-1.7 test\n" + html));
+    }
+
     public async Task<byte[]> RenderAsync(string url, CancellationToken ct = default)
     {
         Urls.Enqueue(url);

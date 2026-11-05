@@ -91,7 +91,7 @@ const GUESS: Record<keyof Omit<StatementMapping, 'dateFormat'>, RegExp> = {
                 <select [value]="mapping()[f.key] ?? ''" (change)="setColumn(f.key, $any($event.target).value)">
                   <option value="">—</option>
                   @for (h of header(); track h) {
-                    <option [value]="h">{{ h }}</option>
+                    <option [value]="h" [selected]="h === mapping()[f.key]">{{ h }}</option>
                   }
                 </select>
                 @if (errors()[f.key]) { <span class="err">{{ errors()[f.key] }}</span> }
@@ -101,7 +101,7 @@ const GUESS: Record<keyof Omit<StatementMapping, 'dateFormat'>, RegExp> = {
               <span class="f-label">Date format</span>
               <select [value]="mapping().dateFormat" (change)="setFormat($any($event.target).value)">
                 @for (d of dateFormats; track d.value) {
-                  <option [value]="d.value">{{ d.label }}</option>
+                  <option [value]="d.value" [selected]="d.value === mapping().dateFormat">{{ d.label }}</option>
                 }
               </select>
             </label>

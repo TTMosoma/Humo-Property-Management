@@ -48,6 +48,12 @@ export class SessionService {
   readonly signedIn = computed(() => this.snapshot().signedIn && !this.forgotten());
 
   /**
+   * Who the data is for: changes when someone signs in or out, or changes role; empty when signed out.
+   * Services that outlive a sign-in load their data from this, so it never carries over to the next person.
+   */
+  readonly dataOwner = computed(() => (this.signedIn() ? `${this.identity().id}|${this.assignment().id}` : ''));
+
+  /**
    * Completes once the server has answered /me (at once in the simulation). Guards wait for it,
    * so a reload or a link to a page doesn't land on the sign-in page while /me is on its way.
    */

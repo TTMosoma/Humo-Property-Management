@@ -322,6 +322,78 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.ToTable("BillingRuns", (string)null);
                 });
 
+            modelBuilder.Entity("Humo.Infrastructure.Data.BreachRow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AssigneeId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Events")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly>("OccurredAt")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Ref")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateOnly?>("RemedyBy")
+                        .HasColumnType("date");
+
+                    b.Property<string>("ReportedBy")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("RuleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SchemeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("UnitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RuleId");
+
+                    b.HasIndex("SchemeId");
+
+                    b.HasIndex("OrganisationId", "Number")
+                        .IsUnique();
+
+                    b.ToTable("Breaches", (string)null);
+                });
+
             modelBuilder.Entity("Humo.Infrastructure.Data.BudgetRow", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2509,6 +2581,23 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.ToTable("RoleAssignments", (string)null);
                 });
 
+            modelBuilder.Entity("Humo.Infrastructure.Data.RuleBookRow", b =>
+                {
+                    b.Property<Guid>("SchemeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Json")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("SchemeId");
+
+                    b.ToTable("RuleBooks", (string)null);
+                });
+
             modelBuilder.Entity("Humo.Infrastructure.Data.Scheme", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2572,6 +2661,58 @@ namespace Humo.Infrastructure.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("Schemes", (string)null);
+                });
+
+            modelBuilder.Entity("Humo.Infrastructure.Data.SchemeRuleRow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("Number")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly?>("RepealedAt")
+                        .HasColumnType("date");
+
+                    b.Property<string>("RepealedBy")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("SchemeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Versions")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SchemeId");
+
+                    b.ToTable("SchemeRules", (string)null);
                 });
 
             modelBuilder.Entity("Humo.Infrastructure.Data.SentMessageRow", b =>
@@ -3775,6 +3916,21 @@ namespace Humo.Infrastructure.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Humo.Infrastructure.Data.BreachRow", b =>
+                {
+                    b.HasOne("Humo.Infrastructure.Data.SchemeRuleRow", null)
+                        .WithMany()
+                        .HasForeignKey("RuleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Humo.Infrastructure.Data.Scheme", null)
+                        .WithMany()
+                        .HasForeignKey("SchemeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Humo.Infrastructure.Data.BudgetRow", b =>
                 {
                     b.HasOne("Humo.Infrastructure.Data.Scheme", null)
@@ -4030,11 +4186,29 @@ namespace Humo.Infrastructure.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Humo.Infrastructure.Data.RuleBookRow", b =>
+                {
+                    b.HasOne("Humo.Infrastructure.Data.Scheme", null)
+                        .WithOne()
+                        .HasForeignKey("Humo.Infrastructure.Data.RuleBookRow", "SchemeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Humo.Infrastructure.Data.Scheme", b =>
                 {
                     b.HasOne("Humo.Infrastructure.Data.Organisation", null)
                         .WithMany()
                         .HasForeignKey("OrganisationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Humo.Infrastructure.Data.SchemeRuleRow", b =>
+                {
+                    b.HasOne("Humo.Infrastructure.Data.Scheme", null)
+                        .WithMany()
+                        .HasForeignKey("SchemeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

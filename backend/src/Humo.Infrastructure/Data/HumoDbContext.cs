@@ -61,6 +61,9 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
     public DbSet<BudgetRow> Budgets => Set<BudgetRow>();
     public DbSet<MeetingRow> Meetings => Set<MeetingRow>();
     public DbSet<ResolutionRow> Resolutions => Set<ResolutionRow>();
+    public DbSet<SchemeRuleRow> SchemeRules => Set<SchemeRuleRow>();
+    public DbSet<RuleBookRow> RuleBooks => Set<RuleBookRow>();
+    public DbSet<BreachRow> Breaches => Set<BreachRow>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Notice> Notices => Set<Notice>();
     public DbSet<NoticeRead> NoticeReads => Set<NoticeRead>();
@@ -568,6 +571,37 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.HasIndex(x => new { x.SchemeId, x.Number }).IsUnique();
             e.HasIndex(x => x.MeetingId);
             e.HasOne<Scheme>().WithMany().HasForeignKey(x => x.SchemeId);
+        });
+
+        builder.Entity<SchemeRuleRow>(e =>
+        {
+            e.ToTable("SchemeRules");
+            e.Property(x => x.Number).HasMaxLength(30);
+            e.Property(x => x.Category).HasMaxLength(30);
+            e.Property(x => x.Status).HasMaxLength(20);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => x.SchemeId);
+            e.HasOne<Scheme>().WithMany().HasForeignKey(x => x.SchemeId);
+        });
+
+        builder.Entity<RuleBookRow>(e =>
+        {
+            e.ToTable("RuleBooks");
+            e.HasKey(x => x.SchemeId);
+            e.HasOne<Scheme>().WithOne().HasForeignKey<RuleBookRow>(x => x.SchemeId);
+        });
+
+        builder.Entity<BreachRow>(e =>
+        {
+            e.ToTable("Breaches");
+            e.Property(x => x.Ref).HasMaxLength(30);
+            e.Property(x => x.Status).HasMaxLength(20);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => new { x.OrganisationId, x.Number }).IsUnique();
+            e.HasIndex(x => x.SchemeId);
+            e.HasIndex(x => x.RuleId);
+            e.HasOne<Scheme>().WithMany().HasForeignKey(x => x.SchemeId);
+            e.HasOne<SchemeRuleRow>().WithMany().HasForeignKey(x => x.RuleId);
         });
 
         builder.Entity<BudgetRow>(e =>

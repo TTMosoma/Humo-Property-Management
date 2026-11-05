@@ -46,7 +46,8 @@ export type DataTopic =
   | 'timeline'
   | 'staff'
   | 'budgets'
-  | 'meetings';
+  | 'meetings'
+  | 'rules';
 
 @Injectable({ providedIn: 'root' })
 export class DataChanges {

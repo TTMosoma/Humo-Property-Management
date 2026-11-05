@@ -119,8 +119,8 @@ The order matters: nobody verifies a passkey for a request that was going to fai
 | Commands | `People.Manage`; scope C4 | |
 
 **Board (D2):**
-- **Appoint:** an owner in the scheme who isn't already a trustee, by election (with a resolution) or co-option. A person with a sign-in **gets trustee access** to that scheme.
-- **End a term:** removes that access.
+- **Appoint:** an owner in the scheme who isn't already a trustee, by election (with a resolution) or co-option. A person with a sign-in **gets trustee access** to that scheme. It doesn't matter which came first: someone already on the board gets it when they're invited in any role, or within a minute if they already sign in.
+- **End a term:** removes that access once the term is over; until the end date they're still a trustee.
 - **Users & access can't grant the trustee role without a current board seat.**
 - **Tests:** `trustee-board.spec`.
 

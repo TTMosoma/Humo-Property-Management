@@ -45,7 +45,7 @@ function linkFields(schemes: Scheme[]): FormField[] {
         { value: 'tenant', label: 'Tenant of a unit' },
       ],
       // D2: the board register is the source of truth for trustees.
-      help: 'Trustees are appointed on the scheme’s board (Governance › Board), from a resolution or by co-option.',
+      help: 'To add a trustee, add them here as an owner, then appoint them on the scheme’s board (Governance › Board).',
     },
     { key: 'schemeId', label: 'Scheme', type: 'select', required: true, half: true, options: schemes.map((s) => ({ value: s.id, label: s.name })) },
     { key: 'unitNumber', label: 'Unit', type: 'text', required: true, half: true, placeholder: 'e.g. 42' },
@@ -82,7 +82,7 @@ function linkFrom(v: FormValues, units: UnitDataSource, schemes: Scheme[]): Obse
 export function newPersonForm(drawer: DrawerService, people: PersonDataSource, units: UnitDataSource, schemes: Scheme[], router: Router, schemeId?: string, unitNumber?: string): void {
   openForm(drawer, {
     eyebrow: 'People',
-    title: 'Add an owner, tenant or trustee',
+    title: 'Add an owner or tenant',
     intro: 'One record per person, however many roles they hold. If they’re already in the directory, open them and link the new role instead.',
     fields: [...PERSON_FIELDS, ...linkFields(schemes)],
     initial: { kind: 'individual', preferredChannel: 'email', type: 'owner', schemeId: schemeId ?? schemes[0]?.id ?? '', unitNumber: unitNumber ?? '', since: today(), portfolio: 'Trustee' },
@@ -111,7 +111,7 @@ export function linkPersonForm(drawer: DrawerService, people: PersonDataSource, 
   openForm(drawer, {
     eyebrow: p.displayName,
     title: 'Add a role',
-    intro: 'Owner or tenant of a unit, or trustee of a scheme. A new owner becomes the account holder if the unit has none.',
+    intro: 'Owner or tenant of a unit. A new owner becomes the account holder if the unit has none.',
     fields: linkFields(schemes),
     initial: { type: 'owner', schemeId: schemes[0]?.id ?? '', since: today(), portfolio: 'Trustee' },
     submitLabel: 'Add role',

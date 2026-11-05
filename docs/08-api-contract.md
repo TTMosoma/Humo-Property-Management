@@ -45,6 +45,7 @@ Status: **frontend contract frozen after the P1 and P2 readiness cleanups** (Oct
 | Impersonate | `startImpersonation` / `endImpersonation` | The server session holds the impersonation; ending always succeeds |
 | Sign out | `signOut(product)` | Ends the Humo session for every product; the browser forgets it even if the call fails |
 | Sign in | Identity provider redirect (passkey or Humo Mobile) | `SessionDataSource.signIn` is a prototype stand-in |
+| Scheme rules and breaches (doc 15 §6, D29) | `GET /rules/{schemeId}`; `POST /rules/{schemeId}/actions` (add, amend, repeal, share); `POST /rules/{schemeId}/upload` (multipart: `adoptedOn`, `resolutionRef`, `shareWithOwners`, `file`); `GET /breaches?schemeIds=…`; `GET /breaches/{id}`; `POST /breaches`; `POST /breaches/{id}/actions` `{ action, expectedVersion }`. All need the `scheme-rules` feature (`403 not-entitled`, reading too) | `RulesDataSource` |
 | Add a passkey (D30) | `POST /me/passkeys/options`, then `POST /me/passkeys` `{ credential, tool }`. `403 step-up-required` if they have a passkey and haven't confirmed with it in the last 5 minutes; `400 passkey-rejected` if the credential is refused | `SecurityDataSource.addPasskey`, `SessionDataSource.registerPasskey` |
 
 For HTTP, add an app initializer that waits for the first `/me` response before the shell renders.

@@ -1321,3 +1321,55 @@ public sealed class OwnerInvoice
     public DateTimeOffset? EmailedAt { get; set; }
 }
 
+/// <summary>A rule in a scheme's conduct rules (doc 15 §6). It changes only by resolution of the owners; repealed rules stay in the register.</summary>
+public sealed class SchemeRuleRow
+{
+    public Guid Id { get; set; }
+    public Guid OrganisationId { get; set; }
+    public Guid SchemeId { get; set; }
+    public int Version { get; set; } = 1;
+    /// <summary>"4.2"</summary>
+    public string Number { get; set; } = "";
+    public string Title { get; set; } = "";
+    public string Category { get; set; } = "other";
+    /// <summary>in-force or repealed.</summary>
+    public string Status { get; set; } = "in-force";
+    /// <summary>JSON list of wordings, current first, each with when and by which resolution it was adopted.</summary>
+    public string Versions { get; set; } = "[]";
+    public DateOnly? RepealedAt { get; set; }
+    /// <summary>The resolution that repealed it.</summary>
+    public string? RepealedBy { get; set; }
+}
+
+/// <summary>A scheme's rule book: the registered rules PDFs, and what owners were last given (JSON).</summary>
+public sealed class RuleBookRow
+{
+    public Guid SchemeId { get; set; }
+    public Guid OrganisationId { get; set; }
+    public string Json { get; set; } = "{}";
+}
+
+/// <summary>A reported breach of a rule and the warnings sent (doc 15 §6). Humo PM doesn't levy fines.</summary>
+public sealed class BreachRow
+{
+    public Guid Id { get; set; }
+    public Guid OrganisationId { get; set; }
+    public Guid SchemeId { get; set; }
+    public int Version { get; set; } = 1;
+    /// <summary>"BR-1001": numbered per organisation.</summary>
+    public string Ref { get; set; } = "";
+    public int Number { get; set; }
+    public Guid RuleId { get; set; }
+    public Guid UnitId { get; set; }
+    /// <summary>Who the letters go to: the owner, or the tenant when they're the one in breach.</summary>
+    public Guid PersonId { get; set; }
+    public string Description { get; set; } = "";
+    public DateOnly OccurredAt { get; set; }
+    public string ReportedBy { get; set; } = "";
+    /// <summary>open, warned, final-warning, with-trustees or resolved.</summary>
+    public string Status { get; set; } = "open";
+    public DateOnly? RemedyBy { get; set; }
+    /// <summary>JSON list of what happened, oldest first.</summary>
+    public string Events { get; set; } = "[]";
+    public string AssigneeId { get; set; } = "";
+}

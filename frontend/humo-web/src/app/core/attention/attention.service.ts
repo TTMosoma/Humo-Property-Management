@@ -1,5 +1,5 @@
 import { Injectable, computed, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import { AGENCY_WORK, Role, WorkItem, WorkItemDataSource, WorkItemType, agencyConflict, isOpen } from '../../domain';
 import { ScopeService } from '../scope/scope.service';
 import { loadable } from '../data/loadable';
@@ -39,7 +39,7 @@ export class AttentionService {
   private readonly source = inject(WorkItemDataSource);
 
   /** Live: emits again whenever a work item changes (HTTP: re-fetched or pushed). */
-  private readonly items = loadable(() => this.source.watch());
+  private readonly items = loadable(() => (this.session.dataOwner() ? this.source.watch() : of([] as WorkItem[])));
   private readonly all = computed(() => this.items.value() ?? []);
   /** For queues that show the work items themselves (Tasks, Approvals). */
   readonly status = this.items.status;

@@ -81,7 +81,7 @@ Checkpoint 10 builds the remaining pages that showed the "Not built yet" card: C
 **Rules register (per scheme):**
 - Every rule has a number, category, current wording, adoption date and **the resolution that adopted it**, plus its earlier versions.
 - **Add:** cites a passed resolution, or is *captured from the registered rules* during onboarding.
-- **Amend / Repeal:** must cite a passed resolution. Repealed rules stay in the register.
+- **Amend / Repeal:** must cite a passed resolution. With Meetings & AGMs, one that isn't in the register can be typed from the minutes with its date (D31). Repealed rules stay in the register.
 - **Share with owners:** publishes the rule book as a readable document in Documents (visible to owners and residents) and archives the previous copy. The page warns when rules have changed since the last share.
 - **Upload rules PDF** (added 12 Oct 2026): the scheme’s **registered rules** as a PDF, the official document.
   - **Captured with it:** when the rules took effect, and how they were adopted (“Registered with the CSOS”, or the AGM resolution).
@@ -105,6 +105,12 @@ Checkpoint 10 builds the remaining pages that showed the "Not built yet" card: C
 - **No fines.** Humo Property Management records breaches and warnings only; consequences are the trustees' decision.
 - **Repeat breaches** of the same rule at the same unit are counted.
 - **Permission:** new `Rules.Enforce` (Agency Administrator, Portfolio Manager). Rules and boards are changed with `Meetings.Manage`.
+
+**On the API (2 November 2026).** Rules, the rule book and the breach log are server-side, and the plan and role are enforced there, for reading too. What differs from the prototype:
+- **Sharing prints a PDF** of the rules in force, because Documents holds PDFs. If it can't be printed, nothing is shared and the screen says so.
+- **A warning by email needs an email address on record**, otherwise it's refused and the screen suggests post. The letter is recorded in Communications › Sent with its delivery result.
+- **Referring to the trustees** raises the task and notifies the trustees who have a sign-in. The task stays with the breach's assignee: trustees don't have tasks of their own yet.
+- **The assignee** is the scheme's portfolio manager, or whoever covers them while they're away; with no manager, the person logging the breach.
 
 ## 7. Naming
 

@@ -18,8 +18,8 @@ public sealed record BoardSummaryDto(SchemeDto Scheme, int Size, int Minimum, st
 public sealed record BoardCandidateDto(string PersonId, string Name, IReadOnlyList<string> Units);
 
 /// <summary>
-/// The trustee board, the source of truth for trustee access (D2, doc 24 §6). Appointing a
-/// trustee who has a Humo sign-in gives them trustee access to the scheme; ending their term takes it away.
+/// The trustee board, the source of truth for trustee access (D2, doc 24 §6). A trustee with a
+/// Humo sign-in has trustee access to the scheme, whichever came first; it ends when their term does.
 /// </summary>
 public static class BoardEndpoints
 {
@@ -101,13 +101,13 @@ public static class BoardEndpoints
                         Since = PeopleEndpoints.ParseDate(a.Since)!.Value, AppointmentHow = a.How,
                         ResolutionRef = a.How == "elected" ? cited?.Ref ?? a.ResolutionId?.Trim() : null,
                     });
-                    await GrantAccess(db, scheme, personId, a.Portfolio!, actor.User.Name, ct);
+                    await PeopleEndpoints.SyncResidentAccessAsync(db, reads, personId, actor.User.Name, ct);
                     break;
                 case "end":
                     // The last day in office is the day before `on`.
                     target!.Until = PeopleEndpoints.ParseDate(a.On)!.Value.AddDays(-1);
                     target.EndReason = a.Reason!.Trim();
-                    await EndAccess(db, schemeId, target.PersonId, actor.User.Name, ct);
+                    await PeopleEndpoints.SyncResidentAccessAsync(db, reads, target.PersonId, actor.User.Name, ct);
                     break;
                 case "set-portfolio":
                     target!.Portfolio = a.Portfolio;
@@ -154,40 +154,6 @@ public static class BoardEndpoints
                 return new() { ["type"] = "Unknown board action." };
         }
         return e;
-    }
-
-    /// <summary>D2: an appointed trustee with a Humo sign-in gets trustee access to the scheme.</summary>
-    private static async Task GrantAccess(HumoDbContext db, Scheme scheme, Guid personId, string portfolio, string by, CancellationToken ct)
-    {
-        var key = personId.ToString();
-        var people = await db.Users.Include(u => u.Assignments).Include(u => u.Memberships)
-            .Where(u => u.PersonId == key && u.Kind == IdentityKinds.Customer && u.Status != IdentityStatuses.Deactivated).ToListAsync(ct);
-        foreach (var u in people)
-        {
-            if (u.Assignments.Any(x => x.Role == Roles.Trustee && x.Status == AssignmentStatuses.Active && x.SchemeIds.Contains(scheme.Id.ToString()))) continue;
-            if (!u.Memberships.Any(m => m.OrganisationId == scheme.OrganisationId && m.Status != MembershipStatuses.Ended))
-                db.Memberships.Add(new Membership { Id = Guid.CreateVersion7(), UserId = u.Id, OrganisationId = scheme.OrganisationId, Since = DateTimeOffset.UtcNow });
-            db.RoleAssignments.Add(new RoleAssignment
-            {
-                Id = Guid.CreateVersion7(), UserId = u.Id, Role = Roles.Trustee, ScopeType = ScopeTypes.Schemes, OrganisationId = scheme.OrganisationId,
-                SchemeIds = [scheme.Id.ToString()], Label = $"{scheme.Name} · {portfolio}", GrantedBy = $"{by} (board appointment)", GrantedAt = DateTimeOffset.UtcNow,
-            });
-        }
-    }
-
-    /// <summary>Leaving the board ends trustee access to that scheme.</summary>
-    private static async Task EndAccess(HumoDbContext db, Guid schemeId, Guid personId, string by, CancellationToken ct)
-    {
-        var key = personId.ToString();
-        var userIds = await db.Users.Where(u => u.PersonId == key).Select(u => u.Id).ToListAsync(ct);
-        var assignments = await db.RoleAssignments.Where(a => userIds.Contains(a.UserId) && a.Role == Roles.Trustee && a.Status == AssignmentStatuses.Active).ToListAsync(ct);
-        foreach (var a in assignments.Where(a => a.SchemeIds.Count == 1 && a.SchemeIds[0] == schemeId.ToString()))
-        {
-            a.Status = AssignmentStatuses.Ended;
-            a.EndedBy = $"{by} (left the board)";
-            a.EndedAt = DateTimeOffset.UtcNow;
-            a.Version++;
-        }
     }
 
     private static async Task<BoardViewDto> Board(Scheme scheme, PortfolioReads reads, HumoDbContext db, CancellationToken ct)

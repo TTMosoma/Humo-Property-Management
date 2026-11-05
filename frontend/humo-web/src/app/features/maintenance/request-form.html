@@ -38,7 +38,7 @@
       <label class="field">Scheme
         <select [value]="schemeId()" (change)="schemeId.set($any($event.target).value); unit.set(null)">
           <option value="">Choose a scheme…</option>
-          @for (s of scope.accessible(); track s.id) { <option [value]="s.id">{{ s.name }} ({{ s.code }})</option> }
+          @for (s of scope.accessible(); track s.id) { <option [value]="s.id" [selected]="s.id === schemeId()">{{ s.name }} ({{ s.code }})</option> }
         </select>
       </label>
     }
@@ -116,7 +116,7 @@
       <div class="row">
         <label class="field">Priority
           <select [value]="priority()" (change)="priority.set($any($event.target).value)">
-            @for (p of priorities; track p) { <option [value]="p">{{ priorityLabel[p] }}</option> }
+            @for (p of priorities; track p) { <option [value]="p" [selected]="p === priority()">{{ priorityLabel[p] }}</option> }
           </select>
         </label>
         <label class="field">Reported by
