@@ -9,7 +9,7 @@ import { SessionService } from '../../core/session/session.service';
 import { Logo } from '../../ui/brand/logo';
 import { PasskeySetup } from '../security/passkey-setup';
 
-type Step = 'start' | 'passkey' | 'no-passkey' | 'paused' | 'link-sent' | 'enter-code' | 'redeeming' | 'link-failed' | 'unavailable' | 'ask-trust' | 'add-passkey';
+type Step = 'start' | 'passkey' | 'no-passkey' | 'paused' | 'link-sent' | 'enter-code' | 'redeeming' | 'link-failed' | 'unavailable' | 'ask-trust' | 'add-passkey' | 'no-role';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const RESEND_AFTER_S = 30;
@@ -247,6 +247,12 @@ export class SignInPage {
 
   /** Signed in: ask once whether this browser is the person's own computer, otherwise carry on. */
   private signedIn(askTrust: boolean, next: 'done' | 'add-passkey'): void {
+    // The sign-in worked, but they hold no role anywhere: there's no page to send them to, so say so.
+    this.session.signedInAgain();
+    if (!this.session.signedIn()) {
+      this.step.set('no-role');
+      return;
+    }
     this.afterTrust = next;
     if (askTrust) this.step.set('ask-trust');
     else this.carryOn();
