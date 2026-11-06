@@ -94,15 +94,18 @@ export function newPersonForm(drawer: DrawerService, people: PersonDataSource, u
   });
 }
 
-export function editPersonForm(drawer: DrawerService, people: PersonDataSource, p: Person): void {
+/** `signsIn` (D34): their sign-in moves only once the new address confirms it. */
+export function editPersonForm(drawer: DrawerService, people: PersonDataSource, p: Person, signsIn = false): void {
   openForm(drawer, {
     eyebrow: p.displayName,
     title: 'Edit contact details',
-    fields: PERSON_FIELDS,
+    fields: signsIn
+      ? PERSON_FIELDS.map((f) => (f.key === 'email' ? { ...f, help: 'They sign in with this address. If you change it, the new address gets a link to confirm, and the old one is told. Nothing changes until they confirm.' } : f))
+      : PERSON_FIELDS,
     initial: { kind: p.kind, firstName: p.firstName, lastName: p.lastName, phone: p.phone, email: p.email, preferredChannel: p.preferredChannel, postalAddress: p.postalAddress ?? '' },
     submitLabel: 'Save details',
     submit: (v) => people.update(p.id, personDetails(v), p.version),
-    success: () => 'Contact details saved.',
+    success: (_id, v) => (signsIn && (v['email'] ?? '').trim().toLowerCase() !== p.email.toLowerCase() ? `Saved. ${v['email']} needs to confirm the change of email.` : 'Contact details saved.'),
     failure: 'The details weren’t saved',
   });
 }

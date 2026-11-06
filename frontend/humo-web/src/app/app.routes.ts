@@ -27,6 +27,12 @@ export const routes: Routes = [
     data: { mode: 'link' },
     loadComponent: () => import('./features/access/sign-in-page').then((m) => m.SignInPage),
   },
+  // D34: the link from a new email address. It needs no session: they may have lost the old address.
+  {
+    path: 'confirm-email',
+    title: 'Confirm your email',
+    loadComponent: () => import('./features/access/confirm-email-page').then((m) => m.ConfirmEmailPage),
+  },
   // The print routes (D8): the server's headless Chromium prints issued documents here. No session; a short-lived token.
   {
     path: 'print/statement/:token',

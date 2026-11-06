@@ -114,7 +114,7 @@ export function editPersonDetailsForm(drawer: DrawerService, access: AccessDataS
   openForm(drawer, {
     eyebrow: 'Users & access',
     title: `Edit ${who.name}`,
-    intro: 'Their sign-in email changes too. Passkeys and devices are theirs to manage, in their own Security settings.',
+    intro: 'If you change the email, you’ll confirm with your passkey, the new address gets a link to confirm, and the old one is told. Nothing changes until they confirm. Passkeys and devices are theirs to manage, in their own Security settings.',
     fields: [
       { key: 'name', label: 'Full name', type: 'text', required: true },
       { key: 'email', label: 'Email', type: 'email', required: true },
@@ -122,8 +122,9 @@ export function editPersonDetailsForm(drawer: DrawerService, access: AccessDataS
     ],
     initial: { name: who.name, email: who.email, title: who.title ?? '' },
     submitLabel: 'Save',
+    stepUp: (v) => ({ action: 'change-roles', detail: `Change ${who.name}’s sign-in email to ${v['email']}` }),
     submit: (v) => access.updateIdentity(who.id, { name: v['name'], email: v['email'], title: v['title'] }, who.version),
-    success: () => 'Details saved.',
+    success: (_id, v) => ((v['email'] ?? '').trim().toLowerCase() !== who.email.toLowerCase() ? `Saved. ${v['email']} needs to confirm the change of email.` : 'Details saved.'),
     failure: 'The details weren’t saved',
   });
 }

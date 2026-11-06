@@ -176,7 +176,7 @@ public static partial class AccessEndpoints
 
     // ---- Details and membership ----
 
-    private static async Task<IResult> UpdateIdentity(Guid id, IdentityDetailsRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, CancellationToken ct)
+    private static async Task<IResult> UpdateIdentity(Guid id, IdentityDetailsRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, EmailChanges changes, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         var user = await Target(db, actor, id, ct);
@@ -184,13 +184,18 @@ public static partial class AccessEndpoints
         var address = (body.Email ?? "").Trim().ToLowerInvariant();
         var taken = await db.Users.AnyAsync(u => u.Id != id && u.NormalizedEmail == address.ToUpperInvariant(), ct);
         var name = Regex.Replace((body.Name ?? "").Trim(), @"\s+", " ");
+        // D34: moving a sign-in needs a passkey, and the new address confirms it before anything changes.
+        var emailChanged = !string.Equals(address, user.Email, StringComparison.OrdinalIgnoreCase);
+        var action = emailChanged ? $"Updated {name}’s details: asked to change their sign-in email from {user.Email} to {address}" : $"Updated {name}’s details";
 
-        return await commands.RunAsync(new CommandSpec($"Updated {name}’s details", "Users.Manage")
+        return await commands.RunAsync(new CommandSpec(action, "Users.Manage")
         {
             Resource = "Identity",
             ResourceId = id.ToString(),
             ExpectedVersion = body.ExpectedVersion,
             CurrentVersion = user.Version,
+            Category = emailChanged ? "security" : "activity",
+            StepUp = emailChanged ? true : null,
             Validate = () =>
             {
                 var e = new Dictionary<string, string>();
@@ -200,18 +205,14 @@ public static partial class AccessEndpoints
                 else if (user.Kind == IdentityKinds.Customer && HumoEmail.IsHumoAddress(address)) e["email"] = "That’s a Humo staff address. Use the person’s own email.";
                 return e;
             },
-        }, _ =>
+        }, async a =>
         {
             user.Name = name;
-            user.Email = address;
-            user.UserName = address;
-            user.NormalizedEmail = address.ToUpperInvariant();
-            user.NormalizedUserName = address.ToUpperInvariant();
             user.Title = string.IsNullOrWhiteSpace(body.Title) ? null : body.Title.Trim();
             user.Version++;
-            // Changing the sign-in email ends their other sessions (Identity's security stamp).
-            user.SecurityStamp = Guid.NewGuid().ToString();
-            return Task.FromResult(Results.NoContent());
+            if (emailChanged)
+                await changes.RequestAsync(user, Guid.TryParse(user.PersonId, out var person) ? person : null, a.OrganisationId, address, a.Human.Name, commands, ct);
+            return Results.NoContent();
         }, ct);
     }
 

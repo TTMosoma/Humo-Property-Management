@@ -12,6 +12,39 @@
   }
 </ui-page-header>
 
+@if (emailReview.value(); as review) {
+  @if (review.mismatches.length) {
+    <section class="surface email-review">
+      <h2>Two email addresses on record</h2>
+      <p class="muted">Statements go to the contact email; sign-in links and invitations go to the sign-in email. Choose which is right for each person.</p>
+      <ul>
+        @for (m of review.mismatches; track m.identityId) {
+          <li>
+            <span class="who"><strong>{{ m.name }}</strong><br /><span class="muted">Contact: {{ m.contactEmail }} · Sign-in: {{ m.signInEmail }}</span></span>
+            <span class="actions">
+              <button type="button" class="btn btn-secondary btn-sm" (click)="resolve(m, 'sign-in')">Use {{ m.signInEmail }}</button>
+              <button type="button" class="btn btn-ghost btn-sm" (click)="resolve(m, 'contact')">Ask {{ m.contactEmail }} to confirm</button>
+            </span>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+  @if (review.pending.length) {
+    <section class="surface email-review">
+      <h2>Waiting for a new email to be confirmed</h2>
+      <ul>
+        @for (c of review.pending; track c.id) {
+          <li>
+            <span class="who"><strong>{{ c.name }}</strong><br /><span class="muted">{{ c.oldEmail }} to {{ c.newEmail }} · asked for by {{ c.requestedBy }}</span></span>
+            <span class="actions"><button type="button" class="btn btn-ghost btn-sm" (click)="cancelEmailChange(c.id)">Cancel</button></span>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+}
+
 <ui-view-tabs [tabs]="tabs()" [active]="state().view ?? 'agency'" (activeChange)="set('view', $event)" label="People by role" />
 
 <div class="toolbar">

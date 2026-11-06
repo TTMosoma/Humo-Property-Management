@@ -47,6 +47,7 @@ Each entry records:
 | D31 | Amending or repealing a rule with Meetings & AGMs: a resolution that isn’t in the register can be typed from the minutes (changes D29 point 5) | Governance |
 | D32 | What Finance can read: financial work and records, plus resolutions and a job opened from its invoice; no breaches, meetings, boards or compliance. A person doing both jobs holds both roles | Identity, finance, governance |
 | D33 | Someone with no property left at an agency keeps a sign-in and sees who to contact, plus their own past statements, read-only (a *Former resident* role). Individuals can't add units | Identity, owner portal |
+| D34 | One email address per person: a sign-in moves only when the new address confirms it, the old one is told, and the audit log records what it changed from and to | Identity, security |
 
 ---
 
@@ -735,7 +736,7 @@ When someone's last role at an agency ended, Humo PM treated them as signed out,
 2. **They keep what's theirs, read-only:** the statements addressed to them, what they used to hold, and their own profile and security. Nothing of the scheme: no notices, jobs, documents or messages.
 3. **Individuals can't add units.** Humo PM stays a system for managing agencies.
 4. **This is a role, *Former resident* (`past-resident`).** It adds a fixed role (D4). Nobody grants it: it follows when someone with an owner, tenant or trustee role has no active role left at that agency, including when an ownership ends on a future date.
-5. **Only for people who had a resident role.** A staff member whose last role ends is unchanged.
+5. **Only for people who had a resident role.** Anyone else with no role left, such as a staff member, is told at sign-in that they don't have access at the moment.
 6. **An administrator can end it** in Users & access, and then it stays ended. If they become an owner again, they land on that role, and can still switch to see the past.
 7. **It doesn't use the agency's allowance** of people with a sign-in.
 8. **No landlord app link for now.** That app doesn't exist yet; ask before adding one.
@@ -746,6 +747,33 @@ When someone's last role at an agency ended, Humo PM treated them as signed out,
 - **Retention isn't decided:** there's no time limit on this access. It should follow the POPIA retention decision still blank in docs/26 §3.
 - An owner who sells one unit and keeps another isn't a former resident, so they don't see the sold unit's statements. That's a possible follow-up.
 - The simulation doesn't move anyone to this role when a role ends.
+
+---
+
+## D34 — Changing someone's email (5 November 2026)
+
+**Status:** approved by the product owner (Terry Mosoma).
+
+Each person had two addresses that didn't know about each other: a contact email in People (statements, letters, messages) and a sign-in email in Users & access (sign-in links, invitations, work notices). Editing one left the other behind, so a person's new address got nothing. Whoever controls a sign-in's email can sign in with an email link, so simply linking them would let one typo, or one dishonest edit, hand over someone's account. The audit log said only that details were updated, not what changed.
+
+**Decision:**
+1. **Changing an email is allowed.** There's one address per person.
+2. **No sign-in:** it takes effect straight away.
+3. **Has a sign-in:** the new address gets a link to confirm, for 7 days, and the old address is told. Nothing changes until the link is used, statements included. Then both records change together, other sessions end, sign-in links still out stop working, and passkeys stay. The old address is told again.
+4. **Staff:** the same from Users & access, and the administrator also confirms with a passkey.
+5. **Only the new address has to confirm**, so someone who lost the old mailbox can still move.
+6. **An address another sign-in uses is refused**, when asked and again when confirmed. A newer request replaces the old link, and staff can cancel one.
+7. **The audit log says what changed:** the old and new email and mobile, which other details changed, who asked, and when it was confirmed or cancelled.
+8. **Records that already disagree** are listed for administrators in Users & access, who choose: keep the sign-in address (it's proven, so it applies at once), or ask the contact address to confirm (with a passkey).
+
+**Consequences:**
+- API: `POST /auth/email-change/confirm`, `GET /people/{id}/email-change`, `POST /email-changes/{id}/cancel`, `GET /access/email-review`, `POST /access/identities/{id}/email-mismatch`.
+- An unresponsive owner stays on the old address. The record shows the change is waiting.
+- A sign-in that spans several agencies moves everywhere, but only the contact address on its linked record changes.
+- Humo's own staff aren't covered: their addresses are on Humo's domain and managed by a System Administrator. Those edits are audited with the old and new address.
+- Owners changing their own email in My profile is left for later; it would use the same confirmation.
+- The simulation still changes an email straight away and sends nothing.
+- Rows already in the audit log can't be improved; they stay as written.
 
 ## Still open (needs domain expertise before slice 2)
 

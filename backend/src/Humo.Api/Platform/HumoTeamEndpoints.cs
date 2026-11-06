@@ -128,7 +128,8 @@ public static partial class HumoTeamEndpoints
         var name = Regex.Replace((body.Name ?? "").Trim(), @"\s+", " ");
         var taken = await db.Users.AnyAsync(u => u.Id != id && u.NormalizedEmail == address.ToUpperInvariant(), ct);
 
-        return await commands.RunAsync(new CommandSpec($"Updated {name}’s details", "Platform.ManageHumoRoles")
+        var action = string.Equals(address, target.Email, StringComparison.OrdinalIgnoreCase) ? $"Updated {name}’s details" : $"Updated {name}’s details: sign-in email {target.Email} to {address}";
+        return await commands.RunAsync(new CommandSpec(action, "Platform.ManageHumoRoles")
         {
             Resource = "Humo team",
             ResourceId = id.ToString(),

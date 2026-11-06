@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, map, switchMap, tap } from 'rxjs';
-import { AccessDataSource, Identity, ImpersonationMode, ImpersonationReason, ImpersonationSession, NewAssignment, Passkey, SessionDataSource } from '../domain';
+import { AccessDataSource, EmailReview, Identity, ImpersonationMode, ImpersonationReason, ImpersonationSession, NewAssignment, Passkey, SessionDataSource } from '../domain';
 import { HttpPort } from './http-port';
 import { HttpSessionDataSource } from './http-session-data-source';
 
@@ -34,8 +34,20 @@ export class HttpAccessDataSource extends HttpPort implements AccessDataSource {
     return this.createId('/access/invitations', input, ['access', 'people', 'units']);
   }
 
+  emailReview(): Observable<EmailReview> {
+    return this.live<EmailReview>('/access/email-review', ['access', 'people']);
+  }
+
+  resolveEmailMismatch(identityId: string, use: 'sign-in' | 'contact'): Observable<void> {
+    return this.command('POST', `/access/identities/${identityId}/email-mismatch`, { use }, ['access', 'people']);
+  }
+
+  confirmEmailChange(token: string): Observable<string> {
+    return this.command<{ email: string }>('POST', '/auth/email-change/confirm', { token }, ['access', 'people']).pipe(map((r) => r.email));
+  }
+
   updateIdentity(identityId: string, details: { name: string; email: string; title?: string }, expectedVersion?: number): Observable<void> {
-    return this.command('PUT', `/access/identities/${identityId}`, { ...details, expectedVersion }, ['access']);
+    return this.command('PUT', `/access/identities/${identityId}`, { ...details, expectedVersion }, ['access', 'people']);
   }
 
   setMembershipStatus(identityId: string, organisationId: string, status: 'active' | 'suspended' | 'ended', reason: string): Observable<void> {

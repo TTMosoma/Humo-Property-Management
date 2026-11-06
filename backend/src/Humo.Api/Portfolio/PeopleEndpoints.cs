@@ -101,28 +101,64 @@ public static partial class PeopleEndpoints
         }, ct);
     }
 
-    private static async Task<IResult> Update(Guid id, PersonDetailsRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, PortfolioReads reads, CancellationToken ct)
+    private static async Task<IResult> Update(Guid id, PersonDetailsRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, PortfolioReads reads, Access.EmailChanges changes, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         var visible = await reads.People(await reads.ReadableSchemes(actor, null, ct), q => q.Where(p => p.Id == id), ct);
         var person = visible.Count == 0 ? null : await db.People.FirstAsync(p => p.Id == id, ct);
         if (person is null) return Problems.NotFound();
         var emailTaken = await EmailOwner(db, person.OrganisationId, body.Email, id, ct);
+        // D34: their sign-in moves only once the new address confirms it. With no sign-in, the record just changes.
+        var address = (body.Email ?? "").Trim();
+        var emailChanged = !string.Equals(address, person.Email, StringComparison.OrdinalIgnoreCase);
+        var key = id.ToString();
+        var signIn = emailChanged ? await db.Users.FirstOrDefaultAsync(u => u.PersonId == key && u.Kind == IdentityKinds.Customer && u.Status != IdentityStatuses.Deactivated, ct) : null;
+        var signInTaken = signIn is not null && await db.Users.AnyAsync(u => u.Id != signIn.Id && u.NormalizedEmail == address.ToUpperInvariant(), ct);
 
-        return await commands.RunAsync(new CommandSpec($"Updated contact details for {body.FirstName?.Trim()} {body.LastName?.Trim()}", "People.Manage")
+        return await commands.RunAsync(new CommandSpec($"Updated contact details for {body.FirstName?.Trim()} {body.LastName?.Trim()}{Changes(person, body, signIn is not null)}", "People.Manage")
         {
             Resource = "Person",
             ResourceId = id.ToString(),
             ExpectedVersion = body.ExpectedVersion,
             CurrentVersion = person.Version,
-            Validate = () => CheckPerson(body, emailTaken),
-        }, _ =>
+            Validate = () =>
+            {
+                var e = CheckPerson(body, emailTaken);
+                if (signIn is not null && address.Length == 0) e["email"] = "They sign in with this email, so it can’t be blank.";
+                else if (signIn is not null && !e.ContainsKey("email") && signInTaken) e["email"] = "Someone else already signs in with this email.";
+                else if (signIn is not null && !e.ContainsKey("email") && Domain.Access.HumoEmail.IsHumoAddress(address)) e["email"] = "That’s a Humo staff address. Use the person’s own email.";
+                return e;
+            },
+        }, async a =>
         {
+            var current = person.Email;
             Apply(person, body);
             person.Version++;
-            return Task.FromResult(Results.NoContent());
+            if (signIn is not null)
+            {
+                person.Email = current;
+                await changes.RequestAsync(signIn, person.Id, person.OrganisationId, address.ToLowerInvariant(), a.Human.Name, commands, ct);
+            }
+            return Results.NoContent();
         }, ct);
     }
+
+    /// <summary>What an edit changes, for the audit log: who did it isn't enough to answer "who changed this address?".</summary>
+    private static string Changes(Person p, PersonDetailsRequest d, bool waitsForConfirmation)
+    {
+        var changes = new List<string>();
+        var name = $"{(d.FirstName ?? "").Trim()} {(d.LastName ?? "").Trim()}".Trim();
+        if (name != $"{p.FirstName} {p.LastName}".Trim()) changes.Add($"name was {$"{p.FirstName} {p.LastName}".Trim()}");
+        var email = (d.Email ?? "").Trim();
+        if (!string.Equals(email, p.Email, StringComparison.OrdinalIgnoreCase)) changes.Add($"email {Shown(p.Email)} to {Shown(email)}{(waitsForConfirmation ? " (waiting for them to confirm)" : "")}");
+        var phone = (d.Phone ?? "").Trim();
+        if (phone != p.Phone) changes.Add($"mobile {Shown(p.Phone)} to {Shown(phone)}");
+        if (d.PreferredChannel != p.PreferredChannel) changes.Add($"prefers {d.PreferredChannel}");
+        if ((string.IsNullOrWhiteSpace(d.PostalAddress) ? null : d.PostalAddress.Trim()) != p.PostalAddress) changes.Add("postal address");
+        return changes.Count == 0 ? "" : $": {string.Join(", ", changes)}";
+    }
+
+    private static string Shown(string value) => value.Length == 0 ? "(none)" : value;
 
     private static async Task<IResult> AddRelationship(Guid id, NewRelationshipRequest link, CurrentActor current, CommandRunner commands, HumoDbContext db, PortfolioReads reads, CancellationToken ct)
     {

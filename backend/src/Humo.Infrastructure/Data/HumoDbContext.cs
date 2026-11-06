@@ -76,6 +76,7 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
     public DbSet<RoleAssignment> RoleAssignments => Set<RoleAssignment>();
     public DbSet<AuditEntry> Audit => Set<AuditEntry>();
     public DbSet<SignInLink> SignInLinks => Set<SignInLink>();
+    public DbSet<EmailChange> EmailChanges => Set<EmailChange>();
     public DbSet<UserSession> UserSessions => Set<UserSession>();
     public DbSet<TrustedBrowser> TrustedBrowsers => Set<TrustedBrowser>();
     public DbSet<UploadedFile> UploadedFiles => Set<UploadedFile>();
@@ -305,6 +306,19 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.Property(x => x.Phone).HasMaxLength(30);
             e.Property(x => x.Version).IsConcurrencyToken();
             e.HasOne<Organisation>().WithOne().HasForeignKey<AgencySetting>(x => x.OrganisationId);
+        });
+
+        builder.Entity<EmailChange>(e =>
+        {
+            e.ToTable("EmailChanges");
+            e.Property(x => x.OldEmail).HasMaxLength(254);
+            e.Property(x => x.NewEmail).HasMaxLength(254);
+            e.Property(x => x.TokenHash).HasMaxLength(64);
+            e.Property(x => x.RequestedBy).HasMaxLength(200);
+            e.Property(x => x.CancelledBy).HasMaxLength(220);
+            e.HasIndex(x => x.TokenHash).IsUnique();
+            e.HasIndex(x => x.UserId);
+            e.HasOne<HumoUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         builder.Entity<DocumentSetting>(e =>

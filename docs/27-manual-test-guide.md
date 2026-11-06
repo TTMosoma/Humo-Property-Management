@@ -261,6 +261,23 @@ Restart the API first. Use a test owner who has signed in (Add an owner at Kingf
 - [ ] As Thandeka: Settings › Users & access › that person. **Expect:** *Former resident* shows and can be ended, and isn't offered when adding a role. End it on someone with nothing else. **Expect:** they can no longer get in.
 - [ ] As Thandeka: record a sale on a unit whose owner is signed in, using *They replace the owner*, with a date that's already passed. **Expect:** the seller's next reload shows the new page straight away.
 
+## 24. Changing someone's email (D34)
+
+Restart the API first. Check Mailpit (localhost:8025) for each email.
+
+- [ ] Sign in as `marike@mail.example`. **Expect:** her *Former resident* page ("You don't have any property registered under your name at the moment"), not a spinner.
+- [ ] As Thandeka: Settings › Users & access. **Expect:** *Two email addresses on record* lists Nadia Abdul with her contact and sign-in addresses. Choose *Use nadia@absa.example*. **Expect:** she leaves the list, and her People record shows that address.
+- [ ] As Thandeka: People › Nadia Abdul › *Edit details*. **Expect:** the Email field explains that the new address has to confirm. Change it to a new address and save. **Expect:** a toast says it needs confirming, a banner on her page says who it's waiting for, and her email hasn't changed.
+- [ ] Mailpit. **Expect:** the new address has a confirmation link, and the old one has "A change of email was requested", naming the new address.
+- [ ] As Thandeka: Settings › Audit log. **Expect:** "Updated contact details for Nadia Abdul: email … to … (waiting for them to confirm)".
+- [ ] Before confirming, send her a statement or sign in as her with an email link. **Expect:** it goes to the old address.
+- [ ] Open the link from the new address in a private window and choose *Confirm*. **Expect:** it says the email is changed; People shows the new address; the old address is told; a sign-in link now goes to the new address; the audit log has "Confirmed the change of email from … to …".
+- [ ] Open the same link again. **Expect:** refused: it was used already.
+- [ ] Change her email again, then *Cancel the change* on her page. **Expect:** the banner goes, and the link is refused.
+- [ ] Change her email to `thandeka@acacia.example`. **Expect:** refused: someone else signs in with it.
+- [ ] As Thandeka: People › an owner who hasn't signed in › change their email. **Expect:** it changes straight away, no email is sent, and the audit log has the old and new address.
+- [ ] As Thandeka: Settings › Users & access › Johan › edit his email. **Expect:** it asks for your passkey, then waits for confirmation, and is listed under *Waiting for a new email to be confirmed*. Cancel it there.
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.

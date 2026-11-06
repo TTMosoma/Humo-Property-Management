@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { map } from 'rxjs';
-import { AccessDataSource, Person, PersonDataSource, RelationshipView, TimelineDataSource, TimelineEvent, UnitDataSource, todaySA } from '../../domain';
+import { AccessDataSource, Person, PersonDataSource, RelationshipView, describeFailure, TimelineDataSource, TimelineEvent, UnitDataSource, todaySA } from '../../domain';
 import { IonIcon } from '@ionic/angular/standalone';
 import { ScopeService } from '../../core/scope/scope.service';
 import { SessionService } from '../../core/session/session.service';
@@ -10,6 +10,7 @@ import { DrawerService } from '../../ui/drawer/drawer.service';
 import { editPersonForm, endRelationshipForm, linkPersonForm } from './person-forms';
 import { ResidentInvite, inviteResidentForm } from '../access/user-forms';
 import { loadable } from '../../core/data/loadable';
+import { FeedbackService } from '../../core/feedback/feedback.service';
 import { formatRand } from '../../ui/format/money';
 import { KeyFact, RecordHeader } from '../../ui/record/record-header';
 import { EmptyState } from '../../ui/states/empty-state';
@@ -55,6 +56,15 @@ import { AttachmentsPanel } from '../library/attachments-panel';
           </ng-container>
         }
       </ui-record-header>
+      @if (emailState.value()?.pending; as change) {
+        <p class="surface email-change" role="status">
+          <ion-icon name="mail-outline" aria-hidden="true" />
+          <span>Waiting for <strong>{{ change.newEmail }}</strong> to confirm. Statements and sign-in links keep going to {{ change.oldEmail }} until then. Asked for by {{ change.requestedBy }}.</span>
+          @if (canManage()) {
+            <button type="button" class="btn btn-ghost btn-sm" (click)="cancelEmailChange(change.id)">Cancel the change</button>
+          }
+        </p>
+      }
       <div class="grid">
         <div class="main">
           <section class="surface panel">
@@ -98,6 +108,8 @@ import { AttachmentsPanel } from '../library/attachments-panel';
     dl { display: grid; grid-template-columns: 140px 1fr; gap: var(--s-2) var(--s-4); margin: 0; font-size: var(--fs-sm); }
     dt { color: var(--c-text-muted); }
     dd { margin: 0; }
+    .email-change { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3); margin: 0 0 var(--s-4); padding: var(--s-3) var(--s-5); border-left: 3px solid var(--c-info); font-size: var(--fs-sm); }
+    .email-change span { flex: 1; min-width: 240px; }
     .tl { margin-top: var(--s-5); padding-top: var(--s-4); border-top: 1px solid var(--c-border); }
     @media (max-width: 1100px) { .grid { grid-template-columns: 1fr; } }
   `,
@@ -111,6 +123,7 @@ export class PersonPage {
   private readonly session = inject(SessionService);
   private readonly scope = inject(ScopeService);
   private readonly access = inject(AccessDataSource);
+  private readonly feedback = inject(FeedbackService);
 
   protected readonly canManage = computed(() => this.session.can('People.Manage') && !this.session.readOnly());
 
@@ -130,8 +143,18 @@ export class PersonPage {
     if (org) inviteResidentForm(this.drawer, this.access, org.id, org.shortName, p, this.invites());
   }
 
+  /** D34: whether they sign in, and any change of email still waiting. */
+  protected readonly emailState = loadable(() => this.people.emailState(this.id()));
+
   protected edit(p: Person): void {
-    editPersonForm(this.drawer, this.people, p);
+    editPersonForm(this.drawer, this.people, p, !!this.emailState.value()?.signsIn);
+  }
+
+  protected cancelEmailChange(id: string): void {
+    this.people.cancelEmailChange(id).subscribe({
+      next: () => this.feedback.success('The change of email was cancelled.'),
+      error: (e) => this.feedback.error(describeFailure(e, 'The change wasn’t cancelled')),
+    });
   }
 
   protected link(p: Person): void {
