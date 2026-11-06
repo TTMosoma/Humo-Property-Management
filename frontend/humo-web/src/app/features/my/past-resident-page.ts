@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { PastHome, PastResidentDataSource } from '../../domain';
+import { PastHome, PastResidentDataSource, PastStatement } from '../../domain';
 import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
 import { formatDate } from '../../ui/format/money';
@@ -46,10 +46,10 @@ const HOME_LABEL: Record<PastHome['type'], string> = { owner: 'Owner', tenant: '
             <section class="surface block">
               <h2>Your past statements</h2>
               <ul class="list">
-                @for (s of v.statements; track s.id) {
+                @for (s of v.statements; track s.accountId + s.period) {
                   <li>
-                    <span><strong>{{ s.periodLabel }}</strong> · {{ s.scheme }}, Unit {{ s.unit }}</span>
-                    @if (pdfUrl(s.id); as url) { <a class="btn btn-secondary btn-sm" [href]="url" target="_blank" rel="noopener"><ion-icon name="download-outline" aria-hidden="true" /> PDF</a> }
+                    <span><strong>{{ s.periodLabel }}</strong> · {{ s.scheme }}, Unit {{ s.unit }}@if (!s.issuedOn) { <span class="muted"> · not sent at the time</span> }</span>
+                    @if (pdfUrl(s); as url) { <a class="btn btn-secondary btn-sm" [href]="url" target="_blank" rel="noopener"><ion-icon name="download-outline" aria-hidden="true" /> PDF</a> }
                   </li>
                 }
               </ul>
@@ -96,7 +96,7 @@ export class PastResidentPage {
   protected readonly homeLabel = HOME_LABEL;
   protected readonly formatDate = formatDate;
 
-  protected pdfUrl(statementId: string): string | undefined {
-    return this.source.pdfUrl(statementId);
+  protected pdfUrl(statement: PastStatement): string | undefined {
+    return this.source.pdfUrl(statement);
   }
 }

@@ -120,8 +120,8 @@ export abstract class InboxDataSource {
 /** D33: someone with no property left at this agency. Reads only: GET /me/past-resident. */
 export abstract class PastResidentDataSource {
   abstract view(): Observable<PastResidentView>;
-  /** Where a past statement's stored PDF downloads from; none in the simulation. */
-  pdfUrl(_statementId: string): string | undefined {
+  /** Where a past month's statement PDF downloads from (issued then, or issued when they open it); none in the simulation. */
+  pdfUrl(_statement: PastStatement): string | undefined {
     return undefined;
   }
 }
@@ -135,13 +135,15 @@ export interface PastHome {
 }
 
 export interface PastStatement {
-  id: string;
+  /** Set when a statement was issued to them for the month. */
+  id: string | null;
+  accountId: string;
   period: string;
   periodLabel: string;
   accountNo: string;
   scheme: string;
   unit: string;
-  issuedOn: string;
+  issuedOn: string | null;
 }
 
 export interface PastResidentView {

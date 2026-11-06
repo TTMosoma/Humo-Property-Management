@@ -187,6 +187,22 @@ public sealed class ResidentAccessTests : IDisposable
     }
 
     [Fact]
+    public async Task A_purchase_dated_next_week_gives_access_to_that_unit_on_that_day()
+    {
+        var o = await AnInvitedOwner();
+        var second = Guid.Parse((await (await o.Admin.PostAsJsonAsync($"/api/schemes/{o.Scheme}/units", new { number = "10", description = "2-bed", sizeM2 = 80, participationQuota = 1, monthlyLevy = 2150, occupancy = "owner-occupied" })).Json())
+            .GetProperty("id").GetString()!);
+        Assert.True((await o.Admin.PostAsJsonAsync($"/api/people/{o.Person}/relationships", new { type = "owner", schemeId = o.Scheme.ToString(), unitId = second.ToString(), since = Day(7) })).IsSuccessStatusCode);
+        async Task<int> OwnerRoles() => await api.Db(db => db.RoleAssignments.CountAsync(a => a.Role == Roles.Owner && a.Status == AssignmentStatuses.Active && a.UnitId == second.ToString()));
+
+        Assert.Equal(0, await OwnerRoles());
+
+        api.Clock.Advance(TimeSpan.FromDays(8));
+        await Sweep();
+        Assert.Equal(1, await OwnerRoles());
+    }
+
+    [Fact]
     public async Task Leaving_the_board_while_still_an_owner_only_takes_trustee_access_away()
     {
         var o = await AnInvitedOwner();

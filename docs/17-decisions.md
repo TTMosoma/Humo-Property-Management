@@ -48,6 +48,7 @@ Each entry records:
 | D32 | What Finance can read: financial work and records, plus resolutions and a job opened from its invoice; no breaches, meetings, boards or compliance. A person doing both jobs holds both roles | Identity, finance, governance |
 | D33 | Someone with no property left at an agency keeps a sign-in and sees who to contact, plus their own past statements, read-only (a *Former resident* role). Individuals can't add units | Identity, owner portal |
 | D34 | One email address per person: a sign-in moves only when the new address confirms it, the old one is told, and the audit log records what it changed from and to | Identity, security |
+| D35 | When a unit is sold: each month's statement belongs to whoever owned it that month; the buyer sees the account from their start date; the seller keeps every month they owned; nothing changes until the transfer date | Finance, owner portal |
 
 ---
 
@@ -774,6 +775,26 @@ Each person had two addresses that didn't know about each other: a contact email
 - Owners changing their own email in My profile is left for later; it would use the same confirmation.
 - The simulation still changes an email straight away and sends nothing.
 - Rows already in the audit log can't be improved; they stay as written.
+
+---
+
+## D35 — When a unit changes hands (6 November 2026)
+
+**Status:** approved by the product owner (Terry Mosoma).
+
+A unit's levy account stays with the unit when it's sold, so its history goes with it. Joseph Jackson, who buys Die Eike unit 3 on 20 November, could already see Marike du Toit's months on it, and a statement issued today for September was addressed to him. Marike, the seller, saw none of her statements. A sale dated in the future also took effect at once.
+
+**Decision:**
+1. **A statement belongs to whoever owned the unit that month:** the owner on its last day (the account holder first, if it's owned jointly), or the last owner before a gap between owners. Sending one for a seller's month goes to the seller.
+2. **The buyer sees the account from their start date:** "Balance when you took over", then their own months. They can't open a statement for a month before that. Before a transfer is registered the scheme normally confirms the levies are paid, so that balance is usually nil; if not, the agency resolves it with the seller.
+3. **The seller sees every month they owned, read-only,** on their *Former resident* page. A month whose statement was never sent to them is issued to them when they open it, and kept like any issued statement (D7).
+4. **Nothing changes until the transfer date.** The buyer's access and the account hand-over both wait for it, and between owners the account stays with the seller.
+5. **A statement addressed to someone who didn't own the unit that month** is kept on record as replaced (a migration does this for ones already issued), so the right owner's can be issued.
+
+**Consequences:**
+- An owner, tenant or trustee whose start date is still to come has no access until that day. Before, only the end date was checked.
+- A month split by a sale belongs to whoever owned it on its last day. Lines from earlier in the buyer's first month still show to the buyer.
+- An owner who sells one unit and keeps another still doesn't see the sold unit's statements (left from D33).
 
 ## Still open (needs domain expertise before slice 2)
 

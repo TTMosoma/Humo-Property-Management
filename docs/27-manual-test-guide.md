@@ -278,6 +278,17 @@ Restart the API first. Check Mailpit (localhost:8025) for each email.
 - [ ] As Thandeka: People › an owner who hasn't signed in › change their email. **Expect:** it changes straight away, no email is sent, and the audit log has the old and new address.
 - [ ] As Thandeka: Settings › Users & access › Johan › edit his email. **Expect:** it asks for your passkey, then waits for confirmation, and is listed under *Waiting for a new email to be confirmed*. Cancel it there.
 
+## 25. When a unit changes hands (D35)
+
+Restart the API first, so the migration runs, and wait a minute.
+
+- [ ] As Thandeka: Die Eike › Unit 3 › account. **Expect:** the account is held by Marike du Toit until Joseph Jackson's ownership starts on 20 November.
+- [ ] Sign in as `joseph@mail.example`. **Expect:** no owner role for unit 3 yet (he's still a trustee). After 20 November, *My account* starts with "Balance when you took over" and shows no August to October months.
+- [ ] Sign in as `marike@mail.example`. **Expect:** *Your past statements* lists September and October 2026 for Unit 3, marked "not sent at the time". Open September's PDF. **Expect:** it's addressed to her.
+- [ ] As Thandeka: send the September statement for DE-003. **Expect:** Mailpit has it for Marike, not Joseph.
+- [ ] As Thandeka: on another unit with an owner who signs in, record a sale with *They replace the owner*, dated next week. **Expect:** the seller keeps access and the account; the buyer has neither until that day.
+- [ ] Record a sale dated last week instead. **Expect:** the account moves to the buyer, and the buyer's account starts with "Balance when you took over".
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.

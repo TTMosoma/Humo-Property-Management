@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
-import { NewCover, PastResidentDataSource, PastResidentView, StaffDataSource, StaffDetail, StaffSummary } from '../domain';
+import { NewCover, PastResidentDataSource, PastResidentView, PastStatement, StaffDataSource, StaffDetail, StaffSummary } from '../domain';
 import { HttpPort } from './http-port';
 
 /**
@@ -13,8 +13,8 @@ export class HttpPastResidentDataSource extends HttpPort implements PastResident
     return this.live<PastResidentView>('/me/past-resident', ['session', 'people']);
   }
 
-  pdfUrl(statementId: string): string {
-    return `${this.base}/me/past-resident/statements/${statementId}/pdf`;
+  pdfUrl(s: PastStatement): string {
+    return s.id ? `${this.base}/me/past-resident/statements/${s.id}/pdf` : `${this.base}/me/past-resident/accounts/${s.accountId}/statements/${s.period}/pdf`;
   }
 }
 

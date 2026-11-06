@@ -6,6 +6,7 @@ using System.Text.Json;
 using Humo.Domain.Access;
 using Humo.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Humo.Api.Tests;
 
@@ -200,6 +201,83 @@ public sealed class StatementTests : IDisposable
             (issuedView.GetProperty("branding").GetProperty("logo").GetProperty("text").GetString(), issuedView.GetProperty("documentSettings").GetProperty("footerText").GetString()));
     }
 
+    /// <summary>A month's levy on Sipho's account, before the sale.</summary>
+    private Task<int> Levy(Setup s, string date, decimal amount = 1850) => api.Db(async db =>
+    {
+        db.Ledger.Add(new LedgerEntry { Id = Guid.CreateVersion7(), AccountId = s.Account42, Date = DateOnly.Parse(date), Type = "levy", Description = $"Levy {date[..7]}", Amount = amount,
+            CreatedAt = api.Clock.GetUtcNow(), CreatedBy = "test" });
+        return await db.SaveChangesAsync();
+    });
+
+    private async Task<Guid> Unit42(Setup s) => await api.Db(db => db.LevyAccounts.Where(a => a.Id == s.Account42).Select(a => a.UnitId).SingleAsync());
+
+    private async Task<HttpStatusCode> SellTo(Setup s, string since) => (await s.Admin.PostAsJsonAsync("/api/people", new
+    {
+        details = new { firstName = "Tshwari", lastName = "Mosoma", kind = "individual", email = "tshwari@mail.example", phone = "078 587 3841", preferredChannel = "email" },
+        link = new { type = "owner", schemeId = s.Kc.ToString(), unitId = (await Unit42(s)).ToString(), since, ownership = "replaces" },
+    })).StatusCode;
+
+    /// <summary>A sign-in for someone in the directory, holding the owner's role for unit 42.</summary>
+    private async Task<HttpClient> SignInAs(Setup s, string email, string name)
+    {
+        var org = await api.Db(db => db.Schemes.Where(x => x.Id == s.Kc).Select(x => x.OrganisationId).SingleAsync());
+        var unit = await Unit42(s);
+        var person = await api.Db(db => db.People.Where(p => p.Email == email).Select(p => p.Id).SingleAsync());
+        await api.Db(async db =>
+        {
+            var u = new HumoUser { Id = Guid.CreateVersion7(), UserName = email, Email = email, NormalizedEmail = email.ToUpperInvariant(), Name = name, SecurityStamp = Guid.NewGuid().ToString(),
+                Kind = IdentityKinds.Customer, Status = IdentityStatuses.Active, PersonId = person.ToString() };
+            db.Users.Add(u);
+            db.Memberships.Add(new Membership { Id = Guid.CreateVersion7(), UserId = u.Id, OrganisationId = org, Since = DateTimeOffset.UtcNow });
+            db.RoleAssignments.Add(new RoleAssignment { Id = Guid.CreateVersion7(), UserId = u.Id, Role = Roles.Owner, ScopeType = ScopeTypes.Unit, OrganisationId = org, SchemeIds = [s.Kc.ToString()], UnitId = unit.ToString(), Label = "Kingfisher Court · Unit 42" });
+            return await db.SaveChangesAsync();
+        });
+
+        return await api.SignedIn(email);
+    }
+
+    private Task<Guid?> HolderOf(Setup s) => api.Db(db => db.LevyAccounts.Where(a => a.Id == s.Account42).Select(a => a.HolderPersonId).SingleAsync());
+
+    private Task<Guid> PersonCalled(string email) => api.Db(db => db.People.Where(p => p.Email == email).Select(p => p.Id).SingleAsync());
+
+    [Fact]
+    public async Task A_month_before_the_sale_goes_to_the_seller_and_the_buyer_sees_only_their_own_months()
+    {
+        var s = await Scheme();
+        await Levy(s, "2026-09-01");
+        await Levy(s, "2026-10-05");
+        Assert.Equal(HttpStatusCode.Created, await SellTo(s, "2026-10-01"));
+
+        // September was Sipho's, so its statement goes to him though Tshwari holds the account now.
+        Assert.Equal(HttpStatusCode.OK, (await s.Finance.PostAsync($"/api/accounts/{s.Account42}/statements/2026-09/send", null)).StatusCode);
+        await HumoApiFactory.Until(() => api.Email.Sent.Any(m => m.To == "sipho@mail.example"));
+        Assert.DoesNotContain(api.Email.Sent, m => m.To == "tshwari@mail.example");
+
+        var buyer = await SignInAs(s, "tshwari@mail.example", "Tshwari Mosoma");
+        var account = await Ok(await buyer.GetAsync($"/api/accounts/{s.Account42}"));
+        var lines = account.GetProperty("transactions").EnumerateArray().ToList();
+        Assert.Equal(("Balance when you took over", 1850m), (lines[^1].GetProperty("description").GetString(), lines[^1].GetProperty("amount").GetDecimal()));
+        Assert.DoesNotContain(lines, l => l.GetProperty("description").GetString() == "Levy 2026-09");
+        Assert.DoesNotContain("2026-09", account.GetProperty("statementPeriods").EnumerateArray().Select(p => p.GetString()));
+        Assert.Equal(HttpStatusCode.NotFound, (await buyer.GetAsync($"/api/accounts/{s.Account42}/statements/2026-09")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await buyer.GetAsync($"/api/accounts/{s.Account42}/statements/2026-10")).StatusCode);
+    }
+
+    [Fact]
+    public async Task A_sale_dated_later_leaves_the_account_with_the_seller_until_that_day()
+    {
+        var s = await Scheme();
+        var sipho = await PersonCalled("sipho@mail.example");
+        Assert.Equal(HttpStatusCode.Created, await SellTo(s, "2026-10-29"));
+        Assert.Equal(sipho, await HolderOf(s));
+
+        api.Clock.Advance(TimeSpan.FromDays(11));
+        using (var scope = api.Services.CreateScope())
+            await Portfolio.PeopleEndpoints.HandOverEndedAsync(scope.ServiceProvider.GetRequiredService<HumoDbContext>(), scope.ServiceProvider.GetRequiredService<Portfolio.PortfolioReads>(), CancellationToken.None);
+
+        Assert.Equal(await PersonCalled("tshwari@mail.example"), await HolderOf(s));
+    }
+
     [Fact]
     public async Task After_selling_an_owner_can_read_the_statements_addressed_to_them_and_no_others()
     {
@@ -217,6 +295,7 @@ public sealed class StatementTests : IDisposable
             return await db.SaveChangesAsync();
         });
         await PostedRun(s);
+        await Levy(s, "2026-09-01");
         Assert.Equal(HttpStatusCode.OK, (await s.Finance.PostAsync($"/api/accounts/{s.Account42}/statements/2026-11/send", null)).StatusCode);
 
         // Sold: the buyer holds the account, and gets their own statement for the month.
@@ -230,12 +309,16 @@ public sealed class StatementTests : IDisposable
         await HumoApiFactory.Until(() => api.Email.Sent.Any(m => m.To == "sipho@mail.example") && api.Email.Sent.Any(m => m.To == "tshwari@mail.example"));
         var former = await api.SignedIn("sipho@mail.example");
         var view = await Ok(await former.GetAsync("/api/me/past-resident"));
+        // November is the buyer's now (D35); September, never sent, is Sipho's.
         var statement = Assert.Single(view.GetProperty("statements").EnumerateArray());
-        Assert.Equal(("2026-11", "42"), (statement.GetProperty("period").GetString(), statement.GetProperty("unit").GetString()));
-        var pdf = await former.GetAsync($"/api/me/past-resident/statements/{statement.GetProperty("id").GetString()}/pdf");
+        Assert.Equal(("2026-09", "42", JsonValueKind.Null), (statement.GetProperty("period").GetString(), statement.GetProperty("unit").GetString(), statement.GetProperty("id").ValueKind));
+        var pdf = await former.GetAsync($"/api/me/past-resident/accounts/{s.Account42}/statements/2026-09/pdf");
         Assert.Equal("application/pdf", pdf.Content.Headers.ContentType?.MediaType);
+        var issuedToSipho = Assert.Single((await Ok(await former.GetAsync("/api/me/past-resident"))).GetProperty("statements").EnumerateArray()).GetProperty("id").GetString();
+        Assert.NotNull(issuedToSipho);
+        Assert.Equal(HttpStatusCode.NotFound, (await former.GetAsync($"/api/me/past-resident/accounts/{s.Account42}/statements/2026-11/pdf")).StatusCode);
 
-        var buyers = await api.Db(db => db.IssuedStatements.Where(x => x.AccountId == s.Account42 && x.ReplacedAt == null).Select(x => x.Id).SingleAsync());
+        var buyers = await api.Db(db => db.IssuedStatements.Where(x => x.AccountId == s.Account42 && x.Period == "2026-11" && x.ReplacedAt == null).Select(x => x.Id).SingleAsync());
         Assert.Equal(HttpStatusCode.NotFound, (await former.GetAsync($"/api/me/past-resident/statements/{buyers}/pdf")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await former.GetAsync($"/api/accounts/{s.Account42}/statements/2026-11")).StatusCode);
 

@@ -96,7 +96,7 @@ public static partial class PeopleEndpoints
             db.People.Add(person);
             // Bought from someone: the seller's access ends now, not at the next minute's sweep.
             if (link is not null)
-                foreach (var previous in Link(db, person.Id, link)) await SyncResidentAccessAsync(db, reads, previous, actor.Human.Name, ct);
+                foreach (var previous in Link(db, person.Id, link, reads.Today)) await SyncResidentAccessAsync(db, reads, previous, actor.Human.Name, ct);
             return Results.Created($"/api/people/{id}", new { id = id.ToString() });
         }, ct);
     }
@@ -177,7 +177,7 @@ public static partial class PeopleEndpoints
             Validate = () => errors,
         }, async actor =>
         {
-            var replaced = Link(db, id, link);
+            var replaced = Link(db, id, link, reads.Today);
             await SyncResidentAccessAsync(db, reads, id, actor.Human.Name, ct);
             foreach (var previous in replaced) await SyncResidentAccessAsync(db, reads, previous, actor.Human.Name, ct);
             return Results.NoContent();
@@ -315,9 +315,10 @@ public static partial class PeopleEndpoints
             .Where(u => u.PersonId == key && u.Kind == IdentityKinds.Customer && u.Status != IdentityStatuses.Deactivated).ToListAsync(ct);
         if (users.Count == 0) return;
         // As this change leaves them: added and changed links count, removed ones don't.
-        var current = (await db.Relationships.Where(r => r.PersonId == personId && (r.Type == "owner" || r.Type == "tenant" || r.Type == "trustee")).ToListAsync(ct))
+        var all = (await db.Relationships.Where(r => r.PersonId == personId && (r.Type == "owner" || r.Type == "tenant" || r.Type == "trustee")).ToListAsync(ct))
             .Concat(db.Relationships.Local.Where(r => r.PersonId == personId && (r.Type == "owner" || r.Type == "tenant" || r.Type == "trustee")))
-            .Distinct().Where(r => db.Entry(r).State != EntityState.Deleted).Where(reads.IsCurrent).ToList();
+            .Distinct().Where(r => db.Entry(r).State != EntityState.Deleted).ToList();
+        var current = all.Where(reads.IsCurrent).ToList();
         var rels = current.Where(r => r.Type != "trustee" && r.UnitId != null).ToList();
         var seats = current.Where(r => r.Type == "trustee").ToList();
         var unitIds = rels.Select(r => r.UnitId!.Value).Distinct().ToList();
@@ -347,7 +348,11 @@ public static partial class PeopleEndpoints
             {
                 if (rels.Any(r => r.Type == a.Role && r.UnitId?.ToString() == a.UnitId)) continue;
                 a.Status = AssignmentStatuses.Ended;
-                a.EndedBy = $"{by} (no longer {(a.Role == Roles.Owner ? "an owner" : "a tenant")} of the unit)";
+                // D35: a purchase or lease dated later isn't theirs yet; say which, so the record isn't read as a sale.
+                var starts = all.Where(r => r.Type == a.Role && r.UnitId?.ToString() == a.UnitId && r.Since > reads.Today).Select(r => (DateOnly?)r.Since).Min();
+                a.EndedBy = starts is { } on
+                    ? $"{by} (not {(a.Role == Roles.Owner ? "an owner" : "a tenant")} of the unit until {on:d MMMM yyyy})"
+                    : $"{by} (no longer {(a.Role == Roles.Owner ? "an owner" : "a tenant")} of the unit)";
                 a.EndedAt = now;
                 a.Version++;
             }
@@ -483,7 +488,7 @@ public static partial class PeopleEndpoints
     /// Adds the relationship. A new owner becomes the levy account's holder when it has none (or the holder no longer owns it).
     /// Returns the owners it replaced, whose access has to follow.
     /// </summary>
-    private static List<Guid> Link(HumoDbContext db, Guid personId, NewRelationshipRequest l)
+    private static List<Guid> Link(HumoDbContext db, Guid personId, NewRelationshipRequest l, DateOnly today)
     {
         var replaced = new List<Guid>();
         var rel = new Relationship
@@ -503,10 +508,11 @@ public static partial class PeopleEndpoints
                     old.Until = rel.Since.AddDays(-1);
                     replaced.Add(old.PersonId);
                 }
-                account.HolderPersonId = personId;
+                // D35: the account changes hands on the transfer date; the minute loop does it then.
+                if (rel.Since <= today) account.HolderPersonId = personId;
             }
             // The holder's ownership had ended (sold, and the buyer added afterwards): the new owner holds it.
-            else if (account.HolderPersonId is not { } holder || !StillOwns(db, holder, unitId, rel.Since)) account.HolderPersonId = personId;
+            else if (rel.Since <= today && (account.HolderPersonId is not { } holder || !StillOwns(db, holder, unitId, rel.Since))) account.HolderPersonId = personId;
         }
         return replaced;
     }
@@ -523,16 +529,19 @@ public static partial class PeopleEndpoints
     public static async Task HandOverEndedAsync(HumoDbContext db, PortfolioReads reads, CancellationToken ct)
     {
         var today = reads.Today;
-        var ended = await db.Relationships.Where(r => r.Type == "owner" && r.UnitId != null && r.Until != null && r.Until < today).Select(r => new { r.PersonId, UnitId = r.UnitId!.Value }).Distinct().ToListAsync(ct);
-        if (ended.Count == 0) return;
-        var unitIds = ended.Select(e => e.UnitId).Distinct().ToList();
-        var accounts = await db.LevyAccounts.Where(a => unitIds.Contains(a.UnitId) && a.HolderPersonId != null).ToListAsync(ct);
-        var owners = (await db.Relationships.Where(r => r.Type == "owner" && r.UnitId != null && unitIds.Contains(r.UnitId.Value)).ToListAsync(ct)).Where(reads.IsCurrent).ToList();
+        // Units where the holder may be out of step: an ownership that ended, or one that starts later (D35).
+        var changing = await db.Relationships.Where(r => r.Type == "owner" && r.UnitId != null && ((r.Until != null && r.Until < today) || r.Since > today)).Select(r => r.UnitId!.Value).Distinct().ToListAsync(ct);
+        if (changing.Count == 0) return;
+        var accounts = await db.LevyAccounts.Where(a => changing.Contains(a.UnitId)).ToListAsync(ct);
+        var owners = await db.Relationships.Where(r => r.Type == "owner" && r.UnitId != null && changing.Contains(r.UnitId.Value)).ToListAsync(ct);
         foreach (var account in accounts)
         {
-            var current = owners.Where(r => r.UnitId == account.UnitId).OrderBy(r => r.Since).ToList();
-            if (current.Count == 0 || current.Any(r => r.PersonId == account.HolderPersonId)) continue;
-            account.HolderPersonId = current[0].PersonId;
+            var mine = owners.Where(r => r.UnitId == account.UnitId).ToList();
+            var current = mine.Where(reads.IsCurrent).OrderBy(r => r.Since).ToList();
+            if (current.Any(r => r.PersonId == account.HolderPersonId)) continue;
+            // Between owners it stays with the last one, so statements for those months reach the seller, not the buyer.
+            var holder = current.FirstOrDefault()?.PersonId ?? mine.Where(r => r.Since <= today).OrderByDescending(r => r.Until).FirstOrDefault()?.PersonId;
+            if (holder is { } h && h != account.HolderPersonId) account.HolderPersonId = h;
         }
         await db.SaveChangesAsync(ct);
     }

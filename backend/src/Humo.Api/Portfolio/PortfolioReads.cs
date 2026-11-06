@@ -41,7 +41,8 @@ public sealed class PortfolioReads(HumoDbContext db, TimeProvider clock)
     /// <summary>South Africa has no daylight saving: the calendar date is UTC+2.</summary>
     public DateOnly Today => DateOnly.FromDateTime(clock.GetUtcNow().ToOffset(TimeSpan.FromHours(2)).DateTime);
 
-    public bool IsCurrent(Relationship r) => r.Until is null || r.Until >= Today;
+    /// <summary>In force today: started (D35: a sale dated next week isn't theirs yet) and not ended.</summary>
+    public bool IsCurrent(Relationship r) => r.Since <= Today && (r.Until is null || r.Until >= Today);
 
     /// <summary>The requested schemes the caller may read (a client's list only narrows; S4).</summary>
     public async Task<List<Scheme>> ReadableSchemes(Actor actor, IEnumerable<string>? requested, CancellationToken ct)
