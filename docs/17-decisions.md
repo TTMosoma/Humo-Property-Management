@@ -49,6 +49,7 @@ Each entry records:
 | D33 | Someone with no property left at an agency keeps a sign-in and sees who to contact, plus their own past statements, read-only (a *Former resident* role). Individuals can't add units | Identity, owner portal |
 | D34 | One email address per person: a sign-in moves only when the new address confirms it, the old one is told, and the audit log records what it changed from and to | Identity, security |
 | D35 | When a unit is sold: each month's statement belongs to whoever owned it that month; the buyer sees the account from their start date; the seller keeps every month they owned; nothing changes until the transfer date | Finance, owner portal |
+| D36 | A unit always has an owner: ending the only owner is refused (record the sale by adding the buyer), and gaps already on record are flagged for staff to correct | Portfolio |
 
 ---
 
@@ -795,6 +796,26 @@ A unit's levy account stays with the unit when it's sold, so its history goes wi
 - An owner, tenant or trustee whose start date is still to come has no access until that day. Before, only the end date was checked.
 - A month split by a sale belongs to whoever owned it on its last day. Lines from earlier in the buyer's first month still show to the buyer.
 - An owner who sells one unit and keeps another still doesn't see the sold unit's statements (left from D33).
+
+---
+
+## D36 — A unit always has an owner (7 November 2026)
+
+**Status:** approved by the product owner (Terry Mosoma).
+
+A sectional title unit always has a registered owner, and ownership passes from seller to buyer on the day the transfer is registered, so there is never a real day with no owner. Die Eike unit 3 had one on record anyway: Joseph Jackson was added from 20 November, and Marike du Toit's ownership was then ended on 4 October, leaving no owner from 5 October to 19 November.
+
+**Decision:**
+1. **Ending the only owner is refused** when it would leave the unit with nobody. The message says to record the sale by adding the buyer with *They replace the owner*, which ends the seller the day before. An owner who has died is replaced by their estate the same way. *Remove*, for an owner added by mistake, is unchanged.
+2. **Correcting dates can't open a gap** either, but it can close one.
+3. **Gaps already on record are flagged:** on the unit's page, and at the top of Portfolio › Units for every unit in view, for staff to correct the owners' dates.
+4. **Until they're corrected,** D35 applies: the months and the account stay with the last owner.
+5. **Correcting dates takes effect at once:** the account and portal access follow the new dates straight away, not at the next minute's check.
+
+**Consequences:**
+- API: `GET /units/owner-gaps`. Ending an ownership (`POST /relationships/{id}/end`) and correcting its dates (`PUT /relationships/{id}`) refuse a change that leaves days with no owner.
+- A unit that has never had an owner, such as a new unit, isn't flagged.
+- The *Former resident* page (D33) now arises from a sale, never from ending an ownership with nobody after it.
 
 ## Still open (needs domain expertise before slice 2)
 

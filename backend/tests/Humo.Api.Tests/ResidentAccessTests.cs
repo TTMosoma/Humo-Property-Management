@@ -59,7 +59,11 @@ public sealed class ResidentAccessTests : IDisposable
 
         // Unit 28 sold from a later date: access ends once that day has passed.
         var rel = await api.Db(db => db.Relationships.Where(r => r.PersonId == person && r.UnitId == units[0]).Select(r => r.Id).SingleAsync());
-        Assert.True((await admin.PostAsJsonAsync($"/api/relationships/{rel}/end", new { endedOn = Day(2) })).IsSuccessStatusCode);
+        Assert.True((await admin.PostAsJsonAsync("/api/people", new
+        {
+            details = new { firstName = "Lerato", lastName = "Buyer", kind = "individual", email = "lerato@mail.example", phone = "082 000 3333", preferredChannel = "email" },
+            link = new { type = "owner", schemeId = scheme.ToString(), unitId = units[0].ToString(), since = Day(2), ownership = "replaces" },
+        })).IsSuccessStatusCode);
         Assert.Equal(2, (await Access(user)).Count(a => a.Status == AssignmentStatuses.Active));
         api.Clock.Advance(TimeSpan.FromDays(3));
         using (var scope = api.Services.CreateScope())
@@ -123,6 +127,13 @@ public sealed class ResidentAccessTests : IDisposable
         await PeopleEndpoints.SyncAllResidentAccessAsync(scope.ServiceProvider.GetRequiredService<HumoDbContext>(), scope.ServiceProvider.GetRequiredService<PortfolioReads>(), CancellationToken.None);
     }
 
+    /// <summary>D36: a sale is recorded by adding the buyer, who replaces the owner; the owner's last day is the day before.</summary>
+    private async Task<HttpStatusCode> Sell(Owner o, string on) => (await o.Admin.PostAsJsonAsync("/api/people", new
+    {
+        details = new { firstName = "Sizwe", lastName = "Buyer", kind = "individual", email = $"sizwe.{Guid.NewGuid():N}@mail.example", phone = "082 000 4444", preferredChannel = "email" },
+        link = new { type = "owner", schemeId = o.Scheme.ToString(), unitId = o.Unit.ToString(), since = on, ownership = "replaces" },
+    })).StatusCode;
+
     private Task<Guid> OwnershipOf(Owner o) => api.Db(db => db.Relationships.Where(r => r.PersonId == o.Person && r.Type == "owner").Select(r => r.Id).SingleAsync());
 
     private async Task<Owner> AnInvitedOwner()
@@ -155,7 +166,7 @@ public sealed class ResidentAccessTests : IDisposable
     public async Task An_owner_who_sells_stays_signed_in_with_no_property_and_nothing_else()
     {
         var o = await AnInvitedOwner();
-        Assert.Equal(HttpStatusCode.NoContent, (await o.Admin.PostAsJsonAsync($"/api/relationships/{await OwnershipOf(o)}/end", new { endedOn = Day(-1) })).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, await Sell(o, Day(-1)));
 
         var me = await Me("johanna@mail.example");
         Assert.True(me.GetProperty("signedIn").GetBoolean());
@@ -178,7 +189,7 @@ public sealed class ResidentAccessTests : IDisposable
     public async Task Selling_with_a_future_date_keeps_the_owner_until_that_day()
     {
         var o = await AnInvitedOwner();
-        Assert.Equal(HttpStatusCode.NoContent, (await o.Admin.PostAsJsonAsync($"/api/relationships/{await OwnershipOf(o)}/end", new { endedOn = Day(7) })).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, await Sell(o, Day(7)));
         Assert.Equal([Roles.Owner], await ActiveRoles("johanna@mail.example"));
 
         api.Clock.Advance(TimeSpan.FromDays(8));
@@ -219,10 +230,10 @@ public sealed class ResidentAccessTests : IDisposable
     public async Task Owning_again_goes_back_to_the_owners_home_and_the_past_stays_on_offer()
     {
         var o = await AnInvitedOwner();
-        Assert.Equal(HttpStatusCode.NoContent, (await o.Admin.PostAsJsonAsync($"/api/relationships/{await OwnershipOf(o)}/end", new { endedOn = Day(-1) })).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, await Sell(o, Day(-1)));
         var unit = await api.Db(db => db.Units.Where(u => u.SchemeId == o.Scheme).Select(u => u.Id).FirstAsync());
 
-        var back = await o.Admin.PostAsJsonAsync($"/api/people/{o.Person}/relationships", new { type = "owner", schemeId = o.Scheme.ToString(), unitId = unit.ToString(), since = Day(0) });
+        var back = await o.Admin.PostAsJsonAsync($"/api/people/{o.Person}/relationships", new { type = "owner", schemeId = o.Scheme.ToString(), unitId = unit.ToString(), since = Day(0), ownership = "replaces" });
         Assert.True(back.IsSuccessStatusCode, await back.Content.ReadAsStringAsync());
 
         var me = await Me("johanna@mail.example");
@@ -235,7 +246,7 @@ public sealed class ResidentAccessTests : IDisposable
     public async Task An_administrator_can_end_it_for_good_and_nobody_can_grant_it()
     {
         var o = await AnInvitedOwner();
-        Assert.Equal(HttpStatusCode.NoContent, (await o.Admin.PostAsJsonAsync($"/api/relationships/{await OwnershipOf(o)}/end", new { endedOn = Day(-1) })).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, await Sell(o, Day(-1)));
         var (user, role, version) = await api.Db(async db =>
         {
             var a = await db.RoleAssignments.SingleAsync(x => x.Role == Roles.PastResident);
@@ -258,7 +269,7 @@ public sealed class ResidentAccessTests : IDisposable
         async Task<decimal> Used() => (await (await o.Admin.GetAsync("/api/me/limits")).Json()).GetProperty("users").GetProperty("used").GetDecimal();
         var before = await Used();
 
-        Assert.Equal(HttpStatusCode.NoContent, (await o.Admin.PostAsJsonAsync($"/api/relationships/{await OwnershipOf(o)}/end", new { endedOn = Day(-1) })).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, await Sell(o, Day(-1)));
 
         Assert.Equal(before - 1, await Used());
     }

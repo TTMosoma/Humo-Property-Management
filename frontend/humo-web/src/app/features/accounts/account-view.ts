@@ -1,4 +1,6 @@
+import { OwnerGap } from '../../domain';
 import { ACCOUNT_STATUS_LABEL, Account, AccountStatus, Occupancy, Person, Scheme, Unit, UnitSummary, describeFailure, fieldErrorsOf } from '../../domain';
+import { formatDate } from '../../ui/format/money';
 import { ChainLink } from '../../ui/record/relationship-chain';
 import { Tone } from '../../ui/status-pill/status-pill';
 
@@ -57,4 +59,9 @@ export function unitChain(summary: Pick<UnitSummary, 'scheme' | 'unit' | 'owners
 export function statementSendFailure(e: unknown): string {
   const reason = Object.values(fieldErrorsOf(e))[0];
   return reason ? `The statement wasn’t sent. ${reason}` : describeFailure(e, 'The statement wasn’t sent');
+}
+
+/** D36: "No owner on record from 5 Oct 2026 to 19 Nov 2026", or "since …" when nobody owns it now. */
+export function ownerGapText(g: OwnerGap): string {
+  return g.to ? `No owner on record from ${formatDate(g.from)} to ${formatDate(g.to)}` : `No owner on record since ${formatDate(g.from)}`;
 }

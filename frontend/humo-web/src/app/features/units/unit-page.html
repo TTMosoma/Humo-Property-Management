@@ -31,6 +31,10 @@
     </ng-container>
   </ui-record-header>
 
+  @for (g of gaps(); track g.from) {
+    <p class="surface owner-gap" role="status"><ion-icon name="alert-circle-outline" aria-hidden="true" /> {{ gapText(g) }}. A unit always has an owner: correct the owners’ dates on their People records.</p>
+  }
+
   <div class="grid">
     <div class="main">
       <!-- Account -->
