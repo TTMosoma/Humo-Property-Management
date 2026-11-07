@@ -1,10 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { AccessDataSource, IDENTITY_STATUS_LABELS, Identity, ROLE_LABELS, RoleFamily, UnitDataSource, heldAssignments } from '../../domain';
+import { AccessDataSource, EmailMismatch, IDENTITY_STATUS_LABELS, Identity, PersonDataSource, ROLE_LABELS, RoleFamily, UnitDataSource, describeFailure, fieldErrorsOf, heldAssignments } from '../../domain';
 import { ScopeService } from '../../core/scope/scope.service';
 import { inviteForm } from './user-forms';
 import { loadable } from '../../core/data/loadable';
+import { FeedbackService } from '../../core/feedback/feedback.service';
+import { StepUpService } from '../../core/security/step-up.service';
 import { SessionService } from '../../core/session/session.service';
 import { CellDef, ColumnDef, DataTable } from '../../ui/data-table/data-table';
 import { urlState } from '../../ui/data-table/url-state';
@@ -31,6 +33,29 @@ import { FAMILY_LABELS, familyOf, roleColor } from './access-view';
 })
 export class UsersPage {
   private readonly access = inject(AccessDataSource);
+  private readonly personData = inject(PersonDataSource);
+  private readonly feedback = inject(FeedbackService);
+  private readonly stepUp = inject(StepUpService);
+
+  /** D34: what needs an administrator's eye about people's email addresses. */
+  protected readonly emailReview = loadable(() => this.access.emailReview());
+
+  protected resolve(m: EmailMismatch, use: 'sign-in' | 'contact'): void {
+    const send = () => this.access.resolveEmailMismatch(m.identityId, use);
+    const request = use === 'contact' ? this.stepUp.guard({ action: 'change-roles', detail: `Change ${m.name}’s sign-in email to ${m.contactEmail}` }, send) : send();
+    request.subscribe({
+      next: () => this.feedback.success(use === 'contact' ? `${m.contactEmail} needs to confirm the change of email.` : `${m.name}’s contact email is now ${m.signInEmail}.`),
+      error: (e) => this.feedback.error(fieldErrorsOf(e)['use'] ?? describeFailure(e, 'That wasn’t saved')),
+    });
+  }
+
+  protected cancelEmailChange(id: string): void {
+    this.personData.cancelEmailChange(id).subscribe({
+      next: () => this.feedback.success('The change of email was cancelled.'),
+      error: (e) => this.feedback.error(describeFailure(e, 'The change wasn’t cancelled')),
+    });
+  }
+
   private readonly drawer = inject(DrawerService);
   private readonly units = inject(UnitDataSource);
   private readonly scope = inject(ScopeService);

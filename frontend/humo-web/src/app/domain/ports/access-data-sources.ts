@@ -1,5 +1,6 @@
 import { Observable, of, throwError } from 'rxjs';
 import { ApiError } from './api-error';
+import type { EmailChange } from './portfolio-data-sources';
 import { ListQuery, Page } from './list-query';
 import { AuditEvent, AuditQuery, ImpersonationMode, ImpersonationReason, ImpersonationSession } from '../models/audit';
 import { AssignmentScope, Identity, RoleAssignment } from '../models/identity';
@@ -17,7 +18,34 @@ export interface NewAssignment {
  * Session-changing commands (switchRole, signOut, impersonation) change what
  * SessionDataSource.current() emits next.
  */
+/** D34: changes of email waiting, and people whose contact and sign-in addresses differ. */
+export interface EmailMismatch {
+  identityId: string;
+  personId: string;
+  name: string;
+  contactEmail: string;
+  signInEmail: string;
+}
+
+export interface EmailReview {
+  pending: EmailChange[];
+  mismatches: EmailMismatch[];
+}
+
 export abstract class AccessDataSource {
+  /** The simulation changes an email straight away, so there's nothing to review. */
+  emailReview(): Observable<EmailReview> {
+    return of({ pending: [], mismatches: [] });
+  }
+  /** Keep the sign-in address on their record, or ask the contact address to confirm (needs a passkey). */
+  resolveEmailMismatch(_identityId: string, _use: 'sign-in' | 'contact'): Observable<void> {
+    return of(undefined);
+  }
+  /** The link from the new address. Works without a session; answers the address now in use. */
+  confirmEmailChange(_token: string): Observable<string> {
+    return of('');
+  }
+
   /** Someone's passkeys, for Humo removing them (Platform.Users.ResetPasskeys). The simulation has none to show. */
   passkeysOf(_identityId: string): Observable<Passkey[]> {
     return of([]);

@@ -1,4 +1,4 @@
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import { ListQuery, Page } from './list-query';
 import { Person, RelationshipType } from '../models/person';
 import { Note, TimelineEvent } from '../models/timeline';
@@ -70,6 +70,28 @@ export abstract class PersonDataSource {
   abstract removeRelationship(relationshipId: string, reason: string): Observable<void>;
   abstract get(personId: string): Observable<PersonSummary | undefined>;
   abstract search(query: string, schemeIds: string[], limit?: number): Observable<PersonSummary[]>;
+  /** D34: whether they sign in, and any change of email waiting for the new address to confirm. The simulation changes it straight away. */
+  emailState(_personId: string): Observable<PersonEmailState> {
+    return of({ signsIn: false, pending: null });
+  }
+  cancelEmailChange(_changeId: string): Observable<void> {
+    return of(undefined);
+  }
+}
+
+export interface EmailChange {
+  id: string;
+  name: string;
+  oldEmail: string;
+  newEmail: string;
+  requestedBy: string;
+  requestedAt: string;
+  expiresAt: string;
+}
+
+export interface PersonEmailState {
+  signsIn: boolean;
+  pending: EmailChange | null;
 }
 
 export abstract class AccountDataSource {

@@ -64,10 +64,24 @@ public sealed class StatementService(HumoDbContext db, Commercial.CommercialReco
             interest, Ledger.Round2(opening + charges + payments + adjustments + interest), lines);
     }
 
+    /// <summary>
+    /// D35: a month's statement belongs to whoever owned the unit that month: the owner on its last day (the account
+    /// holder first, among joint owners), or the owner before a gap between owners. The account's history stays with the unit.
+    /// </summary>
+    public async Task<Guid?> AddressedToAsync(LevyAccount account, string period, CancellationToken ct)
+    {
+        var first = new DateOnly(int.Parse(period[..4], CultureInfo.InvariantCulture), int.Parse(period[5..7], CultureInfo.InvariantCulture), 1);
+        var last = first.AddMonths(1).AddDays(-1);
+        var owners = await db.Relationships.AsNoTracking().Where(r => r.UnitId == account.UnitId && r.Type == "owner" && r.Since <= last).ToListAsync(ct);
+        var then = owners.Where(r => r.Until is null || r.Until >= last).ToList();
+        if (then.Count > 0) return then.Any(r => r.PersonId == account.HolderPersonId) ? account.HolderPersonId : then.OrderBy(r => r.Since).First().PersonId;
+        return owners.OrderByDescending(r => r.Until).FirstOrDefault()?.PersonId ?? account.HolderPersonId;
+    }
+
     /// <summary>The statement as it would be issued today: the organisation's default template (if its plan still includes it) and current branding.</summary>
     public async Task<StatementSnapshot?> DraftAsync(LevyAccount account, string period, DateOnly? issuedOn, CancellationToken ct)
     {
-        if (account.HolderPersonId is not { } holderId) return null;
+        if (await AddressedToAsync(account, period, ct) is not { } holderId) return null;
         var scheme = await db.Schemes.FirstAsync(s => s.Id == account.SchemeId, ct);
         var org = await db.Organisations.FirstAsync(o => o.Id == scheme.OrganisationId, ct);
         var agency = await db.AgencySettings.AsNoTracking().FirstOrDefaultAsync(s => s.OrganisationId == org.Id, ct);
@@ -106,12 +120,12 @@ public sealed class StatementService(HumoDbContext db, Commercial.CommercialReco
     }
 
     /// <summary>
-    /// The month's statement was issued to someone who no longer holds the account: it's marked replaced (kept as the
-    /// record of what was sent), so the next issue makes one for the holder now. Returns whether it replaced one.
+    /// The month's statement was issued to someone who didn't own the unit that month (D35): it's marked replaced (kept as
+    /// the record of what was sent), so the next issue makes one for the right owner. Returns whether it replaced one.
     /// </summary>
     public async Task<bool> ReplaceForNewHolderAsync(LevyAccount account, string period, string by, CancellationToken ct)
     {
-        if (account.HolderPersonId is not { } holder
+        if (await AddressedToAsync(account, period, ct) is not { } holder
             || await db.IssuedStatements.FirstOrDefaultAsync(s => s.AccountId == account.Id && s.Period == period && s.ReplacedAt == null, ct) is not { } issued) return false;
         var addressedTo = JsonSerializer.Deserialize<StatementSnapshot>(issued.Snapshot, Json.Options)!.View.Holder.Id;
         if (addressedTo == holder.ToString()) return false;
@@ -393,18 +407,25 @@ public static class StatementEndpoints
     private static bool IsPeriod(string period) =>
         period.Length == 7 && DateOnly.TryParseExact($"{period}-01", "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _);
 
-    private static async Task<IResult> Get(Guid id, string period, CurrentActor current, HumoDbContext db, StatementService statements, CancellationToken ct)
+    /// <summary>D35: an owner reads only their own months; the ones before they took over are the previous owner's.</summary>
+    private static async Task<LevyAccount?> ReadableMonthAsync(Actor actor, HumoDbContext db, PortfolioReads reads, Guid id, string period, CancellationToken ct)
+    {
+        if (!IsPeriod(period) || await AccountEndpoints.Readable(actor, db, id, ct) is not { } account) return null;
+        return await AccountEndpoints.OwnedFromAsync(actor, db, reads, account, ct) is { } from && string.CompareOrdinal(period, from.ToString("yyyy-MM", CultureInfo.InvariantCulture)) < 0 ? null : account;
+    }
+
+    private static async Task<IResult> Get(Guid id, string period, CurrentActor current, HumoDbContext db, PortfolioReads reads, StatementService statements, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
-        if (!IsPeriod(period) || await AccountEndpoints.Readable(actor, db, id, ct) is not { } account) return Problems.NotFound();
+        if (await ReadableMonthAsync(actor, db, reads, id, period, ct) is not { } account) return Problems.NotFound();
         return await statements.ViewAsync(account, period, ct) is { } view ? Results.Json(view, Json.Options) : Problems.NotFound();
     }
 
     /// <summary>The issued statement's PDF, exactly as sent. A statement that hasn't been issued has no PDF.</summary>
-    private static async Task<IResult> Pdf(Guid id, string period, CurrentActor current, HumoDbContext db, StatementService statements, CancellationToken ct)
+    private static async Task<IResult> Pdf(Guid id, string period, CurrentActor current, HumoDbContext db, PortfolioReads reads, StatementService statements, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
-        if (!IsPeriod(period) || await AccountEndpoints.Readable(actor, db, id, ct) is not { } account) return Problems.NotFound();
+        if (await ReadableMonthAsync(actor, db, reads, id, period, ct) is not { } account) return Problems.NotFound();
         if (await db.IssuedStatements.FirstOrDefaultAsync(s => s.AccountId == id && s.Period == period && s.ReplacedAt == null, ct) is not { } issued) return Problems.NotFound();
         var pdf = await statements.PdfAsync(issued, ct);
         return Results.File(pdf, "application/pdf", $"{account.AccountNo}-{period}.pdf");
@@ -416,7 +437,9 @@ public static class StatementEndpoints
     {
         if (await current.GetAsync(ct) is not { } me) return Results.Unauthorized();
         if (await AccountEndpoints.Readable(me, db, id, ct) is not { } account || !me.Can("Accounts.View")) return Problems.NotFound();
-        var holder = account.HolderPersonId is { } h ? await db.People.FirstOrDefaultAsync(p => p.Id == h, ct) : null;
+        // D35: to whoever owned the unit that month, who may have sold it since.
+        var addressedTo = IsPeriod(period) ? await statements.AddressedToAsync(account, period, ct) : account.HolderPersonId;
+        var holder = addressedTo is { } h ? await db.People.FirstOrDefaultAsync(p => p.Id == h, ct) : null;
         var hasStatement = IsPeriod(period) && (await db.IssuedStatements.AnyAsync(s => s.AccountId == id && s.Period == period, ct)
             || (await db.Ledger.Where(e => e.AccountId == id).Select(e => e.Date).ToListAsync(ct)).Any(d => d.ToString("yyyy-MM", CultureInfo.InvariantCulture) == period));
         var payTo = await HasTrustAccountAsync(db, account.SchemeId, ct);

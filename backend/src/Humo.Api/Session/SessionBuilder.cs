@@ -21,7 +21,8 @@ public sealed class SessionBuilder(HumoDbContext db, TimeProvider clock, Commerc
         return user.Assignments
             .Where(a => a.Status == AssignmentStatuses.Active && (a.ValidUntil is null || a.ValidUntil > now))
             .Where(a => a.OrganisationId is null || user.Memberships.Any(m => m.OrganisationId == a.OrganisationId && m.Status == MembershipStatuses.Active))
-            .OrderBy(a => a.GrantedAt)
+            // D33: a person with a role again lands on that role, not on having none.
+            .OrderBy(a => a.Role == Roles.PastResident).ThenBy(a => a.GrantedAt)
             .ToList();
     }
 

@@ -387,6 +387,25 @@ public sealed class TrusteePermission
     public string? WithdrawnReason { get; set; }
 }
 
+/// <summary>D34: moving a sign-in to a new email, waiting for that address to confirm. Kept as the record once it's done.</summary>
+public sealed class EmailChange
+{
+    public Guid Id { get; set; }
+    public Guid UserId { get; set; }
+    /// <summary>Their record in the directory, whose contact email moves with it.</summary>
+    public Guid? PersonId { get; set; }
+    public Guid? OrganisationId { get; set; }
+    public string OldEmail { get; set; } = "";
+    public string NewEmail { get; set; } = "";
+    public string TokenHash { get; set; } = "";
+    public string RequestedBy { get; set; } = "";
+    public DateTimeOffset RequestedAt { get; set; }
+    public DateTimeOffset ExpiresAt { get; set; }
+    public DateTimeOffset? ConfirmedAt { get; set; }
+    public DateTimeOffset? CancelledAt { get; set; }
+    public string? CancelledBy { get; set; }
+}
+
 public sealed class SignInLink
 {
     public Guid Id { get; set; }

@@ -89,38 +89,76 @@ public static partial class PeopleEndpoints
             Validate = () => actor.OrganisationId is null
                 ? new() { ["lastName"] = "People belong to a customer's directory: work in their organisation to add someone." }
                 : new[] { CheckPerson(d, emailTaken), linkErrors }.SelectMany(x => x).GroupBy(x => x.Key).ToDictionary(g => g.Key, g => g.First().Value),
-        }, _ =>
+        }, async _ =>
         {
             var person = new Person { Id = id, OrganisationId = actor.OrganisationId!.Value, CreatedAt = clock.GetUtcNow() };
             Apply(person, d);
             db.People.Add(person);
-            if (link is not null) Link(db, person.Id, link);
-            return Task.FromResult(Results.Created($"/api/people/{id}", new { id = id.ToString() }));
+            // Bought from someone: the seller's access ends now, not at the next minute's sweep.
+            if (link is not null)
+                foreach (var previous in Link(db, person.Id, link, reads.Today)) await SyncResidentAccessAsync(db, reads, previous, actor.Human.Name, ct);
+            return Results.Created($"/api/people/{id}", new { id = id.ToString() });
         }, ct);
     }
 
-    private static async Task<IResult> Update(Guid id, PersonDetailsRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, PortfolioReads reads, CancellationToken ct)
+    private static async Task<IResult> Update(Guid id, PersonDetailsRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, PortfolioReads reads, Access.EmailChanges changes, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         var visible = await reads.People(await reads.ReadableSchemes(actor, null, ct), q => q.Where(p => p.Id == id), ct);
         var person = visible.Count == 0 ? null : await db.People.FirstAsync(p => p.Id == id, ct);
         if (person is null) return Problems.NotFound();
         var emailTaken = await EmailOwner(db, person.OrganisationId, body.Email, id, ct);
+        // D34: their sign-in moves only once the new address confirms it. With no sign-in, the record just changes.
+        var address = (body.Email ?? "").Trim();
+        var emailChanged = !string.Equals(address, person.Email, StringComparison.OrdinalIgnoreCase);
+        var key = id.ToString();
+        var signIn = emailChanged ? await db.Users.FirstOrDefaultAsync(u => u.PersonId == key && u.Kind == IdentityKinds.Customer && u.Status != IdentityStatuses.Deactivated, ct) : null;
+        var signInTaken = signIn is not null && await db.Users.AnyAsync(u => u.Id != signIn.Id && u.NormalizedEmail == address.ToUpperInvariant(), ct);
 
-        return await commands.RunAsync(new CommandSpec($"Updated contact details for {body.FirstName?.Trim()} {body.LastName?.Trim()}", "People.Manage")
+        return await commands.RunAsync(new CommandSpec($"Updated contact details for {body.FirstName?.Trim()} {body.LastName?.Trim()}{Changes(person, body, signIn is not null)}", "People.Manage")
         {
             Resource = "Person",
             ResourceId = id.ToString(),
             ExpectedVersion = body.ExpectedVersion,
             CurrentVersion = person.Version,
-            Validate = () => CheckPerson(body, emailTaken),
-        }, _ =>
+            Validate = () =>
+            {
+                var e = CheckPerson(body, emailTaken);
+                if (signIn is not null && address.Length == 0) e["email"] = "They sign in with this email, so it can’t be blank.";
+                else if (signIn is not null && !e.ContainsKey("email") && signInTaken) e["email"] = "Someone else already signs in with this email.";
+                else if (signIn is not null && !e.ContainsKey("email") && Domain.Access.HumoEmail.IsHumoAddress(address)) e["email"] = "That’s a Humo staff address. Use the person’s own email.";
+                return e;
+            },
+        }, async a =>
         {
+            var current = person.Email;
             Apply(person, body);
             person.Version++;
-            return Task.FromResult(Results.NoContent());
+            if (signIn is not null)
+            {
+                person.Email = current;
+                await changes.RequestAsync(signIn, person.Id, person.OrganisationId, address.ToLowerInvariant(), a.Human.Name, commands, ct);
+            }
+            return Results.NoContent();
         }, ct);
     }
+
+    /// <summary>What an edit changes, for the audit log: who did it isn't enough to answer "who changed this address?".</summary>
+    private static string Changes(Person p, PersonDetailsRequest d, bool waitsForConfirmation)
+    {
+        var changes = new List<string>();
+        var name = $"{(d.FirstName ?? "").Trim()} {(d.LastName ?? "").Trim()}".Trim();
+        if (name != $"{p.FirstName} {p.LastName}".Trim()) changes.Add($"name was {$"{p.FirstName} {p.LastName}".Trim()}");
+        var email = (d.Email ?? "").Trim();
+        if (!string.Equals(email, p.Email, StringComparison.OrdinalIgnoreCase)) changes.Add($"email {Shown(p.Email)} to {Shown(email)}{(waitsForConfirmation ? " (waiting for them to confirm)" : "")}");
+        var phone = (d.Phone ?? "").Trim();
+        if (phone != p.Phone) changes.Add($"mobile {Shown(p.Phone)} to {Shown(phone)}");
+        if (d.PreferredChannel != p.PreferredChannel) changes.Add($"prefers {d.PreferredChannel}");
+        if ((string.IsNullOrWhiteSpace(d.PostalAddress) ? null : d.PostalAddress.Trim()) != p.PostalAddress) changes.Add("postal address");
+        return changes.Count == 0 ? "" : $": {string.Join(", ", changes)}";
+    }
+
+    private static string Shown(string value) => value.Length == 0 ? "(none)" : value;
 
     private static async Task<IResult> AddRelationship(Guid id, NewRelationshipRequest link, CurrentActor current, CommandRunner commands, HumoDbContext db, PortfolioReads reads, CancellationToken ct)
     {
@@ -139,8 +177,9 @@ public static partial class PeopleEndpoints
             Validate = () => errors,
         }, async actor =>
         {
-            Link(db, id, link);
+            var replaced = Link(db, id, link, reads.Today);
             await SyncResidentAccessAsync(db, reads, id, actor.Human.Name, ct);
+            foreach (var previous in replaced) await SyncResidentAccessAsync(db, reads, previous, actor.Human.Name, ct);
             return Results.NoContent();
         }, ct);
     }
@@ -276,9 +315,10 @@ public static partial class PeopleEndpoints
             .Where(u => u.PersonId == key && u.Kind == IdentityKinds.Customer && u.Status != IdentityStatuses.Deactivated).ToListAsync(ct);
         if (users.Count == 0) return;
         // As this change leaves them: added and changed links count, removed ones don't.
-        var current = (await db.Relationships.Where(r => r.PersonId == personId && (r.Type == "owner" || r.Type == "tenant" || r.Type == "trustee")).ToListAsync(ct))
+        var all = (await db.Relationships.Where(r => r.PersonId == personId && (r.Type == "owner" || r.Type == "tenant" || r.Type == "trustee")).ToListAsync(ct))
             .Concat(db.Relationships.Local.Where(r => r.PersonId == personId && (r.Type == "owner" || r.Type == "tenant" || r.Type == "trustee")))
-            .Distinct().Where(r => db.Entry(r).State != EntityState.Deleted).Where(reads.IsCurrent).ToList();
+            .Distinct().Where(r => db.Entry(r).State != EntityState.Deleted).ToList();
+        var current = all.Where(reads.IsCurrent).ToList();
         var rels = current.Where(r => r.Type != "trustee" && r.UnitId != null).ToList();
         var seats = current.Where(r => r.Type == "trustee").ToList();
         var unitIds = rels.Select(r => r.UnitId!.Value).Distinct().ToList();
@@ -308,7 +348,11 @@ public static partial class PeopleEndpoints
             {
                 if (rels.Any(r => r.Type == a.Role && r.UnitId?.ToString() == a.UnitId)) continue;
                 a.Status = AssignmentStatuses.Ended;
-                a.EndedBy = $"{by} (no longer {(a.Role == Roles.Owner ? "an owner" : "a tenant")} of the unit)";
+                // D35: a purchase or lease dated later isn't theirs yet; say which, so the record isn't read as a sale.
+                var starts = all.Where(r => r.Type == a.Role && r.UnitId?.ToString() == a.UnitId && r.Since > reads.Today).Select(r => (DateOnly?)r.Since).Min();
+                a.EndedBy = starts is { } on
+                    ? $"{by} (not {(a.Role == Roles.Owner ? "an owner" : "a tenant")} of the unit until {on:d MMMM yyyy})"
+                    : $"{by} (no longer {(a.Role == Roles.Owner ? "an owner" : "a tenant")} of the unit)";
                 a.EndedAt = now;
                 a.Version++;
             }
@@ -338,6 +382,15 @@ public static partial class PeopleEndpoints
                 a.EndedBy = $"{by} (left the board)";
                 a.EndedAt = now;
             }
+            // D33: nothing left at this agency, so they keep a way in: who to contact and their past statements.
+            // Once only: if an administrator ends it, it stays ended.
+            var here = user.Assignments.Concat(db.RoleAssignments.Local.Where(a => a.UserId == user.Id)).Distinct().Where(a => a.OrganisationId == organisation).ToList();
+            if (organisation != default && here.All(a => a.Role != Roles.PastResident && a.Status != AssignmentStatuses.Active) && here.Any(a => a.Role is Roles.Owner or Roles.Tenant or Roles.Trustee))
+                db.RoleAssignments.Add(new RoleAssignment
+                {
+                    Id = Guid.CreateVersion7(), UserId = user.Id, Role = Roles.PastResident, ScopeType = ScopeTypes.Schemes, OrganisationId = organisation, SchemeIds = [],
+                    Label = "No property at the moment", GrantedBy = $"{by} (no property left at the agency)", GrantedAt = now,
+                });
         }
     }
 
@@ -431,9 +484,13 @@ public static partial class PeopleEndpoints
         p.PostalAddress = string.IsNullOrWhiteSpace(d.PostalAddress) ? null : d.PostalAddress.Trim();
     }
 
-    /// <summary>Adds the relationship. A new owner becomes the levy account's holder when it has none (or the holder no longer owns it).</summary>
-    private static void Link(HumoDbContext db, Guid personId, NewRelationshipRequest l)
+    /// <summary>
+    /// Adds the relationship. A new owner becomes the levy account's holder when it has none (or the holder no longer owns it).
+    /// Returns the owners it replaced, whose access has to follow.
+    /// </summary>
+    private static List<Guid> Link(HumoDbContext db, Guid personId, NewRelationshipRequest l, DateOnly today)
     {
+        var replaced = new List<Guid>();
         var rel = new Relationship
         {
             Id = Guid.CreateVersion7(), PersonId = personId, Type = l.Type, SchemeId = Guid.Parse(l.SchemeId),
@@ -447,12 +504,17 @@ public static partial class PeopleEndpoints
             {
                 // Sold or transferred: the previous owners' ownership ends the day before; the account and its history stay with the unit.
                 foreach (var old in db.Relationships.Where(r => r.UnitId == unitId && r.Type == "owner" && r.PersonId != personId && (r.Until == null || r.Until >= rel.Since)).ToList())
+                {
                     old.Until = rel.Since.AddDays(-1);
-                account.HolderPersonId = personId;
+                    replaced.Add(old.PersonId);
+                }
+                // D35: the account changes hands on the transfer date; the minute loop does it then.
+                if (rel.Since <= today) account.HolderPersonId = personId;
             }
             // The holder's ownership had ended (sold, and the buyer added afterwards): the new owner holds it.
-            else if (account.HolderPersonId is not { } holder || !StillOwns(db, holder, unitId, rel.Since)) account.HolderPersonId = personId;
+            else if (rel.Since <= today && (account.HolderPersonId is not { } holder || !StillOwns(db, holder, unitId, rel.Since))) account.HolderPersonId = personId;
         }
+        return replaced;
     }
 
     /// <summary>Whether the person still owns the unit on that day (their ownership hasn't ended before it).</summary>
@@ -467,16 +529,19 @@ public static partial class PeopleEndpoints
     public static async Task HandOverEndedAsync(HumoDbContext db, PortfolioReads reads, CancellationToken ct)
     {
         var today = reads.Today;
-        var ended = await db.Relationships.Where(r => r.Type == "owner" && r.UnitId != null && r.Until != null && r.Until < today).Select(r => new { r.PersonId, UnitId = r.UnitId!.Value }).Distinct().ToListAsync(ct);
-        if (ended.Count == 0) return;
-        var unitIds = ended.Select(e => e.UnitId).Distinct().ToList();
-        var accounts = await db.LevyAccounts.Where(a => unitIds.Contains(a.UnitId) && a.HolderPersonId != null).ToListAsync(ct);
-        var owners = (await db.Relationships.Where(r => r.Type == "owner" && r.UnitId != null && unitIds.Contains(r.UnitId.Value)).ToListAsync(ct)).Where(reads.IsCurrent).ToList();
+        // Units where the holder may be out of step: an ownership that ended, or one that starts later (D35).
+        var changing = await db.Relationships.Where(r => r.Type == "owner" && r.UnitId != null && ((r.Until != null && r.Until < today) || r.Since > today)).Select(r => r.UnitId!.Value).Distinct().ToListAsync(ct);
+        if (changing.Count == 0) return;
+        var accounts = await db.LevyAccounts.Where(a => changing.Contains(a.UnitId)).ToListAsync(ct);
+        var owners = await db.Relationships.Where(r => r.Type == "owner" && r.UnitId != null && changing.Contains(r.UnitId.Value)).ToListAsync(ct);
         foreach (var account in accounts)
         {
-            var current = owners.Where(r => r.UnitId == account.UnitId).OrderBy(r => r.Since).ToList();
-            if (current.Count == 0 || current.Any(r => r.PersonId == account.HolderPersonId)) continue;
-            account.HolderPersonId = current[0].PersonId;
+            var mine = owners.Where(r => r.UnitId == account.UnitId).ToList();
+            var current = mine.Where(reads.IsCurrent).OrderBy(r => r.Since).ToList();
+            if (current.Any(r => r.PersonId == account.HolderPersonId)) continue;
+            // Between owners it stays with the last one, so statements for those months reach the seller, not the buyer.
+            var holder = current.FirstOrDefault()?.PersonId ?? mine.Where(r => r.Since <= today).OrderByDescending(r => r.Until).FirstOrDefault()?.PersonId;
+            if (holder is { } h && h != account.HolderPersonId) account.HolderPersonId = h;
         }
         await db.SaveChangesAsync(ct);
     }

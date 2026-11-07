@@ -46,6 +46,9 @@ Each entry records:
 | D30 | Adding a passkey: once you have one, adding another needs it, with no exception for an email-link sign-in; you’re told every time; you choose where it lives | Identity, security |
 | D31 | Amending or repealing a rule with Meetings & AGMs: a resolution that isn’t in the register can be typed from the minutes (changes D29 point 5) | Governance |
 | D32 | What Finance can read: financial work and records, plus resolutions and a job opened from its invoice; no breaches, meetings, boards or compliance. A person doing both jobs holds both roles | Identity, finance, governance |
+| D33 | Someone with no property left at an agency keeps a sign-in and sees who to contact, plus their own past statements, read-only (a *Former resident* role). Individuals can't add units | Identity, owner portal |
+| D34 | One email address per person: a sign-in moves only when the new address confirms it, the old one is told, and the audit log records what it changed from and to | Identity, security |
+| D35 | When a unit is sold: each month's statement belongs to whoever owned it that month; the buyer sees the account from their start date; the seller keeps every month they owned; nothing changes until the transfer date | Finance, owner portal |
 
 ---
 
@@ -720,6 +723,78 @@ An accountant was shown the same records as a portfolio manager, including who b
 - Finance can still prepare a budget, but putting it to the AGM falls to someone who runs meetings.
 - Finance keeps Inbox, Communications, Documents, Units and People, which it needs to answer owners. Operations keeps its current reads; reviewing them is a separate decision.
 - A migration relabels existing breach tasks. One already assigned to a Finance user disappears from their queue and stays visible to administrators.
+
+---
+
+## D33 — Someone with no property left (5 November 2026)
+
+**Status:** approved by the product owner (Terry Mosoma).
+
+When someone's last role at an agency ended, Humo PM treated them as signed out, so they came back to the sign-in page with no explanation.
+
+**Decision:**
+1. **They stay signed in** and see: "You don't have any property registered under your name at the moment", with the agency's contact details in case it's a mistake.
+2. **They keep what's theirs, read-only:** the statements addressed to them, what they used to hold, and their own profile and security. Nothing of the scheme: no notices, jobs, documents or messages.
+3. **Individuals can't add units.** Humo PM stays a system for managing agencies.
+4. **This is a role, *Former resident* (`past-resident`).** It adds a fixed role (D4). Nobody grants it: it follows when someone with an owner, tenant or trustee role has no active role left at that agency, including when an ownership ends on a future date.
+5. **Only for people who had a resident role.** Anyone else with no role left, such as a staff member, is told at sign-in that they don't have access at the moment.
+6. **An administrator can end it** in Users & access, and then it stays ended. If they become an owner again, they land on that role, and can still switch to see the past.
+7. **It doesn't use the agency's allowance** of people with a sign-in.
+8. **No landlord app link for now.** That app doesn't exist yet; ask before adding one.
+
+**Consequences:**
+- API: `GET /me/past-resident` and `GET /me/past-resident/statements/{id}/pdf`, with the new `Statements.ViewPast` permission.
+- A joint owner who wasn't the account holder has no statements to read, because none were addressed to them.
+- **Retention isn't decided:** there's no time limit on this access. It should follow the POPIA retention decision still blank in docs/26 §3.
+- An owner who sells one unit and keeps another isn't a former resident, so they don't see the sold unit's statements. That's a possible follow-up.
+- The simulation doesn't move anyone to this role when a role ends.
+
+---
+
+## D34 — Changing someone's email (5 November 2026)
+
+**Status:** approved by the product owner (Terry Mosoma).
+
+Each person had two addresses that didn't know about each other: a contact email in People (statements, letters, messages) and a sign-in email in Users & access (sign-in links, invitations, work notices). Editing one left the other behind, so a person's new address got nothing. Whoever controls a sign-in's email can sign in with an email link, so simply linking them would let one typo, or one dishonest edit, hand over someone's account. The audit log said only that details were updated, not what changed.
+
+**Decision:**
+1. **Changing an email is allowed.** There's one address per person.
+2. **No sign-in:** it takes effect straight away.
+3. **Has a sign-in:** the new address gets a link to confirm, for 7 days, and the old address is told. Nothing changes until the link is used, statements included. Then both records change together, other sessions end, sign-in links still out stop working, and passkeys stay. The old address is told again.
+4. **Staff:** the same from Users & access, and the administrator also confirms with a passkey.
+5. **Only the new address has to confirm**, so someone who lost the old mailbox can still move.
+6. **An address another sign-in uses is refused**, when asked and again when confirmed. A newer request replaces the old link, and staff can cancel one.
+7. **The audit log says what changed:** the old and new email and mobile, which other details changed, who asked, and when it was confirmed or cancelled.
+8. **Records that already disagree** are listed for administrators in Users & access, who choose: keep the sign-in address (it's proven, so it applies at once), or ask the contact address to confirm (with a passkey).
+
+**Consequences:**
+- API: `POST /auth/email-change/confirm`, `GET /people/{id}/email-change`, `POST /email-changes/{id}/cancel`, `GET /access/email-review`, `POST /access/identities/{id}/email-mismatch`.
+- An unresponsive owner stays on the old address. The record shows the change is waiting.
+- A sign-in that spans several agencies moves everywhere, but only the contact address on its linked record changes.
+- Humo's own staff aren't covered: their addresses are on Humo's domain and managed by a System Administrator. Those edits are audited with the old and new address.
+- Owners changing their own email in My profile is left for later; it would use the same confirmation.
+- The simulation still changes an email straight away and sends nothing.
+- Rows already in the audit log can't be improved; they stay as written.
+
+---
+
+## D35 — When a unit changes hands (6 November 2026)
+
+**Status:** approved by the product owner (Terry Mosoma).
+
+A unit's levy account stays with the unit when it's sold, so its history goes with it. Joseph Jackson, who buys Die Eike unit 3 on 20 November, could already see Marike du Toit's months on it, and a statement issued today for September was addressed to him. Marike, the seller, saw none of her statements. A sale dated in the future also took effect at once.
+
+**Decision:**
+1. **A statement belongs to whoever owned the unit that month:** the owner on its last day (the account holder first, if it's owned jointly), or the last owner before a gap between owners. Sending one for a seller's month goes to the seller.
+2. **The buyer sees the account from their start date:** "Balance when you took over", then their own months. They can't open a statement for a month before that. Before a transfer is registered the scheme normally confirms the levies are paid, so that balance is usually nil; if not, the agency resolves it with the seller.
+3. **The seller sees every month they owned, read-only,** on their *Former resident* page. A month whose statement was never sent to them is issued to them when they open it, and kept like any issued statement (D7).
+4. **Nothing changes until the transfer date.** The buyer's access and the account hand-over both wait for it, and between owners the account stays with the seller.
+5. **A statement addressed to someone who didn't own the unit that month** is kept on record as replaced (a migration does this for ones already issued), so the right owner's can be issued.
+
+**Consequences:**
+- An owner, tenant or trustee whose start date is still to come has no access until that day. Before, only the end date was checked.
+- A month split by a sale belongs to whoever owned it on its last day. Lines from earlier in the buyer's first month still show to the buyer.
+- An owner who sells one unit and keeps another still doesn't see the sold unit's statements (left from D33).
 
 ## Still open (needs domain expertise before slice 2)
 

@@ -245,6 +245,50 @@ Restart the API first, so the migration runs.
 - [ ] As Thandeka: Portfolio › Staff › Johan, and set Priya as his cover from today. **Expect:** his ordinary tasks move to Priya and his "Check whether…" tasks move to you. End the cover. **Expect:** they all go back to Johan.
 - [ ] As Johan: Tasks and Governance. **Expect:** everything as before, including *Log a breach* and the "Check whether…" tasks.
 
+## 23. Editing a person, and someone with no property left (D33)
+
+Restart the API first. Use a test owner who has signed in (Add an owner at Kingfisher Court and *Invite* them, or use Johanna), and keep a private window signed in as them.
+
+- [ ] As Thandeka: People › the owner › *Edit contact details*: change the surname and mobile, and save. **Expect:** the page shows the new details, and the owner can still sign in and sees their unit.
+- [ ] Open that person's page in two tabs, save an edit in one, then save a different edit in the other. **Expect:** the second is refused because someone else changed it.
+- [ ] As Thandeka: on someone who is both owner and trustee, Governance › Trustee boards › end their term today. **Expect:** after a reload, the role switcher no longer offers Trustee, and *Owner* still works.
+- [ ] End the same person's ownership with a date next week. **Expect:** nothing changes for them yet.
+- [ ] End the ownership with today's or an earlier date, then reload as them. **Expect:** they stay signed in, on "You don't have any property registered under your name at the moment", with the agency's contact details and what they used to hold.
+- [ ] As them: the menu. **Expect:** Home and their profile and security only. Open `/my/account` by typing it. **Expect:** you don't have access, with a way home.
+- [ ] As a former owner who had a statement issued while they held the account. **Expect:** it's listed under *Your past statements*, and its PDF opens. The new owner's statement isn't listed.
+- [ ] Sign them out and back in. **Expect:** they land on the same page, not the sign-in page.
+- [ ] As Thandeka: add them as an owner again. **Expect:** after a reload they land on the owner's home, and the role switcher also offers *Former resident*.
+- [ ] As Thandeka: Settings › Users & access › that person. **Expect:** *Former resident* shows and can be ended, and isn't offered when adding a role. End it on someone with nothing else. **Expect:** they can no longer get in.
+- [ ] As Thandeka: record a sale on a unit whose owner is signed in, using *They replace the owner*, with a date that's already passed. **Expect:** the seller's next reload shows the new page straight away.
+
+## 24. Changing someone's email (D34)
+
+Restart the API first. Check Mailpit (localhost:8025) for each email.
+
+- [ ] Sign in as `marike@mail.example`. **Expect:** her *Former resident* page ("You don't have any property registered under your name at the moment"), not a spinner.
+- [ ] As Thandeka: Settings › Users & access. **Expect:** *Two email addresses on record* lists Nadia Abdul with her contact and sign-in addresses. Choose *Use nadia@absa.example*. **Expect:** she leaves the list, and her People record shows that address.
+- [ ] As Thandeka: People › Nadia Abdul › *Edit details*. **Expect:** the Email field explains that the new address has to confirm. Change it to a new address and save. **Expect:** a toast says it needs confirming, a banner on her page says who it's waiting for, and her email hasn't changed.
+- [ ] Mailpit. **Expect:** the new address has a confirmation link, and the old one has "A change of email was requested", naming the new address.
+- [ ] As Thandeka: Settings › Audit log. **Expect:** "Updated contact details for Nadia Abdul: email … to … (waiting for them to confirm)".
+- [ ] Before confirming, send her a statement or sign in as her with an email link. **Expect:** it goes to the old address.
+- [ ] Open the link from the new address in a private window and choose *Confirm*. **Expect:** it says the email is changed; People shows the new address; the old address is told; a sign-in link now goes to the new address; the audit log has "Confirmed the change of email from … to …".
+- [ ] Open the same link again. **Expect:** refused: it was used already.
+- [ ] Change her email again, then *Cancel the change* on her page. **Expect:** the banner goes, and the link is refused.
+- [ ] Change her email to `thandeka@acacia.example`. **Expect:** refused: someone else signs in with it.
+- [ ] As Thandeka: People › an owner who hasn't signed in › change their email. **Expect:** it changes straight away, no email is sent, and the audit log has the old and new address.
+- [ ] As Thandeka: Settings › Users & access › Johan › edit his email. **Expect:** it asks for your passkey, then waits for confirmation, and is listed under *Waiting for a new email to be confirmed*. Cancel it there.
+
+## 25. When a unit changes hands (D35)
+
+Restart the API first, so the migration runs, and wait a minute.
+
+- [ ] As Thandeka: Die Eike › Unit 3 › account. **Expect:** the account is held by Marike du Toit until Joseph Jackson's ownership starts on 20 November.
+- [ ] Sign in as `joseph@mail.example`. **Expect:** no owner role for unit 3 yet (he's still a trustee). After 20 November, *My account* starts with "Balance when you took over" and shows no August to October months.
+- [ ] Sign in as `marike@mail.example`. **Expect:** *Your past statements* lists September and October 2026 for Unit 3, marked "not sent at the time". Open September's PDF. **Expect:** it's addressed to her.
+- [ ] As Thandeka: send the September statement for DE-003. **Expect:** Mailpit has it for Marike, not Joseph.
+- [ ] As Thandeka: on another unit with an owner who signs in, record a sale with *They replace the owner*, dated next week. **Expect:** the seller keeps access and the account; the buyer has neither until that day.
+- [ ] Record a sale dated last week instead. **Expect:** the account moves to the buyer, and the buyer's account starts with "Balance when you took over".
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.

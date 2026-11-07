@@ -10,6 +10,8 @@ public static class Roles
     public const string Trustee = "trustee";
     public const string Owner = "owner";
     public const string Tenant = "tenant";
+    /// <summary>D33: no property left at the agency. Follows from their last role ending; nobody grants it.</summary>
+    public const string PastResident = "past-resident";
 
     public const string SystemAdmin = "system-admin";
     public const string AccountManager = "humo-account-manager";
@@ -32,6 +34,7 @@ public static class Roles
         Trustee => "Trustee",
         Owner => "Owner",
         Tenant => "Tenant",
+        PastResident => "Former resident",
         SystemAdmin => "Humo System Administrator",
         AccountManager => "Humo Account Manager",
         Support => "Humo Support",

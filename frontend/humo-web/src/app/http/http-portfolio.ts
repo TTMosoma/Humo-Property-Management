@@ -27,6 +27,7 @@ import {
   Note,
   TimelineDataSource,
   TimelineEvent,
+  PersonEmailState,
 } from '../domain';
 import { HttpPort, toApiErrorFromHttp } from './http-port';
 
@@ -182,6 +183,14 @@ export class HttpPersonDataSource extends HttpPort implements PersonDataSource {
 
   create(details: PersonDetails, link?: NewRelationship): Observable<string> {
     return this.createId('/people', { details, link }, ['people', 'units']);
+  }
+
+  emailState(personId: string): Observable<PersonEmailState> {
+    return this.live<PersonEmailState>(`/people/${personId}/email-change`, ['people', 'access']);
+  }
+
+  cancelEmailChange(changeId: string): Observable<void> {
+    return this.command('POST', `/email-changes/${changeId}/cancel`, null, ['people', 'access']);
   }
 
   update(personId: string, details: PersonDetails, expectedVersion?: number): Observable<void> {

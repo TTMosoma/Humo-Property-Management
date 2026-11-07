@@ -40,6 +40,18 @@ public static class AccountEndpoints
         return null;
     }
 
+    /// <summary>
+    /// D35: when an owner reads their own account, the day they took it over. The account's history stays with the unit,
+    /// and the months before that are the previous owner's. Null for staff, who see all of it.
+    /// </summary>
+    internal static async Task<DateOnly?> OwnedFromAsync(Actor actor, HumoDbContext db, PortfolioReads reads, LevyAccount account, CancellationToken ct)
+    {
+        if (actor.Can("Accounts.View") && await SchemeEndpoints.Visible(actor, db).AnyAsync(s => s.Id == account.SchemeId, ct)) return null;
+        if (!Guid.TryParse(actor.User.PersonId, out var person)) return null;
+        var mine = (await db.Relationships.AsNoTracking().Where(r => r.UnitId == account.UnitId && r.PersonId == person && r.Type == "owner").ToListAsync(ct)).Where(reads.IsCurrent).ToList();
+        return mine.Count == 0 ? null : mine.Min(r => r.Since);
+    }
+
     private static async Task<IResult> Get(Guid id, CurrentActor current, HumoDbContext db, PortfolioReads reads, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
@@ -49,6 +61,12 @@ public static class AccountEndpoints
         var scheme = await db.Schemes.FirstAsync(s => s.Id == account.SchemeId, ct);
         var holder = await db.People.FirstAsync(p => p.Id == holderId, ct);
         var lines = await db.Ledger.Where(e => e.AccountId == id).ToListAsync(ct);
+        if (await OwnedFromAsync(actor, db, reads, account, ct) is { } from && lines.Any(l => l.Date < from))
+        {
+            var before = Ledger.Round2(lines.Where(l => l.Date < from).Sum(l => l.Amount));
+            lines = [new LedgerEntry { Id = Guid.Empty, AccountId = id, Date = from, Type = TransactionTypes.Opening, Description = "Balance when you took over", Amount = before, CreatedAt = DateTimeOffset.MinValue },
+                .. lines.Where(l => l.Date >= from)];
+        }
         var transactions = WithBalances(lines);
         var periods = lines.Select(l => l.Date.ToString("yyyy-MM")).Distinct().OrderDescending().ToList();
         return Results.Ok(new AccountDetailDto(PortfolioReads.ToDto(account), PortfolioReads.ToDto(unit), (await SchemeEndpoints.ToDtos([scheme], db, ct))[0],

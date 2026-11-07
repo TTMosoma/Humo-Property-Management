@@ -239,6 +239,15 @@
           </div>
         }
 
+        @case ('no-role') {
+          <div class="centre">
+            <div class="icon-badge warn" aria-hidden="true"><ion-icon name="lock-closed-outline" /></div>
+            <h1 #heading tabindex="-1">You don’t have access at the moment</h1>
+            <p class="sub">You signed in, but you don’t have a role at any agency in Humo Property Management right now. If this looks wrong, contact your managing agent or your agency administrator.</p>
+            <button type="button" class="btn btn-primary big" (click)="startOver()">Back to sign in</button>
+          </div>
+        }
+
         @case ('link-failed') {
           <div class="centre">
             <div class="icon-badge warn" aria-hidden="true"><ion-icon name="time-outline" /></div>

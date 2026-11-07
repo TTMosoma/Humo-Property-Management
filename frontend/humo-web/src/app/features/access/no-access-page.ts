@@ -63,7 +63,7 @@ export class NoAccessPage {
     const role = ROLE_LABELS[this.session.role()];
     const admin = this.session.isHumo()
       ? 'a Humo System Administrator'
-      : this.session.isResident() || this.session.role() === 'trustee'
+      : this.session.isResident() || this.session.role() === 'trustee' || this.session.role() === 'past-resident'
         ? 'your managing agent'
         : 'your agency administrator';
     return `As ${role}, this page isn’t available to you. If you need it for your work, ask ${admin} to change your access.`;
