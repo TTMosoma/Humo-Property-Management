@@ -252,8 +252,8 @@ Restart the API first. Use a test owner who has signed in (Add an owner at Kingf
 - [ ] As Thandeka: People › the owner › *Edit contact details*: change the surname and mobile, and save. **Expect:** the page shows the new details, and the owner can still sign in and sees their unit.
 - [ ] Open that person's page in two tabs, save an edit in one, then save a different edit in the other. **Expect:** the second is refused because someone else changed it.
 - [ ] As Thandeka: on someone who is both owner and trustee, Governance › Trustee boards › end their term today. **Expect:** after a reload, the role switcher no longer offers Trustee, and *Owner* still works.
-- [ ] End the same person's ownership with a date next week. **Expect:** nothing changes for them yet.
-- [ ] End the ownership with today's or an earlier date, then reload as them. **Expect:** they stay signed in, on "You don't have any property registered under your name at the moment", with the agency's contact details and what they used to hold.
+- [ ] Record a sale of the same person's unit (add the buyer with *They replace the owner*), dated next week. **Expect:** nothing changes for them yet. (Ending their ownership with nobody after them is refused, D36.)
+- [ ] Record the sale dated today or earlier instead, then reload as them. **Expect:** they stay signed in, on "You don't have any property registered under your name at the moment", with the agency's contact details and what they used to hold.
 - [ ] As them: the menu. **Expect:** Home and their profile and security only. Open `/my/account` by typing it. **Expect:** you don't have access, with a way home.
 - [ ] As a former owner who had a statement issued while they held the account. **Expect:** it's listed under *Your past statements*, and its PDF opens. The new owner's statement isn't listed.
 - [ ] Sign them out and back in. **Expect:** they land on the same page, not the sign-in page.
@@ -288,6 +288,9 @@ Restart the API first, so the migration runs, and wait a minute.
 - [ ] As Thandeka: send the September statement for DE-003. **Expect:** Mailpit has it for Marike, not Joseph.
 - [ ] As Thandeka: on another unit with an owner who signs in, record a sale with *They replace the owner*, dated next week. **Expect:** the seller keeps access and the account; the buyer has neither until that day.
 - [ ] Record a sale dated last week instead. **Expect:** the account moves to the buyer, and the buyer's account starts with "Balance when you took over".
+- [ ] Portfolio › Units. **Expect:** *Units with no owner on record* lists Die Eike, Unit 3, "No owner on record from 5 Oct 2026 to 19 Nov 2026"; the unit's page says the same.
+- [ ] People › Marike du Toit › her ownership of unit 3 › correct the last day to 19 November 2026 (or Joseph's first day to 5 October). **Expect:** the warning goes, and the account and access follow the new dates straight away.
+- [ ] People › the only owner of a unit › *End*. **Expect:** refused, saying to add the buyer with *They replace the owner*.
 
 ## Reporting back
 

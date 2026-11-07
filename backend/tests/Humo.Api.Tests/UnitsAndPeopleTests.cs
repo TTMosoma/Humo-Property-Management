@@ -284,9 +284,10 @@ public sealed class UnitsAndPeopleTests : IDisposable
         var rel = (await (await s.Admin.GetAsync($"/api/people/{anele}")).Json()).GetProperty("relationships")[0].GetProperty("relationship").GetProperty("id").GetString();
 
         Assert.True((await (await s.Admin.PostAsJsonAsync($"/api/relationships/{rel}/end", new { until = "2020-01-01" })).FieldErrors()).TryGetProperty("until", out _));
-        Assert.Equal(HttpStatusCode.NoContent, (await s.Admin.PostAsJsonAsync($"/api/relationships/{rel}/end", new { until = "2026-01-31" })).StatusCode);
+        // D36: sold, so the buyer replaces Anele, whose last day is the day before.
+        await Id(await s.Admin.PostAsJsonAsync("/api/people", new { details = Person("Zanele", "Khoza", "zanele@mail.example"), link = new { type = "owner", schemeId = s.Kc.ToString(), unitId = unit.ToString(), since = "2026-02-01", ownership = "replaces" } }));
 
-        Assert.Empty((await (await s.Admin.GetAsync($"/api/units/{unit}")).Json()).GetProperty("owners").EnumerateArray());
+        Assert.Equal(["Zanele Khoza"], (await (await s.Admin.GetAsync($"/api/units/{unit}")).Json()).GetProperty("owners").EnumerateArray().Select(o => o.GetProperty("displayName").GetString()));
         var history = (await (await s.Admin.GetAsync($"/api/people/{anele}")).Json()).GetProperty("relationships")[0].GetProperty("relationship");
         Assert.Equal("2026-01-31", history.GetProperty("until").GetString());
     }

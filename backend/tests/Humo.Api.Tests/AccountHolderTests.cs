@@ -53,16 +53,45 @@ public sealed class AccountHolderTests : IDisposable
     }
 
     [Fact]
-    public async Task An_owner_added_after_the_previous_ownership_ended_holds_the_account()
+    public async Task Ending_the_only_owner_is_refused_and_the_buyer_replaces_them_instead()
     {
         var (admin, scheme, unit) = await Unit();
         var andile = await Owner(admin, scheme, unit, "Andile", Day(-30));
         Assert.Equal(andile, await Holder(unit));
 
-        // Sold: the ownership is ended first, with nobody to hand over to yet; the buyer is added afterwards.
-        await End(admin, andile, Day(-4));
-        var tshwari = await Owner(admin, scheme, unit, "Tshwari", Day(-1));
+        // D36: a unit always has an owner, so ending the only one would leave a gap.
+        var rel = await api.Db(db => db.Relationships.Where(r => r.PersonId == andile && r.Type == "owner").Select(r => r.Id).SingleAsync());
+        var refused = await admin.PostAsJsonAsync($"/api/relationships/{rel}/end", new { endedOn = Day(-4) });
+        Assert.Contains("They replace the owner", (await refused.FieldErrors()).GetProperty("endedOn").GetString());
+
+        var tshwari = await Owner(admin, scheme, unit, "Tshwari", Day(-4), ownership: "replaces");
         Assert.Equal(tshwari, await Holder(unit));
+    }
+
+    [Fact]
+    public async Task A_gap_already_on_record_is_listed_and_correcting_the_dates_clears_it()
+    {
+        var (admin, scheme, unit) = await Unit();
+        var andile = await Owner(admin, scheme, unit, "Andile", Day(-30));
+        var tshwari = await Owner(admin, scheme, unit, "Tshwari", Day(10), ownership: "replaces");
+        // As captured before D36: the seller's last day set apart from the buyer's first.
+        await api.Db(async db =>
+        {
+            (await db.Relationships.SingleAsync(r => r.PersonId == andile)).Until = DateOnly.Parse(Day(-5));
+            return await db.SaveChangesAsync();
+        });
+
+        var gap = Assert.Single((await (await admin.GetAsync($"/api/units/owner-gaps?schemeIds={scheme}")).Json()).EnumerateArray());
+        Assert.Equal((Day(-4), Day(9)), (gap.GetProperty("from").GetString(), gap.GetProperty("to").GetString()));
+
+        // Making it bigger is refused; closing it is allowed, and the account follows at once.
+        var rel = await api.Db(db => db.Relationships.Where(r => r.PersonId == andile).Select(r => r.Id).SingleAsync());
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, (await admin.PutAsJsonAsync($"/api/relationships/{rel}", new { since = Day(-30), until = Day(-6) })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await admin.PutAsJsonAsync($"/api/relationships/{rel}", new { since = Day(-30), until = Day(9) })).StatusCode);
+
+        Assert.Empty((await (await admin.GetAsync($"/api/units/owner-gaps?schemeIds={scheme}")).Json()).EnumerateArray());
+        Assert.Equal(andile, await Holder(unit));
+        Assert.NotEqual(tshwari, await Holder(unit));
     }
 
     [Fact]

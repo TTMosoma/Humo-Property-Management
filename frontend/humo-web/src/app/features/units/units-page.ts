@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { IonIcon } from '@ionic/angular/standalone';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { map } from 'rxjs';
 import { Scheme, UnitDataSource, UnitSummary } from '../../domain';
 import { loadable } from '../../core/data/loadable';
@@ -20,7 +20,7 @@ import { EmptyState } from '../../ui/states/empty-state';
 import { ErrorState } from '../../ui/states/error-state';
 import { Skeleton } from '../../ui/states/skeleton';
 import { StatusPill } from '../../ui/status-pill/status-pill';
-import { OCCUPANCY_LABEL, accountStatus, links } from '../accounts/account-view';
+import { OCCUPANCY_LABEL, accountStatus, links, ownerGapText } from '../accounts/account-view';
 import { UnitPreview } from './unit-preview';
 
 const PAGE = 50;
@@ -33,7 +33,7 @@ const PAGE = 50;
  */
 @Component({
   selector: 'app-units-page',
-  imports: [PageHeader, ScopeNotice, ViewTabs, FilterBar, DataTable, CellDef, StatusPill, EmptyState, ErrorState, Skeleton, RandPipe, IonIcon],
+  imports: [PageHeader, ScopeNotice, ViewTabs, FilterBar, DataTable, CellDef, StatusPill, EmptyState, ErrorState, Skeleton, RandPipe, IonIcon, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './units-page.html',
   styleUrl: './units-page.scss',
@@ -72,6 +72,9 @@ export class UnitsPage {
   });
 
   protected readonly result = loadable(() => this.data.list(this.schemeIds()).pipe(map((p) => ({ rows: p.items }))));
+  /** D36: units nobody owned for a while: the dates need correcting. */
+  protected readonly gaps = loadable(() => this.data.ownerGaps(this.schemeIds()));
+  protected readonly gapText = ownerGapText;
 
   protected readonly loading = this.result.loading;
   protected readonly failed = this.result.failed;
