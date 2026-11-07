@@ -77,7 +77,7 @@ import { AttachmentsPanel } from '../library/attachments-panel';
               <dt>Mobile</dt><dd>{{ p.person.phone }}</dd>
               <dt>Email</dt><dd>{{ p.person.email }}</dd>
               <dt>Prefers</dt><dd>{{ channel() }}</dd>
-              <dt>Humo sign-in</dt><dd>{{ p.person.personaId ? 'Invited' : 'Not invited yet' }}</dd>
+              <dt>Humo sign-in</dt><dd>{{ signInLabel() }}</dd>
             </dl>
           </section>
           <section class="surface panel">
@@ -142,6 +142,15 @@ export class PersonPage {
     const org = this.session.organisation();
     if (org) inviteResidentForm(this.drawer, this.access, org.id, org.shortName, p, this.invites());
   }
+
+  /** What their Humo sign-in is now: the record alone can't tell an invitation from one they've accepted. */
+  protected readonly signInLabel = computed(() => {
+    const state = this.emailState.value()?.signIn;
+    if (state === 'active') return 'Signs in';
+    if (state === 'invited') return 'Invited, not accepted yet';
+    if (state === 'suspended') return 'Suspended';
+    return this.person()?.person.personaId ? 'Invited' : 'Not invited yet';
+  });
 
   /** D34: whether they sign in, and any change of email still waiting. */
   protected readonly emailState = loadable(() => this.people.emailState(this.id()));

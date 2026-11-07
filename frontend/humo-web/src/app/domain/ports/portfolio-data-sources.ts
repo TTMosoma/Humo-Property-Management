@@ -106,6 +106,8 @@ export interface EmailChange {
 export interface PersonEmailState {
   signsIn: boolean;
   pending: EmailChange | null;
+  /** 'invited' (not accepted yet), 'active' or 'suspended'; absent with no sign-in. */
+  signIn?: string | null;
 }
 
 export abstract class AccountDataSource {

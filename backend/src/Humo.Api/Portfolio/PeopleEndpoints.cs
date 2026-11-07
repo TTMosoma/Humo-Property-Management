@@ -451,10 +451,21 @@ public static partial class PeopleEndpoints
         else
         {
             var unit = Guid.TryParse(l.UnitId, out var uid) ? await db.Units.FirstOrDefaultAsync(u => u.Id == uid, ct) : null;
-            var current = unit is null ? [] : (await db.Relationships.Where(r => r.UnitId == unit.Id && r.Type == l.Type).ToListAsync(ct)).Where(reads.IsCurrent).ToList();
+            var all = unit is null ? [] : await db.Relationships.Where(r => r.UnitId == unit.Id && r.Type == l.Type).ToListAsync(ct);
+            // Not ended: in force now, or starting later (D35). A sale dated next week still owns the unit for these checks.
+            var current = all.Where(r => r.Until is null || r.Until >= reads.Today).ToList();
+            var gapFrom = l.Type == "owner" && unit is not null ? PortfolioRules.OwnerGaps(all).Where(g => g.To is null).Select(g => (DateOnly?)g.From).FirstOrDefault() : null;
             if (unit is null || unit.SchemeId != scheme.Id) e["unitId"] = "Choose the unit.";
             else if (l.Type == "tenant" && current.Count > 0) e["unitId"] = $"Unit {unit.Number} already has a tenant. End that lease first.";
-            else if (l.Type == "owner" && personId is { } pid && current.Any(r => r.PersonId == pid)) e["unitId"] = "They already own this unit.";
+            else if (l.Type == "owner" && personId is { } pid && current.FirstOrDefault(r => r.PersonId == pid) is { } mine)
+                e["unitId"] = mine.Since > reads.Today ? $"They already own this unit from {mine.Since:d MMMM yyyy}. To change that date, correct their ownership instead." : "They already own this unit.";
+            else if (gapFrom is { } after && current.Count == 0 && ParseDate(l.Since) is { } starts && starts != after)
+            {
+                // D36: a unit always has an owner, so the next owner starts the day after the last one's last day.
+                var last = all.OrderByDescending(r => r.Until).First();
+                var name = await db.People.Where(p => p.Id == last.PersonId).Select(p => p.DisplayName).FirstAsync(ct);
+                e["since"] = $"{name}’s ownership ended on {last.Until:d MMMM yyyy}, so the new owner’s first day is {after:d MMMM yyyy}. If the transfer was registered later, correct {name}’s last day first.";
+            }
             else if (l.Type == "owner" && current.Count > 0)
             {
                 // Someone else owns it: ask, never assume. Partners own it together; a sale replaces the owner.

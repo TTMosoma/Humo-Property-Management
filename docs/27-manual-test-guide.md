@@ -291,6 +291,9 @@ Restart the API first, so the migration runs, and wait a minute.
 - [ ] Portfolio › Units. **Expect:** *Units with no owner on record* lists Die Eike, Unit 3, "No owner on record from 5 Oct 2026 to 19 Nov 2026"; the unit's page says the same.
 - [ ] People › Marike du Toit › her ownership of unit 3 › correct the last day to 19 November 2026 (or Joseph's first day to 5 October). **Expect:** the warning goes, and the account and access follow the new dates straight away.
 - [ ] People › the only owner of a unit › *End*. **Expect:** refused, saying to add the buyer with *They replace the owner*.
+- [ ] People › Joseph Jackson › *Add a role* › owner of Die Eike unit 3 again. **Expect:** refused: he already owns it.
+- [ ] On a unit whose owner's ownership has ended with nobody after them, add an owner starting a week later than the day after. **Expect:** refused, giving the day after as the new owner's first day.
+- [ ] People › someone with a sign-in. **Expect:** *Humo sign-in* says "Signs in", or "Invited, not accepted yet" before they accept.
 
 ## Reporting back
 

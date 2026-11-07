@@ -811,6 +811,8 @@ A sectional title unit always has a registered owner, and ownership passes from 
 3. **Gaps already on record are flagged:** on the unit's page, and at the top of Portfolio › Units for every unit in view, for staff to correct the owners' dates.
 4. **Until they're corrected,** D35 applies: the months and the account stay with the last owner.
 5. **Correcting dates takes effect at once:** the account and portal access follow the new dates straight away, not at the next minute's check.
+6. **Adding an owner after the last one's last day:** they start the day after it. If the transfer was registered later, the seller's last day is corrected first.
+7. **The same person can't own a unit twice:** someone who already owns it from a later date is refused, with a pointer to correct that date instead.
 
 **Consequences:**
 - API: `GET /units/owner-gaps`. Ending an ownership (`POST /relationships/{id}/end`) and correcting its dates (`PUT /relationships/{id}`) refuse a change that leaves days with no owner.

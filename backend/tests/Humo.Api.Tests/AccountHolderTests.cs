@@ -69,6 +69,40 @@ public sealed class AccountHolderTests : IDisposable
     }
 
     [Fact]
+    public async Task Someone_who_already_owns_the_unit_from_a_later_date_cant_be_added_again()
+    {
+        var (admin, scheme, unit) = await Unit();
+        await Owner(admin, scheme, unit, "Andile", Day(-30));
+        var joseph = await Owner(admin, scheme, unit, "Joseph", Day(10), ownership: "replaces");
+
+        var again = await admin.PostAsJsonAsync($"/api/people/{joseph}/relationships", new { type = "owner", schemeId = scheme.ToString(), unitId = unit.ToString(), since = Day(0), ownership = "replaces" });
+
+        Assert.Contains("already own this unit from", (await again.FieldErrors()).GetProperty("unitId").GetString());
+    }
+
+    [Fact]
+    public async Task After_the_last_owners_last_day_the_next_owner_starts_the_day_after()
+    {
+        var (admin, scheme, unit) = await Unit();
+        var andile = await Owner(admin, scheme, unit, "Andile", Day(-30));
+        await api.Db(async db =>
+        {
+            (await db.Relationships.SingleAsync(r => r.PersonId == andile)).Until = DateOnly.Parse(Day(-10));
+            return await db.SaveChangesAsync();
+        });
+
+        var late = await admin.PostAsJsonAsync("/api/people", new
+        {
+            details = new { firstName = "Lerato", lastName = "Owner", kind = "individual", email = "lerato@mail.example", phone = "082 555 0199", preferredChannel = "email" },
+            link = new { type = "owner", schemeId = scheme.ToString(), unitId = unit.ToString(), since = Day(0) },
+        });
+        Assert.Contains("first day is", (await late.FieldErrors()).GetProperty("since").GetString());
+
+        await Owner(admin, scheme, unit, "Lerato", Day(-9));
+        Assert.Empty((await (await admin.GetAsync($"/api/units/owner-gaps?schemeIds={scheme}")).Json()).EnumerateArray());
+    }
+
+    [Fact]
     public async Task A_gap_already_on_record_is_listed_and_correcting_the_dates_clears_it()
     {
         var (admin, scheme, unit) = await Unit();
