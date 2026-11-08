@@ -53,6 +53,18 @@ ion-toast.humo-toast-danger {
   --color: #fff;
 }
 
+// A message is shown in full, however long: it wraps, keeps its line breaks, and scrolls if it must.
+ion-toast.humo-toast {
+  --max-width: min(720px, calc(100vw - 32px));
+
+  &::part(message) {
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+    max-height: 50vh;
+    overflow-y: auto;
+  }
+}
+
 // Toasts sit above drawers and dialogs.
 ion-toast.humo-toast {
   z-index: 2000;
