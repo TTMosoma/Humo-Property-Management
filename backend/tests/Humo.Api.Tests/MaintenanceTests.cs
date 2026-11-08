@@ -217,6 +217,25 @@ public sealed class MaintenanceTests : IDisposable
     }
 
     [Fact]
+    public async Task A_job_offers_the_scheme_s_suppliers_of_every_trade_so_triage_can_change_it()
+    {
+        var s = await Scheme();
+        var plumber = await Id(await NewSupplier(s.Admin, s.Kc));
+        var roofer = await Id(await s.Admin.PostAsJsonAsync("/api/suppliers", new
+        {
+            name = "Top Roofs", trades = new[] { "Roofing & waterproofing" }, contactName = "Lerato Dube", phone = "082 555 0199", email = "jobs@roofs.example", schemeIds = new[] { s.Kc.ToString() },
+        }));
+        var elsewhere = await Id(await s.Admin.PostAsJsonAsync("/api/schemes", new { name = "Die Eike", code = "DE", type = "Sectional Title", suburb = "Brooklyn", city = "Pretoria", province = "Gauteng" }));
+        var away = await Id(await NewSupplier(s.Admin, elsewhere, "Far Plumbing"));
+        var reference = await NewJob(s);
+
+        var candidates = (await Ok(await s.Admin.GetAsync($"/api/jobs/{reference}"))).GetProperty("candidates").EnumerateArray().Select(c => c.GetProperty("id").GetString()).ToList();
+        Assert.Contains(plumber.ToString(), candidates);
+        Assert.Contains(roofer.ToString(), candidates);
+        Assert.DoesNotContain(away.ToString(), candidates);
+    }
+
+    [Fact]
     public async Task A_job_runs_from_report_to_invoice_within_delegated_authority()
     {
         var s = await Scheme();

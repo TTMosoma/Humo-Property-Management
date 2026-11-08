@@ -92,7 +92,12 @@ export function supplierCompliance(s: Supplier): DocStatus {
   return order.find((o) => statuses.includes(o)) ?? 'valid';
 }
 
-export type BankAccountType = 'cheque' | 'savings' | 'transmission';
+/** Of a job's suppliers (every trade at its scheme), those who do this trade. */
+export function suppliersFor(job: { candidates: Supplier[] }, trade: Trade): Supplier[] {
+  return job.candidates.filter((s) => s.trades.includes(trade));
+}
+
+export type BankAccountType ='cheque' | 'savings' | 'transmission';
 
 /** A supplier's bank account, as entered (D27): the API holds payments until someone else verifies it. */
 export interface BankDetailsInput {

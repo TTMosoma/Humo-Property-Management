@@ -168,8 +168,9 @@ public sealed class MaintenanceService(HumoDbContext db, TimeProvider clock)
         var job = summary.Job;
         var quoted = job.Quotes.Select(q => Guid.TryParse(q.SupplierId, out var g) ? g : Guid.Empty).Distinct().ToList();
         var suppliers = await db.Suppliers.Where(s => quoted.Contains(s.Id)).ToListAsync(ct);
+        // Every trade, so the screen can offer suppliers for a trade picked at triage before it's saved.
         var candidates = (await db.Suppliers.Where(s => s.OrganisationId == row.OrganisationId && s.Status != "archived").ToListAsync(ct))
-            .Where(s => List<string>(s.Trades).Contains(job.Category) && List<string>(s.SchemeIds).Contains(job.SchemeId)).ToList();
+            .Where(s => List<string>(s.SchemeIds).Contains(job.SchemeId)).ToList();
         var perf = await PerformanceAsync([.. suppliers.Concat(candidates).Select(s => s.Id).Distinct()], ct);
         var invoice = Guid.TryParse(job.InvoiceId, out var invId) ? await db.SupplierInvoices.FirstOrDefaultAsync(i => i.Id == invId, ct) : null;
         var approval = Guid.TryParse(job.Approval?.WorkItemId, out var w) ? await db.WorkItems.FirstOrDefaultAsync(x => x.Id == w, ct) : null;

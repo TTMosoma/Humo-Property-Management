@@ -109,7 +109,7 @@ export class MaintenanceStore {
       ...this.summary(job),
       suppliers,
       // Archived suppliers aren't offered for new work.
-      candidates: this.suppliers.filter((s) => s.status !== 'archived' && s.trades.includes(job.category) && s.schemeIds.includes(job.schemeId)),
+      candidates: this.suppliers.filter((s) => s.status !== 'archived' && s.schemeIds.includes(job.schemeId)),
       invoice: invoice ? this.invoiceView(invoice) : undefined,
       batch: invoice?.batchId ? this.batches.find((b) => b.id === invoice.batchId) : undefined,
       approvalItem: job.approval?.workItemId ? this.db.workItems.find((w) => w.id === job.approval!.workItemId) : undefined,

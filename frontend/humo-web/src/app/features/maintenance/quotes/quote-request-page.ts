@@ -4,7 +4,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { catchError, concatMap, map, of, switchMap } from 'rxjs';
 import { ContractorNetwork, ContractorProfile } from '../../../domain/contractor';
-import { JobDataSource, JobDetail, saDate } from '../../../domain';
+import { JobDataSource, JobDetail, saDate, suppliersFor } from '../../../domain';
 import { FeedbackService } from '../../../core/feedback/feedback.service';
 import { loadable } from '../../../core/data/loadable';
 import { SessionService } from '../../../core/session/session.service';
@@ -46,7 +46,7 @@ export class QuoteRequestPage {
     toObservable(computed(() => this.detail() ?? null)).pipe(
       switchMap((d) => {
         if (!d) return of([] as { supplierId: string; profile: ContractorProfile }[]);
-        const linked = d.candidates.filter((s) => s.partyId && s.status === 'active');
+        const linked = suppliersFor(d, d.job.category).filter((s) => s.partyId && s.status === 'active');
         return this.network.profiles(linked.map((s) => s.partyId!)).pipe(
           map((profiles) => linked.map((s) => ({ supplierId: s.id, profile: profiles.find((p) => p.party.id === s.partyId)! })).filter((x) => !!x.profile)),
           catchError(() => of([])),

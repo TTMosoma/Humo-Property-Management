@@ -28,7 +28,7 @@ export interface InvoiceView {
 export interface JobDetail extends JobSummary {
   /** Suppliers referenced by quotes, keyed by id. */
   suppliers: Record<string, Supplier>;
-  /** Suppliers who could be asked to quote (same trade, serving this scheme). */
+  /** Suppliers serving this scheme, of every trade: screens pick those for the job's trade with `suppliersFor`. */
   candidates: Supplier[];
   invoice?: InvoiceView;
   batch?: PaymentBatch;
