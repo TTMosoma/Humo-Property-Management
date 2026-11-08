@@ -1,6 +1,6 @@
 import { Injectable, Injector, inject } from '@angular/core';
 import { simulationStorage } from '../simulation/simulation-storage';
-import {
+import { Photo,
   BatchView,
   DELEGATED_LIMIT,
   Invoice,
@@ -283,6 +283,14 @@ export class MaintenanceStore {
     };
     this.suppliers.push(supplier);
     return supplier.id;
+  }
+
+  addPhoto(ref: string, caption: string, stage: Photo['stage'], by: string): void {
+    const job = this.jobs.find((j) => j.ref === ref);
+    if (!job) throw new Error(`Unknown job ${ref}`);
+    job.version++;
+    job.photos.push({ id: `${ref}-${stage === 'completion' ? 'c' : 'p'}${job.photos.length + 1}`, caption, takenAt: new Date().toISOString(), by, stage });
+    this.db.touch();
   }
 
   act(ref: string, action: JobAction, by: string): void {

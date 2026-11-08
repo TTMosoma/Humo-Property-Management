@@ -192,3 +192,17 @@
     }
   }
 }
+
+.photos a {
+  display: block;
+  border-radius: var(--r);
+}
+
+.add-photos {
+  margin-top: var(--s-3);
+
+  &.busy {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+}

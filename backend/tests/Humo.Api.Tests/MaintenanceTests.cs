@@ -92,6 +92,99 @@ public sealed class MaintenanceTests : IDisposable
         Assert.Equal("forbidden", await log.ProblemCode());
     }
 
+    // ---------------------------------------------------------------- Photos (stored, scanned and counted)
+
+    private static readonly byte[] Jpeg = [0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, (byte)'J', (byte)'F', (byte)'I', (byte)'F', 0x00, 0x01, 0xFF, 0xD9];
+
+    private static MultipartFormDataContent Photo(byte[] bytes, string name = "ceiling.jpg", string? stage = null, string? caption = null)
+    {
+        var form = new MultipartFormDataContent { { new ByteArrayContent(bytes), "file", name } };
+        if (stage is not null) form.Add(new StringContent(stage), "stage");
+        if (caption is not null) form.Add(new StringContent(caption), "caption");
+        return form;
+    }
+
+    private async Task<string> NewJob(Setup s) =>
+        await Ref(await s.Admin.PostAsJsonAsync("/api/jobs", new { schemeId = s.Kc.ToString(), unitId = s.Unit42.ToString(), location = "Kitchen", title = "Geyser leaking", description = "Dripping.", category = "Plumbing", priority = "normal" }));
+
+    private async Task<long> StoredBytes(Setup s) =>
+        (await Ok(await s.Admin.GetAsync($"/api/organisations/{s.Org}/plan"))).GetProperty("storage").GetProperty("usedBytes").GetInt64();
+
+    [Fact]
+    public async Task A_photo_is_stored_shown_on_the_job_and_counted_against_storage()
+    {
+        var s = await Scheme();
+        var reference = await NewJob(s);
+        var before = await StoredBytes(s);
+
+        Assert.Equal(HttpStatusCode.Created, (await s.Admin.PostAsync($"/api/jobs/{reference}/photos", Photo(Jpeg, caption: "Stain on the ceiling"))).StatusCode);
+
+        var photo = Assert.Single((await Ok(await s.Admin.GetAsync($"/api/jobs/{reference}"))).GetProperty("job").GetProperty("photos").EnumerateArray());
+        Assert.Equal(("Stain on the ceiling", "report"), (photo.GetProperty("caption").GetString(), photo.GetProperty("stage").GetString()));
+        Assert.False(string.IsNullOrEmpty(photo.GetProperty("fileId").GetString()));
+        var image = await s.Admin.GetAsync($"/api/jobs/{reference}/photos/{photo.GetProperty("id").GetString()}");
+        Assert.Equal("image/jpeg", image.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(Jpeg, await image.Content.ReadAsByteArrayAsync());
+        Assert.Equal(before + Jpeg.Length, await StoredBytes(s));
+    }
+
+    [Fact]
+    public async Task Only_clean_images_are_stored()
+    {
+        var s = await Scheme();
+        var reference = await NewJob(s);
+        var heic = new byte[] { 0, 0, 0, 0x18, (byte)'f', (byte)'t', (byte)'y', (byte)'p', (byte)'h', (byte)'e', (byte)'i', (byte)'c', 0, 0 };
+
+        Assert.Contains("JPEG, PNG or WebP", (await (await s.Admin.PostAsync($"/api/jobs/{reference}/photos", Photo("%PDF-1.7"u8.ToArray(), "photo.jpg"))).FieldErrors()).GetProperty("file").GetString());
+        Assert.Contains("HEIC", (await (await s.Admin.PostAsync($"/api/jobs/{reference}/photos", Photo(heic, "IMG_1.heic"))).FieldErrors()).GetProperty("file").GetString());
+        Assert.Equal("infected", await (await s.Admin.PostAsync($"/api/jobs/{reference}/photos", Photo([.. Jpeg, .. "EICAR-STANDARD-ANTIVIRUS-TEST-FILE"u8.ToArray()]))).ProblemCode());
+
+        Assert.Empty((await Ok(await s.Admin.GetAsync($"/api/jobs/{reference}"))).GetProperty("job").GetProperty("photos").EnumerateArray());
+        Assert.Equal(0, await api.Db(db => db.UploadedFiles.CountAsync()));
+    }
+
+    [Fact]
+    public async Task A_resident_adds_photos_to_their_own_request_but_not_of_the_finished_work()
+    {
+        var s = await Scheme();
+        var reference = await Ref(await s.Owner.PostAsJsonAsync("/api/jobs", new { title = "Geyser leaking", description = "Dripping since this morning.", category = "Plumbing" }));
+
+        Assert.Equal(HttpStatusCode.Created, (await s.Owner.PostAsync($"/api/jobs/{reference}/photos", Photo(Jpeg, stage: "completion"))).StatusCode);
+
+        var photo = Assert.Single((await Ok(await s.Admin.GetAsync($"/api/jobs/{reference}"))).GetProperty("job").GetProperty("photos").EnumerateArray());
+        Assert.Equal("report", photo.GetProperty("stage").GetString());
+        Assert.Equal(HttpStatusCode.OK, (await s.Owner.GetAsync($"/api/jobs/{reference}/photos/{photo.GetProperty("id").GetString()}")).StatusCode);
+
+        // Someone else's job isn't theirs to add to or look at.
+        var other = await NewJob(s);
+        await api.Db(async db =>
+        {
+            (await db.Jobs.SingleAsync(j => j.Ref == other)).UnitId = null;
+            return await db.SaveChangesAsync();
+        });
+        Assert.Equal(HttpStatusCode.NotFound, (await s.Owner.PostAsync($"/api/jobs/{other}/photos", Photo(Jpeg))).StatusCode);
+    }
+
+    [Fact]
+    public async Task Completing_a_job_no_longer_adds_a_photo_that_isnt_there()
+    {
+        var s = await Scheme();
+        var reference = await NewJob(s);
+        await api.Db(async db =>
+        {
+            var row = await db.Jobs.SingleAsync(j => j.Ref == reference);
+            var job = Humo.Api.Maintenance.MaintenanceService.Read(row);
+            job.Stage = "in-progress";
+            Humo.Api.Maintenance.MaintenanceService.Write(row, job);
+            return await db.SaveChangesAsync();
+        });
+
+        var done = await s.Admin.PostAsJsonAsync($"/api/jobs/{reference}/actions", new { action = new { type = "complete", notes = "Replaced the valve." } });
+        Assert.True(done.IsSuccessStatusCode, await done.Content.ReadAsStringAsync());
+
+        Assert.Empty((await Ok(await s.Admin.GetAsync($"/api/jobs/{reference}"))).GetProperty("job").GetProperty("photos").EnumerateArray());
+    }
+
     [Fact]
     public async Task A_job_runs_from_report_to_invoice_within_delegated_authority()
     {

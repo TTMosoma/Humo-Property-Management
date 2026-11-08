@@ -2,17 +2,20 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 import { IonIcon } from '@ionic/angular/standalone';
 
 /**
- * Photo placeholder for the prototype: a calm tile with the caption, so photo
- * flows (report → completion) can be reviewed without real images.
- * Replace with real thumbnails when the document store exists.
+ * A job photo: the image when it's stored, or a calm placeholder with the caption
+ * (the prototype, and photos recorded by name before they were uploaded).
  */
 @Component({
   selector: 'ui-photo-tile',
   imports: [IonIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="img" [style.background]="bg()" role="img" [attr.aria-label]="'Photo: ' + caption()">
-      <ion-icon name="image-outline" aria-hidden="true" />
+    <div class="img" [style.background]="src() ? null : bg()" role="img" [attr.aria-label]="'Photo: ' + caption()">
+      @if (src(); as url) {
+        <img [src]="url" alt="" loading="lazy" />
+      } @else {
+        <ion-icon name="image-outline" aria-hidden="true" />
+      }
       @if (badge()) {
         <span class="badge">{{ badge() }}</span>
       }
@@ -22,9 +25,11 @@ import { IonIcon } from '@ionic/angular/standalone';
   styles: `
     :host { display: block; width: 132px; }
     .img {
-      position: relative; display: grid; place-items: center; height: 96px; border-radius: var(--r);
+      position: relative; overflow: hidden; display: grid; place-items: center; height: 96px; border-radius: var(--r);
       border: 1px solid var(--c-border); color: rgba(255,255,255,0.85); font-size: 26px;
     }
+    .img img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+    a.img-link { display: block; }
     .badge { position: absolute; left: 6px; top: 6px; padding: 1px 6px; font-size: 10px; font-weight: var(--fw-semibold); color: var(--brand-navy-900); background: rgba(255,255,255,0.85); border-radius: var(--r-pill); }
     .cap { margin-top: 4px; font-size: var(--fs-xs); color: var(--c-text-muted); line-height: 1.3; }
   `,
@@ -33,6 +38,8 @@ export class PhotoTile {
   readonly caption = input.required<string>();
   readonly seed = input('');
   readonly badge = input<string>();
+  /** The stored image; without one, a calm placeholder with the caption. */
+  readonly src = input<string>();
 
   protected readonly bg = computed(() => {
     let h = 0;

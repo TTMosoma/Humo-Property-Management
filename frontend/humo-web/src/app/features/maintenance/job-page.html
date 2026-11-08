@@ -104,9 +104,19 @@
         @if (d.job.photos.length) {
           <div class="photos">
             @for (p of d.job.photos; track p.id) {
-              <ui-photo-tile [caption]="p.caption" [seed]="d.job.ref" [badge]="p.stage === 'completion' ? 'After' : 'Before'" />
+              @if (photoUrl(d.job.ref, p); as url) {
+                <a [href]="url" target="_blank" rel="noopener"><ui-photo-tile [caption]="p.caption" [seed]="d.job.ref" [badge]="p.stage === 'completion' ? 'After' : 'Before'" [src]="url" /></a>
+              } @else {
+                <ui-photo-tile [caption]="p.caption" [seed]="d.job.ref" [badge]="p.stage === 'completion' ? 'After' : 'Before'" />
+              }
             }
           </div>
+        }
+        @if (canAddPhotos()) {
+          <label class="btn btn-secondary btn-sm add-photos" [class.busy]="uploading()">
+            <input type="file" accept="image/jpeg,image/png,image/webp" multiple class="visually-hidden" [disabled]="uploading()" (change)="addPhotos(d.job.ref, d.job.stage, $event)" />
+            <ion-icon name="camera-outline" aria-hidden="true" /> {{ uploading() ? 'Uploading…' : 'Add photos' }}
+          </label>
         }
       </section>
 

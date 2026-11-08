@@ -295,6 +295,18 @@ Restart the API first, so the migration runs, and wait a minute.
 - [ ] On a unit whose owner's ownership has ended with nobody after them, add an owner starting a week later than the day after. **Expect:** refused, giving the day after as the new owner's first day.
 - [ ] People › someone with a sign-in. **Expect:** *Humo sign-in* says "Signs in", or "Invited, not accepted yet" before they accept.
 
+## 26. Maintenance photos (D37)
+
+Restart the API first. Have a JPEG on hand, and an iPhone HEIC if you can.
+
+- [ ] As Thandeka: Settings › Plan & features. Note the storage used.
+- [ ] Maintenance › *Log a request*: pick two photos. **Expect:** both show as previews; *Remove* takes one away. Log it. **Expect:** the job page shows the photo as an image, marked *Before*; opening it shows it full size.
+- [ ] Settings › Plan & features. **Expect:** storage used has gone up by the photo's size.
+- [ ] On the job: *Add photos* with a PDF renamed to `.jpg`. **Expect:** refused: only JPEG, PNG or WebP. With an HEIC. **Expect:** refused, with the iPhone hint.
+- [ ] Take a job to *Completed*, then *Add photos*. **Expect:** the photo is marked *After*, and completing the job added no "Completed work" placeholder.
+- [ ] As `sipho@mail.example` (owner): *Report a problem* with a photo. **Expect:** the request is sent, and Thandeka sees the photo on the job.
+- [ ] As Priya (Finance), open a job from its invoice. **Expect:** its photos show.
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.
