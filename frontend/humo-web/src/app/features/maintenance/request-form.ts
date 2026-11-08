@@ -10,7 +10,7 @@ import { SessionService } from '../../core/session/session.service';
 import { FieldError } from '../../ui/form/field-error';
 import { PageHeader } from '../../ui/page-header/page-header';
 import { PhotoTile } from '../../ui/photo/photo-tile';
-import { uploadAll } from './photo-upload';
+import { failedPhotosMessage, uploadAll } from './photo-upload';
 
 interface TradeTile {
   trade: Trade;
@@ -190,7 +190,7 @@ export class RequestForm {
       this.busy.set(false);
       this.sendingPhotos.set(false);
       picked.forEach((p) => URL.revokeObjectURL(p.url));
-      if (failed.length) this.feedback.error(`${ref} was logged, but ${failed.length === 1 ? 'a photo wasn’t' : `${failed.length} photos weren’t`} stored: ${failed.map((x) => `${x.file.name} (${describeFailure(x.error, 'refused')})`).join('; ')}`);
+      if (failed.length) this.feedback.error(`${ref} was logged. ${failedPhotosMessage(failed, picked.length)} You can add them on the job.`);
       this.after(ref, resident);
     });
   }

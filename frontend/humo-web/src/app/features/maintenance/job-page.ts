@@ -3,7 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { map } from 'rxjs';
-import { AGENCY_QUEUE, JobDataSource, JobEvent, JobStage, PRIORITY_LABEL, Photo, TimelineEvent, TimelineKind, describeFailure, supplierCompliance } from '../../domain';
+import { AGENCY_QUEUE, JobDataSource, JobEvent, JobStage, PRIORITY_LABEL, Photo, TimelineEvent, TimelineKind, supplierCompliance } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
@@ -18,7 +18,7 @@ import { Skeleton } from '../../ui/states/skeleton';
 import { StatusPill } from '../../ui/status-pill/status-pill';
 import { Timeline } from '../../ui/timeline/timeline';
 import { links } from '../accounts/account-view';
-import { uploadAll } from './photo-upload';
+import { failedPhotosMessage, uploadAll } from './photo-upload';
 import { JobNextStep } from './job-next-step';
 import { STAGE_LABEL, STAGE_TONE, TRACKER_STAGES, daysOpen, isOverdue } from './job-view';
 import { AttachmentsPanel } from '../library/attachments-panel';
@@ -70,7 +70,7 @@ export class JobPage {
     uploadAll(files, (f) => this.jobs.addPhoto(ref, f, photoStage)).subscribe((failed) => {
       this.uploading.set(false);
       if (failed.length === 0) this.feedback.success(files.length === 1 ? 'Photo added' : `${files.length} photos added`);
-      else this.feedback.error(failed.map((x) => `${x.file.name}: ${describeFailure(x.error, 'not stored')}`).join(' '));
+      else this.feedback.error(failedPhotosMessage(failed, files.length));
     });
   }
   protected readonly session = inject(SessionService);
