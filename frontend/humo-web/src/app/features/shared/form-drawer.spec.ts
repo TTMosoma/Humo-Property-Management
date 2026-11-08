@@ -7,11 +7,7 @@ import { StepUpService } from '../../core/security/step-up.service';
 import { FormDrawer, FormField, FormSpec } from './form-drawer';
 
 // Ionic's components can't load in the test runner: a stand-in icon.
-vi.mock('@ionic/angular/standalone', async () => {
-  const { Component } = await import('@angular/core');
-  // No decorator syntax: its helper isn't loaded yet when this runs ahead of the imports, in specs sharing form-drawer.
-  return { IonIcon: Component({ selector: 'ion-icon', template: '', inputs: ['name'] })(class {}) };
-});
+vi.mock('@ionic/angular/standalone', async () => (await import('../../testing-ionic')).ionicStandin());
 
 const RULES = [
   { value: 'r-1', label: '1.1 Pets' },

@@ -3,7 +3,7 @@ import { vi } from 'vitest';
 import { PolicyNotices } from '../security/policy-notices';
 import { FeedbackService } from './feedback.service';
 
-vi.mock('@ionic/angular/standalone', () => ({ ToastController: class {} }));
+vi.mock('@ionic/angular/standalone', async () => (await import('../../testing-ionic')).ionicStandin());
 const { ToastController } = await import('@ionic/angular/standalone');
 
 describe('FeedbackService', () => {
