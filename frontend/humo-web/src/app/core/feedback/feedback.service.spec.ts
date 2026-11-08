@@ -4,7 +4,8 @@ import { PolicyNotices } from '../security/policy-notices';
 import { FeedbackService } from './feedback.service';
 
 vi.mock('@ionic/angular/standalone', async () => (await import('../../testing-ionic')).ionicStandin());
-const { ToastController } = await import('@ionic/angular/standalone');
+// The same class the service was given, whichever spec loaded the stand-in first.
+const { ToastController } = (await import('../../testing-ionic')).ionicStandin();
 
 describe('FeedbackService', () => {
   let created: { duration: number; buttons: { text: string }[]; message: string }[];
