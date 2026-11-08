@@ -293,6 +293,14 @@ export class MaintenanceStore {
     this.db.touch();
   }
 
+  removePhoto(ref: string, photoId: string): void {
+    const job = this.jobs.find((j) => j.ref === ref);
+    if (!job) throw new Error(`Unknown job ${ref}`);
+    job.version++;
+    job.photos = job.photos.filter((p) => p.id !== photoId);
+    this.db.touch();
+  }
+
   act(ref: string, action: JobAction, by: string): void {
     const job = this.jobs.find((j) => j.ref === ref);
     if (!job) throw new Error(`Unknown job ${ref}`);

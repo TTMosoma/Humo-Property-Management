@@ -1,4 +1,5 @@
 import { firstValueFrom, of, throwError } from 'rxjs';
+import { ApiError } from '../../domain';
 import { failedPhotosMessage, uploadAll } from './photo-upload';
 
 describe('uploadAll', () => {
@@ -22,6 +23,11 @@ describe('uploadAll', () => {
     const message = failedPhotosMessage([{ file: file('a.jpg'), error }, { file: file('b.jpg'), error }], 2);
     expect(message.startsWith('None of the 2 photos were stored.')).toBe(true);
     expect(message.split('too large').length).toBeLessThanOrEqual(2);
+  });
+
+  it('gives the reason the API gave, not a pointer to fields a photo doesn’t have', () => {
+    const refused = new ApiError('validation', 'Some details need attention', { file: 'Only JPEG, PNG or WebP photos can be uploaded.' });
+    expect(failedPhotosMessage([{ file: file('a.jpg'), error: refused }], 1)).toBe('The photo wasn’t stored. Only JPEG, PNG or WebP photos can be uploaded.');
   });
 
   it('answers nothing when every photo is stored', async () => {

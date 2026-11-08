@@ -114,6 +114,15 @@ export class InMemoryJobDataSource extends Live implements JobDataSource {
     );
   }
 
+  /** SIMULATED (docs/18 R-17): the photo's name goes; there's no stored file to delete. */
+  removePhoto(ref: string, photoId: string): Observable<void> {
+    const job = this.store.detail(ref)?.job;
+    return this.command(
+      { action: `Removed a photo from ${ref}`, resource: 'Job', resourceId: ref, schemeId: job?.schemeId, permission: 'Maintenance.Log' },
+      () => this.store.removePhoto(ref, photoId),
+    );
+  }
+
   /** The simulation keeps only a photo's name, so there's no image to show. */
   photoUrl(): string | undefined {
     return undefined;

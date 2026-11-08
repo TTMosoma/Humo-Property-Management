@@ -63,6 +63,7 @@ public static class ImageIntake
 /// <summary>
 ///   POST /jobs/{ref}/photos             a photo of the problem (report) or of the finished work (completion), as multipart
 ///   GET  /jobs/{ref}/photos/{photoId}   the image, for whoever can see the job
+///   DELETE /jobs/{ref}/photos/{photoId} added by mistake: the file goes too, and frees its storage
 /// A photo is an uploaded file like any other: scanned, stored under a random key, and counted against the agency's storage (D20).
 /// </summary>
 public static class JobPhotoEndpoints
@@ -74,6 +75,7 @@ public static class JobPhotoEndpoints
         var j = api.MapGroup("/jobs").RequireAuthorization();
         j.MapPost("/{reference}/photos", Add);
         j.MapGet("/{reference}/photos/{photoId}", Get);
+        j.MapDelete("/{reference}/photos/{photoId}", Remove);
     }
 
     /// <summary>Staff who can see the job (Maintenance.View, in their schemes); a resident, for a job they reported or one on their unit.</summary>
@@ -128,12 +130,44 @@ public static class JobPhotoEndpoints
             job.Photos.Add(new JobPhoto
             {
                 Id = id, Caption = caption.Length > 0 ? caption : Path.GetFileNameWithoutExtension(file.Name), TakenAt = now.ToString("O"), By = writer.Human.Name, Stage = stage,
-                FileId = fileId.ToString(),
+                FileId = fileId.ToString(), AddedById = writer.User.Id.ToString(),
             });
             MaintenanceService.Write(row, job);
             // The storage warning at 80% (D20), counted with this photo.
             await limits.NotifyAsync(row.OrganisationId, notices, writer.Human.Id, ct, extraBytes: file.Bytes.Length);
             return Results.Created($"/api/jobs/{reference}/photos/{id}", new { id });
+        }, ct);
+    }
+
+    /// <summary>Staff remove any photo on a job they can see; a resident only one they added themselves.</summary>
+    private static async Task<IResult> Remove(string reference, string photoId, CurrentActor current, CommandRunner commands, HumoDbContext db, IFileStore store, CancellationToken ct)
+    {
+        if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
+        if (await ReadableAsync(actor, db, reference, ct) is not { } row) return Problems.NotFound();
+        var job = MaintenanceService.Read(row);
+        var photo = job.Photos.FirstOrDefault(p => p.Id == photoId);
+        var resident = actor.Assignment.Role is Roles.Owner or Roles.Tenant;
+        if (photo is null || (resident && photo.AddedById != actor.User.Id.ToString())) return Problems.NotFound();
+        var file = Guid.TryParse(photo.FileId, out var fid) ? await db.UploadedFiles.FirstOrDefaultAsync(f => f.Id == fid && f.SchemeId == row.SchemeId, ct) : null;
+
+        return await commands.RunAsync(new CommandSpec($"Removed a photo from {reference}: {photo.Caption}",
+            resident ? "Resident.Requests" : photo.Stage == "completion" ? "Maintenance.Manage" : "Maintenance.Log")
+        {
+            Resource = "Job",
+            ResourceId = reference,
+            SchemeId = row.SchemeId,
+            Feature = "maintenance-basic",
+        }, _ =>
+        {
+            job.Photos.Remove(photo);
+            MaintenanceService.Write(row, job);
+            if (file is not null)
+            {
+                db.UploadedFiles.Remove(file);
+                // Only once the change is saved: a file that fails to go is left over, never a photo that points at nothing.
+                commands.AfterCommit(() => store.DeleteAsync(file.StorageKey, ct));
+            }
+            return Task.FromResult(Results.NoContent());
         }, ct);
     }
 

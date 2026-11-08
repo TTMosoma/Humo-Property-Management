@@ -109,6 +109,8 @@ export abstract class JobDataSource {
    * agency's storage (D20), and refuse it past the limit (docs/18 R-17).
    */
   abstract addPhoto(ref: string, file: File, stage: Photo['stage'], caption?: string): Observable<void>;
+  /** A photo added by mistake. PRODUCTION: delete its file too, freeing the storage (docs/18 R-17). */
+  abstract removePhoto(ref: string, photoId: string): Observable<void>;
   /** Where a stored photo's image is served from; none in the simulation, which keeps only the name. */
   photoUrl(_ref: string, _photo: Photo): string | undefined {
     return undefined;

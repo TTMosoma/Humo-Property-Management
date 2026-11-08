@@ -206,3 +206,29 @@
     pointer-events: none;
   }
 }
+
+.photo {
+  position: relative;
+}
+
+.remove-photo {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 18px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.55);
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    background: rgba(127, 29, 22, 0.9);
+  }
+}

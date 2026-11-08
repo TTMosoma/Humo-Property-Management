@@ -302,7 +302,10 @@ Restart the API first. Have a JPEG on hand, and an iPhone HEIC if you can.
 - [ ] As Thandeka: Settings › Plan & features. Note the storage used.
 - [ ] Maintenance › *Log a request*: pick two photos. **Expect:** both show as previews; *Remove* takes one away. Log it. **Expect:** the job page shows the photo as an image, marked *Before*; opening it shows it full size.
 - [ ] Settings › Plan & features. **Expect:** storage used has gone up by the photo's size.
-- [ ] On the job: *Add photos* with a PDF renamed to `.jpg`. **Expect:** refused: only JPEG, PNG or WebP. With an HEIC. **Expect:** refused, with the iPhone hint.
+- [ ] On the job: *Add photos* with a PDF renamed to `.jpg`. **Expect:** the red banner says "The photo wasn’t stored. Only JPEG, PNG or WebP photos can be uploaded." (no mention of highlighted fields). With an HEIC. **Expect:** refused, with the iPhone hint.
+- [ ] Watch the red banner. **Expect:** it shows "Closes in Ns" counting down with a bar shrinking along its bottom, and closes by itself. Do it again and rest the pointer on it. **Expect:** "Paused while you read", and it stays. Move off. **Expect:** the countdown carries on. Do it again and press the **×**. **Expect:** it closes at once.
+- [ ] On a job with a photo, press the **×** on the photo. **Expect:** "Remove this photo?" asks first. Remove it. **Expect:** the photo goes, the job's activity says "Removed a photo…", and Settings › Plan & features shows storage used down by its size.
+- [ ] As `sipho@mail.example`, open his request. **Expect:** its photos show, with no **×**: residents can't remove photos in the app yet.
 - [ ] Take a job to *Completed*, then *Add photos*. **Expect:** the photo is marked *After*, and completing the job added no "Completed work" placeholder.
 - [ ] As `sipho@mail.example` (owner): *Report a problem* with a photo. **Expect:** the request is sent, and Thandeka sees the photo on the job.
 - [ ] As Priya (Finance), open a job from its invoice. **Expect:** its photos show.

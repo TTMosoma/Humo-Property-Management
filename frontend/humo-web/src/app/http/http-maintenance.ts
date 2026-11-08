@@ -35,6 +35,10 @@ export class HttpJobDataSource extends HttpPort implements JobDataSource {
     return this.createId(`/jobs/${encodeURIComponent(ref)}/photos`, form, ['jobs']).pipe(map(() => undefined));
   }
 
+  removePhoto(ref: string, photoId: string): Observable<void> {
+    return this.command('DELETE', `/jobs/${encodeURIComponent(ref)}/photos/${encodeURIComponent(photoId)}`, null, ['jobs']);
+  }
+
   photoUrl(ref: string, photo: Photo): string | undefined {
     return photo.fileId ? `${this.base}/jobs/${encodeURIComponent(ref)}/photos/${encodeURIComponent(photo.id)}` : undefined;
   }

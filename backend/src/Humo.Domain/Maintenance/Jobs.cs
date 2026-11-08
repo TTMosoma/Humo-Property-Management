@@ -15,6 +15,8 @@ public sealed class JobPhoto
     public string Stage { get; set; } = "report";
     /// <summary>The stored image (an UploadedFile). Null for a photo recorded by name only, before photos were uploaded.</summary>
     public string? FileId { get; set; }
+    /// <summary>Who added it (their sign-in), so a resident can remove their own and no one else's.</summary>
+    public string? AddedById { get; set; }
 }
 
 public sealed class JobQuote

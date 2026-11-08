@@ -19,6 +19,8 @@ import { StatusPill } from '../../ui/status-pill/status-pill';
 import { Timeline } from '../../ui/timeline/timeline';
 import { links } from '../accounts/account-view';
 import { failedPhotosMessage, uploadAll } from './photo-upload';
+import { DrawerService } from '../../ui/drawer/drawer.service';
+import { openForm } from '../shared/form-drawer';
 import { JobNextStep } from './job-next-step';
 import { STAGE_LABEL, STAGE_TONE, TRACKER_STAGES, daysOpen, isOverdue } from './job-view';
 import { AttachmentsPanel } from '../library/attachments-panel';
@@ -50,6 +52,7 @@ export class JobPage {
   private readonly route = inject(ActivatedRoute);
   private readonly jobs = inject(JobDataSource);
   private readonly feedback = inject(FeedbackService);
+  private readonly drawer = inject(DrawerService);
 
   /** Staff who log or run jobs add photos; after the work is done they're of the finished work. */
   protected readonly canAddPhotos = computed(() => (this.session.can('Maintenance.Log') || this.session.can('Maintenance.Manage')) && !this.session.readOnly());
@@ -57,6 +60,21 @@ export class JobPage {
 
   protected photoUrl(ref: string, photo: Photo): string | undefined {
     return this.jobs.photoUrl(ref, photo);
+  }
+
+  /** Added by mistake: asked first, because the file goes too. */
+  protected removePhoto(ref: string, photo: Photo): void {
+    openForm(this.drawer, {
+      eyebrow: ref,
+      title: 'Remove this photo?',
+      intro: `“${photo.caption}” is removed from the job and deleted, which frees its storage. This can’t be undone.`,
+      fields: [],
+      initial: {},
+      submitLabel: 'Remove photo',
+      submit: () => this.jobs.removePhoto(ref, photo.id),
+      success: () => 'Photo removed.',
+      failure: 'The photo wasn’t removed',
+    });
   }
 
   protected addPhotos(ref: string, stage: JobStage, e: Event): void {

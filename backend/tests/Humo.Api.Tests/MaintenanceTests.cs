@@ -166,6 +166,37 @@ public sealed class MaintenanceTests : IDisposable
     }
 
     [Fact]
+    public async Task Removing_a_photo_deletes_its_file_and_frees_the_storage()
+    {
+        var s = await Scheme();
+        var reference = await NewJob(s);
+        var before = await StoredBytes(s);
+        await s.Admin.PostAsync($"/api/jobs/{reference}/photos", Photo(Jpeg));
+        var photo = Assert.Single((await Ok(await s.Admin.GetAsync($"/api/jobs/{reference}"))).GetProperty("job").GetProperty("photos").EnumerateArray()).GetProperty("id").GetString();
+
+        Assert.Equal(HttpStatusCode.NoContent, (await s.Admin.DeleteAsync($"/api/jobs/{reference}/photos/{photo}")).StatusCode);
+
+        Assert.Empty((await Ok(await s.Admin.GetAsync($"/api/jobs/{reference}"))).GetProperty("job").GetProperty("photos").EnumerateArray());
+        Assert.Equal(before, await StoredBytes(s));
+        Assert.Equal(0, await api.Db(db => db.UploadedFiles.CountAsync()));
+        Assert.Single(await api.Db(db => db.Audit.Where(a => a.Action.StartsWith($"Removed a photo from {reference}")).ToListAsync()));
+    }
+
+    [Fact]
+    public async Task A_resident_removes_only_photos_they_added()
+    {
+        var s = await Scheme();
+        var reference = await Ref(await s.Owner.PostAsJsonAsync("/api/jobs", new { title = "Geyser leaking", description = "Dripping since this morning.", category = "Plumbing" }));
+        await s.Owner.PostAsync($"/api/jobs/{reference}/photos", Photo(Jpeg, "mine.jpg"));
+        await s.Admin.PostAsync($"/api/jobs/{reference}/photos", Photo(Jpeg, "staff.jpg"));
+        var photos = (await Ok(await s.Admin.GetAsync($"/api/jobs/{reference}"))).GetProperty("job").GetProperty("photos").EnumerateArray().Select(p => p.GetProperty("id").GetString()).ToList();
+
+        Assert.Equal(HttpStatusCode.NotFound, (await s.Owner.DeleteAsync($"/api/jobs/{reference}/photos/{photos[1]}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await s.Owner.DeleteAsync($"/api/jobs/{reference}/photos/{photos[0]}")).StatusCode);
+        Assert.Single((await Ok(await s.Admin.GetAsync($"/api/jobs/{reference}"))).GetProperty("job").GetProperty("photos").EnumerateArray());
+    }
+
+    [Fact]
     public async Task Completing_a_job_no_longer_adds_a_photo_that_isnt_there()
     {
         var s = await Scheme();
