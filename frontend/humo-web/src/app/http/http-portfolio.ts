@@ -28,6 +28,7 @@ import {
   TimelineDataSource,
   TimelineEvent,
   PersonEmailState,
+  OwnerGap,
 } from '../domain';
 import { HttpPort, toApiErrorFromHttp } from './http-port';
 
@@ -143,6 +144,10 @@ const notFoundIsUndefined = <T>(source: Observable<T>): Observable<T | undefined
 /** Units and their levy accounts over HTTP (slice 1, doc 24 §5). */
 @Injectable()
 export class HttpUnitDataSource extends HttpPort implements UnitDataSource {
+  ownerGaps(schemeIds: string[]): Observable<OwnerGap[]> {
+    return this.live<OwnerGap[]>('/units/owner-gaps', ['units', 'people'], { schemeIds });
+  }
+
   list(schemeIds: string[], query?: ListQuery): Observable<Page<UnitSummary>> {
     return this.live<Page<UnitSummary>>('/units', ['units', 'people', 'schemes', 'session'], paging(schemeIds, query));
   }

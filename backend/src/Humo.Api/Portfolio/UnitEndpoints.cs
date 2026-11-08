@@ -10,6 +10,9 @@ public sealed record UnitDetailsRequest(string Number, string? Block, string Des
 /// <summary>Units and their levy accounts (doc 24 §5). Reads limited to schemes the caller may read; changes by C4.</summary>
 public sealed record DeleteUnitRequest(string? Reason);
 
+/// <summary>D36: days when nobody owned the unit. <c>To</c> null: no owner since <c>From</c>.</summary>
+public sealed record OwnerGapDto(string UnitId, string SchemeId, string SchemeName, string UnitNumber, string From, string? To);
+
 public static partial class UnitEndpoints
 {
     private static readonly string[] Occupancies = ["owner-occupied", "tenanted", "vacant"];
@@ -19,6 +22,7 @@ public static partial class UnitEndpoints
         var g = api.MapGroup("").RequireAuthorization();
         g.MapGet("/units", List);
         g.MapGet("/units/search", Search);
+        g.MapGet("/units/owner-gaps", OwnerGaps);
         g.MapGet("/units/{id:guid}", ById);
         g.MapGet("/schemes/{schemeId:guid}/units/{number}", ByNumber);
         g.MapPost("/schemes/{schemeId:guid}/units", Create);
@@ -31,6 +35,23 @@ public static partial class UnitEndpoints
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         var schemes = await reads.ReadableSchemes(actor, schemeIds, ct);
         return Results.Ok(PortfolioReads.Page(await reads.Units(schemes, null, ct), page, pageSize));
+    }
+
+    /// <summary>D36: units with days when nobody owned them, for staff to correct the dates.</summary>
+    private static async Task<IResult> OwnerGaps(string[]? schemeIds, CurrentActor current, PortfolioReads reads, HumoDbContext db, CancellationToken ct)
+    {
+        if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
+        if (!actor.Can("Portfolio.Browse")) return Results.Ok(Array.Empty<OwnerGapDto>());
+        var schemes = (await reads.ReadableSchemes(actor, schemeIds, ct)).ToDictionary(s => s.Id);
+        var ids = schemes.Keys.ToList();
+        var owners = await db.Relationships.AsNoTracking().Where(r => r.Type == "owner" && r.UnitId != null && ids.Contains(r.SchemeId)).ToListAsync(ct);
+        var unitIds = owners.Select(r => r.UnitId!.Value).Distinct().ToList();
+        var units = await db.Units.AsNoTracking().Where(u => unitIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, ct);
+        var gaps = owners.GroupBy(r => r.UnitId!.Value).Where(g => units.ContainsKey(g.Key))
+            .SelectMany(g => PortfolioRules.OwnerGaps(g).Select(x => new OwnerGapDto(g.Key.ToString(), units[g.Key].SchemeId.ToString(), schemes[units[g.Key].SchemeId].Name, units[g.Key].Number,
+                x.From.ToString("yyyy-MM-dd"), x.To?.ToString("yyyy-MM-dd"))))
+            .OrderBy(x => x.SchemeName).ThenBy(x => x.UnitNumber, StringComparer.Create(System.Globalization.CultureInfo.InvariantCulture, System.Globalization.CompareOptions.NumericOrdering)).ToList();
+        return Results.Ok(gaps);
     }
 
     private static async Task<IResult> ById(Guid id, CurrentActor current, PortfolioReads reads, CancellationToken ct)

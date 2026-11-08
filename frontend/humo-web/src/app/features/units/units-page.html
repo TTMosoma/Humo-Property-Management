@@ -7,6 +7,18 @@
   </div>
 }
 
+@if (gaps.value()?.length) {
+  <section class="surface owner-gaps" role="status">
+    <h2>Units with no owner on record</h2>
+    <p class="muted">A unit always has an owner, so these dates were captured wrongly. Correct the owners’ dates on their People records.</p>
+    <ul>
+      @for (g of gaps.value(); track g.unitId + g.from) {
+        <li><a [routerLink]="['/schemes', g.schemeId, 'units', g.unitNumber]">{{ g.schemeName }}, Unit {{ g.unitNumber }}</a> · {{ gapText(g) }}</li>
+      }
+    </ul>
+  </section>
+}
+
 <ui-view-tabs label="Unit views" [tabs]="tabs()" [active]="state().view ?? 'all'" (activeChange)="patch({ view: $event })" />
 <ui-filter-bar
   searchLabel="Unit number, owner, tenant…"

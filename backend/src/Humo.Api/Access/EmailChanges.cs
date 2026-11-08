@@ -14,7 +14,8 @@ namespace Humo.Api.Access;
 
 public sealed record EmailChangeDto(string Id, string Name, string OldEmail, string NewEmail, string RequestedBy, string RequestedAt, string ExpiresAt);
 
-public sealed record PersonEmailStateDto(bool SignsIn, EmailChangeDto? Pending);
+/// <param name="SignIn">"invited" (not accepted yet), "active", "suspended", or null with no sign-in.</param>
+public sealed record PersonEmailStateDto(bool SignsIn, EmailChangeDto? Pending, string? SignIn = null);
 
 public sealed record EmailMismatchDto(string IdentityId, string PersonId, string Name, string ContactEmail, string SignInEmail);
 
@@ -156,7 +157,7 @@ public static class EmailChangeEndpoints
         var key = id.ToString();
         var user = await db.Users.FirstOrDefaultAsync(u => u.PersonId == key && u.Kind == IdentityKinds.Customer && u.Status != IdentityStatuses.Deactivated, ct);
         var open = user is null || !actor.Can("People.Manage") ? null : await changes.OpenForAsync(user.Id, ct);
-        return Results.Ok(new PersonEmailStateDto(user is not null, open is null ? null : EmailChanges.ToDto(open, user!.Name)));
+        return Results.Ok(new PersonEmailStateDto(user is not null, open is null ? null : EmailChanges.ToDto(open, user!.Name), user?.Status));
     }
 
     private static async Task<IResult> Cancel(Guid id, CurrentActor current, CommandRunner commands, PortfolioReads reads, HumoDbContext db, TimeProvider clock, CancellationToken ct)

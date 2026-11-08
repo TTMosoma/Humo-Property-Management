@@ -196,6 +196,7 @@ public static partial class PeopleEndpoints
         var endedOn = ParseDate(body.EndedOn);
         var until = endedOn?.AddDays(-1) ?? ParseDate(body.Until);
         var ended = rel.Until is { } u && u < reads.Today;
+        var gap = await GapIfAsync(db, rel, rel.Since, until, ct);
 
         return await commands.RunAsync(new CommandSpec($"Ended {rel.Type} of {person.DisplayName}: last day {until:d MMMM yyyy}", "People.Manage")
         {
@@ -204,7 +205,8 @@ public static partial class PeopleEndpoints
             SchemeId = rel.SchemeId,
             Validate = () => ended ? new() { ["endedOn"] = "It has already ended." }
                 : endedOn is { } e && e <= rel.Since ? new() { ["endedOn"] = $"It started on {rel.Since:d MMMM yyyy}: choose a later day. Added by mistake? Remove it instead." }
-                : until is null || until < rel.Since ? new() { [body.EndedOn is null ? "until" : "endedOn"] = "Choose a date after it started." } : [],
+                : until is null || until < rel.Since ? new() { [body.EndedOn is null ? "until" : "endedOn"] = "Choose a date after it started." }
+                : gap is { } g ? new() { [body.EndedOn is null ? "until" : "endedOn"] = g } : [],
         }, async _ =>
         {
             rel.Until = until;
@@ -215,7 +217,8 @@ public static partial class PeopleEndpoints
     }
 
     /// <summary>Corrects an owner's or tenant's dates: when it started, and a tenant's lease end (or an ended role's last day).</summary>
-    private static async Task<IResult> UpdateRelationship(Guid id, UpdateRelationshipRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, CancellationToken ct)
+    private static async Task<IResult> UpdateRelationship(Guid id, UpdateRelationshipRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, PortfolioReads reads,
+        CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         var rel = await db.Relationships.FirstOrDefaultAsync(r => r.Id == id, ct);
@@ -224,6 +227,7 @@ public static partial class PeopleEndpoints
         var person = await db.People.FirstAsync(p => p.Id == rel.PersonId, ct);
         var since = ParseDate(body.Since);
         var until = ParseDate(body.Until);
+        var gap = since is { } from ? await GapIfAsync(db, rel, from, until, ct) : null;
 
         return await commands.RunAsync(new CommandSpec($"Corrected the dates of {person.DisplayName} as {rel.Type}: from {since:d MMMM yyyy}{(until is null ? "" : $" to {until:d MMMM yyyy}")}", "People.Manage")
         {
@@ -233,12 +237,20 @@ public static partial class PeopleEndpoints
             Validate = () => rel.Type is not ("owner" or "tenant") ? new() { ["type"] = "Trustees’ terms are kept on the scheme’s board." }
                 : since is null ? new() { ["since"] = "Choose the date it started." }
                 : until is { } x && x < since ? new() { ["until"] = "Choose a date on or after it started." }
-                : rel.Type == "owner" && rel.Until is null && until is not null ? new() { ["until"] = "To end an ownership, use End (sold or transferred)." } : [],
-        }, _ =>
+                : rel.Type == "owner" && rel.Until is null && until is not null ? new() { ["until"] = "To end an ownership, use End (sold or transferred)." }
+                : gap is { } g ? new() { [until is not null && until != rel.Until ? "until" : "since"] = g } : [],
+        }, async _ =>
         {
             rel.Since = since!.Value;
             rel.Until = until;
-            return Task.FromResult(Results.NoContent());
+            // Corrected dates change who owns it today: the account and portal access follow now, not at the next sweep.
+            if (rel.UnitId is { } unitId)
+            {
+                await HandOverUnitAsync(db, reads, unitId, ct);
+                foreach (var owner in await db.Relationships.Where(r => r.UnitId == unitId && (r.Type == "owner" || r.Type == "tenant")).Select(r => r.PersonId).Distinct().ToListAsync(ct))
+                    await SyncResidentAccessAsync(db, reads, owner, actor.Human.Name, ct);
+            }
+            return Results.NoContent();
         }, ct);
     }
 
@@ -439,10 +451,21 @@ public static partial class PeopleEndpoints
         else
         {
             var unit = Guid.TryParse(l.UnitId, out var uid) ? await db.Units.FirstOrDefaultAsync(u => u.Id == uid, ct) : null;
-            var current = unit is null ? [] : (await db.Relationships.Where(r => r.UnitId == unit.Id && r.Type == l.Type).ToListAsync(ct)).Where(reads.IsCurrent).ToList();
+            var all = unit is null ? [] : await db.Relationships.Where(r => r.UnitId == unit.Id && r.Type == l.Type).ToListAsync(ct);
+            // Not ended: in force now, or starting later (D35). A sale dated next week still owns the unit for these checks.
+            var current = all.Where(r => r.Until is null || r.Until >= reads.Today).ToList();
+            var gapFrom = l.Type == "owner" && unit is not null ? PortfolioRules.OwnerGaps(all).Where(g => g.To is null).Select(g => (DateOnly?)g.From).FirstOrDefault() : null;
             if (unit is null || unit.SchemeId != scheme.Id) e["unitId"] = "Choose the unit.";
             else if (l.Type == "tenant" && current.Count > 0) e["unitId"] = $"Unit {unit.Number} already has a tenant. End that lease first.";
-            else if (l.Type == "owner" && personId is { } pid && current.Any(r => r.PersonId == pid)) e["unitId"] = "They already own this unit.";
+            else if (l.Type == "owner" && personId is { } pid && current.FirstOrDefault(r => r.PersonId == pid) is { } mine)
+                e["unitId"] = mine.Since > reads.Today ? $"They already own this unit from {mine.Since:d MMMM yyyy}. To change that date, correct their ownership instead." : "They already own this unit.";
+            else if (gapFrom is { } after && current.Count == 0 && ParseDate(l.Since) is { } starts && starts != after)
+            {
+                // D36: a unit always has an owner, so the next owner starts the day after the last one's last day.
+                var last = all.OrderByDescending(r => r.Until).First();
+                var name = await db.People.Where(p => p.Id == last.PersonId).Select(p => p.DisplayName).FirstAsync(ct);
+                e["since"] = $"{name}’s ownership ended on {last.Until:d MMMM yyyy}, so the new owner’s first day is {after:d MMMM yyyy}. If the transfer was registered later, correct {name}’s last day first.";
+            }
             else if (l.Type == "owner" && current.Count > 0)
             {
                 // Someone else owns it: ask, never assume. Partners own it together; a sale replaces the owner.
@@ -526,6 +549,36 @@ public static partial class PeopleEndpoints
     /// The minute loop: an account whose holder's ownership has ended (ended for a date that has now passed, or ended
     /// before the next owner was added) goes to a current owner, so statements and letters reach whoever owns the unit.
     /// </summary>
+    /// <summary>D36: the message for a change that would leave the unit with no owner, if it would.</summary>
+    private static async Task<string?> GapIfAsync(HumoDbContext db, Relationship rel, DateOnly since, DateOnly? until, CancellationToken ct)
+    {
+        if (rel.Type != "owner" || rel.UnitId is not { } unitId) return null;
+        var owners = await db.Relationships.AsNoTracking().Where(r => r.UnitId == unitId && r.Type == "owner").ToListAsync(ct);
+        var after = owners.Select(r => r.Id == rel.Id ? new Relationship { Id = r.Id, Type = r.Type, Since = since, Until = until } : r).ToList();
+        if (PortfolioRules.NewGap(owners, after) is not { } from) return null;
+        var unit = await db.Units.Where(u => u.Id == unitId).Select(u => u.Number).FirstAsync(ct);
+        return PortfolioRules.GapMessage(from, $"Unit {unit}");
+    }
+
+    /// <summary>
+    /// Who holds a unit's account: a current owner (the holder stays if they still own it), or between owners the
+    /// last one, so statements for those months reach the seller, not the buyer (D35).
+    /// </summary>
+    private static void SetHolder(LevyAccount account, List<Relationship> owners, PortfolioReads reads)
+    {
+        var current = owners.Where(reads.IsCurrent).OrderBy(r => r.Since).ToList();
+        if (current.Any(r => r.PersonId == account.HolderPersonId)) return;
+        var holder = current.FirstOrDefault()?.PersonId ?? owners.Where(r => r.Since <= reads.Today).OrderByDescending(r => r.Until).FirstOrDefault()?.PersonId;
+        if (holder is { } h && h != account.HolderPersonId) account.HolderPersonId = h;
+    }
+
+    /// <summary>One unit's account, from the relationships as this change leaves them.</summary>
+    private static async Task HandOverUnitAsync(HumoDbContext db, PortfolioReads reads, Guid unitId, CancellationToken ct)
+    {
+        if (await db.LevyAccounts.FirstOrDefaultAsync(a => a.UnitId == unitId, ct) is not { } account) return;
+        SetHolder(account, await db.Relationships.Where(r => r.UnitId == unitId && r.Type == "owner").ToListAsync(ct), reads);
+    }
+
     public static async Task HandOverEndedAsync(HumoDbContext db, PortfolioReads reads, CancellationToken ct)
     {
         var today = reads.Today;
@@ -534,15 +587,7 @@ public static partial class PeopleEndpoints
         if (changing.Count == 0) return;
         var accounts = await db.LevyAccounts.Where(a => changing.Contains(a.UnitId)).ToListAsync(ct);
         var owners = await db.Relationships.Where(r => r.Type == "owner" && r.UnitId != null && changing.Contains(r.UnitId.Value)).ToListAsync(ct);
-        foreach (var account in accounts)
-        {
-            var mine = owners.Where(r => r.UnitId == account.UnitId).ToList();
-            var current = mine.Where(reads.IsCurrent).OrderBy(r => r.Since).ToList();
-            if (current.Any(r => r.PersonId == account.HolderPersonId)) continue;
-            // Between owners it stays with the last one, so statements for those months reach the seller, not the buyer.
-            var holder = current.FirstOrDefault()?.PersonId ?? mine.Where(r => r.Since <= today).OrderByDescending(r => r.Until).FirstOrDefault()?.PersonId;
-            if (holder is { } h && h != account.HolderPersonId) account.HolderPersonId = h;
-        }
+        foreach (var account in accounts) SetHolder(account, owners.Where(r => r.UnitId == account.UnitId).ToList(), reads);
         await db.SaveChangesAsync(ct);
     }
 

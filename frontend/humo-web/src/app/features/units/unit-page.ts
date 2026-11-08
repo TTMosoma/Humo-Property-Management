@@ -33,7 +33,7 @@ import { StatusPill } from '../../ui/status-pill/status-pill';
 import { Timeline } from '../../ui/timeline/timeline';
 import { WorkItemPreview } from '../my-work/work-item-preview';
 import { workItemView } from '../my-work/work-item-view';
-import { OCCUPANCY_LABEL, accountStatus, balanceTone, links, unitChain } from '../accounts/account-view';
+import { OCCUPANCY_LABEL, accountStatus, balanceTone, links, ownerGapText, unitChain } from '../accounts/account-view';
 import { LogNote } from '../shared/log-note';
 import { AttachmentsPanel } from '../library/attachments-panel';
 import { ScopeService } from '../../core/scope/scope.service';
@@ -148,6 +148,11 @@ export class UnitPage {
     this.route.paramMap.pipe(map((p) => ({ schemeId: p.get('schemeId')!, number: p.get('unitId')! }))),
     { initialValue: { schemeId: this.route.snapshot.paramMap.get('schemeId')!, number: this.route.snapshot.paramMap.get('unitId')! } },
   );
+
+  /** D36: days when nobody owned this unit. */
+  private readonly allGaps = loadable(() => this.units.ownerGaps([this.key().schemeId]));
+  protected readonly gaps = computed(() => (this.allGaps.value() ?? []).filter((g) => g.unitNumber === this.key().number));
+  protected readonly gapText = ownerGapText;
 
   /** undefined = loading; null = failed; false = not found. */
   protected readonly summary = loadable(() => {

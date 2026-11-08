@@ -52,6 +52,20 @@ export abstract class UnitDataSource {
   abstract remove(unitId: string, reason: string): Observable<void>;
   /** "KC 42", "kingfisher 42", "KC-042", "unit 42" … */
   abstract search(query: string, schemeIds: string[], limit?: number): Observable<UnitSummary[]>;
+  /** D36: units with days when nobody owned them, for staff to correct. The simulation has none. */
+  ownerGaps(_schemeIds: string[]): Observable<OwnerGap[]> {
+    return of([]);
+  }
+}
+
+/** `to` null: no owner on record since `from`. */
+export interface OwnerGap {
+  unitId: string;
+  schemeId: string;
+  schemeName: string;
+  unitNumber: string;
+  from: string;
+  to: string | null;
 }
 
 export abstract class PersonDataSource {
@@ -92,6 +106,8 @@ export interface EmailChange {
 export interface PersonEmailState {
   signsIn: boolean;
   pending: EmailChange | null;
+  /** 'invited' (not accepted yet), 'active' or 'suspended'; absent with no sign-in. */
+  signIn?: string | null;
 }
 
 export abstract class AccountDataSource {
