@@ -18,3 +18,4 @@ backend/src/Humo.Api/storage/
 
 # Local launchers (.bat): each developer keeps their own
 *.bat
+backend/src/Humo.Api/logs/

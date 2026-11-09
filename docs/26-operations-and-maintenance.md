@@ -144,7 +144,7 @@ Status: **started 18 October 2026**, before the server exists. Fill in the blank
 | HTTPS certificate | The same monitor | Fewer than 14 days left |
 | Disk space | A script or the monitor's agent | Above 80% |
 | Backups | The backup job emails or pings on success; the monitor alerts when no ping arrives | No success in 26 hours |
-| Errors | API logs (`docker compose logs api`) | A rise in 5xx errors |
+| Errors | Platform › Technical logs, or `docker compose logs api` if the API is down | A rise in 5xx errors |
 | Email | Mail-server queue and bounce rate | Queue stuck, or bounces above 5% |
 
 **Alerts go to:** ____ (email or phone). They must not depend on our own mail server.

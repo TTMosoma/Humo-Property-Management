@@ -328,6 +328,17 @@ Restart the API first. Have a PDF on hand.
 - [ ] Tick two tasks where one is a debtor follow-up. **Expect:** the bar at the bottom has no *Mark done*.
 - [ ] Tasks › a plain follow-up from Inbox, or a meeting action. **Expect:** *Mark done* is still there and works.
 
+## 29. Technical logs
+
+Restart the API first. You'll need the System Administrator sign-in.
+
+- [ ] As the System Administrator: Platform › Technical logs. **Expect:** today's entries, newest first, and clicking one shows its raw detail.
+- [ ] In another window, as Thandeka, upload a PDF renamed from a text file on a supplier. Back in the log, set *Warnings and errors* and search `Only PDF`. **Expect:** the refused request, with the reason under it.
+- [ ] Pick a day with no activity. **Expect:** "Nothing for that day and search."
+- [ ] Press *Download this day*. **Expect:** it asks for your passkey, then downloads a `.json` file.
+- [ ] Platform › Audit log. **Expect:** "Read the technical log for…" and "Downloaded the technical log for…".
+- [ ] As a Humo Support user, or as Thandeka. **Expect:** no *Technical logs* menu, and `/platform/logs` is refused.
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.

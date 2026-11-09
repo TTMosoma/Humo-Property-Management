@@ -93,6 +93,7 @@ export type Permission =
   | 'Platform.Operations.Manage'
   | 'Platform.ManageHumoRoles'
   | 'Platform.Audit'
+  | 'Platform.Logs'
   | 'System.Impersonate';
 
 export type PermissionArea = 'Work' | 'Portfolio' | 'Finance' | 'Maintenance' | 'Records' | 'Residents' | 'Administration' | 'Platform';
@@ -185,6 +186,7 @@ export const PERMISSIONS: PermissionMeta[] = [
   { id: 'Platform.Operations.Manage', area: 'Platform', label: 'Retry background jobs and run incidents', mutates: true },
   { id: 'Platform.ManageHumoRoles', area: 'Platform', label: 'Grant Humo internal roles', mutates: true, stepUp: true },
   { id: 'Platform.Audit', area: 'Platform', label: 'View the platform-wide audit log', mutates: false },
+  { id: 'Platform.Logs', area: 'Platform', label: 'Read and download the technical logs', mutates: false },
   { id: 'System.Impersonate', area: 'Platform', label: 'Impersonate a customer user (granted individually)', mutates: false },
 ];
 
@@ -236,7 +238,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   'system-admin': [
     'Platform.View', 'Platform.Customers.View', 'Platform.Customers.Manage', 'Platform.Customers.Approve', 'Platform.Customers.Users', 'Platform.Users.ResetPasskeys', 'Platform.Customers.AnyAccount', 'Platform.Subscriptions.View',
     'Platform.Subscriptions.Manage', 'Platform.Packages.Manage', 'Platform.Discounts.Approve', 'Platform.Templates.Manage', 'Platform.Health.View', 'Platform.Revenue.View', 'Platform.Insights.View',
-    'Platform.Support.Assist', 'Platform.Config.Manage', 'Platform.Operations.View', 'Platform.Operations.Manage', 'Platform.ManageHumoRoles', 'Platform.Audit', 'Security.ManageOwn',
+    'Platform.Support.Assist', 'Platform.Config.Manage', 'Platform.Operations.View', 'Platform.Operations.Manage', 'Platform.ManageHumoRoles', 'Platform.Audit', 'Platform.Logs', 'Security.ManageOwn',
   ],
   // The customer relationship: onboarding, adoption, health, subscriptions where authorised. No platform config, no Humo roles.
   'humo-account-manager': [

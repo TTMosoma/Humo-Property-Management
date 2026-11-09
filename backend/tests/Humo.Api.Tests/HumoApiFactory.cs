@@ -42,6 +42,7 @@ public sealed class HumoApiFactory : WebApplicationFactory<Program>
         ["App:PublicUrl"] = "https://localhost",
         ["App:PasskeyDomain"] = "localhost",
         ["App:AllowedOrigins:0"] = "https://localhost",
+        ["Logs:Directory"] = Path.Combine(Path.GetTempPath(), "humo-test-logs", Guid.NewGuid().ToString("N")),
     };
 
     public TestClock Clock { get; } = new();
