@@ -1,6 +1,6 @@
 import { Observable } from 'rxjs';
 import { ListQuery, Page } from './list-query';
-import { Invoice, Job, PaymentBatch, Priority } from '../models/job';
+import { Invoice, Job, PaymentBatch, Photo, Priority } from '../models/job';
 import { Scheme } from '../models/scheme';
 import { BankDetailsInput, DocStatus, Supplier, SupplierStatus, Trade } from '../models/supplier';
 import { Unit } from '../models/unit';
@@ -28,7 +28,7 @@ export interface InvoiceView {
 export interface JobDetail extends JobSummary {
   /** Suppliers referenced by quotes, keyed by id. */
   suppliers: Record<string, Supplier>;
-  /** Suppliers who could be asked to quote (same trade, serving this scheme). */
+  /** Suppliers serving this scheme, of every trade: screens pick those for the job's trade with `suppliersFor`. */
   candidates: Supplier[];
   invoice?: InvoiceView;
   batch?: PaymentBatch;
@@ -103,6 +103,18 @@ export abstract class JobDataSource {
   abstract create(input: NewJobInput): Observable<string>;
   /** `expectedVersion`: the record's version as shown; the API answers 409 (conflict) if it has changed since. */
   abstract act(ref: string, action: JobAction, expectedVersion?: number): Observable<void>;
+  /**
+   * A photo of the problem (`report`) or of the finished work (`completion`). Residents add report photos only.
+   * PRODUCTION: store the image (JPEG, PNG or WebP, virus-scanned) as an uploaded file that counts against the
+   * agency's storage (D20), and refuse it past the limit (docs/18 R-17).
+   */
+  abstract addPhoto(ref: string, file: File, stage: Photo['stage'], caption?: string): Observable<void>;
+  /** A photo added by mistake. PRODUCTION: delete its file too, freeing the storage (docs/18 R-17). */
+  abstract removePhoto(ref: string, photoId: string): Observable<void>;
+  /** Where a stored photo's image is served from; none in the simulation, which keeps only the name. */
+  photoUrl(_ref: string, _photo: Photo): string | undefined {
+    return undefined;
+  }
 }
 
 export abstract class SupplierDataSource {

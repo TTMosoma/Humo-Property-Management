@@ -4,15 +4,7 @@ import { TimelineEvent } from '../../domain';
 import { Timeline } from './timeline';
 
 // Ionic's components can't load in the test runner: a stand-in icon.
-vi.mock('@ionic/angular/standalone', async () => {
-  const { Component, input } = await import('@angular/core');
-  // eslint-disable-next-line @angular-eslint/component-selector -- stands in for Ionic's own element
-  @Component({ selector: 'ion-icon', template: '' })
-  class IonIcon {
-    readonly name = input<string>();
-  }
-  return { IonIcon };
-});
+vi.mock('@ionic/angular/standalone', async () => (await import('../../testing-ionic')).ionicStandin());
 
 describe('Timeline', () => {
   function render(events: TimelineEvent[]): string[] {

@@ -40,6 +40,8 @@ public interface IFileStore
     /// <summary>Writes the content and returns its storage key.</summary>
     Task<string> SaveAsync(byte[] content, CancellationToken ct);
     Task<Stream> OpenAsync(string key, CancellationToken ct);
+    /// <summary>Removes the content, if it's there.</summary>
+    Task DeleteAsync(string key, CancellationToken ct);
 }
 
 public sealed class LocalFileStore(IOptions<FilesOptions> options) : IFileStore
@@ -59,6 +61,13 @@ public sealed class LocalFileStore(IOptions<FilesOptions> options) : IFileStore
 
     public Task<Stream> OpenAsync(string key, CancellationToken ct) =>
         Task.FromResult<Stream>(new FileStream(PathFor(key), FileMode.Open, FileAccess.Read, FileShare.Read, 81920, FileOptions.Asynchronous));
+
+    public Task DeleteAsync(string key, CancellationToken ct)
+    {
+        var path = PathFor(key);
+        if (File.Exists(path)) File.Delete(path);
+        return Task.CompletedTask;
+    }
 
     /// <summary>The path for a key: the first two characters name a folder, so no folder holds too many files.</summary>
     private string PathFor(string key)

@@ -265,3 +265,10 @@
     font-size: var(--fs-sm);
   }
 }
+
+.picked-photo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-1);
+}

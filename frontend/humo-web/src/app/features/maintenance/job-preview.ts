@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { toSignal } from '@angular/core/rxjs-interop';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { catchError, map, of } from 'rxjs';
-import { JobDataSource, PRIORITY_LABEL } from '../../domain';
+import { Photo, JobDataSource, PRIORITY_LABEL } from '../../domain';
 import { Drawer } from '../../ui/drawer/drawer';
 import { RandPipe, formatDate } from '../../ui/format/money';
 import { PhotoTile } from '../../ui/photo/photo-tile';
@@ -43,7 +43,7 @@ import { PRIORITY_TONE, STAGE_LABEL, STAGE_TONE, TRACKER_STAGES, daysOpen, isOve
         @if (d.job.photos.length) {
           <div class="photos">
             @for (p of d.job.photos.slice(0, 3); track p.id) {
-              <ui-photo-tile [caption]="p.caption" [seed]="d.job.ref" [badge]="p.stage === 'completion' ? 'After' : 'Before'" />
+              <ui-photo-tile [caption]="p.caption" [seed]="d.job.ref" [badge]="p.stage === 'completion' ? 'After' : 'Before'" [src]="photoUrl(d.job.ref, p)" />
             }
           </div>
         }
@@ -74,8 +74,9 @@ import { PRIORITY_TONE, STAGE_LABEL, STAGE_TONE, TRACKER_STAGES, daysOpen, isOve
 export class JobPreview {
   private readonly data = inject<{ ref: string }>(DIALOG_DATA);
   protected readonly ref = inject(DialogRef);
+  private readonly jobs = inject(JobDataSource);
   protected readonly detail = toSignal(
-    inject(JobDataSource)
+    this.jobs
       .get(this.data.ref)
       .pipe(
         map((d) => d ?? null),
@@ -84,6 +85,10 @@ export class JobPreview {
   );
 
   protected readonly stages = TRACKER_STAGES;
+
+  protected photoUrl(ref: string, photo: Photo): string | undefined {
+    return this.jobs.photoUrl(ref, photo);
+  }
   protected readonly formatDate = formatDate;
   protected readonly stageLabel = computed(() => STAGE_LABEL[this.detail()!.job.stage]);
   protected readonly stageTone = computed(() => STAGE_TONE[this.detail()!.job.stage]);

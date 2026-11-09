@@ -275,7 +275,6 @@ public static partial class MaintenanceEndpoints
                 break;
             case "complete":
                 job.Completion = new JobCompletion(now, a.Notes!.Trim());
-                job.Photos.Add(new JobPhoto { Id = $"{job.Ref}-c{job.Photos.Count + 1}", Caption = "Completed work", TakenAt = now, By = job.SupplierId is null ? by : Name(job.SupplierId), Stage = "completion" });
                 job.Stage = JobStages.Completed;
                 JobRules.Log(job, "stage", $"Completed: {job.Completion.Notes}", by, now);
                 if (job.ReportedBy.Role != "staff") JobRules.Log(job, "message", $"Asked {job.ReportedBy.Name} to confirm it’s fixed", "Humo PM", now);

@@ -1,6 +1,6 @@
 import { Injectable, Injector, inject } from '@angular/core';
 import { simulationStorage } from '../simulation/simulation-storage';
-import {
+import { Photo,
   BatchView,
   DELEGATED_LIMIT,
   Invoice,
@@ -109,7 +109,7 @@ export class MaintenanceStore {
       ...this.summary(job),
       suppliers,
       // Archived suppliers aren't offered for new work.
-      candidates: this.suppliers.filter((s) => s.status !== 'archived' && s.trades.includes(job.category) && s.schemeIds.includes(job.schemeId)),
+      candidates: this.suppliers.filter((s) => s.status !== 'archived' && s.schemeIds.includes(job.schemeId)),
       invoice: invoice ? this.invoiceView(invoice) : undefined,
       batch: invoice?.batchId ? this.batches.find((b) => b.id === invoice.batchId) : undefined,
       approvalItem: job.approval?.workItemId ? this.db.workItems.find((w) => w.id === job.approval!.workItemId) : undefined,
@@ -283,6 +283,22 @@ export class MaintenanceStore {
     };
     this.suppliers.push(supplier);
     return supplier.id;
+  }
+
+  addPhoto(ref: string, caption: string, stage: Photo['stage'], by: string): void {
+    const job = this.jobs.find((j) => j.ref === ref);
+    if (!job) throw new Error(`Unknown job ${ref}`);
+    job.version++;
+    job.photos.push({ id: `${ref}-${stage === 'completion' ? 'c' : 'p'}${job.photos.length + 1}`, caption, takenAt: new Date().toISOString(), by, stage });
+    this.db.touch();
+  }
+
+  removePhoto(ref: string, photoId: string): void {
+    const job = this.jobs.find((j) => j.ref === ref);
+    if (!job) throw new Error(`Unknown job ${ref}`);
+    job.version++;
+    job.photos = job.photos.filter((p) => p.id !== photoId);
+    this.db.touch();
   }
 
   act(ref: string, action: JobAction, by: string): void {

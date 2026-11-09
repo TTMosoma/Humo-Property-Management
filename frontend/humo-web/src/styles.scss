@@ -53,6 +53,35 @@ ion-toast.humo-toast-danger {
   --color: #fff;
 }
 
+// A message is shown in full, however long: it wraps, keeps its line breaks, and scrolls if it must.
+ion-toast.humo-toast {
+  --max-width: min(720px, calc(100vw - 32px));
+
+  &::part(message) {
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+    max-height: 50vh;
+    overflow-y: auto;
+  }
+}
+
+// A failure's countdown: a bar along the bottom that empties, and the seconds left above the message.
+ion-toast.humo-toast-danger {
+  &::part(container) {
+    padding-bottom: 4px;
+    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.6) var(--progress, 100%), transparent 0);
+    background-repeat: no-repeat;
+    background-position: left bottom;
+    background-size: 100% 3px;
+  }
+
+  &::part(header) {
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-medium);
+    opacity: 0.8;
+  }
+}
+
 // Toasts sit above drawers and dialogs.
 ion-toast.humo-toast {
   z-index: 2000;

@@ -25,14 +25,14 @@
             </select>
           </label>
           <label>Trade
-            <select [value]="category()" (change)="category.set($any($event.target).value)">
+            <select [value]="category()" (change)="setCategory($any($event.target).value)">
               @for (t of trades; track t) { <option [value]="t" [selected]="t === category()">{{ t }}</option> }
             </select>
           </label>
         </div>
         <h3 class="sub">Ask for quotes</h3>
         <ul class="suppliers">
-          @for (s of d.candidates; track s.id) {
+          @for (s of tradeCandidates(); track s.id) {
             @let c = compliance(s);
             <li>
               <label class="check">
@@ -44,7 +44,7 @@
             </li>
             @for (i of issues(s); track i) { <li class="issue"><ion-icon name="alert-circle-outline" aria-hidden="true" />{{ i }}</li> }
           } @empty {
-            <li class="muted">No suppliers for {{ job.category }} serve this scheme yet. <a routerLink="/suppliers">Add one in Suppliers</a>.</li>
+            <li class="muted">No suppliers for {{ category() }} serve this scheme yet. <a routerLink="/suppliers">Add one in Suppliers</a>.</li>
           }
         </ul>
         <a class="humo-quotes" [routerLink]="['/maintenance', job.ref, 'quote-request']">

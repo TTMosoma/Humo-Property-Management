@@ -174,6 +174,7 @@ api.MapOrganisations();
 api.MapSchemes();
 api.MapUnits();
 api.MapPeople();
+Humo.Api.Maintenance.JobPhotoEndpoints.MapJobPhotos(api);
 Humo.Api.Access.EmailChangeEndpoints.MapEmailChanges(api);
 Humo.Api.Portfolio.PastResidentEndpoints.MapPastResident(api);
 api.MapBoards();

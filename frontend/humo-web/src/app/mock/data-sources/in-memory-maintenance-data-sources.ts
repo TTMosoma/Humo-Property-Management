@@ -14,6 +14,7 @@ import {
   Page,
   PayablesDataSource,
   Permission,
+  Photo,
   SUPPLIER_STATUS_LABELS,
   SupplierDataSource,
   SupplierDetail,
@@ -110,6 +111,31 @@ export class InMemoryJobDataSource extends Live implements JobDataSource {
         },
       },
       () => this.store.create(input, this.by),
+    );
+  }
+
+  /** SIMULATED (docs/18 R-17): the photo's name goes; there's no stored file to delete. */
+  removePhoto(ref: string, photoId: string): Observable<void> {
+    const job = this.store.detail(ref)?.job;
+    return this.command(
+      { action: `Removed a photo from ${ref}`, resource: 'Job', resourceId: ref, schemeId: job?.schemeId, permission: 'Maintenance.Log' },
+      () => this.store.removePhoto(ref, photoId),
+    );
+  }
+
+  /** The simulation keeps only a photo's name, so there's no image to show. */
+  photoUrl(): string | undefined {
+    return undefined;
+  }
+
+  /** SIMULATED (docs/18 R-17): keeps the photo's name as its caption; the image isn't stored or counted. */
+  addPhoto(ref: string, file: File, stage: Photo['stage'], caption?: string): Observable<void> {
+    const job = this.store.detail(ref)?.job;
+    const resident = ['owner', 'tenant'].includes(this.session.assignment().role);
+    const permission: Permission = resident ? 'Resident.Requests' : stage === 'completion' ? 'Maintenance.Manage' : 'Maintenance.Log';
+    return this.command(
+      { action: `Added a photo to ${ref}`, resource: 'Job', resourceId: ref, schemeId: job?.schemeId, permission },
+      () => this.store.addPhoto(ref, caption?.trim() || file.name.replace(/\.[^.]+$/, ''), resident ? 'report' : stage, this.by),
     );
   }
 

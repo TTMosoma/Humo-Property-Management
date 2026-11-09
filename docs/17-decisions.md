@@ -50,6 +50,7 @@ Each entry records:
 | D34 | One email address per person: a sign-in moves only when the new address confirms it, the old one is told, and the audit log records what it changed from and to | Identity, security |
 | D35 | When a unit is sold: each month's statement belongs to whoever owned it that month; the buyer sees the account from their start date; the seller keeps every month they owned; nothing changes until the transfer date | Finance, owner portal |
 | D36 | A unit always has an owner: ending the only owner is refused (record the sale by adding the buyer), and gaps already on record are flagged for staff to correct | Portfolio |
+| D37 | Maintenance photos are uploaded and stored, and count against the agency's storage like any uploaded file; documents Humo PM generates (statements, letters) don't count | Maintenance, commercial |
 
 ---
 
@@ -818,6 +819,26 @@ A sectional title unit always has a registered owner, and ownership passes from 
 - API: `GET /units/owner-gaps`. Ending an ownership (`POST /relationships/{id}/end`) and correcting its dates (`PUT /relationships/{id}`) refuse a change that leaves days with no owner.
 - A unit that has never had an owner, such as a new unit, isn't flagged.
 - The *Former resident* page (D33) now arises from a sale, never from ending an ownership with nobody after it.
+
+---
+
+## D37 — Maintenance photos, and what counts as storage (8 November 2026)
+
+**Status:** approved by the product owner (Terry Mosoma).
+
+Photos on a maintenance request were kept by name only on the live system, so they couldn't be seen or counted against the agency's storage.
+
+**Decision:**
+1. **Photos are uploaded and stored.** Staff add them to a job; a resident adds them to their own request. JPEG, PNG and WebP are accepted; HEIC is refused with a hint, because most browsers can't show it. Each photo is virus-scanned like any upload, and a job holds up to 20.
+2. **Before and after:** a resident's photos are of the problem. Staff photos added once the work is done are of the finished work.
+3. **They count against storage** like every uploaded file (D20), and are refused past the limit.
+4. **Generated documents don't count:** statements, letters and other documents Humo PM issues. The agency can't delete them and must keep them, so counting them would penalise keeping records.
+5. **Completing a job no longer adds a "Completed work" photo** that isn't there.
+
+**Consequences:**
+- API: `POST /jobs/{ref}/photos` (multipart) and `GET /jobs/{ref}/photos/{photoId}`.
+- Photos recorded by name before this stay as named placeholders.
+- Removing a photo added by mistake is left for later.
 
 ## Still open (needs domain expertise before slice 2)
 

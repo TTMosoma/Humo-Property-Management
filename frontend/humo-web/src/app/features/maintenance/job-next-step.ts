@@ -4,7 +4,7 @@ import { catchError, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 import { ContractorNetwork } from '../../domain/contractor';
 import { RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { DELEGATED_LIMIT, DocStatus, JobAction, JobDataSource, JobDetail, PRIORITY_LABEL, Priority, Quote, Supplier, Trade, describeFailure, docStatus, supplierCompliance, saDate } from '../../domain';
+import { DELEGATED_LIMIT, DocStatus, suppliersFor, JobAction, JobDataSource, JobDetail, PRIORITY_LABEL, Priority, Quote, Supplier, Trade, describeFailure, docStatus, supplierCompliance, saDate } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { SessionService } from '../../core/session/session.service';
 import { organisationTeam } from '../../core/session/team';
@@ -94,7 +94,7 @@ export class JobNextStep {
     this.assignee.set(d.job.assigneeId ?? d.scheme.portfolioManager?.staffId ?? '');
     this.priority.set(d.job.priority);
     this.category.set(d.job.category);
-    this.chosenSuppliers.set(this.compliantCandidates(d).slice(0, 2).map((s) => s.id));
+    this.chosenSuppliers.set(this.compliantCandidates(d, d.job.category));
     this.quoteDrafts.set({});
     this.recommended.set(d.job.quotes.find((q) => q.recommended)?.id ?? this.cheapest(d)?.id ?? null);
     const tomorrow = new Date(Date.now() + 86_400_000);
@@ -120,8 +120,10 @@ export class JobNextStep {
   });
   protected readonly notYetAsked = computed(() => {
     const asked = new Set(this.detail().job.quotes.map((q) => q.supplierId));
-    return this.detail().candidates.filter((s) => !asked.has(s.id) && s.status === 'active');
+    return suppliersFor(this.detail(), this.detail().job.category).filter((s) => !asked.has(s.id) && s.status === 'active');
   });
+  /** Suppliers for the trade picked at triage, which follows the choice before it's saved. */
+  protected readonly tradeCandidates = computed(() => suppliersFor(this.detail(), this.category()));
   protected readonly supplier = computed(() => this.detail().supplier);
   /** Expired or missing site-work documents: the work order needs an explicit override. */
   protected readonly supplierIssues = computed(() => {
@@ -165,8 +167,18 @@ export class JobNextStep {
     return this.detail().suppliers[id]?.name ?? this.detail().candidates.find((c) => c.id === id)?.name ?? 'Supplier';
   }
 
-  private compliantCandidates(d: JobDetail): Supplier[] {
-    return d.candidates.filter((s) => s.status === 'active' && !['expired', 'missing'].includes(supplierCompliance(s)));
+  /** The first two vetted, active suppliers for a trade: ticked to start with. */
+  private compliantCandidates(d: JobDetail, trade: Trade): string[] {
+    return suppliersFor(d, trade)
+      .filter((s) => s.status === 'active' && !['expired', 'missing'].includes(supplierCompliance(s)))
+      .slice(0, 2)
+      .map((s) => s.id);
+  }
+
+  /** A different trade asks different suppliers: the ticks start again for it. */
+  protected setCategory(trade: Trade): void {
+    this.category.set(trade);
+    this.chosenSuppliers.set(this.compliantCandidates(this.detail(), trade));
   }
 
   private cheapest(d: JobDetail) {

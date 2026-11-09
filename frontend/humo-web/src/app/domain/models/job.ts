@@ -47,6 +47,8 @@ export interface Photo {
   by: string;
   /** Before/after work. */
   stage: 'report' | 'completion';
+  /** The stored image. Absent for a photo recorded by name only (the prototype, and jobs from before photos were uploaded). */
+  fileId?: string;
 }
 
 export interface Quote {

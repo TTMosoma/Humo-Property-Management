@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable, catchError, of, throwError } from 'rxjs';
+import { Observable, catchError, map, of, throwError } from 'rxjs';
 import {
   BankDetailsInput,
   JobAction,
@@ -8,6 +8,7 @@ import {
   JobSummary,
   ListQuery,
   NewJobInput,
+  Photo,
   Page,
   SupplierDataSource,
   SupplierDetail,
@@ -26,6 +27,22 @@ const orUndefined = <T>(source: Observable<T>): Observable<T | undefined> =>
  */
 @Injectable()
 export class HttpJobDataSource extends HttpPort implements JobDataSource {
+  addPhoto(ref: string, file: File, stage: Photo['stage'], caption?: string): Observable<void> {
+    const form = new FormData();
+    form.append('stage', stage);
+    if (caption) form.append('caption', caption);
+    form.append('file', file, file.name);
+    return this.createId(`/jobs/${encodeURIComponent(ref)}/photos`, form, ['jobs']).pipe(map(() => undefined));
+  }
+
+  removePhoto(ref: string, photoId: string): Observable<void> {
+    return this.command('DELETE', `/jobs/${encodeURIComponent(ref)}/photos/${encodeURIComponent(photoId)}`, null, ['jobs']);
+  }
+
+  photoUrl(ref: string, photo: Photo): string | undefined {
+    return photo.fileId ? `${this.base}/jobs/${encodeURIComponent(ref)}/photos/${encodeURIComponent(photo.id)}` : undefined;
+  }
+
   list(schemeIds: string[], query?: ListQuery): Observable<Page<JobSummary>> {
     const params: Record<string, string | string[]> = { schemeIds };
     if (query?.page) params['page'] = String(query.page);

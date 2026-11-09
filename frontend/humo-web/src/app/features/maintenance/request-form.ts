@@ -10,6 +10,7 @@ import { SessionService } from '../../core/session/session.service';
 import { FieldError } from '../../ui/form/field-error';
 import { PageHeader } from '../../ui/page-header/page-header';
 import { PhotoTile } from '../../ui/photo/photo-tile';
+import { failedPhotosMessage, uploadAll } from './photo-upload';
 
 interface TradeTile {
   trade: Trade;
@@ -70,8 +71,11 @@ export class RequestForm {
   protected readonly urgent = signal<boolean | null>(null);
   protected readonly reporterName = signal('');
   protected readonly reporterRole = signal<'owner' | 'tenant' | 'trustee' | 'staff'>('staff');
-  protected readonly photos = signal<string[]>([]);
+  /** Picked photos, uploaded once the job is logged. `url` previews the image before it's sent. */
+  protected readonly photos = signal<{ file: File; caption: string; url: string }[]>([]);
   protected readonly busy = signal(false);
+  /** The request is logged and its photos are going up. */
+  protected readonly sendingPhotos = signal(false);
   protected readonly attempted = signal(false);
   /** What the server said about the last attempt, per field. */
   protected readonly serverErrors = signal<FieldErrors>({});
@@ -129,12 +133,16 @@ export class RequestForm {
   /** Field mode: "Report" on a phone opens this form photo-first (?capture=1). */
   protected readonly capture = signal(this.route.snapshot.queryParamMap.get('capture') === '1');
 
-  /** The camera or the photo library. The prototype keeps each photo's name as its caption. */
+  /** The camera or the photo library. Previewed here; uploaded with the request. */
   protected takePhotos(e: Event): void {
     const files = [...((e.target as HTMLInputElement).files ?? [])];
-    const start = this.photos().length;
-    this.photos.update((p) => [...p, ...files.map((f, i) => `Photo ${start + i + 1} — ${f.name.replace(/\.[^.]+$/, '')}`)]);
+    this.photos.update((p) => [...p, ...files.map((file) => ({ file, caption: file.name.replace(/\.[^.]+$/, ''), url: URL.createObjectURL(file) }))]);
     (e.target as HTMLInputElement).value = '';
+  }
+
+  protected removePhoto(url: string): void {
+    URL.revokeObjectURL(url);
+    this.photos.update((p) => p.filter((x) => x.url !== url));
   }
 
   protected submit(): void {
@@ -161,19 +169,10 @@ export class RequestForm {
         category: this.category()!,
         priority: resident ? (this.urgent() ? 'urgent' : 'normal') : this.priority(),
         reportedBy,
-        photoCaptions: this.photos(),
+        photoCaptions: [],
       })
       .subscribe({
-        next: (ref) => {
-          this.busy.set(false);
-          if (resident) {
-            this.feedback.success(`Thanks — your request ${ref} has been sent to the managing agent.`);
-            this.router.navigateByUrl('/my/requests');
-          } else {
-            this.feedback.success(`${ref} logged — triage it next.`);
-            this.router.navigate(['/maintenance', ref]);
-          }
-        },
+        next: (ref) => this.afterLogged(ref, resident),
         // Everything they typed stays in the form.
         error: (e) => {
           this.busy.set(false);
@@ -181,6 +180,29 @@ export class RequestForm {
           this.feedback.error(describeFailure(e, 'We couldn’t send that'));
         },
       });
+  }
+
+  /** The job exists: its photos go up one by one; one that fails doesn't undo the request. */
+  private afterLogged(ref: string, resident: boolean): void {
+    const picked = this.photos();
+    this.sendingPhotos.set(picked.length > 0);
+    uploadAll(picked.map((p) => p.file), (file) => this.jobs.addPhoto(ref, file, 'report', picked.find((p) => p.file === file)?.caption)).subscribe((failed) => {
+      this.busy.set(false);
+      this.sendingPhotos.set(false);
+      picked.forEach((p) => URL.revokeObjectURL(p.url));
+      if (failed.length) this.feedback.error(`${ref} was logged. ${failedPhotosMessage(failed, picked.length)} You can add them on the job.`);
+      this.after(ref, resident);
+    });
+  }
+
+  private after(ref: string, resident: boolean): void {
+    if (resident) {
+      this.feedback.success(`Thanks — your request ${ref} has been sent to the managing agent.`);
+      this.router.navigateByUrl('/my/requests');
+    } else {
+      this.feedback.success(`${ref} logged — triage it next.`);
+      this.router.navigate(['/maintenance', ref]);
+    }
   }
 
   protected cancel(): void {
