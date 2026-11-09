@@ -136,6 +136,16 @@ public static class JobRules
     /// <summary>Actions that need the advanced maintenance feature (quotes, approvals, work orders, verification, invoices).</summary>
     public static readonly string[] Advanced = ["request-quotes", "record-quote", "send-for-approval", "approve-within-delegation", "issue-work-order", "start-work", "verify", "capture-invoice"];
 
+    /// <summary>Every vetting document, with any not recorded yet shown as not on file: having no record of one is not the same as being vetted.</summary>
+    public static List<SupplierDocument> WithRequired(IEnumerable<SupplierDocument> docs)
+    {
+        var held = docs.ToList();
+        return [.. held, .. VettingDocuments.Where(t => held.All(d => d.Type != t)).Select(t => new SupplierDocument(t, null, false))];
+    }
+
+    /// <summary>A vetting document that lapses needs its expiry date, or it would count as valid for ever. Only the bank letter doesn't lapse.</summary>
+    public static bool NeedsExpiry(string type) => type != "Bank confirmation letter";
+
     /// <summary>valid, expiring (within 30 days), expired or missing.</summary>
     public static string DocStatus(SupplierDocument d, DateOnly today)
     {
@@ -148,7 +158,7 @@ public static class JobRules
     /// <summary>The worst of the documents that matter for site work (B-BBEE doesn't).</summary>
     public static string Compliance(IEnumerable<SupplierDocument> docs, DateOnly today)
     {
-        var statuses = docs.Where(d => d.Type != "B-BBEE certificate").Select(d => DocStatus(d, today)).ToList();
+        var statuses = WithRequired(docs).Where(d => d.Type != "B-BBEE certificate").Select(d => DocStatus(d, today)).ToList();
         return new[] { "missing", "expired", "expiring", "valid" }.FirstOrDefault(statuses.Contains) ?? "valid";
     }
 

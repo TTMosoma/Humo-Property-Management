@@ -4,12 +4,12 @@ import { ApiError, DocumentAction, LibraryDataSource, LibraryDocument, NewDocume
 import { HttpPort, toApiErrorFromHttp } from './http-port';
 
 /** The record kinds the API holds documents for. */
-const ON_API: RecordKind[] = ['scheme', 'unit', 'job'];
+const ON_API: RecordKind[] = ['scheme', 'unit', 'job', 'supplier'];
 
 /**
- * The document library over HTTP (docs/18 R-11). Documents on schemes, units and jobs are on the API: upload, list,
+ * The document library over HTTP (docs/18 R-11). Documents on schemes, units, jobs and suppliers are on the API: upload, list,
  * read, edit, archive and restore, and opening through a link signed for the person who asks. Each person sees what
- * is shared with them (`mine`). Documents on people, suppliers and meetings come in a later slice: until then those
+ * is shared with them (`mine`). Documents on people and meetings come in a later slice: until then those
  * lists are empty here, and uploads for those records are refused.
  */
 @Injectable()
@@ -47,8 +47,10 @@ export class HttpLibraryDataSource extends HttpPort implements LibraryDataSource
     form.append('visibility', input.visibility);
     if (input.expiresAt) form.append('expiresAt', input.expiresAt);
     if (input.notes) form.append('notes', input.notes);
+    if (input.supplierDoc) form.append('supplierDoc', input.supplierDoc);
     form.append('file', file, file.name);
-    return this.createId('/documents/library', form, ['documents']);
+    // A vetting document changes the supplier's status.
+    return this.createId('/documents/library', form, input.record.kind === 'supplier' ? ['documents', 'suppliers', 'jobs'] : ['documents']);
   }
 
   act(id: string, action: DocumentAction, expectedVersion = 0): Observable<void> {
