@@ -25,6 +25,7 @@ services:
       dockerfile: backend/Dockerfile
     restart: unless-stopped
     volumes:
+      - logs-data:/data/logs
       - files-data:/data/files # uploaded files: back up with the database (doc 18 D-12)
     environment:
       ASPNETCORE_ENVIRONMENT: Production
@@ -34,6 +35,8 @@ services:
       App__AllowedOrigins__0: https://pm.humo.co.za
       # Uploaded PDFs (doc 18 D-12 to D-16): on the files volume, signed links with this key, scanned by ClamAV.
       Files__Root: /data/files
+      # Technical logs (docs/26 §5): daily files, kept 30 days. Not backed up: they're short-lived and hold personal data.
+      Logs__Directory: /data/logs
       Files__SigningKey: ${FILES_SIGNING_KEY}
       Files__ClamAv__Host: ${CLAMAV_HOST}
       Files__ClamAv__Port: ${CLAMAV_PORT}
@@ -95,6 +98,7 @@ services:
       - mail-data:/opt/stalwart # DKIM keys and configuration: back up (doc 26 §6). ⚠ Check the data path in Stalwart’s Docker docs at setup.
 
 volumes:
+  logs-data:
   files-data:
   pgdata:
   caddy-data:

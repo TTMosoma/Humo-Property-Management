@@ -33,6 +33,7 @@ import {
   OrganisationDataSource,
   PlanDataSource,
   PlatformDataSource,
+  TechnicalLogDataSource,
   AccountRequestDataSource,
   SecurityDataSource,
   StepUpAuthenticator,
@@ -47,6 +48,7 @@ import {
   UnitDataSource,
   WorkItemDataSource, PackageLimitsDataSource, OwnerInvoiceDataSource } from '../domain';
 import { InMemoryHumoTeamDataSource } from './data-sources/in-memory-humo-team-data-source';
+import { InMemoryTechnicalLogDataSource } from './data-sources/in-memory-technical-logs';
 import { InMemoryPackageLimitsDataSource } from './data-sources/in-memory-package-limits';
 import { InMemoryOwnerInvoiceDataSource } from './data-sources/in-memory-owner-invoices';
 import {
@@ -121,6 +123,7 @@ export function provideMockData(): EnvironmentProviders {
     { provide: SecurityDataSource, useClass: InMemorySecurityDataSource },
     { provide: StepUpAuthenticator, useClass: InMemoryStepUpAuthenticator },
     { provide: PlatformDataSource, useClass: InMemoryPlatformDataSource },
+    { provide: TechnicalLogDataSource, useClass: InMemoryTechnicalLogDataSource },
     { provide: AccountRequestDataSource, useClass: InMemoryAccountRequestDataSource },
     { provide: PlanDataSource, useClass: InMemoryPlanDataSource },
     { provide: NudgeDataSource, useClass: InMemoryNudgeDataSource },

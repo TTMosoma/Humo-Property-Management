@@ -864,6 +864,12 @@ export const routes: Routes = [
             loadComponent: () => import('./features/platform/platform-users-page').then((m) => m.PlatformUsersPage),
           },
           {
+            path: 'logs',
+            title: 'Technical logs',
+            data: { permission: 'Platform.Logs', breadcrumb: 'Technical logs' },
+            loadComponent: () => import('./features/platform/technical-logs-page').then((m) => m.TechnicalLogsPage),
+          },
+          {
             path: 'audit',
             title: 'Platform audit log',
             data: { permission: 'Platform.Audit', breadcrumb: 'Audit log', platform: true },

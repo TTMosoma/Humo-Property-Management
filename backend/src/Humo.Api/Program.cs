@@ -27,7 +27,8 @@ builder.Services.AddOptions<BootstrapOptions>().Bind(config.GetSection(Bootstrap
 builder.Services.AddOptions<DatabaseOptions>().Bind(config.GetSection(DatabaseOptions.Section));
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddProblemDetails();
+builder.Services.AddProblemDetails(o => o.CustomizeProblemDetails = TechnicalLogging.NoteRefusal);
+builder.AddTechnicalLogging();
 
 builder.Services.AddHumoInfrastructure(config);
 builder.Services.AddScoped<SessionBuilder>();
@@ -154,6 +155,7 @@ Humo.Api.Startup.ProductionSettings.Check(builder.Environment, builder.Configura
 var app = builder.Build();
 
 app.UseForwardedHeaders();
+app.UseTechnicalRequestLogging(); // outside the exception handler, so a failure is logged with its 500
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseRateLimiter();
@@ -181,6 +183,7 @@ api.MapBoards();
 api.MapAccess();
 api.MapAccountRequests();
 api.MapHumoTeam();
+api.MapTechnicalLogs();
 api.MapImpersonation();
 Humo.Api.Platform.PasskeyResetEndpoints.MapPasskeyReset(api);
 Humo.Api.Auth.SmsStepUp.MapSmsStepUp(api);

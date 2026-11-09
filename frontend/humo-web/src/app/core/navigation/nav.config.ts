@@ -58,6 +58,7 @@ export const NAV: NavSection[] = [
       { id: 'platform-invoices', label: 'Invoices', icon: 'receipt-outline', route: '/platform/invoices', permission: 'Platform.Revenue.View', keywords: 'billing invoices payments overdue eft card outstanding' },
       { id: 'platform-pricing', label: 'Pricing & add-ons', icon: 'card-outline', route: '/platform/pricing', permission: 'Platform.Revenue.View', keywords: 'prices catalogue add-ons storage whatsapp vat proration billing invoices' },
       { id: 'platform-flags', label: 'Feature flags', icon: 'flag-outline', route: '/platform/flags', permission: 'Platform.Config.Manage' },
+      { id: 'platform-logs', label: 'Technical logs', icon: 'terminal-outline', route: '/platform/logs', permission: 'Platform.Logs', keywords: 'serilog errors failures trace' },
       { id: 'platform-health', label: 'Platform health', icon: 'pulse-outline', route: '/platform/health', permission: 'Platform.Operations.View' },
     ],
   },

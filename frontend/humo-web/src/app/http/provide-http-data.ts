@@ -33,6 +33,7 @@ import {
   PersonDataSource,
   PlanDataSource,
   PlatformDataSource,
+  TechnicalLogDataSource,
   PlatformTemplateDataSource,
   ReceiptDataSource,
   ReportDataSource,
@@ -63,6 +64,7 @@ import { HttpOrganisationDataSource, HttpPersonDataSource, HttpSchemeDataSource,
 import { NOT_CONNECTED } from '../core/availability/not-connected';
 import { HttpSessionDataSource } from './http-session-data-source';
 import { HttpLibraryDataSource } from './http-library';
+import { HttpTechnicalLogDataSource } from './http-technical-logs';
 import { HttpPayablesDataSource } from './http-payables';
 import { HttpPastResidentDataSource, HttpStaffDataSource } from './http-staff';
 import { HttpPackageLimitsDataSource } from './http-package-limits';
@@ -116,6 +118,7 @@ export function provideHttpData(): EnvironmentProviders {
     { provide: OwnerInvoiceDataSource, useClass: HttpOwnerInvoiceDataSource },
     { provide: CatalogueDataSource, useClass: HttpCatalogueDataSource },
     { provide: PlatformDataSource, useClass: HttpPlatformDataSource },
+    { provide: TechnicalLogDataSource, useClass: HttpTechnicalLogDataSource },
     { provide: PlanDataSource, useClass: HttpPlanDataSource },
     { provide: CommercialDataSource, useClass: HttpCommercialDataSource },
     { provide: NudgeDataSource, useClass: HttpNudgeDataSource },

@@ -109,3 +109,31 @@ export abstract class AccountRequestDataSource {
   abstract policy(): Observable<AccountPolicySetting>;
   abstract setPolicy(policy: AccountApprovalPolicy, reason: string, expectedVersion?: number): Observable<void>;
 }
+
+export interface TechnicalLogQuery {
+  /** The day, yyyy-MM-dd. */
+  date: string;
+  level: string;
+  search: string;
+}
+
+export interface TechnicalLogEntry {
+  at: string;
+  level: string;
+  message: string;
+  /** Why the API refused the request, when it did. */
+  refusal?: string;
+  traceId?: string;
+  raw: string;
+}
+
+export interface TechnicalLogResult {
+  entries: TechnicalLogEntry[];
+  matched: number;
+}
+
+/** What the API logged, for Humo's System Administrators (Platform.Logs). Both are audited; downloading needs a passkey. */
+export abstract class TechnicalLogDataSource {
+  abstract query(q: TechnicalLogQuery): Observable<TechnicalLogResult>;
+  abstract download(date: string): Observable<string>;
+}

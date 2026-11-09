@@ -14,6 +14,8 @@ WORKDIR /app
 RUN apt-get update     && apt-get install -y --no-install-recommends chromium fonts-dejavu-core fonts-liberation     && rm -rf /var/lib/apt/lists/*
 ENV Documents__ChromiumPath=/usr/bin/chromium
 COPY --from=build /app .
+# Owned by the app before its volumes are mounted: a new volume takes this ownership, so uploads and logs can be written.
+RUN mkdir -p /data/files /data/logs && chown -R app:app /data
 # Non-root user shipped with the .NET images.
 USER app
 ENV ASPNETCORE_URLS=http://+:8080
