@@ -69,6 +69,30 @@ public sealed class WorkItemAccessTests : IDisposable
         Assert.Equal(["follow-up"], await TypesFor(s.Finance));
     }
 
+    [Theory]
+    [InlineData("debtor-follow-up")]
+    [InlineData("maintenance-triage")]
+    [InlineData("rule-breach")]
+    public async Task A_task_for_real_work_cant_be_ticked_off(string type)
+    {
+        var s = await Team();
+        var task = await Work(s, type, s.PmId);
+
+        var refused = await s.Pm.PostAsJsonAsync("/api/work-items/complete", new { ids = new[] { task.ToString() } });
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, refused.StatusCode);
+        Assert.Equal("open", await api.Db(db => db.WorkItems.Where(w => w.Id == task).Select(w => w.Status).SingleAsync()));
+    }
+
+    [Fact]
+    public async Task A_plain_follow_up_can_still_be_marked_done()
+    {
+        var s = await Team();
+        var task = await Work(s, "follow-up", s.PmId);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await s.Pm.PostAsJsonAsync("/api/work-items/complete", new { ids = new[] { task.ToString() } })).StatusCode);
+    }
+
     [Fact]
     public async Task Finance_cannot_change_a_breach_task_by_calling_the_API()
     {

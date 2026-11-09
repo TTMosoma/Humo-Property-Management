@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { CdkMenu, CdkMenuItem, CdkMenuTrigger } from '@angular/cdk/menu';
 import { IonIcon } from '@ionic/angular/standalone';
-import { WORK_TYPE_AREA, WorkItem, fieldErrorsOf, isOpen, urgencyOf } from '../../domain';
+import { WORK_TYPE_AREA, WorkItem, fieldErrorsOf, isOpen, urgencyOf, workButton } from '../../domain';
 import { AttentionService } from '../../core/attention/attention.service';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { ScopeNotice } from '../../core/scope/scope-notice';
@@ -54,6 +54,11 @@ export class TasksPage {
   protected readonly assignable = computed(() => {
     const ids = new Set(this.selected());
     return this.attention.visible().some((w) => ids.has(w.id) && w.type === 'rule-breach') ? this.staff().filter(canTakeRuleBreaches) : this.staff();
+  });
+  /** Only plain to-dos can be ticked off; the rest close themselves when the work is done. */
+  protected readonly canMarkSelectedDone = computed(() => {
+    const ids = new Set(this.selected());
+    return !this.attention.visible().some((w) => ids.has(w.id) && workButton(w));
   });
   protected readonly areaIcon = AREA_ICON;
 

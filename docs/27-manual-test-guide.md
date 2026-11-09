@@ -310,6 +310,14 @@ Restart the API first. Have a JPEG on hand, and an iPhone HEIC if you can.
 - [ ] As `sipho@mail.example` (owner): *Report a problem* with a photo. **Expect:** the request is sent, and Thandeka sees the photo on the job.
 - [ ] As Priya (Finance), open a job from its invoice. **Expect:** its photos show.
 
+## 28. Tasks that close themselves
+
+- [ ] As Thandeka: Tasks › a debtor follow-up, such as "send a final demand". **Expect:** the button is *Open debtor case*, with no *Mark done*. The drawer says the task closes itself, and no longer mentions a "workflow slice".
+- [ ] Press *Open debtor case* and send the final demand. **Expect:** the task has gone from Tasks, and the next follow-up has been created.
+- [ ] Tasks › a new maintenance request. **Expect:** *Open the job*, with no *Mark done*. Save triage on the job. **Expect:** the task closes.
+- [ ] Tick two tasks where one is a debtor follow-up. **Expect:** the bar at the bottom has no *Mark done*.
+- [ ] Tasks › a plain follow-up from Inbox, or a meeting action. **Expect:** *Mark done* is still there and works.
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.
