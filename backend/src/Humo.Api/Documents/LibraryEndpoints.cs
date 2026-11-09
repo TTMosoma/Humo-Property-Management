@@ -1,7 +1,10 @@
+using System.Text.Json;
 using Humo.Api.Commands;
 using Humo.Api.Commercial;
 using Humo.Api.Files;
 using Humo.Domain.Access;
+using Humo.Domain.Commercial;
+using Humo.Domain.Maintenance;
 using Humo.Infrastructure.Data;
 using Humo.Infrastructure.Files;
 using Microsoft.AspNetCore.Routing;
@@ -21,13 +24,13 @@ public sealed record LibraryActionRequest(string Type, int ExpectedVersion, stri
 /// (see <see cref="PdfIntake"/>) and stored. Staff with the document permission read everything on the schemes they
 /// cover. Trustees, owners and tenants read what's shared with them: trustees see "trustees" and "owners" documents on
 /// their schemes; owners see "owners" documents on their schemes; owners and tenants see "this unit only" documents on
-/// their units. Documents on people, suppliers and meetings, and replacing a compliance or vetting document, come later.
+/// their units. A supplier's vetting document is uploaded on the supplier and marks that document as on file. Documents on people and meetings, and replacing a compliance document, come later.
 /// </summary>
 public static class LibraryEndpoints
 {
     public static readonly string[] Categories = ["insurance", "certificate", "vetting", "rules", "minutes", "financial", "contract", "plans", "correspondence", "quote", "photo", "other"];
     public static readonly string[] Visibilities = ["staff", "trustees", "owners", "unit"];
-    private static readonly string[] RecordKinds = ["scheme", "unit", "job"];
+    private static readonly string[] RecordKinds = ["scheme", "unit", "job", "supplier"];
 
     public static void MapLibrary(this RouteGroupBuilder g)
     {
@@ -105,6 +108,10 @@ public static class LibraryEndpoints
         var visibility = form["visibility"].ToString();
         var errors = Check(title, category, visibility, form["expiresAt"].ToString(), kind);
         if (recordValue.Length == 0) errors[kind == "scheme" ? "schemeId" : "recordId"] = "Choose what this document is uploaded on.";
+        // A vetting document decides whether a supplier may be booked, so it's the supplier managers' to record, and one that lapses needs its date.
+        var supplierDoc = kind == "supplier" && form["supplierDoc"].ToString() is { Length: > 0 } named ? named : null;
+        if (supplierDoc is not null && !JobRules.VettingDocuments.Contains(supplierDoc)) errors["supplierDoc"] = "Choose a vetting document.";
+        else if (supplierDoc is not null && JobRules.NeedsExpiry(supplierDoc) && ParseDate(form["expiresAt"].ToString()) is null) errors["expiresAt"] = "Enter the date it expires.";
         if (errors.Count > 0) return Problems.Validation(errors);
 
         var placement = await PlaceAsync(kind, recordValue, actor, db, ct);
@@ -114,7 +121,8 @@ public static class LibraryEndpoints
         if (refusal is not null) return refusal;
         if (await limits.RefuseNewFileAsync(placement.OrganisationId, accepted!.Bytes.Length, ct) is { } full) return Problems.Validation(new() { ["file"] = full });
 
-        return await commands.RunAsync(new CommandSpec($"Uploaded {title} to {placement.SchemeName}", "Documents.Manage")
+        var supplier = supplierDoc is null ? null : await db.Suppliers.FirstAsync(s => s.Id == placement.RecordId, ct);
+        return await commands.RunAsync(new CommandSpec(supplier is null ? $"Uploaded {title} to {placement.SchemeName}" : $"Recorded {supplierDoc} for {supplier.Name}", supplier is null ? "Documents.Manage" : "Suppliers.Manage")
         {
             Resource = "Document",
             ResourceId = title,
@@ -132,6 +140,12 @@ public static class LibraryEndpoints
             });
             // The storage warning at 80% (D20), counted with this file.
             await limits.NotifyAsync(placement.OrganisationId, notices, writer.Human.Id, ct, extraBytes: accepted.Bytes.Length);
+            if (supplier is not null)
+            {
+                var held = JobRules.WithRequired(JsonSerializer.Deserialize<List<SupplierDocument>>(supplier.Documents, Json.Options) ?? []);
+                supplier.Documents = JsonSerializer.Serialize(held.Select(d => d.Type == supplierDoc ? new SupplierDocument(d.Type, form["expiresAt"].ToString() is { Length: > 0 } e ? e : null, true) : d), Json.Options);
+                supplier.Version++;
+            }
             var id = Guid.CreateVersion7();
             db.LibraryDocuments.Add(new LibraryDocument
             {
@@ -153,6 +167,10 @@ public static class LibraryEndpoints
         if (body.ExpectedVersion != document.Version) return Problems.Conflict();
 
         var errors = new Dictionary<string, string>();
+        // The file behind a supplier's vetting status: changing its date or taking it away would change the status with no new document.
+        var vetting = document.RecordKind == "supplier" && document.Category == "vetting";
+        if (vetting && (body.Type == "archive" || (body.Type == "edit" && (body.ExpiresAt ?? "") != (document.ExpiresOn?.ToString("yyyy-MM-dd") ?? ""))))
+            return Problems.Validation(new() { [body.Type == "archive" ? "id" : "expiresAt"] = "A vetting document stands until it’s replaced: upload the new one on the supplier." });
         switch (body.Type)
         {
             case "edit":
@@ -223,6 +241,15 @@ public static class LibraryEndpoints
     {
         if (!RecordKinds.Contains(kind)) return null;
         if (kind != "job" && !Guid.TryParse(value, out _)) return null;
+        if (kind == "supplier")
+        {
+            var supplier = await db.Suppliers.AsNoTracking().FirstOrDefaultAsync(s => s.Id == Guid.Parse(value) && s.OrganisationId == actor.OrganisationId, ct);
+            // Kept against a scheme the person covers, as every file is.
+            var covered = (JsonSerializer.Deserialize<List<string>>(supplier?.SchemeIds ?? "[]", Json.Options) ?? []).Select(Guid.Parse).FirstOrDefault(actor.CoversScheme);
+            if (supplier is null || covered == Guid.Empty) return null;
+            var home = await db.Schemes.AsNoTracking().FirstAsync(s => s.Id == covered, ct);
+            return new Placement("supplier", supplier.Id, home.Id, home.OrganisationId, home.Name);
+        }
         var id = kind == "job" ? Guid.Empty : Guid.Parse(value);
         if (kind == "scheme")
         {
@@ -301,6 +328,8 @@ public static class LibraryEndpoints
         var units = await db.Units.AsNoTracking().Where(u => unitIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, ct);
         var jobIds = documents.Where(d => d.RecordKind == "job" && d.RecordId is not null).Select(d => d.RecordId!.Value).ToList();
         var jobs = await db.Jobs.AsNoTracking().Where(j => jobIds.Contains(j.Id)).ToDictionaryAsync(j => j.Id, ct);
+        var supplierIds = documents.Where(d => d.RecordKind == "supplier" && d.RecordId is not null).Select(d => d.RecordId!.Value).ToList();
+        var suppliers = await db.Suppliers.AsNoTracking().Where(s => supplierIds.Contains(s.Id)).ToDictionaryAsync(s => s.Id, ct);
 
         return documents.Select(d =>
         {
@@ -312,6 +341,8 @@ public static class LibraryEndpoints
                     new LibraryLinkDto("unit", unit.Id.ToString(), $"Unit {unit.Number}, {scheme.Name}", $"/schemes/{scheme.Id}/units/{unit.Number}"),
                 "job" when jobs.TryGetValue(d.RecordId!.Value, out var job) =>
                     new LibraryLinkDto("job", job.Ref, $"{job.Ref} · {job.Title}", $"/maintenance/{job.Ref}"),
+                "supplier" when suppliers.TryGetValue(d.RecordId!.Value, out var supplier) =>
+                    new LibraryLinkDto("supplier", supplier.Id.ToString(), supplier.Name, $"/suppliers/{supplier.Id}"),
                 _ => new LibraryLinkDto("scheme", scheme.Id.ToString(), scheme.Name, $"/schemes/{scheme.Id}/overview"),
             };
             return new LibraryDocumentDto(

@@ -48,7 +48,7 @@
               @if (st.tone !== 'success' && session.can('Suppliers.Manage')) {
                 <button type="button" class="btn btn-ghost btn-sm" (click)="request(doc)">Request</button>
               }
-              @if (canUpload()) {
+              @if (canUpload() && session.can('Suppliers.Manage')) {
                 <button type="button" class="btn btn-ghost btn-sm" (click)="uploadDoc(doc.type)">Upload</button>
               }
             </li>

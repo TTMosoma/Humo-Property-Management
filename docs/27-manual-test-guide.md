@@ -310,6 +310,17 @@ Restart the API first. Have a JPEG on hand, and an iPhone HEIC if you can.
 - [ ] As `sipho@mail.example` (owner): *Report a problem* with a photo. **Expect:** the request is sent, and Thandeka sees the photo on the job.
 - [ ] As Priya (Finance), open a job from its invoice. **Expect:** its photos show.
 
+## 27. A supplier's vetting documents
+
+Restart the API first. Have a PDF on hand.
+
+- [ ] As Thandeka: Maintenance › Suppliers › AquaFix Plumbing. **Expect:** it shows *Document missing*, not *Vetted*, and the five vetting documents are listed as *Not on file*.
+- [ ] Press *Upload* on *Public liability insurance* and leave *Expires* empty. **Expect:** it asks for the date.
+- [ ] Upload a PDF for COIDA, public liability and tax, each with a date next year. **Expect:** each shows *Valid*, and AquaFix still shows *Document missing* until the bank letter is on file too. Upload the bank letter, which needs no date. **Expect:** *Vetted*.
+- [ ] In *Documents on file*, open one of those documents and try to archive it, or change its date. **Expect:** refused: upload the new one instead.
+- [ ] As Priya (Finance): open the supplier. **Expect:** no *Upload* on the vetting documents.
+- [ ] On a job booked with a supplier that has a document missing. **Expect:** the work order lists what's missing, and can't be issued without ticking *Proceed anyway*.
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.
