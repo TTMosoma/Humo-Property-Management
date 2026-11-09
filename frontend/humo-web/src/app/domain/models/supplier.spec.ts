@@ -1,4 +1,10 @@
-import { Supplier, suppliersFor } from './supplier';
+import { Supplier, supplierCompliance, suppliersFor } from './supplier';
+
+describe('supplierCompliance', () => {
+  it('doesn’t call a supplier with no documents on record vetted', () => {
+    expect(supplierCompliance({ documents: [] } as unknown as Supplier)).toBe('missing');
+  });
+});
 
 describe('suppliersFor', () => {
   const supplier = (id: string, trades: Supplier['trades']) => ({ id, trades }) as Supplier;

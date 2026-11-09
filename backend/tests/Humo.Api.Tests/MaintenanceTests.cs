@@ -235,6 +235,60 @@ public sealed class MaintenanceTests : IDisposable
         Assert.DoesNotContain(away.ToString(), candidates);
     }
 
+    private static MultipartFormDataContent VettingDoc(Guid supplier, string type, string? expires)
+    {
+        var form = new MultipartFormDataContent
+        {
+            { new StringContent("supplier"), "recordKind" }, { new StringContent(supplier.ToString()), "recordId" }, { new StringContent(type), "title" },
+            { new StringContent("vetting"), "category" }, { new StringContent("staff"), "visibility" }, { new StringContent(type), "supplierDoc" },
+            { new ByteArrayContent(System.Text.Encoding.ASCII.GetBytes("%PDF-1.4\n1 0 obj << /Type /Catalog >> endobj\n%%EOF\n")), "file", "doc.pdf" },
+        };
+        if (expires is not null) form.Add(new StringContent(expires), "expiresAt");
+        return form;
+    }
+
+    [Fact]
+    public async Task A_supplier_with_no_document_records_isnt_vetted_and_the_work_order_says_so()
+    {
+        var s = await Scheme();
+        var supplier = await Id(await NewSupplier(s.Admin, s.Kc));
+        await api.Db(async db => { (await db.Suppliers.SingleAsync(x => x.Id == supplier)).Documents = "[]"; return await db.SaveChangesAsync(); });
+
+        var detail = await Ok(await s.Admin.GetAsync($"/api/suppliers/{supplier}"));
+        Assert.Equal("missing", detail.GetProperty("compliance").GetString());
+        Assert.Equal(5, detail.GetProperty("supplier").GetProperty("documents").GetArrayLength());
+
+        var reference = await NewJob(s);
+        await Act(s.Admin, reference, new { type = "triage", assigneeId = s.AdminId.ToString(), priority = "normal", category = "Plumbing" });
+        await Act(s.Admin, reference, new { type = "request-quotes", supplierIds = new[] { supplier.ToString() } });
+        var quote = (await Job(s.Admin, reference)).GetProperty("quotes")[0].GetProperty("id").GetString();
+        await Act(s.Admin, reference, new { type = "record-quote", quoteId = quote, amount = 1_000 });
+        await Act(s.Admin, reference, new { type = "approve-within-delegation", quoteId = quote });
+        Assert.Contains("missing", (await Refused(s.Admin, reference, new { type = "issue-work-order", scheduledFor = api.Clock.GetUtcNow().AddDays(1).ToString("O") })).GetProperty("overrideVetting").GetString());
+    }
+
+    [Fact]
+    public async Task Uploading_every_vetting_document_vets_the_supplier_and_a_lapsing_one_needs_its_date()
+    {
+        var s = await Scheme();
+        var supplier = await Id(await NewSupplier(s.Admin, s.Kc));
+        var later = api.Clock.GetUtcNow().AddYears(1).ToString("yyyy-MM-dd");
+
+        Assert.True((await (await s.Admin.PostAsync("/api/documents/library", VettingDoc(supplier, "Public liability insurance", null))).FieldErrors()).TryGetProperty("expiresAt", out _));
+        foreach (var type in new[] { "COIDA letter of good standing", "Public liability insurance", "Tax compliance (SARS PIN)" })
+            Assert.Equal(HttpStatusCode.OK, (await s.Admin.PostAsync("/api/documents/library", VettingDoc(supplier, type, later))).StatusCode);
+        Assert.Equal("missing", (await Ok(await s.Admin.GetAsync($"/api/suppliers/{supplier}"))).GetProperty("compliance").GetString());
+        var bank = await s.Admin.PostAsync("/api/documents/library", VettingDoc(supplier, "Bank confirmation letter", null));
+        Assert.Equal(HttpStatusCode.OK, bank.StatusCode);
+        Assert.Equal("valid", (await Ok(await s.Admin.GetAsync($"/api/suppliers/{supplier}"))).GetProperty("compliance").GetString());
+
+        // The file behind the status stands until it's replaced.
+        var id = (await bank.Json()).GetProperty("id").GetString();
+        var version = (await Ok(await s.Admin.GetAsync($"/api/documents/library/{id}"))).GetProperty("version").GetInt32();
+        var archive = await s.Admin.PostAsJsonAsync($"/api/documents/library/{id}/actions", new { type = "archive", expectedVersion = version, reason = "Gone" });
+        Assert.True((await archive.FieldErrors()).TryGetProperty("id", out _));
+    }
+
     [Fact]
     public async Task A_job_runs_from_report_to_invoice_within_delegated_authority()
     {

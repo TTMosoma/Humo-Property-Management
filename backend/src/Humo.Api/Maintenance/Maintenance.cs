@@ -71,7 +71,7 @@ public sealed class MaintenanceService(HumoDbContext db, TimeProvider clock)
     }
 
     public static SupplierDto ToDto(SupplierRow s, PerformanceDto? p) => new(s.Id.ToString(), s.Version, s.PartyId, s.Name, List<string>(s.Trades), s.ContactName, s.Phone, s.Email,
-        s.BankAccount, s.BankVerified, s.BbbeeLevel, List<string>(s.SchemeIds), List<SupplierDocument>(s.Documents), p ?? new PerformanceDto(0, 0, 0, 0), s.Status,
+        s.BankAccount, s.BankVerified, s.BbbeeLevel, List<string>(s.SchemeIds), JobRules.WithRequired(List<SupplierDocument>(s.Documents)), p ?? new PerformanceDto(0, 0, 0, 0), s.Status,
         !s.BankVerified && s.BankChangedById is { } changer ? new BankChangeDto(s.BankChangedBy ?? "", changer.ToString(), s.BankChangedAt?.ToString("O") ?? "", s.BankWorkItemId?.ToString()) : null,
         s.BankVerified ? s.BankVerifiedBy : null, s.BankVerified ? s.BankVerifiedAt?.ToString("O") : null);
 
@@ -102,7 +102,7 @@ public sealed class MaintenanceService(HumoDbContext db, TimeProvider clock)
 
     /// <summary>Their site-work documents that are missing or expired, in words.</summary>
     public List<string> VettingProblems(SupplierRow s) =>
-        [.. List<SupplierDocument>(s.Documents).Where(d => d.Type != "B-BBEE certificate").Select(d => (d.Type, Status: JobRules.DocStatus(d, Today)))
+        [.. JobRules.WithRequired(List<SupplierDocument>(s.Documents)).Where(d => d.Type != "B-BBEE certificate").Select(d => (d.Type, Status: JobRules.DocStatus(d, Today)))
             .Where(x => x.Status is "missing" or "expired").Select(x => $"{x.Type} is {x.Status}")];
 
     // ---------------------------------------------------------------- Jobs

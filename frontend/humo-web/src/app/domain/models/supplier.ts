@@ -83,9 +83,13 @@ export function docStatus(doc: SupplierDocument, now = new Date()): DocStatus {
   return 'valid';
 }
 
+const SITE_WORK_DOCS: SupplierDocType[] = ['COIDA letter of good standing', 'Public liability insurance', 'Tax compliance (SARS PIN)', 'Bank confirmation letter'];
+
 /** Overall vetting status: the worst of the documents that matter for site work. */
 export function supplierCompliance(s: Supplier): DocStatus {
   const order: DocStatus[] = ['missing', 'expired', 'expiring', 'valid'];
+  // No record of a required document is not the same as being vetted.
+  if (SITE_WORK_DOCS.some((t) => !s.documents.some((d) => d.type === t))) return 'missing';
   const statuses = s.documents
     .filter((d) => d.type !== 'B-BBEE certificate')
     .map((d) => docStatus(d));
