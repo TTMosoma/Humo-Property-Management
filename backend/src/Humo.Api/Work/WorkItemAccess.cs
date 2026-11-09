@@ -13,6 +13,9 @@ public static class WorkItemAccess
 {
     public const string RuleBreach = "rule-breach";
 
+    /// <summary>Tasks that stand for real work on a record. Each closes itself when that step is taken, so ticking one off could only say the work was done when it wasn't.</summary>
+    public static readonly string[] ClosedByTheirOwnStep = ["debtor-follow-up", "maintenance-triage", RuleBreach];
+
     private static readonly string[] FinanceTypes = ["receipt-allocation", "debtor-follow-up", "invoice-approval", "payment-batch-approval", "billing-run-approval"];
     private static readonly string[] OperationsTypes = ["maintenance-triage", "maintenance-overdue", "document-expiry"];
     private static readonly string[] NotForPortfolioManagers = ["receipt-allocation", "payment-batch-approval", "bank-details-verification", "billing-run-approval"];

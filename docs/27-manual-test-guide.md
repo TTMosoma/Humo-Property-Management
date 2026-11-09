@@ -320,6 +320,13 @@ Restart the API first. Have a PDF on hand.
 - [ ] In *Documents on file*, open one of those documents and try to archive it, or change its date. **Expect:** refused: upload the new one instead.
 - [ ] As Priya (Finance): open the supplier. **Expect:** no *Upload* on the vetting documents.
 - [ ] On a job booked with a supplier that has a document missing. **Expect:** the work order lists what's missing, and can't be issued without ticking *Proceed anyway*.
+## 28. Tasks that close themselves
+
+- [ ] As Thandeka: Tasks › a debtor follow-up, such as "send a final demand". **Expect:** the button is *Open debtor case*, with no *Mark done*. The drawer says the task closes itself, and no longer mentions a "workflow slice".
+- [ ] Press *Open debtor case* and send the final demand. **Expect:** the task has gone from Tasks, and the next follow-up has been created.
+- [ ] Tasks › a new maintenance request. **Expect:** *Open the job*, with no *Mark done*. Save triage on the job. **Expect:** the task closes.
+- [ ] Tick two tasks where one is a debtor follow-up. **Expect:** the bar at the bottom has no *Mark done*.
+- [ ] Tasks › a plain follow-up from Inbox, or a meeting action. **Expect:** *Mark done* is still there and works.
 
 ## Reporting back
 

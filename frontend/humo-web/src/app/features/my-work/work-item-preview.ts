@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { CdkMenu, CdkMenuItem, CdkMenuTrigger } from '@angular/cdk/menu';
 import { IonIcon } from '@ionic/angular/standalone';
-import { fieldErrorsOf } from '../../domain';
+import { fieldErrorsOf, workButton } from '../../domain';
 import { AttentionService } from '../../core/attention/attention.service';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { ScopeService } from '../../core/scope/scope.service';
@@ -48,19 +48,25 @@ import { workItemView } from './work-item-view';
           <dt>Created</dt><dd>{{ formatDate(w.createdAt) }}</dd>
         </dl>
 
-        <p class="hint">
-          <ion-icon name="information-circle-outline" aria-hidden="true" />
-          The full record (timeline, documents, messages) arrives with its workflow slice. “Open” takes you to its page.
-        </p>
+        @if (w.status === 'open' && workButton(w)) {
+          <p class="hint">
+            <ion-icon name="information-circle-outline" aria-hidden="true" />
+            This task closes itself when the work is done.
+          </p>
+        }
 
         @if (w.kind !== 'approval') {
           <div drawerFooter class="footer">
             @if (!session.can('Work.Manage')) {
               <span class="muted small">Read-only.</span>
             } @else if (w.status === 'open') {
-              <button type="button" class="btn btn-primary" (click)="complete()">
-                <ion-icon name="checkmark-outline" aria-hidden="true" /> Mark done
-              </button>
+              @if (workButton(w); as label) {
+                <a class="btn btn-primary" [routerLink]="w.route" (click)="ref.close()">{{ label }}</a>
+              } @else {
+                <button type="button" class="btn btn-primary" (click)="complete()">
+                  <ion-icon name="checkmark-outline" aria-hidden="true" /> Mark done
+                </button>
+              }
               @if (session.isStaff()) {
                 <button type="button" class="btn btn-secondary" [cdkMenuTriggerFor]="assignMenu">Assign…</button>
               }
@@ -110,6 +116,7 @@ export class WorkItemPreview {
   private readonly team = organisationTeam();
   protected readonly staff = this.team.staff;
   protected readonly formatDate = formatDate;
+  protected readonly workButton = workButton;
 
   /** Live: reflects decisions/completions made while the drawer is open. */
   protected readonly item = computed(() => this.attention.visible().find((w) => w.id === this.data.id));

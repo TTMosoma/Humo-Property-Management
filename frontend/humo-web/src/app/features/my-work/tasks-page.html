@@ -86,9 +86,11 @@
 
       @if (selected().length) {
         <ui-bulk-bar [count]="selected().length" (clear)="selected.set([])">
-          <button type="button" class="btn btn-primary btn-sm on-dark" (click)="completeSelected()">
-            <ion-icon name="checkmark-outline" aria-hidden="true" /> Mark done
-          </button>
+          @if (canMarkSelectedDone()) {
+            <button type="button" class="btn btn-primary btn-sm on-dark" (click)="completeSelected()">
+              <ion-icon name="checkmark-outline" aria-hidden="true" /> Mark done
+            </button>
+          }
           <button type="button" class="btn btn-secondary btn-sm" [cdkMenuTriggerFor]="assignMenu">Assign to…</button>
         </ui-bulk-bar>
       }

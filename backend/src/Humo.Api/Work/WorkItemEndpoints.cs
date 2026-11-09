@@ -72,7 +72,8 @@ public static class WorkItemEndpoints
     }
 
     private static Task<IResult> Complete(WorkIdsRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, CancellationToken ct) =>
-        Change(body.Ids, "Completed", current, commands, db, (w, actor) => { w.Status = "done"; w.DecidedBy = actor.Human.Name; w.DecidedAt = DateTimeOffset.UtcNow; }, ct, onlyTasks: true);
+        Change(body.Ids, "Completed", current, commands, db, (w, actor) => { w.Status = "done"; w.DecidedBy = actor.Human.Name; w.DecidedAt = DateTimeOffset.UtcNow; }, ct, onlyTasks: true,
+            refuse: items => items.Any(w => WorkItemAccess.ClosedByTheirOwnStep.Contains(w.Type)) ? "This task closes itself when the work is done: open it and take the next step." : null);
 
     private static Task<IResult> Reopen(WorkIdsRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, CancellationToken ct) =>
         Change(body.Ids, "Reopened", current, commands, db, (w, _) => { w.Status = "open"; w.DecidedBy = null; w.DecidedAt = null; }, ct, onlyTasks: true);

@@ -117,6 +117,21 @@ export const WORK_TYPE_LABELS: Record<WorkItemType, string> = {
 };
 
 /** Which part of Humo Property Management a work item belongs to (used for grouping and filters). */
+/**
+ * Tasks that stand for real work on a record, with the button that goes to it. Each closes itself when that step is
+ * taken, so ticking one off could only say the work was done when it wasn't. The API refuses it too.
+ */
+const CLOSES_ITSELF: Partial<Record<WorkItemType, string>> = {
+  'debtor-follow-up': 'Open debtor case',
+  'maintenance-triage': 'Open the job',
+  'rule-breach': 'Open the breach',
+};
+
+/** The button to the work, when this task can only be closed by doing it. */
+export function workButton(w: Pick<WorkItem, 'type'>): string | undefined {
+  return CLOSES_ITSELF[w.type];
+}
+
 export const WORK_TYPE_AREA: Record<WorkItemType, 'Finance' | 'Maintenance' | 'Governance' | 'Compliance' | 'Communication'> = {
   'receipt-allocation': 'Finance',
   'debtor-follow-up': 'Finance',
