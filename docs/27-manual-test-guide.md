@@ -314,7 +314,7 @@ Restart the API first. Have a JPEG on hand, and an iPhone HEIC if you can.
 
 Restart the API first. Have a PDF on hand.
 
-- [ ] As Thandeka: Maintenance › Suppliers › AquaFix Plumbing. **Expect:** it shows *Document missing*, not *Vetted*, and the five vetting documents are listed as *Not on file*.
+- [ ] As Thandeka: Maintenance › Suppliers › AquaFix Plumbing. **Expect:** it shows *Document missing*, not *Vetted*, and the five vetting documents are listed as *Not on file*, each with *Upload* and no *Request*.
 - [ ] Press *Upload* on *Public liability insurance* and leave *Expires* empty. **Expect:** it asks for the date.
 - [ ] Upload a PDF for COIDA, public liability and tax, each with a date next year. **Expect:** each shows *Valid*, and AquaFix still shows *Document missing* until the bank letter is on file too. Upload the bank letter, which needs no date. **Expect:** *Vetted*.
 - [ ] In *Documents on file*, open one of those documents and try to archive it, or change its date. **Expect:** refused: upload the new one instead.

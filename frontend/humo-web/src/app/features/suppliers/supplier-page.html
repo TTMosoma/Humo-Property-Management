@@ -45,9 +45,6 @@
               <span class="doc-name">{{ doc.type }}</span>
               <span class="doc-note">{{ st.note }}</span>
               <ui-status-pill [label]="st.label" [tone]="st.tone" />
-              @if (st.tone !== 'success' && session.can('Suppliers.Manage')) {
-                <button type="button" class="btn btn-ghost btn-sm" (click)="request(doc)">Request</button>
-              }
               @if (canUpload() && session.can('Suppliers.Manage')) {
                 <button type="button" class="btn btn-ghost btn-sm" (click)="uploadDoc(doc.type)">Upload</button>
               }

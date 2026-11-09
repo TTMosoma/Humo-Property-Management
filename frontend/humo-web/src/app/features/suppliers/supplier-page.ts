@@ -119,7 +119,7 @@ export class SupplierPage {
     const days = d.expires ? Math.round((new Date(d.expires).getTime() - Date.now()) / 86_400_000) : null;
     switch (s) {
       case 'missing':
-        return { label: 'Not on file', tone: 'danger' as const, note: 'Request it before the next work order' };
+        return { label: 'Not on file', tone: 'danger' as const, note: 'Upload it before the next work order' };
       case 'expired':
         return { label: 'Expired', tone: 'danger' as const, note: `Expired ${-days!} days ago` };
       case 'expiring':
@@ -144,12 +144,4 @@ export class SupplierPage {
     if (s) uploadForm(this.drawer, this.library, { kind: 'supplier', id: s.id, label: s.name }, { category: 'vetting', supplierDoc: type });
   }
 
-  protected request(d: SupplierDocument): void {
-    const s = this.detail()?.supplier;
-    if (!s) return;
-    this.data.requestDocument(s.id, d.type).subscribe({
-      next: () => this.feedback.success(`Requested an updated ${d.type} from ${s.contactName} (${s.email})`),
-      error: () => this.feedback.error('The request didn’t send. Try again.'),
-    });
-  }
 }
