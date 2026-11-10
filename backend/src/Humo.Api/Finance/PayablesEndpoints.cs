@@ -87,7 +87,7 @@ public static class PayablesEndpoints
                 : scheme is null ? new() { ["invoiceIds"] = "A batch pays from one scheme’s trust account: choose invoices of one scheme." }
                 : invoices.Any(i => i.Status != "approved") ? new() { ["invoiceIds"] = "Only approved invoices that aren’t in a batch can be paid." }
                 : unverified.Count > 0 ? new() { ["invoiceIds"] = $"Bank details aren’t verified for {string.Join(", ", unverified)}: payments to them are held." }
-                : unconfirmed.Count > 0 ? new() { ["invoiceIds"] = $"The board hasn’t confirmed the emergency work on {string.Join(", ", unconfirmed)}: its invoice waits for that." }
+                : unconfirmed.Count > 0 ? new() { ["invoiceIds"] = $"The board hasn’t confirmed the emergency work on {string.Join(", ", unconfirmed)}: its invoice waits for that. Record the board’s approval in My work › Approvals, or on the job." }
                 : [],
         }, async actor =>
         {

@@ -18,6 +18,9 @@
         }
       </span>
     </div>
+    @if (e.status === 'to-confirm' && d.approvalItem; as item) {
+      <app-approval-card [item]="item" [compact]="true" />
+    }
   }
 
   @switch (job.stage) {
