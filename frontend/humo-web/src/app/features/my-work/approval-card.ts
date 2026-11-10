@@ -64,6 +64,8 @@ export class ApprovalCard {
   readonly item = input.required<WorkItem>();
   /** Inside a drawer: no title block or "details" link. */
   readonly compact = input(false);
+  /** Inside a record that already shows the context (e.g. the job): just the decision, without the detail line and evidence. */
+  readonly brief = input(false);
   readonly details = output<WorkItem>();
 
   protected readonly view = computed(() => workItemView(this.item()));

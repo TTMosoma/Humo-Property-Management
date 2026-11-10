@@ -8,6 +8,7 @@
   </header>
 
   @if (job.emergency; as e) {
+    <div class="emergency">
     <div class="note" [class.warn]="e.status !== 'confirmed'">
       <ion-icon name="alert-circle-outline" aria-hidden="true" />
       <span>
@@ -19,8 +20,9 @@
       </span>
     </div>
     @if (e.status === 'to-confirm' && d.approvalItem; as item) {
-      <app-approval-card [item]="item" [compact]="true" />
+      <app-approval-card [item]="item" [compact]="true" [brief]="true" />
     }
+    </div>
   }
 
   @switch (job.stage) {
@@ -310,8 +312,12 @@
             @if (d.invoiceApprovalItem; as item) { <app-approval-card [item]="item" [compact]="true" /> }
           }
           @case ('approved') {
-            <p class="lead">Invoice {{ iv.invoice.number ?? iv.invoice.id }} is approved and ready to pay.</p>
-            <a class="btn btn-primary" routerLink="/finance/payables" [queryParams]="{ view: 'ready' }">Add to a payment batch in Payables</a>
+            @if (job.emergency?.status === 'to-confirm') {
+              <p class="lead">Invoice {{ iv.invoice.number ?? iv.invoice.id }} is approved. It can be paid once the board confirms the emergency work.</p>
+            } @else {
+              <p class="lead">Invoice {{ iv.invoice.number ?? iv.invoice.id }} is approved and ready to pay.</p>
+              <a class="btn btn-primary" routerLink="/finance/payables" [queryParams]="{ view: 'ready' }">Add to a payment batch in Payables</a>
+            }
           }
           @case ('in-batch') {
             <p class="lead">In payment batch {{ iv.invoice.batchId }} — {{ d.batch?.status === 'approved' ? 'approved, ready to release' : 'awaiting the second authoriser' }}.</p>
