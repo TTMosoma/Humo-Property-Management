@@ -360,7 +360,7 @@ Restart the API first. You'll need Thandeka's and Priya's sign-ins, and a truste
 
 - [ ] As Priya: Finance › Credit control › an account in arrears › *Owner disputes it*, with a reason. Then *Resolve dispute*. **Expect:** four choices: the charge stands, the owner paid, charged in error, the board waives it.
 - [ ] Choose *Charged in error*, pick a levy line, the amount and a note. **Expect:** the case shows "Resolving: a reversal of R…, waiting for a second person", collection stays paused, and the balance hasn't changed.
-- [ ] As Priya, in Approvals, try to approve it. **Expect:** refused: you prepared it. As Thandeka, approve it. **Expect:** the account shows "Reversal of Levy — …" and the dispute is resolved.
+- [ ] As Priya, in Approvals › *All pending*. **Expect:** no *Approve* on her reversal; it says Thandeka can approve it, and it isn't under *Waiting for me*. As Thandeka, approve it. **Expect:** the account shows "Reversal of Levy — …" and the dispute is resolved.
 - [ ] Try to reverse the same charge again. **Expect:** refused: it's already been reversed.
 - [ ] On another disputed account, choose *The board waives it* with an amount. **Expect:** Thandeka can't approve it; it waits for the board. As a trustee, approve it. **Expect:** "Written off by the board — …" on the account.
 - [ ] Choose *The owner paid* with no payment chosen. **Expect:** refused: choose a payment on the account.
