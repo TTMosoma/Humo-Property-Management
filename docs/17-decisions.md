@@ -868,6 +868,33 @@ Photos on a maintenance request were kept by name only on the live system, so th
 - How many must sign, and the emergency route, should be confirmed by a practising managing agent, because each scheme's mandate and rules may differ.
 - Item 9 (correcting a quote) and item 20 (write-offs) build on this.
 
+---
+
+## D40 — Resolving an owner's dispute, and correcting an account (10 November 2026)
+
+**Status:** approved by the product owner (Terry Mosoma). Every write-off goes to the board.
+
+**The problem:** *Resolve dispute* writes a note and restarts collection; it moves no money. "Partly written off" posts nothing and links to nothing, so a dispute can be closed as written off while the debt stands, or the other way round. Separately, one person with billing rights can credit an account by up to R100 000 with a journal, with no second person, and nothing ties that credit to a reason anyone checked. Levy debt is the scheme's money, so the agency shouldn't be able to clear it alone.
+
+**Decision:**
+1. **Resolving a dispute means choosing what happened, and that does the accounting:**
+   - **The charge stands:** nothing moves; collection resumes.
+   - **The owner paid:** the payment is a receipt in the trust account. Choose an unallocated or suspense receipt and allocate it, or capture the payment as it appears on the bank statement. Never a journal. Cash is banked first, then recorded from the bank statement.
+   - **Charged in error, or twice:** reverse the specific charge. Pick the line on the account; the credit is for that line's amount or less, linked to it, and a charge can't be reversed twice.
+   - **Waived (written off):** some or all of what's owed, as the board agreed.
+2. **Who approves:**
+   - A **reversal** needs a second person: someone other than whoever prepared it, in Approvals. An agency with one approver follows D24.
+   - A **write-off** needs the board, as D39: a majority of the board register, on Humo or by signed approval uploaded for that item. Any amount: it's the scheme's money being given up.
+3. **Evidence and the record:** every outcome needs a reason; a proof of payment or the board's approval can be attached. The dispute links to the receipt, reversal or write-off, and the account's statement shows it as its own line ("Reversal of …", "Written off by the board …").
+4. **A dispute closes only when its accounting is done.** Until the reversal or write-off is approved, it stays *Resolving*, and collection stays paused. Rejected, it goes back to *Disputed* with the reason.
+5. **The case closes itself when nothing is overdue**, and its follow-up task with it.
+6. **No back door:** a journal from the account page follows the same rules. A credit is a reversal (second person) or a write-off (the board); a charge (debit) needs a reason, as now. The R100 000 cap stays.
+
+**Consequences:**
+- Existing journals and resolved disputes stay as they are; this applies from when it goes live.
+- What counts as a write-off the agency may make without the board (for example, small interest amounts under its mandate) is for a practising managing agent or auditor to confirm. Until then, every write-off goes to the board.
+- Builds on D39 (the board's approval and upload) and D24 (one approver).
+
 ## Still open (needs domain expertise before slice 2)
 
 - **Levies and participation quotas:** decided per scheme in **D13**. Still open: interest rules, special levies, VAT.

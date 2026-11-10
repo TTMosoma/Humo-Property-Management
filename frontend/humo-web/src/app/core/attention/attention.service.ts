@@ -22,6 +22,7 @@ const FINANCE_TYPES: WorkItemType[] = [
   'invoice-approval',
   'payment-batch-approval',
   'billing-run-approval',
+  'account-correction',
 ];
 const OPERATIONS_TYPES: WorkItemType[] = ['maintenance-triage', 'maintenance-overdue', 'document-expiry'];
 const NOT_FOR_PORTFOLIO_MANAGERS: WorkItemType[] = ['receipt-allocation', 'payment-batch-approval', 'bank-details-verification', 'billing-run-approval'];

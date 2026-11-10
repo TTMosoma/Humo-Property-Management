@@ -32,7 +32,7 @@ public sealed record LetterSnapshot(CollectionViewDto View, CollectionStep Step,
 /// prints it). A letter of demand needs the trustees' approval in My work; every active case has one follow-up Task.
 /// </summary>
 public sealed class CreditControl(HumoDbContext db, Commercial.CommercialRecords commercial, DocumentPrinter printer, IEmailSender email, SmsGateway sms, Messaging.SentRecords sent,
-    Messaging.MessageUsage usage, Messaging.EmailSignatures signatures,
+    Messaging.MessageUsage usage, Messaging.EmailSignatures signatures, AccountCorrections corrections,
     TimeProvider clock, ILogger<CreditControl> logger) : IApprovalHandler
 {
     public const string Feature = "credit-control";
@@ -181,11 +181,26 @@ public sealed class CreditControl(HumoDbContext db, Commercial.CommercialRecords
                 c.Dispute = new CaseDispute(action.Reason!.Trim(), NowText, by);
                 CreditControlRules.Log(c, c.Stage, $"Disputed: {c.Dispute.Reason}", by, NowText);
                 break;
+            case "resolve-dispute" when action.Outcome is "reversal" or "write-off":
+            {
+                // D40: the dispute stays open, and collection paused, until the reversal or write-off is decided.
+                var correction = await corrections.CreateAsync(a, action.Outcome, action.Amount!.Value, action.LineId, action.Note!, null, actor, fromDispute: true, ct);
+                c.Resolving = new CaseResolving(correction.Id.ToString(), action.Outcome, correction.Amount);
+                CreditControlRules.Log(c, c.Stage, action.Outcome == "reversal"
+                    ? $"Resolving: reversal of {BillingRules.Rand(correction.Amount)} charged in error, for a second person to approve. {action.Note!.Trim()}"
+                    : $"Resolving: write-off of {BillingRules.Rand(correction.Amount)}, for the board to approve. {action.Note!.Trim()}", by, NowText);
+                break;
+            }
             case "resolve-dispute":
+            {
+                var paid = action.Outcome == "paid" && Guid.TryParse(action.LineId, out var lid) ? await db.Ledger.AsNoTracking().FirstOrDefaultAsync(l => l.Id == lid, ct) : null;
                 c.Stage = c.PreviousStage ?? CollectionStages.NotStarted;
-                CreditControlRules.Log(c, c.Stage, $"Dispute resolved{(action.Outcome == "written-off-in-part" ? " (part written off by journal)" : "")}: {action.Note!.Trim()}", by, NowText);
+                CreditControlRules.Log(c, c.Stage, paid is not null
+                    ? $"Dispute resolved: the owner paid ({paid.Description}, {paid.Date:d MMM yyyy}, {BillingRules.Rand(-paid.Amount)}). {action.Note!.Trim()}"
+                    : $"Dispute resolved: the charge stands. {action.Note!.Trim()}", by, NowText);
                 c.Dispute = null;
                 break;
+            }
             case "note":
                 CreditControlRules.Log(c, c.Stage, action.Text!.Trim(), by, NowText);
                 break;
@@ -437,6 +452,26 @@ public sealed class CreditControl(HumoDbContext db, Commercial.CommercialRecords
         return $"{v.Scheme.Name}: {BillingRules.Rand(l.Amount)} is overdue on levy account {v.Account.AccountNo} (unit {v.Unit.Number}). {CreditControlRules.LetterNames[l.Kind]}: please pay by {DueBy(l)} using reference {v.Account.AccountNo}{phone}. {v.AgencyName}";
     }
 
+    /// <summary>D40: a dispute's reversal or write-off was decided. Approved, the dispute is resolved; rejected, it's disputed again, with the reason.</summary>
+    public async Task CorrectionDecidedAsync(AccountCorrection correction, bool approved, string by, string? comment, CancellationToken ct)
+    {
+        if (await db.LevyAccounts.FirstOrDefaultAsync(x => x.Id == correction.AccountId, ct) is not { } a) return;
+        var (c, row) = await CaseAsync(a, ct);
+        if (c.Resolving?.CorrectionId != correction.Id.ToString()) return;
+        var what = correction.Kind == AccountCorrections.Reversal ? $"reversal of {BillingRules.Rand(correction.Amount)}" : $"write-off of {BillingRules.Rand(correction.Amount)}";
+        c.Resolving = null;
+        if (approved)
+        {
+            c.Stage = c.PreviousStage ?? CollectionStages.NotStarted;
+            c.Dispute = null;
+            CreditControlRules.Log(c, c.Stage, $"Dispute resolved: the {what} was approved by {by} and is on the account.", by, NowText);
+        }
+        else CreditControlRules.Log(c, c.Stage, $"The {what} wasn’t approved{(comment is null ? "" : $": “{comment}”")}. Still disputed.", by, NowText);
+        c.Version++;
+        await FollowUpAsync(a, c, by, ct);
+        await WriteAsync(a, c, row, ct);
+    }
+
     // ---------------------------------------------------------------- Letters of demand decided in My work
 
     public Task<string?> RefuseAsync(WorkItemRow item, Actor actor, bool approve, CancellationToken ct) => Task.FromResult<string?>(null);
@@ -503,13 +538,19 @@ public static class CreditControlEndpoints
     }
 
     private static async Task<IResult> Act(Guid accountId, CollectionActionRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, CreditControl credit, DeliveryQueue queue,
-        CancellationToken ct)
+        AccountCorrections corrections, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } me) return Results.Unauthorized();
         if (!CanRead(me) || await AccountEndpoints.Readable(me, db, accountId, ct) is not { HolderPersonId: not null } a) return Problems.NotFound();
         var (c, row) = await credit.CaseAsync(a, ct);
         var action = body.Action ?? new CollectionAction("");
         var deliveryProblem = action.Type == "send-letter" ? await credit.DeliveryProblemAsync(a, action.Channel, ct) : null;
+        // D40: a reversal or write-off is checked like one made from the account page; "paid" points at a payment on this account.
+        var outcomeProblems = action.Type != "resolve-dispute" ? []
+            : action.Outcome is "reversal" or "write-off" ? await corrections.CheckAsync(a, action.Outcome, action.Amount, action.LineId, action.Note, ct)
+            : action.Outcome == "paid" && !(Guid.TryParse(action.LineId, out var paidId) && await db.Ledger.AnyAsync(l => l.Id == paidId && l.AccountId == a.Id && l.Type == TransactionTypes.Payment, ct))
+                ? new Dictionary<string, string> { ["lineId"] = "Choose a payment on this account. If it isn’t there yet, allocate the receipt to this account first." }
+            : [];
         return await commands.RunAsync(new CommandSpec($"{Verbs.GetValueOrDefault(action.Type ?? "", action.Type ?? "Acted on")} {a.AccountNo}", CreditControl.Permission)
         {
             Resource = "Account",
@@ -522,6 +563,7 @@ public static class CreditControlEndpoints
             {
                 var e = CreditControlRules.Check(c, CreditControl.Ageing(a), action);
                 if (e.Count == 0 && deliveryProblem is not null) e["channel"] = deliveryProblem;
+                if (e.Count == 0) foreach (var (k, v) in outcomeProblems) e[k] = v;
                 return e;
             },
         }, async actor =>

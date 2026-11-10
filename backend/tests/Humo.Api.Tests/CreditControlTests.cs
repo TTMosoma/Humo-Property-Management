@@ -179,6 +179,79 @@ public sealed class CreditControlTests : IDisposable
         Assert.Equal("reminder", (await Case(s.Finance, s.Account12)).GetProperty("case").GetProperty("stage").GetString());
     }
 
+    private Task<Guid> SeptemberLevy(Guid account) => api.Db(db => db.Ledger.Where(l => l.AccountId == account && l.Type == "levy").Select(l => l.Id).SingleAsync());
+
+    private static async Task<JsonElement> Approval(HttpClient c, string type = "account-correction") =>
+        Assert.Single((await Ok(await c.GetAsync("/api/work-items"))).EnumerateArray(), w => w.GetProperty("type").GetString() == type && w.GetProperty("status").GetString() == "open");
+
+    [Fact]
+    public async Task A_dispute_resolved_as_charged_in_error_waits_for_a_second_person_then_reverses_that_charge()
+    {
+        var s = await Scheme();
+        await NoContent(await Act(s.Finance, s.Account12, new { type = "dispute", reason = "Owner says September was billed twice." }, 0));
+        var levy = await SeptemberLevy(s.Account12);
+        await NoContent(await Act(s.Finance, s.Account12, new { type = "resolve-dispute", outcome = "reversal", lineId = levy.ToString(), amount = 1800, note = "Billed twice in September" }, 1));
+
+        var view = await Case(s.Finance, s.Account12);
+        Assert.Equal("disputed", view.GetProperty("case").GetProperty("stage").GetString());
+        Assert.Equal("reversal", view.GetProperty("case").GetProperty("resolving").GetProperty("kind").GetString());
+        Assert.Equal(1800m, view.GetProperty("account").GetProperty("balance").GetDecimal());
+
+        // Whoever prepared it doesn't approve it.
+        var item = await Approval(s.Finance);
+        Assert.Equal("conflict-of-interest", await (await s.Finance.PostAsJsonAsync($"/api/work-items/{item.GetProperty("id").GetString()}/decision", new { decision = "approved" })).ProblemCode());
+        await NoContent(await s.Admin.PostAsJsonAsync($"/api/work-items/{item.GetProperty("id").GetString()}/decision", new { decision = "approved" }));
+
+        view = await Case(s.Finance, s.Account12);
+        Assert.Equal(0m, view.GetProperty("account").GetProperty("balance").GetDecimal());
+        Assert.False(view.GetProperty("case").TryGetProperty("dispute", out var d) && d.ValueKind != JsonValueKind.Null);
+        Assert.Contains(await api.Db(db => db.Ledger.Where(l => l.AccountId == s.Account12).Select(l => l.Description).ToListAsync()), x => x.StartsWith("Reversal of Levy — September"));
+
+        // It can't be reversed twice.
+        await NoContent(await Act(s.Finance, s.Account12, new { type = "dispute", reason = "Owner disputes September again." }, (await Case(s.Finance, s.Account12)).GetProperty("case").GetProperty("version").GetInt32()));
+        var again = await Act(s.Finance, s.Account12, new { type = "resolve-dispute", outcome = "reversal", lineId = levy.ToString(), amount = 100, note = "Again" }, (await Case(s.Finance, s.Account12)).GetProperty("case").GetProperty("version").GetInt32());
+        Assert.Contains("already been reversed", (await again.FieldErrors()).GetProperty("amount").GetString());
+    }
+
+    [Fact]
+    public async Task A_write_off_is_the_boards_and_a_journal_cant_credit_an_account()
+    {
+        var s = await Scheme();
+        // Bongani on the board register (D2): the board is him alone.
+        await api.Db(async db =>
+        {
+            var p = new Person { Id = Guid.CreateVersion7(), OrganisationId = (await db.Schemes.SingleAsync(x => x.Id == s.Kc)).OrganisationId, FirstName = "Bongani", LastName = "Trustee",
+                DisplayName = "Bongani Trustee", Initials = "BT", Email = "bongani@trustee.example", CreatedAt = api.Clock.GetUtcNow() };
+            db.People.Add(p);
+            db.Relationships.Add(new Relationship { Id = Guid.CreateVersion7(), PersonId = p.Id, Type = "trustee", SchemeId = s.Kc, Portfolio = "Chairperson", Since = new DateOnly(2025, 3, 1) });
+            (await db.Users.SingleAsync(u => u.Email == "bongani@trustee.example")).PersonId = p.Id.ToString();
+            return await db.SaveChangesAsync();
+        });
+        var journal = await s.Admin.PostAsJsonAsync($"/api/accounts/{s.Account42}/adjustments", new { amount = -500, reason = "Goodwill" });
+        Assert.Contains("Correct the account", (await journal.FieldErrors()).GetProperty("amount").GetString());
+
+        await NoContent(await Act(s.Finance, s.Account42, new { type = "dispute", reason = "Owner was overseas; asks the board to waive September." }, 0));
+        await NoContent(await Act(s.Finance, s.Account42, new { type = "resolve-dispute", outcome = "write-off", amount = 900, note = "Board to consider waiving half" }, 1));
+        var item = await Approval(s.Admin);
+        Assert.Equal(["trustee"], item.GetProperty("approverRoles").EnumerateArray().Select(r => r.GetString()));
+        Assert.Equal("forbidden", await (await s.Admin.PostAsJsonAsync($"/api/work-items/{item.GetProperty("id").GetString()}/decision", new { decision = "approved" })).ProblemCode());
+        Assert.Equal(1800m, (await Case(s.Finance, s.Account42)).GetProperty("account").GetProperty("balance").GetDecimal());
+
+        await NoContent(await s.Trustee.PostAsJsonAsync($"/api/work-items/{item.GetProperty("id").GetString()}/decision", new { decision = "approved" }));
+        Assert.Equal(900m, (await Case(s.Finance, s.Account42)).GetProperty("account").GetProperty("balance").GetDecimal());
+        Assert.Contains(await api.Db(db => db.Ledger.Where(l => l.AccountId == s.Account42).Select(l => l.Description).ToListAsync()), x => x.StartsWith("Written off by the board"));
+    }
+
+    [Fact]
+    public async Task Paid_points_at_a_payment_on_the_account()
+    {
+        var s = await Scheme();
+        await NoContent(await Act(s.Finance, s.Account12, new { type = "dispute", reason = "Owner says September was paid in cash at the office." }, 0));
+        var levy = await SeptemberLevy(s.Account12);
+        Assert.True((await (await Act(s.Finance, s.Account12, new { type = "resolve-dispute", outcome = "paid", note = "Paid in cash" }, 1)).FieldErrors()).TryGetProperty("lineId", out _));
+        Assert.True((await (await Act(s.Finance, s.Account12, new { type = "resolve-dispute", outcome = "paid", lineId = levy.ToString(), note = "Paid in cash" }, 1)).FieldErrors()).TryGetProperty("lineId", out _));
+    }
+
     [Fact]
     public async Task Credit_control_follows_the_plan_and_needs_somewhere_to_pay()
     {

@@ -120,13 +120,13 @@ export function adjustmentForm(drawer: DrawerService, data: BillingDataSource, a
   openForm(drawer, {
     eyebrow: account.accountNo,
     title: 'Journal adjustment',
-    intro: 'Corrects a posted charge. It appears on the owner’s next statement with your reason, and in the audit log.',
+    intro: 'Adds a charge that was missed. To take money off the account, use Correct the account: a reversal or a write-off, approved first (D40). It appears on the owner’s next statement with your reason, and in the audit log.',
     fields: [
-      { key: 'direction', label: 'Type', type: 'select', required: true, half: true, options: [{ value: 'credit', label: 'Credit (reduce what’s owed)' }, { value: 'debit', label: 'Charge (increase what’s owed)' }] },
+      { key: 'direction', label: 'Type', type: 'select', required: true, half: true, options: [{ value: 'debit', label: 'Charge (increase what’s owed)' }] },
       { key: 'amount', label: 'Amount (R)', type: 'number', required: true, half: true },
       { key: 'reason', label: 'Reason', type: 'textarea', required: true, placeholder: 'e.g. Water over-estimated in November: meter read 12 kl, billed 30 kl' },
     ],
-    initial: { direction: 'credit' },
+    initial: { direction: 'debit' },
     submitLabel: 'Post adjustment',
     submit: (v) => data.adjust(account.id, (v['direction'] === 'credit' ? -1 : 1) * Math.abs(Number(v['amount'])), v['reason']),
     success: () => 'Adjustment posted.',

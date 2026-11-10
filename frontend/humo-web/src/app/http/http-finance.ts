@@ -83,6 +83,10 @@ export class HttpAccountDataSource extends HttpPort implements AccountDataSource
   adjust(accountId: string, amount: number, reason: string): Observable<void> {
     return this.command('POST', `/accounts/${accountId}/adjustments`, { amount, reason }, ['accounts']);
   }
+
+  correct(accountId: string, form: FormData): Observable<void> {
+    return this.command('POST', `/accounts/${accountId}/corrections`, form, ['accounts', 'work-items', 'billing']);
+  }
 }
 
 /** Receipts over HTTP (slice 2a; docs/22 §1): capture, bank-statement import, matching with reasons and allocation. */
@@ -177,6 +181,16 @@ export class HttpBillingDataSource extends HttpPort implements BillingDataSource
 
   adjust(accountId: string, amount: number, reason: string): Observable<void> {
     return this.accounts.adjust(accountId, amount, reason);
+  }
+
+  correct(accountId: string, input: { kind: 'reversal' | 'write-off'; amount: number; lineId?: string; reason: string }, file?: File): Observable<void> {
+    const form = new FormData();
+    form.append('kind', input.kind);
+    form.append('amount', String(input.amount));
+    if (input.lineId) form.append('lineId', input.lineId);
+    form.append('reason', input.reason);
+    if (file) form.append('file', file, file.name);
+    return this.accounts.correct(accountId, form);
   }
 }
 

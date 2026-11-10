@@ -20,6 +20,8 @@ public sealed class CollectionStep
 
 public sealed record PaymentArrangement(decimal Instalment, int Day, int Months, string StartedAt, int Missed);
 public sealed record CaseDispute(string Reason, string At, string By);
+/// <summary>D40: a dispute's reversal or write-off, waiting for its approval. Collection stays paused until it's decided.</summary>
+public sealed record CaseResolving(string CorrectionId, string Kind, decimal Amount);
 public sealed record DemandApproval(string WorkItemId, string Status, string? DecidedBy = null, string? DecidedAt = null);
 
 /// <summary>One per account in arrears: its stage, every step taken, the arrangement or dispute, and the trustees' approval of a letter of demand.</summary>
@@ -35,6 +37,7 @@ public sealed class CollectionCase
     public List<CollectionStep> Steps { get; set; } = [];
     public PaymentArrangement? Arrangement { get; set; }
     public CaseDispute? Dispute { get; set; }
+    public CaseResolving? Resolving { get; set; }
     public DemandApproval? DemandApproval { get; set; }
     public string? FollowUpWorkItemId { get; set; }
 }
@@ -42,7 +45,7 @@ public sealed class CollectionCase
 /// <summary>What someone does to a case. Which fields matter depends on <see cref="Type"/>.</summary>
 public sealed record CollectionAction(
     string Type, string? Kind = null, string? Channel = null, string? Attorney = null, decimal? Instalment = null, int? Day = null, int? Months = null,
-    string? Reason = null, string? Outcome = null, string? Note = null, string? Text = null);
+    string? Reason = null, string? Outcome = null, string? Note = null, string? Text = null, string? LineId = null, decimal? Amount = null);
 
 public sealed record NextAction(string Label, string DueAt, bool Overdue);
 
@@ -133,7 +136,10 @@ public static class CreditControlRules
                 break;
             case "resolve-dispute":
                 StageIs("Resolving a dispute", CollectionStages.Disputed);
-                if (action.Outcome is not ("resume" or "written-off-in-part")) e["outcome"] = "Collection resumes, or part was written off by journal.";
+                // D40: what happened decides the accounting. "resume" is the old name for "stands".
+                if (action.Outcome is not ("stands" or "resume" or "paid" or "reversal" or "write-off")) e["outcome"] = "Choose what happened: the charge stands, the owner paid, it was charged in error, or the board waives it.";
+                else if (c.Resolving is not null) e["outcome"] = "A reversal or write-off for this dispute is already waiting for approval.";
+                else if (action.Outcome == "paid" && string.IsNullOrWhiteSpace(action.LineId)) e["lineId"] = "Choose the payment on the account.";
                 if ((action.Note ?? "").Trim().Length < 5) e["note"] = "Record how it was resolved.";
                 break;
             case "note":

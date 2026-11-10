@@ -25,6 +25,11 @@ export abstract class BillingDataSource {
   abstract act(id: string, action: BillingAction, expectedVersion?: number): Observable<void>;
   /** A correction after posting: a journal on the account, never an edit to a run. */
   abstract adjust(accountId: string, amount: number, reason: string): Observable<void>;
+  /**
+   * D40: money off an account. A reversal of a charge made in error (a second person approves it) or a write-off (the board
+   * approves it). It goes on the account once approved.
+   */
+  abstract correct(accountId: string, input: { kind: 'reversal' | 'write-off'; amount: number; lineId?: string; reason: string }, file?: File): Observable<void>;
 }
 
 /**

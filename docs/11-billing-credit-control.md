@@ -64,7 +64,7 @@ Both are in `docs/02-ux-review.md`. Letters are template-driven A4 documents (`d
 | **Letter of demand needs the trustees** | *Ask the trustees* creates a `demand-approval` item in Approvals for the scheme's trustees and agency administrators. Approved: the letter can be sent. Declined: the case stays at final demand. |
 | **Hand-over** | Only after a letter of demand. Needs the attorney's name. |
 | **Arrangement** | Instalment × months must clear what's overdue; day 1–28; up to 24 months. A missed instalment returns the case to where it was. |
-| **Dispute** | Pauses collection until resolved (amount stands, or partly written off by journal). |
+| **Dispute** | Pauses collection until resolved (D40). Resolving means choosing what happened: the charge stands; the owner paid (a payment on the account, from a receipt); it was charged in error (a reversal of that charge, approved by a second person); or the board waives it (a write-off, approved by the board as D39). A reversal or write-off keeps the dispute open, *Resolving*, until it's decided; rejected, it's disputed again. |
 | **Bulk reminders** | Select accounts on the pipeline → *Send reminders* by email or SMS. Only accounts not yet started get one. The others are skipped, and the count sent is reported. |
 
 Everything is behind `Collections.Manage` (Agency Administrator, Portfolio Manager, Finance) and the `credit-control` entitlement.
@@ -84,7 +84,7 @@ Everything is behind `Collections.Manage` (Agency Administrator, Portfolio Manag
 - **Accounts → credit control.** Anything 30+ days overdue appears on the pipeline. Paying up removes the account; arrangements and hand-overs stay until the balance is cleared.
 - **Billing → statements.** *Send statements* records the issuing template per account and period. The statement page renders with that version.
 - **Approvals.** Billing runs and letters of demand sit beside quotes, invoices and minutes. A decision moves the run or case on: Approved, or back to Preparing with the comment logged.
-- **Account page.** Shows the collection stage and next action with a link to the case, and a *Journal adjustment* button (`Billing.Run`).
+- **Account page.** Shows the collection stage and next action with a link to the case, a *Journal adjustment* button for charges only (`Billing.Run`), and *Correct the account…* for a reversal or write-off (D40).
 
 ## 4. Documents
 

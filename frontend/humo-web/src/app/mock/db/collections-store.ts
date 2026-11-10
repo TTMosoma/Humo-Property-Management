@@ -212,6 +212,7 @@ export class CollectionsStore {
         break;
       case 'resolve-dispute':
         stageIs(['disputed'], 'Resolving a dispute');
+        if (action.outcome === 'reversal' || action.outcome === 'write-off') e['outcome'] = 'Reversals and write-offs are only on Humo’s API.';
         if (action.note.trim().length < 5) e['note'] = 'Record how it was resolved.';
         break;
       case 'note':
@@ -297,7 +298,7 @@ export class CollectionsStore {
         break;
       case 'resolve-dispute':
         c.stage = c.previousStage ?? 'not-started';
-        this.step(c, c.stage, `Dispute resolved${action.outcome === 'written-off-in-part' ? ' (part written off by journal)' : ''}: ${action.note.trim()}`, by);
+        this.step(c, c.stage, `Dispute resolved: ${action.outcome === 'paid' ? 'the owner paid' : 'the charge stands'}. ${action.note.trim()}`, by);
         c.dispute = undefined;
         break;
       case 'note':
