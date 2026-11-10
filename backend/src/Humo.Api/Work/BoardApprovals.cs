@@ -12,7 +12,8 @@ using Microsoft.Extensions.Options;
 
 namespace Humo.Api.Work;
 
-public sealed record BoardSeatDto(string PersonId, string Name, string? Decision, string? Source);
+/// <param name="OnHumo">Signs in as a trustee of the scheme, so is asked in My work; otherwise their signed approval is needed.</param>
+public sealed record BoardSeatDto(string PersonId, string Name, string? Decision, string? Source, bool OnHumo = false);
 /// <param name="Needed">More than half the trustees on the board register (D39).</param>
 public sealed record BoardProgressDto(int Trustees, int Needed, int Approvals, int Rejections, List<BoardSeatDto> Seats, bool MySeat, bool IVoted);
 public sealed record DelegatedLimitRequest(decimal? Limit);
@@ -44,14 +45,44 @@ public sealed class BoardApprovals(HumoDbContext db, TimeProvider clock, Audit.A
 
     public static int Majority(int trustees) => trustees / 2 + 1;
 
+    /// <summary>The scheme's trustees who sign in to Humo: their person records and their sign-ins.</summary>
+    private static async Task<List<(Guid PersonId, Guid UserId)>> TrusteeUsersAsync(HumoDbContext db, Guid schemeId, CancellationToken ct)
+    {
+        var assignments = await db.RoleAssignments.AsNoTracking().Where(a => a.Role == Roles.Trustee && a.Status == AssignmentStatuses.Active).ToListAsync(ct);
+        var users = assignments.Where(a => a.SchemeIds.Contains(schemeId.ToString())).Select(a => a.UserId).Distinct().ToList();
+        return (await db.Users.AsNoTracking().Where(u => users.Contains(u.Id) && u.Status == IdentityStatuses.Active && u.PersonId != null).Select(u => new { u.Id, u.PersonId }).ToListAsync(ct))
+            .Where(u => Guid.TryParse(u.PersonId, out _)).Select(u => (Guid.Parse(u.PersonId!), u.Id)).ToList();
+    }
+
+    private static async Task<HashSet<Guid>> TrusteePeopleOnHumoAsync(HumoDbContext db, Guid schemeId, CancellationToken ct) =>
+        [.. (await TrusteeUsersAsync(db, schemeId, ct)).Select(x => x.PersonId)];
+
+    /// <summary>
+    /// D39: something new for the board, in this command. Its trustees on Humo are told at once (in the app, and by email),
+    /// so the board knows to act. Those not on Humo are the agency's to ask for a signed approval.
+    /// </summary>
+    public static async Task AskForAddedAsync(HumoDbContext db, Platform.Notices notices, Guid actorId, CancellationToken ct)
+    {
+        var added = db.ChangeTracker.Entries<WorkItemRow>().Where(e => e.State == EntityState.Added && e.Entity.BoardMajority && e.Entity.SchemeId is not null).Select(e => e.Entity).ToList();
+        foreach (var item in added)
+        {
+            var scheme = await db.Schemes.AsNoTracking().FirstAsync(s => s.Id == item.SchemeId, ct);
+            var amount = item.Amount is { } a ? $" · {Humo.Domain.Finance.BillingRules.Rand(a)}" : "";
+            foreach (var (_, userId) in await TrusteeUsersAsync(db, scheme.Id, ct))
+                notices.ToPerson(userId, actorId, $"For the board to decide: {item.Title}",
+                    $"{scheme.Name}{amount}. A majority of the board decides. Approve or reject it in My work › Approvals.", "/approvals");
+        }
+    }
+
     public async Task<BoardProgressDto> ProgressAsync(WorkItemRow item, Actor? actor, CancellationToken ct)
     {
         var seats = item.SchemeId is { } s ? await SeatsAsync(s, ct) : [];
         var votes = await db.BoardVotes.AsNoTracking().Where(v => v.WorkItemId == item.Id).ToListAsync(ct);
         var me = Guid.TryParse(actor?.User.PersonId, out var p) ? p : Guid.Empty;
+        var onHumo = item.SchemeId is { } scheme ? await TrusteePeopleOnHumoAsync(db, scheme, ct) : [];
         return new BoardProgressDto(seats.Count, Majority(seats.Count), votes.Count(v => v.Decision == "approved"), votes.Count(v => v.Decision == "rejected"),
-            [.. seats.Select(x => votes.FirstOrDefault(v => v.PersonId == x.PersonId) is { } v ? new BoardSeatDto(x.PersonId.ToString(), x.Name, v.Decision, v.Source)
-                : new BoardSeatDto(x.PersonId.ToString(), x.Name, null, null))],
+            [.. seats.Select(x => votes.FirstOrDefault(v => v.PersonId == x.PersonId) is { } v ? new BoardSeatDto(x.PersonId.ToString(), x.Name, v.Decision, v.Source, onHumo.Contains(x.PersonId))
+                : new BoardSeatDto(x.PersonId.ToString(), x.Name, null, null, onHumo.Contains(x.PersonId)))],
             seats.Any(x => x.PersonId == me), votes.Any(v => v.PersonId == me));
     }
 

@@ -67,13 +67,13 @@
 @if (w.board; as b) {
   <div class="board" aria-label="The board's decision">
     <div class="board-head">
-      <strong>The board decides</strong>
+      <strong>{{ w.status === 'open' ? 'Waiting for the board' : 'The board decided' }}</strong>
       <span class="muted">{{ b.approvals }} of {{ b.needed }} approvals · {{ b.trustees }} trustee{{ b.trustees === 1 ? '' : 's' }} on the register@if (b.rejections) { · {{ b.rejections }} against}</span>
     </div>
     <ul class="seats">
       @for (s of b.seats; track s.personId) {
         <li>
-          <span>{{ s.name }}</span>
+          <span>{{ s.name }} @if (!s.decision) { <span class="muted small">· {{ s.onHumo ? 'asked in My work' : 'not on Humo: needs their signed approval' }}</span> }</span>
           @if (s.decision) {
             <ui-status-pill [label]="(s.decision === 'approved' ? 'Approved' : 'Rejected') + (s.source === 'upload' ? ' · signed' : '')" [tone]="s.decision === 'approved' ? 'success' : 'danger'" />
           } @else {
@@ -171,7 +171,7 @@
     <div class="record-board">
       <p class="waiting">
         <ion-icon name="time-outline" aria-hidden="true" />
-        Trustees on Humo decide in My work. For those who aren’t, record their signed approval.
+        {{ boardAsk() }}
       </p>
       <button type="button" class="btn btn-secondary btn-sm" (click)="recordBoardApproval()">
         <ion-icon name="finger-print-outline" aria-hidden="true" /> Record the board’s signed approval

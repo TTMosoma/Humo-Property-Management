@@ -362,7 +362,7 @@ Restart the API first. You'll need Thandeka's and Priya's sign-ins, and a truste
 - [ ] Choose *Charged in error*, pick a levy line, the amount and a note. **Expect:** the case shows "Resolving: a reversal of R…, waiting for a second person", collection stays paused, and the balance hasn't changed.
 - [ ] As Priya, in Approvals › *All pending*. **Expect:** no *Approve* on her reversal; it says Thandeka can approve it, and it isn't under *Waiting for me*. As Thandeka, approve it. **Expect:** the account shows "Reversal of Levy — …" and the dispute is resolved.
 - [ ] Try to reverse the same charge again. **Expect:** refused: it's already been reversed.
-- [ ] On another disputed account, choose *The board waives it* with an amount. **Expect:** Thandeka can't approve it; it waits for the board. As a trustee, approve it. **Expect:** "Written off by the board — …" on the account.
+- [ ] On another disputed account, choose *The board waives it* with an amount. **Expect:** Thandeka can't approve it; the card says "Waiting for the board", which trustees have been asked in My work and whose signed approval to collect. Sipho gets a bell notification and an email "For the board to decide". As a trustee, approve it. **Expect:** "Written off by the board — …" on the account.
 - [ ] Choose *The owner paid* with no payment chosen. **Expect:** refused: choose a payment on the account.
 - [ ] On an account page: *Journal adjustment* offers only a charge. *Correct the account…* sends a reversal or write-off for approval.
 

@@ -235,6 +235,9 @@ public sealed class CreditControlTests : IDisposable
         await NoContent(await Act(s.Finance, s.Account42, new { type = "resolve-dispute", outcome = "write-off", amount = 900, note = "Board to consider waiving half" }, 1));
         var item = await Approval(s.Admin);
         Assert.Equal(["trustee"], item.GetProperty("approverRoles").EnumerateArray().Select(r => r.GetString()));
+        // The board is told to act; the agency is told who's been asked.
+        Assert.Contains(await api.Db(db => db.Notices.Select(n => n.Title).ToListAsync()), t => t.StartsWith("For the board to decide: Write off R900"));
+        Assert.True(item.GetProperty("board").GetProperty("seats")[0].GetProperty("onHumo").GetBoolean());
         Assert.Equal("forbidden", await (await s.Admin.PostAsJsonAsync($"/api/work-items/{item.GetProperty("id").GetString()}/decision", new { decision = "approved" })).ProblemCode());
         Assert.Equal(1800m, (await Case(s.Finance, s.Account42)).GetProperty("account").GetProperty("balance").GetDecimal());
 

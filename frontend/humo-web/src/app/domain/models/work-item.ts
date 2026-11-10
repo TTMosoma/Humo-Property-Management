@@ -91,7 +91,8 @@ export interface BoardProgress {
   needed: number;
   approvals: number;
   rejections: number;
-  seats: { personId: string; name: string; decision?: 'approved' | 'rejected'; source?: 'humo' | 'upload' }[];
+  /** `onHumo`: asked in My work; otherwise their signed approval is needed. */
+  seats: { personId: string; name: string; decision?: 'approved' | 'rejected'; source?: 'humo' | 'upload'; onHumo?: boolean }[];
   /** The person looking is on this scheme's board. */
   mySeat: boolean;
   iVoted: boolean;
