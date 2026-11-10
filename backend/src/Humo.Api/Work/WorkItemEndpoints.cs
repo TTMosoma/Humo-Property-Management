@@ -9,7 +9,7 @@ namespace Humo.Api.Work;
 
 public sealed record WorkItemDto(string Id, string Ref, string Kind, string Type, string Title, string Detail, string SchemeId, decimal? Amount, int? Count, string CreatedAt, string DueAt,
     string? AssigneeId, IReadOnlyList<string> ApproverRoles, IReadOnlyList<string> Evidence, string Status, string? DecidedBy, string? DecidedAt, string? Comment, string Route,
-    string? HeldUntil = null, string? HeldBy = null, SecondAuthoriserDto? SecondAuthoriser = null, Finance.BudgetLineSpendDto? Budget = null, BoardProgressDto? Board = null);
+    string? HeldUntil = null, string? HeldBy = null, SecondAuthoriserDto? SecondAuthoriser = null, Finance.BudgetLineSpendDto? Budget = null, BoardProgressDto? Board = null, string? NotYours = null);
 public sealed record WorkIdsRequest(List<string> Ids);
 public sealed record AssignRequest(List<string> Ids, string? AssigneeId);
 /// <param name="Alone">Approve alone under the trustees' permission (D24), when that's the only way.</param>
@@ -56,9 +56,19 @@ public static class WorkItemEndpoints
         {
             // An approval this person can't approve (they prepared it): who can, when the agency has nobody else (D24).
             SecondAuthoriserDto? second = null;
-            if (w.Kind == "approval" && w.Status == "open" && handlers.FirstOrDefault(h => h.Type == w.Type) is { } handler && await handler.RefuseAsync(w, actor, true, ct) is not null)
+            string? notYours = null;
+            if (w.Kind == "approval" && w.Status == "open" && handlers.FirstOrDefault(h => h.Type == w.Type) is { } handler && await handler.RefuseAsync(w, actor, true, ct) is { } refusal)
+            {
                 second = await sole.SecondAuthoriserAsync(w, actor.Human.Id, ct);
-            var dto = ToDto(w) with { SecondAuthoriser = second };
+                // Someone else at the agency approves it: say who, rather than offer a button that would be refused.
+                if (second is null)
+                {
+                    var others = (await sole.StaffApproversAsync(w, ct)).Where(u => u != actor.Human.Id).ToList();
+                    var names = await db.Users.Where(u => others.Contains(u.Id)).OrderBy(u => u.Name).Select(u => u.Name).ToListAsync(ct);
+                    notYours = names.Count == 0 ? refusal : $"{refusal} {string.Join(" or ", names)} can.";
+                }
+            }
+            var dto = ToDto(w) with { SecondAuthoriser = second, NotYours = notYours };
             // D39: the board decides it, by a majority; who has decided so far.
             if (w.BoardMajority) dto = dto with { Board = await board.ProgressAsync(w, actor, ct) };
             // With one authoriser at the agency, the scheme's trustees decide it too (D24).

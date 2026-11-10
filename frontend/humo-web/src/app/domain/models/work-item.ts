@@ -81,6 +81,8 @@ export interface WorkItem {
   route: string;
   /** D39: decided by a majority of the board register; who has decided so far. */
   board?: BoardProgress;
+  /** The person looking prepared it, so someone else approves it: who. */
+  notYours?: string;
 }
 
 export interface BoardProgress {

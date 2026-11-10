@@ -105,6 +105,11 @@
       }
     </span>
   </div>
+} @else if (w.notYours) {
+  <p class="waiting">
+    <ion-icon name="information-circle-outline" aria-hidden="true" />
+    {{ w.notYours }}
+  </p>
 } @else if (canDecide() && w.board && (w.board.iVoted || !w.board.mySeat)) {
   <p class="waiting">
     <ion-icon name="time-outline" aria-hidden="true" />

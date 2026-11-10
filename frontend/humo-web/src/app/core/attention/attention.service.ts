@@ -97,7 +97,10 @@ export class AttentionService {
     // D39: the board decides it, but the agency records trustees' signed approval, so it's waiting for them too.
     const recordsBoard = role === 'agency-admin' || role === 'portfolio-manager';
     return this.open().filter(
-      (w) => w.kind === 'approval' && ((this.canDecide(w, role) && !(conflicted && AGENCY_WORK.includes(w.type))) || (recordsBoard && !!w.board && !w.board.mySeat)),
+      (w) =>
+        w.kind === 'approval' &&
+        !w.notYours &&
+        ((this.canDecide(w, role) && !(conflicted && AGENCY_WORK.includes(w.type))) || (recordsBoard && !!w.board && !w.board.mySeat)),
     );
   });
 

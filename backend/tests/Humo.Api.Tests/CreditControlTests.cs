@@ -197,8 +197,9 @@ public sealed class CreditControlTests : IDisposable
         Assert.Equal("reversal", view.GetProperty("case").GetProperty("resolving").GetProperty("kind").GetString());
         Assert.Equal(1800m, view.GetProperty("account").GetProperty("balance").GetDecimal());
 
-        // Whoever prepared it doesn't approve it.
+        // Whoever prepared it doesn't approve it, and is told who does.
         var item = await Approval(s.Finance);
+        Assert.Contains("thandeka", item.GetProperty("notYours").GetString(), StringComparison.OrdinalIgnoreCase);
         Assert.Equal("conflict-of-interest", await (await s.Finance.PostAsJsonAsync($"/api/work-items/{item.GetProperty("id").GetString()}/decision", new { decision = "approved" })).ProblemCode());
         await NoContent(await s.Admin.PostAsJsonAsync($"/api/work-items/{item.GetProperty("id").GetString()}/decision", new { decision = "approved" }));
 
