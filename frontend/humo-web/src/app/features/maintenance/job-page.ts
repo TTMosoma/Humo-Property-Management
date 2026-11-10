@@ -3,7 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { map } from 'rxjs';
-import { AGENCY_QUEUE, JobDataSource, JobEvent, JobStage, PRIORITY_LABEL, Photo, TimelineEvent, TimelineKind, supplierCompliance } from '../../domain';
+import { AGENCY_QUEUE, JobDataSource, JobEvent, JobStage, PRIORITY_LABEL, Photo, Priority, TimelineEvent, TimelineKind, supplierCompliance } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
@@ -60,6 +60,30 @@ export class JobPage {
 
   protected photoUrl(ref: string, photo: Photo): string | undefined {
     return this.jobs.photoUrl(ref, photo);
+  }
+
+  /** Staff with the job in hand, until it's closed or cancelled. */
+  protected readonly canChangePriority = computed(() => {
+    const d = this.detail();
+    return !!d && this.session.can('Maintenance.Manage') && !this.session.readOnly() && d.job.stage !== 'closed' && d.job.stage !== 'cancelled';
+  });
+
+  /** A job can become more (or less) pressing at any stage; the reason goes in its history. */
+  protected changePriority(): void {
+    const job = this.detail()!.job;
+    openForm(this.drawer, {
+      eyebrow: job.ref,
+      title: 'Change priority',
+      intro: `Now ${PRIORITY_LABEL[job.priority].toLowerCase()}. The change and its reason are recorded on the job. Only an urgent job can go ahead above the scheme’s limit in an emergency.`,
+      fields: [
+        { key: 'priority', label: 'Priority', type: 'select', required: true, half: true, options: (Object.keys(PRIORITY_LABEL) as Priority[]).filter((p) => p !== job.priority).map((p) => ({ value: p, label: PRIORITY_LABEL[p] })) },
+        { key: 'reason', label: 'Why', type: 'textarea', required: true, placeholder: 'e.g. The leak has spread to Unit 4' },
+      ],
+      submitLabel: 'Change priority',
+      submit: (f) => this.jobs.act(job.ref, { type: 'change-priority', priority: f['priority'] as Priority, reason: f['reason'] }, job.version),
+      success: () => 'Priority changed.',
+      failure: 'The priority wasn’t changed',
+    });
   }
 
   /** Added by mistake: asked first, because the file goes too. */

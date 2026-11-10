@@ -350,6 +350,7 @@ Restart the API first. You'll need a PDF, and Thandeka's and Sipho's sign-ins. K
 - [ ] As Sipho (trustee): approve it. **Expect:** if the board has more than one trustee, it stays open with 1 approval, and Sipho sees "You’ve decided".
 - [ ] As Thandeka: *Record the board’s signed approval*, choose another trustee, today's date, a PDF. **Expect:** passkey, then the job is approved once a majority is reached. Mailpit: every trustee with an email got "Board approval recorded", naming who signed.
 - [ ] Try again on a new item with a *Signed on* date before it was sent. **Expect:** refused: signed before it was sent to the board.
+- [ ] On a job marked *High* with a quote above the limit. **Expect:** no *Emergency* button. Press *Change priority…*, choose *Urgent* with a reason. **Expect:** the job's history says "Priority changed from high to urgent" with the reason, and *Emergency: go ahead now…* appears.
 - [ ] On an urgent job with a quote above the limit: *Emergency: go ahead now…* with a reason. **Expect:** passkey, the job is approved with "Went ahead in an emergency… The board to confirm", and the trustees are emailed.
 - [ ] Take that job to an approved invoice, then try to add it to a payment batch. **Expect:** refused until the board confirms it in Approvals; then it can be paid.
 

@@ -31,7 +31,7 @@ public static partial class MaintenanceEndpoints
     {
         ["triage"] = "Triaged", ["request-quotes"] = "Requested quotes for", ["record-quote"] = "Recorded a quote on", ["send-for-approval"] = "Sent for approval:",
         ["approve-within-delegation"] = "Approved within delegated authority:", ["issue-work-order"] = "Issued a work order for", ["start-work"] = "Started work on",
-        ["complete"] = "Completed", ["verify"] = "Confirmed the outcome of", ["capture-invoice"] = "Captured the invoice for", ["close"] = "Closed", ["comment"] = "Commented on",
+        ["complete"] = "Completed", ["verify"] = "Confirmed the outcome of", ["capture-invoice"] = "Captured the invoice for", ["close"] = "Closed", ["comment"] = "Commented on", ["change-priority"] = "Changed the priority of",
         ["cancel"] = "Cancelled",
     };
 
@@ -385,6 +385,11 @@ public static partial class MaintenanceEndpoints
                 break;
             case "comment":
                 JobRules.Log(job, "comment", a.Text!.Trim(), by, now);
+                break;
+            case "change-priority":
+                // Recorded with its reason: raising a job to urgent is what opens the emergency route (D39).
+                JobRules.Log(job, "stage", $"Priority changed from {job.Priority} to {a.Priority}: {a.Reason!.Trim()}", by, now);
+                job.Priority = a.Priority!;
                 break;
             case "cancel":
                 job.Stage = JobStages.Cancelled;

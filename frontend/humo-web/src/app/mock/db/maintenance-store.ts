@@ -487,6 +487,11 @@ export class MaintenanceStore {
         this.log(job, 'stage', 'Job closed', by);
         break;
 
+      case 'change-priority':
+        this.log(job, 'stage', `Priority changed from ${job.priority} to ${action.priority}: ${action.reason}`, by);
+        job.priority = action.priority;
+        break;
+
       case 'comment':
         this.log(job, 'comment', action.text, by);
         break;

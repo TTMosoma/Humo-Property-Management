@@ -386,6 +386,23 @@ public sealed class MaintenanceTests : IDisposable
     }
 
     [Fact]
+    public async Task A_jobs_priority_can_change_with_a_reason_and_urgent_opens_the_emergency_route()
+    {
+        var s = await Scheme();
+        var (reference, quote, _) = await QuotedJob(s, 9_000, "high");
+        Assert.True((await Refused(s.Admin, reference, new { type = "emergency-proceed", quoteId = quote, reason = "Water is pouring into Unit 4" })).TryGetProperty("priority", out _));
+        Assert.True((await Refused(s.Admin, reference, new { type = "change-priority", priority = "urgent" })).TryGetProperty("reason", out _));
+
+        await Act(s.Admin, reference, new { type = "change-priority", priority = "urgent", reason = "The leak has spread to Unit 4" });
+        var job = await Job(s.Admin, reference);
+        Assert.Equal("urgent", job.GetProperty("priority").GetString());
+        Assert.Contains(job.GetProperty("events").EnumerateArray(), e => e.GetProperty("text").GetString()!.Contains("Priority changed from high to urgent: The leak has spread"));
+        await s.Admin.StepUp();
+        await Act(s.Admin, reference, new { type = "emergency-proceed", quoteId = quote, reason = "Water is pouring into Unit 4" });
+        Assert.Equal("approved", (await Job(s.Admin, reference)).GetProperty("stage").GetString());
+    }
+
+    [Fact]
     public async Task Each_scheme_sets_its_own_limit_with_a_passkey()
     {
         var s = await Scheme();

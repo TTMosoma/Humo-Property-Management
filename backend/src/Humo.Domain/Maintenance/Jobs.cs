@@ -245,6 +245,12 @@ public static class JobRules
             case "comment":
                 if (string.IsNullOrWhiteSpace(a.Text)) e["text"] = "Write a comment.";
                 break;
+            case "change-priority":
+                if (job.Stage is JobStages.Closed or JobStages.Cancelled) e["stage"] = "The job is finished: its priority can’t change.";
+                if (!Priorities.Contains(a.Priority)) e["priority"] = "Choose a priority.";
+                else if (a.Priority == job.Priority) e["priority"] = "That’s its priority already.";
+                if ((a.Reason ?? "").Trim().Length < 5) e["reason"] = "Say why, e.g. the leak has spread to Unit 4.";
+                break;
             case "cancel":
                 if (job.Stage is JobStages.Invoiced or JobStages.Paid) e["stage"] = "There’s an invoice on it: it can’t be cancelled.";
                 if ((a.Reason ?? "").Trim().Length < 3) e["reason"] = "Say why, for the audit log.";

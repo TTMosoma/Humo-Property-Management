@@ -47,6 +47,7 @@ const JOB_VERB: Record<JobAction['type'], string> = {
   'capture-invoice': 'Captured supplier invoice',
   close: 'Closed job',
   comment: 'Commented on job',
+  'change-priority': 'Changed the job’s priority',
   cancel: 'Cancelled job',
 };
 

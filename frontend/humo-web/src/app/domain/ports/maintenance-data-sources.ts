@@ -89,6 +89,8 @@ export type JobAction =
   | { type: 'capture-invoice'; amount: number; invoiceNo: string }
   | { type: 'close' }
   | { type: 'comment'; text: string }
+  /** Any stage until it's closed or cancelled, with a reason in the job's history. */
+  | { type: 'change-priority'; priority: Priority; reason: string }
   | { type: 'cancel'; reason: string };
 
 export type SupplierDetails = Pick<Supplier, 'name' | 'trades' | 'contactName' | 'phone' | 'email' | 'schemeIds'> & { bbbeeLevel?: number };

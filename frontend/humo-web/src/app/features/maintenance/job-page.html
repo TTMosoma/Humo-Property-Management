@@ -19,7 +19,13 @@
     [status]="status()"
     [facts]="facts()"
     [chain]="chain()"
-  />
+  >
+    @if (canChangePriority()) {
+      <ng-container recordActions>
+        <button type="button" class="btn btn-secondary" (click)="changePriority()">Change priority…</button>
+      </ng-container>
+    }
+  </ui-record-header>
 
   <div class="tracker surface">
     <ui-stage-tracker [stages]="stages" [current]="d.job.stage === 'cancelled' ? 'reported' : d.job.stage" [alert]="overdue()" label="Job progress" />
