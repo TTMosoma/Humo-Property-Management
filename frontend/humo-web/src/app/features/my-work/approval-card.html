@@ -73,7 +73,7 @@
     <ul class="seats">
       @for (s of b.seats; track s.personId) {
         <li>
-          <span>{{ s.name }} @if (!s.decision) { <span class="muted small">· {{ s.onHumo ? 'asked in My work' : 'not on Humo: needs their signed approval' }}</span> }</span>
+          <span>{{ s.name }} @if (!s.decision && s.onHumo !== undefined) { <span class="muted small">· {{ s.onHumo ? 'asked in My work' : 'not on Humo: needs their signed approval' }}</span> }</span>
           @if (s.decision) {
             <ui-status-pill [label]="(s.decision === 'approved' ? 'Approved' : 'Rejected') + (s.source === 'upload' ? ' · signed' : '')" [tone]="s.decision === 'approved' ? 'success' : 'danger'" />
           } @else {

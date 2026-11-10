@@ -46,8 +46,9 @@ export class ApprovalCard {
     const b = this.item().board;
     if (!b) return '';
     const open = b.seats.filter((s) => !s.decision);
-    const asked = open.filter((s) => s.onHumo).map((s) => s.name);
-    const offline = open.filter((s) => !s.onHumo).map((s) => s.name);
+    // Not known (an older API): say only what's needed, not who is or isn't on Humo.
+    const asked = open.filter((s) => s.onHumo === true).map((s) => s.name);
+    const offline = open.filter((s) => s.onHumo === false).map((s) => s.name);
     const need = Math.max(0, b.needed - b.approvals);
     const parts = [`${need} more approval${need === 1 ? '' : 's'} needed.`];
     if (asked.length) parts.push(`${asked.join(' and ')} ${asked.length === 1 ? 'has' : 'have'} been asked in My work.`);
