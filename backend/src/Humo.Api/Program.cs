@@ -71,6 +71,8 @@ builder.Services.AddScoped<Humo.Api.Messaging.Inbox>();
 builder.Services.AddSingleton<Humo.Api.Finance.DeliveryQueue>();
 builder.Services.AddHostedService<Humo.Api.Finance.DeliveryHost>();
 builder.Services.AddScoped<Humo.Api.Finance.CreditControl>();
+builder.Services.AddScoped<Humo.Api.Finance.AccountCorrections>();
+builder.Services.AddScoped<Humo.Api.Work.IApprovalHandler, Humo.Api.Finance.AccountCorrectionHandler>();
 builder.Services.AddScoped<Humo.Api.Work.IApprovalHandler>(sp => sp.GetRequiredService<Humo.Api.Finance.CreditControl>());
 builder.Services.AddScoped<Humo.Api.Work.IApprovalHandler>(sp => sp.GetRequiredService<Humo.Api.Finance.LevyBilling>());
 // The daily billing run (Billing:Enabled, Billing:RunHour): invoices, card charges, reminders.
@@ -196,6 +198,7 @@ Humo.Api.Commercial.BillingEndpoints.MapBilling(api);
 Humo.Api.Commercial.PayfastEndpoints.MapPayfast(api);
 Humo.Api.Finance.LevyCardPayments.MapLevyCardPayments(api);
 Humo.Api.Finance.AccountEndpoints.MapAccounts(api);
+Humo.Api.Finance.AccountCorrectionEndpoints.MapAccountCorrections(api);
 Humo.Api.Portfolio.TimelineEndpoints.MapTimeline(api);
 Humo.Api.Finance.ReceiptEndpoints.MapReceipts(api);
 Humo.Api.Finance.BillingRunEndpoints.MapBillingRuns(api);

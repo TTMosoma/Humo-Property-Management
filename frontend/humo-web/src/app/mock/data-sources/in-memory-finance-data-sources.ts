@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, map, switchMap } from 'rxjs';
+import { Observable, map, switchMap, throwError } from 'rxjs';
 import {
+  ApiError,
   BillingAction,
   BillingDataSource,
   BillingRun,
@@ -97,6 +98,11 @@ export class InMemoryBillingDataSource extends BillingDataSource {
         () => this.store.act(id, action, this.auth.current.identity.name),
       )
       .pipe(map(() => undefined));
+  }
+
+  /** Corrections are only on Humo's API: the prototype has no approvals behind them. */
+  correct(): Observable<void> {
+    return throwError(() => new ApiError('server', 'Reversals and write-offs are only on Humo’s API'));
   }
 
   adjust(accountId: string, amount: number, reason: string): Observable<void> {

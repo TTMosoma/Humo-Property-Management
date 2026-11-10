@@ -27,6 +27,7 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
     public DbSet<UpgradeRequest> UpgradeRequests => Set<UpgradeRequest>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<LedgerEntry> Ledger => Set<LedgerEntry>();
+    public DbSet<AccountCorrection> AccountCorrections => Set<AccountCorrection>();
     public DbSet<Receipt> Receipts => Set<Receipt>();
     public DbSet<ReceiptAllocation> ReceiptAllocations => Set<ReceiptAllocation>();
     public DbSet<PayerRule> PayerRules => Set<PayerRule>();
@@ -189,6 +190,19 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.Property(x => x.Status).HasMaxLength(20);
             e.HasIndex(x => x.OrganisationId);
             e.HasOne<Organisation>().WithMany().HasForeignKey(x => x.OrganisationId);
+        });
+
+        builder.Entity<AccountCorrection>(e =>
+        {
+            e.ToTable("AccountCorrections");
+            e.HasIndex(x => x.AccountId);
+            e.HasIndex(x => x.LineId);
+            e.Property(x => x.Amount).HasPrecision(18, 2);
+            e.Property(x => x.Kind).HasMaxLength(10);
+            e.Property(x => x.Status).HasMaxLength(10);
+            e.Property(x => x.Reason).HasMaxLength(500);
+            e.Property(x => x.PreparedBy).HasMaxLength(200);
+            e.Property(x => x.DecidedBy).HasMaxLength(200);
         });
 
         builder.Entity<LedgerEntry>(e =>

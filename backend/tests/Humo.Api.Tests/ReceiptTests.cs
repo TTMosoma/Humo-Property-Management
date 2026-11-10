@@ -165,9 +165,11 @@ public sealed class ReceiptTests : IDisposable
         var ops = await api.SignedIn("lerato@acacia.example");
         Assert.Equal(HttpStatusCode.NotFound, (await ops.PostAsJsonAsync($"/api/accounts/{s.Account42}/adjustments", new { amount = -100, reason = "Goodwill credit" })).StatusCode);
         Assert.True((await (await s.Finance.PostAsJsonAsync($"/api/accounts/{s.Account42}/adjustments", new { amount = 150_000, reason = "Big fix" })).FieldErrors()).TryGetProperty("amount", out _));
-        Assert.Equal(HttpStatusCode.NoContent, (await s.Finance.PostAsJsonAsync($"/api/accounts/{s.Account42}/adjustments", new { amount = -100, reason = "Goodwill credit" })).StatusCode);
+        // D40: a credit isn't a journal: it's a reversal or a write-off, approved first.
+        Assert.True((await (await s.Finance.PostAsJsonAsync($"/api/accounts/{s.Account42}/adjustments", new { amount = -100, reason = "Goodwill credit" })).FieldErrors()).TryGetProperty("amount", out _));
+        Assert.Equal(HttpStatusCode.NoContent, (await s.Finance.PostAsJsonAsync($"/api/accounts/{s.Account42}/adjustments", new { amount = 100, reason = "Missed key fee" })).StatusCode);
         var t = (await Ok(await s.Finance.GetAsync($"/api/accounts/{s.Account42}"))).GetProperty("transactions")[0];
-        Assert.Equal(("adjustment", -100m, "Adjustment — Goodwill credit"), (t.GetProperty("type").GetString(), t.GetProperty("amount").GetDecimal(), t.GetProperty("description").GetString()));
+        Assert.Equal(("adjustment", 100m, "Adjustment — Missed key fee"), (t.GetProperty("type").GetString(), t.GetProperty("amount").GetDecimal(), t.GetProperty("description").GetString()));
     }
 
     [Fact]

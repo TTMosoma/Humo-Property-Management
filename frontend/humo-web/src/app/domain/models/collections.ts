@@ -71,6 +71,8 @@ export interface CollectionCase {
   steps: CollectionStep[];
   arrangement?: PaymentArrangement;
   dispute?: { reason: string; at: string; by: string };
+  /** D40: the dispute's reversal or write-off, waiting for its approval. */
+  resolving?: { correctionId: string; kind: 'reversal' | 'write-off'; amount: number };
   /** A letter of demand waiting for, or approved by, the trustees. */
   demandApproval?: { workItemId: string; status: 'pending' | 'approved' | 'rejected'; decidedBy?: string; decidedAt?: string };
   /** The open follow-up Task. */
@@ -84,7 +86,8 @@ export type CollectionAction =
   | { type: 'arrangement'; instalment: number; day: number; months: number }
   | { type: 'missed-instalment' }
   | { type: 'dispute'; reason: string }
-  | { type: 'resolve-dispute'; outcome: 'resume' | 'written-off-in-part'; note: string }
+  /** D40: what happened decides the accounting. A reversal or write-off waits for its approval before the dispute closes. */
+  | { type: 'resolve-dispute'; outcome: 'stands' | 'paid' | 'reversal' | 'write-off'; note: string; lineId?: string; amount?: number }
   | { type: 'note'; text: string };
 
 // ---------------------------------------------------------------- Read models

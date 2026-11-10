@@ -354,6 +354,18 @@ Restart the API first. You'll need a PDF, and Thandeka's and Sipho's sign-ins. K
 - [ ] On an urgent job with a quote above the limit: *Emergency: go ahead now…* with a reason. **Expect:** passkey, the job is approved with "Went ahead in an emergency… The board to confirm", and the trustees are emailed.
 - [ ] Take that job to an approved invoice, then try to add it to a payment batch. **Expect:** refused until the board confirms it in Approvals; then it can be paid.
 
+## 31. Resolving a dispute and correcting an account (D40)
+
+Restart the API first. You'll need Thandeka's and Priya's sign-ins, and a trustee's for the write-off.
+
+- [ ] As Priya: Finance › Credit control › an account in arrears › *Owner disputes it*, with a reason. Then *Resolve dispute*. **Expect:** four choices: the charge stands, the owner paid, charged in error, the board waives it.
+- [ ] Choose *Charged in error*, pick a levy line, the amount and a note. **Expect:** the case shows "Resolving: a reversal of R…, waiting for a second person", collection stays paused, and the balance hasn't changed.
+- [ ] As Priya, in Approvals › *All pending*. **Expect:** no *Approve* on her reversal; it says Thandeka can approve it, and it isn't under *Waiting for me*. As Thandeka, approve it. **Expect:** the account shows "Reversal of Levy — …" and the dispute is resolved.
+- [ ] Try to reverse the same charge again. **Expect:** refused: it's already been reversed.
+- [ ] On another disputed account, choose *The board waives it* with an amount. **Expect:** Thandeka can't approve it; the card says "Waiting for the board", which trustees have been asked in My work and whose signed approval to collect. Sipho gets a bell notification and an email "For the board to decide". As a trustee, approve it. **Expect:** "Written off by the board — …" on the account.
+- [ ] Choose *The owner paid* with no payment chosen. **Expect:** refused: choose a payment on the account.
+- [ ] On an account page: *Journal adjustment* offers only a charge. *Correct the account…* sends a reversal or write-off for approval.
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.

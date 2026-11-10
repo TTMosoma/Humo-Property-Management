@@ -41,6 +41,21 @@ export class ApprovalCard {
     return !!w.board && w.status === 'open' && ['agency-admin', 'portfolio-manager'].includes(this.session.assignment()?.role ?? '') && !this.session.readOnly();
   });
 
+  /** What the agency does next: who has been asked, and whose signed approval to collect. */
+  protected readonly boardAsk = computed(() => {
+    const b = this.item().board;
+    if (!b) return '';
+    const open = b.seats.filter((s) => !s.decision);
+    // Not known (an older API): say only what's needed, not who is or isn't on Humo.
+    const asked = open.filter((s) => s.onHumo === true).map((s) => s.name);
+    const offline = open.filter((s) => s.onHumo === false).map((s) => s.name);
+    const need = Math.max(0, b.needed - b.approvals);
+    const parts = [`${need} more approval${need === 1 ? '' : 's'} needed.`];
+    if (asked.length) parts.push(`${asked.join(' and ')} ${asked.length === 1 ? 'has' : 'have'} been asked in My work.`);
+    if (offline.length) parts.push(`${offline.join(' and ')} ${offline.length === 1 ? 'isn’t' : 'aren’t'} on Humo: collect their signed approval and record it here.`);
+    return parts.join(' ');
+  });
+
   protected recordBoardApproval(): void {
     const w = this.item();
     const open = (w.board?.seats ?? []).filter((s) => !s.decision);

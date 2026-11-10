@@ -10,6 +10,7 @@ import { SessionService } from '../../core/session/session.service';
 import { DrawerService } from '../../ui/drawer/drawer.service';
 import { StatusPill } from '../../ui/status-pill/status-pill';
 import { adjustmentForm } from '../finance/billing/billing-forms';
+import { correctionForm } from '../finance/credit-control/collection-forms';
 import { COLLECTION_STAGE_TONE } from '../finance/credit-control/collection-view';
 import { AgeingBar } from '../../ui/ageing/ageing-bar';
 import { CellDef, ColumnDef, DataTable } from '../../ui/data-table/data-table';
@@ -189,5 +190,11 @@ export class AccountPage {
   protected adjust(): void {
     const d = this.detail();
     if (d) adjustmentForm(this.drawer, this.billing, d.account);
+  }
+
+  /** D40: a reversal or write-off, approved before it goes on the account. */
+  protected correct(): void {
+    const d = this.detail();
+    if (d) correctionForm(this.drawer, this.billing, d.account, d.transactions);
   }
 }

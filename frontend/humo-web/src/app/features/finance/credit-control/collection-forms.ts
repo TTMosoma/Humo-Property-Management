@@ -1,6 +1,6 @@
-import { CollectionDataSource, CollectionView, LetterKind } from '../../../domain';
+import { BillingDataSource, CollectionDataSource, CollectionView, LetterKind, Transaction } from '../../../domain';
 import { DrawerService } from '../../../ui/drawer/drawer.service';
-import { formatRand } from '../../../ui/format/money';
+import { formatDate, formatRand } from '../../../ui/format/money';
 import { openForm } from '../../shared/form-drawer';
 import { LETTER_LABELS } from './collection-view';
 
@@ -102,29 +102,109 @@ export function disputeForm(drawer: DrawerService, data: CollectionDataSource, v
   });
 }
 
-export function resolveDisputeForm(drawer: DrawerService, data: CollectionDataSource, v: CollectionView): void {
+/** Charges that can be reversed, newest first: what's on the account that money could be taken off. */
+const CHARGES = ['levy', 'special-levy', 'utility', 'interest', 'adjustment', 'opening'];
+
+/** D40: resolving means choosing what happened; a reversal or write-off then waits for its approval. */
+export function resolveDisputeForm(drawer: DrawerService, data: CollectionDataSource, v: CollectionView, lines: Transaction[]): void {
+  const charges = lines.filter((l) => l.amount > 0 && CHARGES.includes(l.type));
+  const payments = lines.filter((l) => l.amount < 0 && l.type === 'payment');
+  const label = (l: Transaction) => `${formatDate(l.date)} · ${l.description} · ${formatRand(Math.abs(l.amount))}`;
   openForm(drawer, {
     eyebrow: eyebrow(v),
     title: 'Resolve the dispute',
-    intro: v.case.dispute ? `Disputed: “${v.case.dispute.reason}”. A write-off is a journal adjustment from the account page.` : undefined,
+    intro: v.case.dispute
+      ? `Disputed: “${v.case.dispute.reason}”. A reversal needs a second person to approve it; a write-off needs the board. Until then, the dispute stays open and collection stays paused.`
+      : undefined,
     fields: [
       {
         key: 'outcome',
-        label: 'Outcome',
+        label: 'What happened',
         type: 'select',
         required: true,
         options: [
-          { value: 'resume', label: 'Amount stands — resume collection' },
-          { value: 'written-off-in-part', label: 'Partly written off — resume for the rest' },
+          { value: 'stands', label: 'The charge stands — resume collection' },
+          { value: 'paid', label: 'The owner paid — the payment is on the account' },
+          { value: 'reversal', label: 'Charged in error, or twice — reverse it' },
+          { value: 'write-off', label: 'The board waives it — write it off' },
         ],
       },
-      { key: 'note', label: 'How it was resolved', type: 'textarea', required: true },
+      {
+        key: 'lineId',
+        label: 'Which line',
+        type: 'select',
+        requiredIf: (f) => f['outcome'] === 'paid' || f['outcome'] === 'reversal',
+        showIf: (f) => f['outcome'] === 'paid' || f['outcome'] === 'reversal',
+        optionsFor: (f) => (f['outcome'] === 'paid' ? payments : charges).map((l) => ({ value: l.id, label: label(l) })),
+        help: 'A payment not here yet? Allocate its receipt to this account first, in Receipts. Cash is banked first.',
+      },
+      {
+        key: 'amount',
+        label: 'Amount (R)',
+        type: 'number',
+        half: true,
+        requiredIf: (f) => f['outcome'] === 'reversal' || f['outcome'] === 'write-off',
+        showIf: (f) => f['outcome'] === 'reversal' || f['outcome'] === 'write-off',
+      },
+      { key: 'note', label: 'How it was resolved', type: 'textarea', required: true, placeholder: 'e.g. Billed twice in September: the second charge is reversed.' },
     ],
-    initial: { outcome: 'resume' },
+    initial: { outcome: 'stands' },
     submitLabel: 'Resolve',
-    submit: (f) => data.act(v.account.id, { type: 'resolve-dispute', outcome: f['outcome'] as 'resume' | 'written-off-in-part', note: f['note'] }, v.case.version),
-    success: () => 'Dispute resolved; collection resumes.',
+    submit: (f) =>
+      data.act(
+        v.account.id,
+        {
+          type: 'resolve-dispute',
+          outcome: f['outcome'] as 'stands' | 'paid' | 'reversal' | 'write-off',
+          note: f['note'],
+          lineId: f['lineId'] || undefined,
+          amount: f['amount'] ? Number(f['amount']) : undefined,
+        },
+        v.case.version,
+      ),
+    success: (_r, f) =>
+      f['outcome'] === 'reversal' ? 'Sent for a second person to approve. The dispute stays open until then.'
+      : f['outcome'] === 'write-off' ? 'Sent to the board. The dispute stays open until it decides.'
+      : 'Dispute resolved; collection resumes.',
     failure: 'The dispute wasn’t resolved',
+  });
+}
+
+/** D40: money off an account from the account page. Never a journal: a reversal (a second person) or a write-off (the board). */
+export function correctionForm(drawer: DrawerService, data: BillingDataSource, account: { id: string; accountNo: string }, lines: Transaction[]): void {
+  const charges = lines.filter((l) => l.amount > 0 && CHARGES.includes(l.type));
+  openForm(drawer, {
+    eyebrow: account.accountNo,
+    title: 'Correct the account',
+    intro: 'Takes money off the account once approved: a reversal by a second person at the agency, a write-off by the board. It shows on the owner’s statement with your reason.',
+    fields: [
+      {
+        key: 'kind',
+        label: 'Correction',
+        type: 'select',
+        required: true,
+        options: [
+          { value: 'reversal', label: 'Reverse a charge made in error' },
+          { value: 'write-off', label: 'Write off what’s owed (the board decides)' },
+        ],
+      },
+      {
+        key: 'lineId',
+        label: 'The charge',
+        type: 'select',
+        requiredIf: (f) => f['kind'] === 'reversal',
+        showIf: (f) => f['kind'] === 'reversal',
+        optionsFor: () => charges.map((l) => ({ value: l.id, label: `${formatDate(l.date)} · ${l.description} · ${formatRand(l.amount)}` })),
+      },
+      { key: 'amount', label: 'Amount (R)', type: 'number', required: true, half: true },
+      { key: 'reason', label: 'Reason', type: 'textarea', required: true, placeholder: 'e.g. Water over-estimated in November: meter read 12 kl, billed 30 kl' },
+      { key: 'file', label: 'Supporting document (PDF, optional)', type: 'file', accept: '.pdf' },
+    ],
+    initial: { kind: 'reversal' },
+    submitLabel: 'Send for approval',
+    submit: (f, files) => data.correct(account.id, { kind: f['kind'] as 'reversal' | 'write-off', amount: Number(f['amount']), lineId: f['lineId'] || undefined, reason: f['reason'] }, files['file']),
+    success: (_r, f) => (f['kind'] === 'write-off' ? 'Sent to the board. It goes on the account once approved.' : 'Sent for a second person to approve.'),
+    failure: 'The correction wasn’t sent',
   });
 }
 

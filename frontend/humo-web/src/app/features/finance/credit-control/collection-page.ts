@@ -2,8 +2,8 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { map } from 'rxjs';
-import { CollectionDataSource, CollectionStep, CollectionView, TimelineEvent, TimelineKind } from '../../../domain';
+import { map, take } from 'rxjs';
+import { AccountDataSource, CollectionDataSource, CollectionStep, CollectionView, TimelineEvent, TimelineKind } from '../../../domain';
 import { DocumentTemplatesService } from '../../../core/documents/document-templates.service';
 import { FeedbackService } from '../../../core/feedback/feedback.service';
 import { loadable } from '../../../core/data/loadable';
@@ -45,6 +45,7 @@ import { COLLECTION_STAGE_TONE, COLLECTION_TRACKER, LETTER_LABELS, collectionSta
 export class CollectionPage {
   private readonly route = inject(ActivatedRoute);
   private readonly data = inject(CollectionDataSource);
+  private readonly accounts = inject(AccountDataSource);
   private readonly drawer = inject(DrawerService);
   private readonly feedback = inject(FeedbackService);
   private readonly registry = inject(DocumentTemplatesService);
@@ -142,8 +143,13 @@ export class CollectionPage {
     disputeForm(this.drawer, this.data, this.v());
   }
 
+  /** D40: the account's lines, to pick the payment or the charge from. */
   protected resolve(): void {
-    resolveDisputeForm(this.drawer, this.data, this.v());
+    const v = this.v();
+    this.accounts
+      .get(v.account.id)
+      .pipe(take(1))
+      .subscribe((d) => resolveDisputeForm(this.drawer, this.data, v, d?.transactions ?? []));
   }
 
   protected addNote(): void {

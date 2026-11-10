@@ -102,7 +102,9 @@ public static class AccountEndpoints
             Validate = () =>
             {
                 var e = new Dictionary<string, string>();
-                if (body.Amount == 0) e["amount"] = "Enter the amount: positive to charge, negative to credit.";
+                if (body.Amount == 0) e["amount"] = "Enter the amount to charge.";
+                // D40: a credit takes money off the account, so it's a reversal (a second person) or a write-off (the board), never a journal.
+                else if (body.Amount < 0) e["amount"] = "To take money off an account, reverse the charge or ask the board to write it off: use Correct the account.";
                 else if (Math.Abs(body.Amount) > AdjustmentCap) e["amount"] = "Corrections over R100 000 need a correction run.";
                 if (reason.Length < 5) e["reason"] = "Say why, in a few words. It shows on the statement and in the audit log.";
                 return e;

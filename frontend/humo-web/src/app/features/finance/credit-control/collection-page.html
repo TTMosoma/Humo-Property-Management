@@ -64,6 +64,9 @@
           @case ('disputed') {
             <h2 class="section-title">Disputed</h2>
             <p>“{{ c.dispute?.reason }}” — {{ c.dispute?.by }}, {{ formatDate(c.dispute?.at ?? '', true) }}. Collection is paused until it’s resolved.</p>
+            @if (c.resolving; as r) {
+              <p class="muted">Resolving: {{ r.kind === 'reversal' ? 'a reversal' : 'a write-off' }} of {{ r.amount | rand }}, waiting for {{ r.kind === 'reversal' ? 'a second person' : 'the board' }} in <a routerLink="/approvals">Approvals</a>.</p>
+            }
           }
         }
         @if (canManage()) {
@@ -83,7 +86,7 @@
             @if (c.stage === 'arrangement') {
               <button type="button" class="btn btn-secondary" (click)="missed()">Record missed instalment</button>
             }
-            @if (c.stage === 'disputed') {
+            @if (c.stage === 'disputed' && !c.resolving) {
               <button type="button" class="btn btn-primary" (click)="resolve()">Resolve dispute</button>
             }
             @if (c.stage !== 'arrangement' && c.stage !== 'handed-over') {

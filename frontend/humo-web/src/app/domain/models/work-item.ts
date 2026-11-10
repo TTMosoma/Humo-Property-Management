@@ -25,7 +25,8 @@ export type WorkItemType =
   | 'document-expiry'
   | 'owner-message'
   | 'follow-up'
-  | 'rule-breach';
+  | 'rule-breach'
+  | 'account-correction';
 
 /** 'cooling-off': approved alone under the trustees' permission, in effect after 24 hours (D24). */
 export type WorkItemStatus = 'open' | 'done' | 'approved' | 'rejected' | 'cooling-off';
@@ -80,6 +81,8 @@ export interface WorkItem {
   route: string;
   /** D39: decided by a majority of the board register; who has decided so far. */
   board?: BoardProgress;
+  /** The person looking prepared it, so someone else approves it: who. */
+  notYours?: string;
 }
 
 export interface BoardProgress {
@@ -88,7 +91,8 @@ export interface BoardProgress {
   needed: number;
   approvals: number;
   rejections: number;
-  seats: { personId: string; name: string; decision?: 'approved' | 'rejected'; source?: 'humo' | 'upload' }[];
+  /** `onHumo`: asked in My work; otherwise their signed approval is needed. */
+  seats: { personId: string; name: string; decision?: 'approved' | 'rejected'; source?: 'humo' | 'upload'; onHumo?: boolean }[];
   /** The person looking is on this scheme's board. */
   mySeat: boolean;
   iVoted: boolean;
@@ -128,6 +132,7 @@ export const WORK_TYPE_LABELS: Record<WorkItemType, string> = {
   'owner-message': 'Message',
   'follow-up': 'Follow-up',
   'rule-breach': 'Rule breach',
+  'account-correction': 'Account correction',
 };
 
 /** Which part of Humo Property Management a work item belongs to (used for grouping and filters). */
@@ -165,6 +170,7 @@ export const WORK_TYPE_AREA: Record<WorkItemType, 'Finance' | 'Maintenance' | 'G
   'owner-message': 'Communication',
   'follow-up': 'Communication',
   'rule-breach': 'Governance',
+  'account-correction': 'Finance',
 };
 
 export function urgencyOf(item: Pick<WorkItem, 'dueAt'>, now = new Date()): Urgency {

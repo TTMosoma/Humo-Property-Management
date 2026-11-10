@@ -568,6 +568,34 @@ public sealed class LedgerEntry
     public string CreatedBy { get; set; } = "";
 }
 
+/// <summary>
+/// D40: money taken off a levy account, waiting for its approval and then posted. A reversal undoes a charge made in error
+/// (<see cref="LineId"/>); a write-off gives up what's owed and is the board's to approve.
+/// </summary>
+public sealed class AccountCorrection
+{
+    public Guid Id { get; set; }
+    public Guid OrganisationId { get; set; }
+    public Guid SchemeId { get; set; }
+    public Guid AccountId { get; set; }
+    /// <summary>reversal or write-off.</summary>
+    public string Kind { get; set; } = "reversal";
+    public decimal Amount { get; set; }
+    /// <summary>Reversals: the charge reversed.</summary>
+    public Guid? LineId { get; set; }
+    public string Reason { get; set; } = "";
+    public Guid? FileId { get; set; }
+    /// <summary>pending, approved or rejected.</summary>
+    public string Status { get; set; } = "pending";
+    public bool FromDispute { get; set; }
+    public string PreparedBy { get; set; } = "";
+    public Guid PreparedById { get; set; }
+    public DateTimeOffset PreparedAt { get; set; }
+    public Guid? WorkItemId { get; set; }
+    public string? DecidedBy { get; set; }
+    public DateTimeOffset? DecidedAt { get; set; }
+}
+
 /// <summary>Money that reached a scheme's trust account (docs/22 §1): captured, imported from a bank statement, or from a bank feed later.</summary>
 public sealed class Receipt
 {
