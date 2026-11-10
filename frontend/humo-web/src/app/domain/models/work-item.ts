@@ -78,6 +78,20 @@ export interface WorkItem {
   secondAuthoriser?: SecondAuthoriser;
   /** Deep link to the record where the work is done. */
   route: string;
+  /** D39: decided by a majority of the board register; who has decided so far. */
+  board?: BoardProgress;
+}
+
+export interface BoardProgress {
+  trustees: number;
+  /** More than half the trustees on the board register. */
+  needed: number;
+  approvals: number;
+  rejections: number;
+  seats: { personId: string; name: string; decision?: 'approved' | 'rejected'; source?: 'humo' | 'upload' }[];
+  /** The person looking is on this scheme's board. */
+  mySeat: boolean;
+  iVoted: boolean;
 }
 
 /**

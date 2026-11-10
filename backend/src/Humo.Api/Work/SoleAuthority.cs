@@ -17,7 +17,7 @@ namespace Humo.Api.Work;
 public sealed record SecondAuthoriserDto(string Mode, string Note);
 public sealed record TrusteePermissionDto(string Id, string SchemeId, string FileId, string Summary, string GrantedOn, string Until, string AddedBy, string AddedAt,
     string? WithdrawnAt, string? WithdrawnBy, string? WithdrawnReason, bool InForce);
-public sealed record SchemeAuthorityDto(string SchemeId, string SchemeName, int TrusteesOnHumo, TrusteePermissionDto? Permission, List<TrusteePermissionDto> History);
+public sealed record SchemeAuthorityDto(string SchemeId, string SchemeName, int TrusteesOnHumo, TrusteePermissionDto? Permission, List<TrusteePermissionDto> History, decimal DelegatedLimit = 5_000);
 public sealed record WithdrawPermissionRequest(string? Reason);
 
 /// <summary>
@@ -230,7 +230,7 @@ public static class TrusteePermissionEndpoints
         foreach (var s in schemes)
         {
             var mine = permissions.Where(p => p.SchemeId == s.Id).OrderByDescending(p => p.AddedAt).Select(sole.ToDto).ToList();
-            list.Add(new(s.Id.ToString(), s.Name, (await sole.TrusteesOnHumoAsync(s.Id, ct)).Count, mine.FirstOrDefault(p => p.InForce), mine));
+            list.Add(new(s.Id.ToString(), s.Name, (await sole.TrusteesOnHumoAsync(s.Id, ct)).Count, mine.FirstOrDefault(p => p.InForce), mine, s.DelegatedLimit));
         }
         return Results.Ok(list);
     }

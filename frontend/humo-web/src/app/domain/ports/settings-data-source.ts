@@ -31,6 +31,8 @@ export abstract class SettingsDataSource {
   /** Uploads the trustees' signed permission (PDF). Needs a fresh passkey. */
   abstract addTrusteePermission(input: NewTrusteePermission, file?: File): Observable<string>;
   abstract withdrawTrusteePermission(id: string, reason: string): Observable<void>;
+  /** D39: a scheme's limit for agency approval. Organisation.Manage, with a passkey. */
+  abstract setDelegatedLimit(schemeId: string, limit: number): Observable<void>;
   abstract updateTrustAccount(schemeId: string, account: TrustAccount): Observable<void>;
   /** D25: links the scheme's own Payfast merchant so owners can pay by card. Needs a fresh passkey. */
   abstract linkPayfast(schemeId: string, merchant: PayfastMerchantDetails): Observable<void>;

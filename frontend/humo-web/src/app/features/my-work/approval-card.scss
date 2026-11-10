@@ -284,3 +284,14 @@ h3 {
     flex: none;
   }
 }
+
+.board {
+  margin-top: var(--s-4);
+  font-size: var(--fs-sm);
+}
+
+.seats {
+  margin: var(--s-2) 0 0;
+  padding-left: var(--s-5);
+  color: var(--c-text-2);
+}

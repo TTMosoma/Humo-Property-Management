@@ -103,6 +103,10 @@ export class InMemorySettingsDataSource extends SettingsDataSource {
     return throwError(() => new ApiError('server', 'The trustees’ permission is only on Humo’s API'));
   }
 
+  setDelegatedLimit(): Observable<void> {
+    return throwError(() => new ApiError('server', 'A scheme’s limit is only on Humo’s API'));
+  }
+
   withdrawTrusteePermission(): Observable<void> {
     return throwError(() => new ApiError('server', 'The trustees’ permission is only on Humo’s API'));
   }

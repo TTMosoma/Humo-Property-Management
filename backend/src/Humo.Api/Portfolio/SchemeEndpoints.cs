@@ -11,7 +11,7 @@ public sealed record SchemeDetailsRequest(string Name, string Code, string Type,
 public sealed record StaffRefDto(string IdentityId, string? StaffId, string Name);
 
 public sealed record SchemeDto(string Id, int Version, string OrganisationId, string Name, string Code, string Type, string Status,
-    string Suburb, string City, string Province, int UnitCount, StaffRefDto? PortfolioManager);
+    string Suburb, string City, string Province, int UnitCount, StaffRefDto? PortfolioManager, decimal DelegatedLimit = 5_000);
 
 /// <summary>Vital signs per scheme (worked out by <see cref="SchemeHealth"/>). Compliance reads as not applicable until it's on the API.</summary>
 public sealed record SchemeHealthDto(string SchemeId, double CollectionRate, decimal Arrears, int Accounts90Plus, decimal MonthlyLevyRoll,
@@ -201,7 +201,7 @@ public static partial class SchemeEndpoints
                 .OrderBy(x => x.a.GrantedAt)
                 .FirstOrDefault();
             return new SchemeDto(s.Id.ToString(), s.Version, s.OrganisationId.ToString(), s.Name, s.Code, s.Type, s.Status, s.Suburb, s.City, s.Province,
-                UnitCount: unitCounts.GetValueOrDefault(s.Id), pm is null ? null : new StaffRefDto(pm.u.Id.ToString(), pm.u.Id.ToString(), pm.u.Name));
+                UnitCount: unitCounts.GetValueOrDefault(s.Id), pm is null ? null : new StaffRefDto(pm.u.Id.ToString(), pm.u.Id.ToString(), pm.u.Name), s.DelegatedLimit);
         }).ToList();
     }
 }

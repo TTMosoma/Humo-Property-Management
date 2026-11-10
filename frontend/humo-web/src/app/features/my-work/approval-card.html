@@ -62,6 +62,17 @@
   </ul>
 }
 
+@if (w.board; as b) {
+  <div class="board" aria-label="The board's decision">
+    <strong>The board decides:</strong> {{ b.approvals }} of {{ b.needed }} approvals needed ({{ b.trustees }} trustee{{ b.trustees === 1 ? '' : 's' }} on the register)@if (b.rejections) {, {{ b.rejections }} against}.
+    <ul class="seats">
+      @for (s of b.seats; track s.personId) {
+        <li>{{ s.name }} · @if (s.decision) { {{ s.decision === 'approved' ? 'approved' : 'rejected' }}{{ s.source === 'upload' ? ' (signed, uploaded)' : '' }} } @else { <span class="muted">not yet</span> }</li>
+      }
+    </ul>
+  </div>
+}
+
 @if (w.status === 'cooling-off') {
   <div class="outcome held">
     <ion-icon name="hourglass-outline" aria-hidden="true" />
@@ -82,6 +93,11 @@
       }
     </span>
   </div>
+} @else if (canDecide() && w.board && (w.board.iVoted || !w.board.mySeat)) {
+  <p class="waiting">
+    <ion-icon name="time-outline" aria-hidden="true" />
+    {{ w.board.iVoted ? 'You’ve decided. The rest of the board decides the outcome.' : 'Only trustees on this scheme’s board register decide this.' }}
+  </p>
 } @else if (canDecide()) {
   @if (rejecting()) {
     <div class="reject">
@@ -139,7 +155,14 @@
     @if (session.readOnly()) {
       Observe mode — decisions are disabled.
     } @else {
-      Waiting for {{ w.approverRoles?.includes('trustee') ? 'trustee' : 'agency' }} approval. You can view it, but your role doesn’t decide it.
+      Waiting for {{ w.board ? 'the board’s' : w.approverRoles?.includes('trustee') ? 'trustee' : 'agency' }} approval. You can view it, but your role doesn’t decide it.
     }
   </p>
+  @if (canRecordBoard()) {
+    <div class="actions">
+      <button type="button" class="btn btn-secondary" (click)="recordBoardApproval()">
+        <ion-icon name="finger-print-outline" aria-hidden="true" /> Record the board’s signed approval
+      </button>
+    </div>
+  }
 }

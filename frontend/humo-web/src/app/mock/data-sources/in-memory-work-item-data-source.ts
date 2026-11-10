@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, map } from 'rxjs';
-import { AGENCY_WORK, LARGE_APPROVAL_AMOUNT, PolicyError, WORK_TYPE_LABELS, WorkItem, WorkItemDataSource, agencyConflict } from '../../domain';
+import { Observable, map, throwError } from 'rxjs';
+import { AGENCY_WORK, ApiError, LARGE_APPROVAL_AMOUNT, PolicyError, WORK_TYPE_LABELS, WorkItem, WorkItemDataSource, agencyConflict } from '../../domain';
 import { MockDb } from '../db/mock-db';
 import { OrganisationStore } from '../db/organisation-store';
 import { MockAuthSession } from '../server/mock-auth-session';
@@ -57,6 +57,11 @@ export class InMemoryWorkItemDataSource extends WorkItemDataSource {
   }
 
   /** D24's cooling-off happens on the API only; the simulation never holds an approval, so this just reopens it. */
+  /** The board's signed approval is only on Humo's API: the prototype has no file store or trustees to tell. */
+  uploadBoardApproval(): Observable<void> {
+    return throwError(() => new ApiError('server', 'The board’s signed approval is only on Humo’s API'));
+  }
+
   cancelHold(id: string): Observable<void> {
     return this.mutate([id], this.spec([id], 'Stopped in its cooling-off'), (w) => ({ ...w, status: 'open', heldBy: undefined, heldUntil: undefined }));
   }

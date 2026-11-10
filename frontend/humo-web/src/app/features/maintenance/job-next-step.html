@@ -7,6 +7,19 @@
     <h2 id="next-title" class="section-title">Next step</h2>
   </header>
 
+  @if (job.emergency; as e) {
+    <div class="note" [class.warn]="e.status !== 'confirmed'">
+      <ion-icon name="alert-circle-outline" aria-hidden="true" />
+      <span>
+        @switch (e.status) {
+          @case ('to-confirm') { Went ahead in an emergency ({{ e.by }}: “{{ e.reason }}”). The board to confirm; the invoice won’t be paid until it does. }
+          @case ('confirmed') { Emergency work, confirmed by the board. }
+          @case ('rejected') { The board didn’t confirm this emergency work. Its invoice stays held. }
+        }
+      </span>
+    </div>
+  }
+
   @switch (job.stage) {
     <!-- ============================== REPORTED ============================== -->
     @case ('reported') {
@@ -110,12 +123,15 @@
           </div>
           @if (recommendedQuote(); as rq) {
             <div class="actions">
-              @if (rq.amount <= limit) {
-                <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="approveDelegated()">Approve {{ rq.amount | rand }} (within your {{ limit | rand: 'whole' }} authority)</button>
+              @if (rq.amount <= limit()) {
+                <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="approveDelegated()">Approve {{ rq.amount | rand }} (within the {{ limit() | rand: 'whole' }} limit)</button>
                 <button type="button" class="btn btn-secondary" [disabled]="busy()" (click)="sendForApproval()">Send for approval instead</button>
               } @else {
-                <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="sendForApproval()">Send {{ rq.amount | rand }} to the trustees</button>
-                <span class="muted small">Above the {{ limit | rand: 'whole' }} delegated limit — trustees decide.</span>
+                <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="sendForApproval()">Send {{ rq.amount | rand }} to the board</button>
+                @if (canGoAhead()) {
+                  <button type="button" class="btn btn-ghost" [disabled]="busy()" (click)="goAheadInEmergency(rq)">Emergency: go ahead now…</button>
+                }
+                <span class="muted small">Above the scheme’s {{ limit() | rand: 'whole' }} limit — a majority of the board decides.</span>
               }
             </div>
           }
@@ -145,6 +161,13 @@
       @if (d.approvalItem; as item) {
         <p class="lead">Recommended quote is waiting for a decision. It’s also in <a routerLink="/approvals">Approvals</a>.</p>
         <app-approval-card [item]="item" [compact]="true" />
+        @if (canGoAhead() && !job.emergency) {
+          @for (q of job.quotes; track q.id) {
+            @if (q.recommended && q.amount > limit()) {
+              <button type="button" class="btn btn-ghost" [disabled]="busy()" (click)="goAheadInEmergency(q)">Emergency: go ahead now…</button>
+            }
+          }
+        }
       } @else {
         <p class="muted">Waiting for approval.</p>
       }

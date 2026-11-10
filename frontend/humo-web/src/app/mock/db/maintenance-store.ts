@@ -491,6 +491,9 @@ export class MaintenanceStore {
         this.log(job, 'comment', action.text, by);
         break;
 
+      case 'emergency-proceed':
+        throw new Error('Going ahead in an emergency is only on Humo’s API');
+
       case 'cancel':
         job.stage = 'cancelled';
         this.log(job, 'stage', `Cancelled: ${action.reason}`, by);

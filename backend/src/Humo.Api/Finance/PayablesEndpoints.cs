@@ -70,6 +70,10 @@ public static class PayablesEndpoints
         var supplierIds = invoices.Select(i => i.SupplierId).Distinct().ToList();
         var suppliers = await db.Suppliers.Where(s => supplierIds.Contains(s.Id)).ToDictionaryAsync(s => s.Id, ct);
         var unverified = suppliers.Values.Where(s => !s.BankVerified).Select(s => s.Name).Order().ToList();
+        // D39: emergency work above the limit is paid only once the board has confirmed it.
+        var jobIds = invoices.Where(i => i.JobId is not null).Select(i => i.JobId!.Value).ToList();
+        var unconfirmed = (await db.Jobs.Where(j => jobIds.Contains(j.Id)).ToListAsync(ct)).Select(Maintenance.MaintenanceService.Read)
+            .Where(j => j.Emergency is { Status: not "confirmed" }).Select(j => j.Ref).Order().ToList();
         var total = Ledger.Round2(invoices.Sum(i => i.Amount));
 
         return await commands.RunAsync(new CommandSpec($"Prepared a payment batch: {invoices.Count} invoice{(invoices.Count == 1 ? "" : "s")}, {BillingRules.Rand(total)}{(scheme is null ? "" : $", {scheme.Name}")}", "Payables.Prepare")
@@ -83,6 +87,7 @@ public static class PayablesEndpoints
                 : scheme is null ? new() { ["invoiceIds"] = "A batch pays from one scheme’s trust account: choose invoices of one scheme." }
                 : invoices.Any(i => i.Status != "approved") ? new() { ["invoiceIds"] = "Only approved invoices that aren’t in a batch can be paid." }
                 : unverified.Count > 0 ? new() { ["invoiceIds"] = $"Bank details aren’t verified for {string.Join(", ", unverified)}: payments to them are held." }
+                : unconfirmed.Count > 0 ? new() { ["invoiceIds"] = $"The board hasn’t confirmed the emergency work on {string.Join(", ", unconfirmed)}: its invoice waits for that." }
                 : [],
         }, async actor =>
         {

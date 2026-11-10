@@ -127,6 +127,10 @@ export class AttentionService {
   }
 
   // ---- Commands (delegated to the port) ----
+  uploadBoardApproval(id: string, signers: string[], signedOn: string, file?: File): Observable<void> {
+    return this.source.uploadBoardApproval(id, signers, signedOn, file);
+  }
+
   complete(ids: string[]): Observable<void> {
     return this.source.complete(ids, this.session.identity().name);
   }

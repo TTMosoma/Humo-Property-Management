@@ -34,6 +34,7 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
     public DbSet<StatementImport> StatementImports => Set<StatementImport>();
     public DbSet<BillingRunRow> BillingRuns => Set<BillingRunRow>();
     public DbSet<WorkItemRow> WorkItems => Set<WorkItemRow>();
+    public DbSet<BoardVote> BoardVotes => Set<BoardVote>();
     public DbSet<WaterSetting> WaterSettings => Set<WaterSetting>();
     public DbSet<MeterReading> MeterReadings => Set<MeterReading>();
     public DbSet<LevySetting> LevySettings => Set<LevySetting>();
@@ -682,6 +683,7 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
         builder.Entity<Scheme>(e =>
         {
             e.ToTable("Schemes");
+            e.Property(x => x.DelegatedLimit).HasPrecision(18, 2).HasDefaultValue(5_000m);
             e.Property(x => x.Name).HasMaxLength(200);
             e.Property(x => x.Code).HasMaxLength(4);
             e.Property(x => x.Type).HasMaxLength(40);
@@ -851,6 +853,17 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.Property(x => x.Status).HasMaxLength(20);
             e.Property(x => x.UpdatedBy).HasMaxLength(200);
             e.HasIndex(x => x.OrganisationId);
+        });
+
+        builder.Entity<BoardVote>(e =>
+        {
+            e.ToTable("BoardVotes");
+            e.HasIndex(x => new { x.WorkItemId, x.PersonId }).IsUnique();
+            e.Property(x => x.TrusteeName).HasMaxLength(200);
+            e.Property(x => x.Decision).HasMaxLength(10);
+            e.Property(x => x.Source).HasMaxLength(10);
+            e.Property(x => x.Comment).HasMaxLength(1000);
+            e.Property(x => x.RecordedBy).HasMaxLength(200);
         });
 
         builder.Entity<TrusteePermission>(e =>

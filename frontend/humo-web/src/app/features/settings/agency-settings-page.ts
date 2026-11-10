@@ -123,7 +123,7 @@ import { agencyDetailsForm, trustAccountForm } from './settings-forms';
           <p class="muted">
             When you’re the agency’s only approver, a scheme’s trustees on Humo approve what you prepared. On a scheme with no trustee on Humo, you can approve alone under the
             trustees’ written permission: once per scheme, for up to {{ months }} months, with your passkey each time. An approval made alone takes effect after 24 hours, the
-            trustees on record are told, and it’s flagged in the audit log. Once a second authoriser joins, approving alone stops applying.
+            trustees on record are told, and it’s flagged in the audit log. Once a second authoriser joins, approving alone stops applying. Above each scheme’s limit, only a majority of its board approves spending (D39), and approving alone doesn’t apply.
           </p>
           @if (authority.loading()) {
             <ui-skeleton [count]="3" />
@@ -136,6 +136,10 @@ import { agencyDetailsForm, trustAccountForm } from './settings-forms';
                 } @else {
                   <span class="muted">None on Humo</span>
                 }
+              </ng-template>
+              <ng-template uiCell="limit" let-a>
+                <span class="money">{{ rand(a.delegatedLimit ?? 5000) }}</span>
+                <button type="button" class="btn btn-ghost btn-sm" (click)="changeLimit(a)">Change</button>
               </ng-template>
               <ng-template uiCell="permission" let-a>
                 @if (a.permission; as p) {
@@ -228,9 +232,26 @@ export class AgencySettingsPage {
     { key: 'scheme', header: 'Scheme', mobile: 'title', sort: (a) => a.schemeName },
     { key: 'trustees', header: 'Trustees', width: '170px' },
     { key: 'permission', header: 'Trustees’ permission' },
+    { key: 'limit', header: 'Agency can approve up to', width: '200px' },
     { key: 'action', header: '', align: 'end', width: '200px' },
   ];
   protected readonly authorityId = (a: SchemeAuthority) => a.schemeId;
+
+  /** D39: above this, the board approves spending, not the agency. A passkey; it's in the audit log. */
+  protected changeLimit(a: SchemeAuthority): void {
+    openForm(this.drawer, {
+      eyebrow: a.schemeName,
+      title: 'Limit for agency approval',
+      intro: 'Quotes up to this amount the agency approves. Above it, a majority of the board does. Use the amount in the scheme’s mandate with the agency.',
+      fields: [{ key: 'limit', label: 'Up to (R)', type: 'number', required: true, half: true }],
+      initial: { limit: String(a.delegatedLimit ?? 5000) },
+      submitLabel: 'Verify and save',
+      stepUp: { action: 'change-security', detail: `Change ${a.schemeName}’s limit for agency approval` },
+      submit: (f) => this.data.setDelegatedLimit(a.schemeId, Number(f['limit'])),
+      success: () => `Saved. Above this, ${a.schemeName}’s board approves.`,
+      failure: 'The limit wasn’t changed',
+    });
+  }
 
   /** D24: the trustees' signed permission (PDF), with a passkey. */
   protected addPermission(a: SchemeAuthority): void {

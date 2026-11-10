@@ -322,6 +322,59 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.ToTable("BillingRuns", (string)null);
                 });
 
+            modelBuilder.Entity("Humo.Infrastructure.Data.BoardVote", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Decision")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<Guid?>("FileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("RecordedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RecordedBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateOnly?>("SignedOn")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("TrusteeName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("WorkItemId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkItemId", "PersonId")
+                        .IsUnique();
+
+                    b.ToTable("BoardVotes", (string)null);
+                });
+
             modelBuilder.Entity("Humo.Infrastructure.Data.BreachRow", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2677,6 +2730,12 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<decimal>("DelegatedLimit")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasDefaultValue(5000m);
+
                     b.Property<int?>("FinancialYearEnd")
                         .HasColumnType("integer");
 
@@ -3693,6 +3752,9 @@ namespace Humo.Infrastructure.Data.Migrations
 
                     b.Property<string>("AssigneeId")
                         .HasColumnType("text");
+
+                    b.Property<bool>("BoardMajority")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Comment")
                         .HasColumnType("text");

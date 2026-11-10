@@ -45,6 +45,9 @@ public sealed class JobEvent
 
 public sealed record ReportedBy(string Name, string Role, [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? PersonId = null);
 
+/// <param name="Status">to-confirm, confirmed or rejected (by the board).</param>
+public sealed record JobEmergency(string Reason, string By, string At, string Status);
+
 public sealed class JobApproval
 {
     /// <summary>pending, approved or rejected.</summary>
@@ -86,6 +89,8 @@ public sealed class Job
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public JobCompletion? Completion { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public JobVerification? Verification { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? InvoiceId { get; set; }
+    /// <summary>D39: went ahead above the limit in an emergency; the board confirms it afterwards, and the invoice waits for that.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public JobEmergency? Emergency { get; set; }
     public string BudgetCategory { get; set; } = "";
     /// <summary>Newest first.</summary>
     public List<JobEvent> Events { get; set; } = [];
@@ -123,6 +128,7 @@ public sealed record SupplierDocument(string Type, [property: JsonIgnore(Conditi
 public static class JobRules
 {
     /// <summary>Agency staff approve quotes up to this; above it the trustees decide.</summary>
+    /// <summary>A new scheme's limit for agency approval (D39); each scheme sets its own.</summary>
     public const decimal DelegatedLimit = 5_000;
 
     public static readonly string[] Trades =
@@ -166,7 +172,7 @@ public static class JobRules
     /// Field → message; empty when the action may go ahead. <paramref name="supplierProblems"/>: for a work order, the chosen
     /// supplier's missing or expired documents (it then needs an explicit override), or why they can't take work (on hold).
     /// </summary>
-    public static Dictionary<string, string> Check(Job job, JobAction a, Func<string, string?> supplierBlock, IReadOnlyList<string> supplierProblems, DateOnly today)
+    public static Dictionary<string, string> Check(Job job, JobAction a, Func<string, string?> supplierBlock, IReadOnlyList<string> supplierProblems, DateOnly today, decimal limit = DelegatedLimit)
     {
         var e = new Dictionary<string, string>();
         void StageIs(string what, params string[] stages)
@@ -197,8 +203,15 @@ public static class JobRules
             case "approve-within-delegation":
                 StageIs(a.Type == "send-for-approval" ? "Sending for approval" : "Approving", JobStages.Quoting);
                 if (quote is not { Status: "received" }) e["quoteId"] = "Choose a quote you’ve received.";
-                else if (a.Type == "approve-within-delegation" && quote.Amount > DelegatedLimit)
-                    e["quoteId"] = $"Above the delegated limit of {BillingRules.Rand(DelegatedLimit)}: send it for the trustees’ approval.";
+                else if (a.Type == "approve-within-delegation" && quote.Amount > limit)
+                    e["quoteId"] = $"Above the scheme’s limit of {BillingRules.Rand(limit)}: send it to the board.";
+                break;
+            case "emergency-proceed":
+                StageIs("Going ahead in an emergency", JobStages.Quoting, JobStages.Approval);
+                if (job.Priority != "urgent") e["priority"] = "Only an urgent job can go ahead before the board approves it.";
+                else if (quote is not { Status: "received" }) e["quoteId"] = "Choose a quote you’ve received.";
+                else if (quote.Amount <= limit) e["quoteId"] = "This is within the scheme’s limit: approve it the usual way.";
+                if ((a.Reason ?? "").Trim().Length < 10) e["reason"] = "Say why it can’t wait for the board, e.g. water coming through the ceiling of Unit 4.";
                 break;
             case "issue-work-order":
                 StageIs("A work order", JobStages.Approved);

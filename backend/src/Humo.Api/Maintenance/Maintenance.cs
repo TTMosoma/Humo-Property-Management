@@ -205,9 +205,9 @@ public sealed class MaintenanceService(HumoDbContext db, TimeProvider clock)
         }
     }
 
-    /// <summary>Who approves a quote: agency managers up to the delegated limit; trustees (and agency managers) above it.</summary>
-    public static string[] QuoteApprovers(decimal amount) =>
-        amount > JobRules.DelegatedLimit ? [Roles.AgencyAdmin, Roles.PortfolioManager, Roles.Trustee] : [Roles.AgencyAdmin, Roles.PortfolioManager];
+    /// <summary>Who approves a quote: agency managers up to the scheme's limit; above it, only the board (D39).</summary>
+    public static string[] QuoteApprovers(decimal amount, decimal limit) =>
+        amount > limit ? [Roles.Trustee] : [Roles.AgencyAdmin, Roles.PortfolioManager];
 }
 
 /// <summary>A quote decided in My work › Approvals: approved, the job moves to its work order; rejected, back to quotes.</summary>
@@ -221,10 +221,22 @@ public sealed class QuoteApprovalHandler(HumoDbContext db, MaintenanceService ma
     {
         if (item.SourceId is not { } id || await db.Jobs.FirstOrDefaultAsync(j => j.Id == id, ct) is not { } row) return;
         var job = MaintenanceService.Read(row);
-        if (job.Approval?.WorkItemId != item.Id.ToString() || job.Stage != JobStages.Approval) return;
+        if (job.Approval?.WorkItemId != item.Id.ToString()) return;
         var by = actor.Human.Name;
         var q = job.Quotes.FirstOrDefault(x => x.Recommended);
         var supplier = q is null ? null : await db.Suppliers.FirstOrDefaultAsync(s => s.Id == Guid.Parse(q.SupplierId), ct);
+        // D39: the work went ahead in an emergency; this is the board confirming it, or not. The job doesn't move back.
+        if (job.Emergency is { Status: "to-confirm" } emergency)
+        {
+            job.Emergency = emergency with { Status = approve ? "confirmed" : "rejected" };
+            job.Approval = new JobApproval { Status = approve ? "approved" : "rejected", WorkItemId = job.Approval.WorkItemId, DecidedBy = by, DecidedAt = maintenance.NowText, Comment = comment };
+            JobRules.Log(job, "approval", approve ? $"The board confirmed the emergency work: {supplier?.Name}, {BillingRules.Rand(q?.Amount ?? 0)}"
+                : $"The board didn’t confirm the emergency work{(comment is null ? "" : $": “{comment}”")}. The invoice stays held.", by, maintenance.NowText);
+            job.Version++;
+            MaintenanceService.Write(row, job);
+            return;
+        }
+        if (job.Stage != JobStages.Approval) return;
         job.Approval = new JobApproval { Status = approve ? "approved" : "rejected", WorkItemId = job.Approval.WorkItemId, DecidedBy = by, DecidedAt = maintenance.NowText, Comment = comment };
         if (approve)
         {

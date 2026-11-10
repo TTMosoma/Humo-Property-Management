@@ -98,7 +98,7 @@ The seed's actions replace the old fixture tasks w28–w30 (same ids), so Tasks 
 
 | Gap | Note |
 |---|---|
-| Real round-robin voting | A written resolution passes on one trustee's approval in the simulation. The real rule (a majority of trustees signing) needs per-trustee votes on the approval. |
+| Round-robin voting in the prototype | On the API (D39, 10 November 2026) a written resolution passes when a majority of the board register approves, on Humo or by signed approval uploaded by the agency. The prototype still passes it on one trustee's approval. |
 | Proxies and owner attendance at general meetings | Captured as a count, not per owner; no proxy forms or voting by unit quota. |
 | Sending notice | On the API (2 November 2026) the notice is emailed to the trustees, or to every current owner for a general meeting, and a cancellation tells them too; owners without an email are counted for the post. The prototype simulates it (docs/18 R-16). Not yet published to the owner portal. |
 | Meeting pack from the document library | Listed by name; the library comes with Checkpoint 7. |

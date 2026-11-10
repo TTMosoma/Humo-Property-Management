@@ -1,3 +1,4 @@
+using Humo.Infrastructure.Data;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -33,7 +34,17 @@ public sealed class MaintenanceTests : IDisposable
             (await db.Users.SingleAsync(u => u.Id == owner)).PersonId = (await db.People.SingleAsync(p => p.Email == "sipho@mail.example")).Id.ToString();
             return await db.SaveChangesAsync();
         });
-        await api.Person("bongani@trustee.example", Roles.Trustee, org, [kc]);
+        var bongani = await api.Person("bongani@trustee.example", Roles.Trustee, org, [kc]);
+        // On the board register (D2), so his decision counts for the board (D39). He's its only trustee: a majority of one.
+        await api.Db(async db =>
+        {
+            var p = new Person { Id = Guid.CreateVersion7(), OrganisationId = org, FirstName = "Bongani", LastName = "Trustee", DisplayName = "Bongani Trustee", Initials = "BT",
+                Email = "bongani@trustee.example", CreatedAt = api.Clock.GetUtcNow() };
+            db.People.Add(p);
+            db.Relationships.Add(new Relationship { Id = Guid.CreateVersion7(), PersonId = p.Id, Type = "trustee", SchemeId = kc, Portfolio = "Chairperson", Since = new DateOnly(2025, 3, 1) });
+            (await db.Users.SingleAsync(u => u.Id == bongani)).PersonId = p.Id.ToString();
+            return await db.SaveChangesAsync();
+        });
         return new Setup(org, kc, u42, admin, await api.SignedIn("bongani@trustee.example"), await api.SignedIn("sipho@mail.example"), adminId);
     }
 
@@ -339,11 +350,13 @@ public sealed class MaintenanceTests : IDisposable
         await Act(s.Admin, reference, new { type = "request-quotes", supplierIds = new[] { supplier.ToString() } });
         var quote = (await Job(s.Admin, reference)).GetProperty("quotes")[0].GetProperty("id").GetString();
         await Act(s.Admin, reference, new { type = "record-quote", quoteId = quote, amount = 18_500 });
-        Assert.Contains("delegated limit", (await Refused(s.Admin, reference, new { type = "approve-within-delegation", quoteId = quote })).GetProperty("quoteId").GetString());
+        Assert.Contains("scheme’s limit", (await Refused(s.Admin, reference, new { type = "approve-within-delegation", quoteId = quote })).GetProperty("quoteId").GetString());
         await Act(s.Admin, reference, new { type = "send-for-approval", quoteId = quote });
 
         var approval = Assert.Single((await Ok(await s.Trustee.GetAsync("/api/work-items"))).EnumerateArray(), w => w.GetProperty("type").GetString() == "quote-approval");
-        Assert.Contains("trustee", approval.GetProperty("approverRoles").EnumerateArray().Select(r => r.GetString()));
+        Assert.Equal(["trustee"], approval.GetProperty("approverRoles").EnumerateArray().Select(r => r.GetString()));
+        // D39: the agency recommends; it doesn't approve spending above the limit, not even the person who sent it.
+        Assert.Equal("forbidden", await (await s.Admin.PostAsJsonAsync($"/api/work-items/{approval.GetProperty("id").GetString()}/decision", new { decision = "approved" })).ProblemCode());
         await NoContent(await s.Trustee.PostAsJsonAsync($"/api/work-items/{approval.GetProperty("id").GetString()}/decision", new { decision = "approved", comment = "Go ahead" }));
         Assert.Equal("approved", (await Job(s.Admin, reference)).GetProperty("stage").GetString());
 
@@ -355,9 +368,85 @@ public sealed class MaintenanceTests : IDisposable
         var invoice = (await Ok(await s.Admin.GetAsync($"/api/jobs/{reference}"))).GetProperty("invoice");
         Assert.Equal(("awaiting-approval", 700m), (invoice.GetProperty("invoice").GetProperty("status").GetString(), invoice.GetProperty("variance").GetDecimal()));
         var reapproval = Assert.Single((await Ok(await s.Admin.GetAsync("/api/work-items"))).EnumerateArray(), w => w.GetProperty("type").GetString() == "invoice-approval");
-        await NoContent(await s.Admin.PostAsJsonAsync($"/api/work-items/{reapproval.GetProperty("id").GetString()}/decision", new { decision = "approved" }));
+        // Above its quote and above the limit: the board's too.
+        Assert.Equal("forbidden", await (await s.Admin.PostAsJsonAsync($"/api/work-items/{reapproval.GetProperty("id").GetString()}/decision", new { decision = "approved" })).ProblemCode());
+        await NoContent(await s.Trustee.PostAsJsonAsync($"/api/work-items/{reapproval.GetProperty("id").GetString()}/decision", new { decision = "approved" }));
         Assert.Equal("approved", (await Ok(await s.Admin.GetAsync($"/api/jobs/{reference}"))).GetProperty("invoice").GetProperty("invoice").GetProperty("status").GetString());
         Assert.True((await Refused(s.Admin, reference, new { type = "capture-invoice", amount = 100, invoiceNo = "R-2207" })).TryGetProperty("stage", out _));
+    }
+
+    private async Task<(string Reference, string Quote, Guid Supplier)> QuotedJob(Setup s, decimal amount, string priority = "urgent")
+    {
+        var supplier = await Id(await NewSupplier(s.Admin, s.Kc));
+        var reference = await Ref(await s.Admin.PostAsJsonAsync("/api/jobs", new { schemeId = s.Kc.ToString(), location = "Block A", title = "Burst pipe in roof", description = "Water through the ceiling.", category = "Plumbing", priority }));
+        await Act(s.Admin, reference, new { type = "request-quotes", supplierIds = new[] { supplier.ToString() } });
+        var quote = (await Job(s.Admin, reference)).GetProperty("quotes")[0].GetProperty("id").GetString()!;
+        await Act(s.Admin, reference, new { type = "record-quote", quoteId = quote, amount });
+        return (reference, quote, supplier);
+    }
+
+    [Fact]
+    public async Task Each_scheme_sets_its_own_limit_with_a_passkey()
+    {
+        var s = await Scheme();
+        Assert.Equal("step-up-required", await (await s.Admin.PostAsJsonAsync($"/api/schemes/{s.Kc}/delegated-limit", new { limit = 20_000 })).ProblemCode());
+        await s.Admin.StepUp();
+        await NoContent(await s.Admin.PostAsJsonAsync($"/api/schemes/{s.Kc}/delegated-limit", new { limit = 20_000 }));
+        Assert.Equal(20_000m, (await Ok(await s.Admin.GetAsync($"/api/schemes/{s.Kc}"))).GetProperty("delegatedLimit").GetDecimal());
+
+        var (reference, quote, _) = await QuotedJob(s, 18_500, "normal");
+        await Act(s.Admin, reference, new { type = "approve-within-delegation", quoteId = quote });
+        Assert.Equal("approved", (await Job(s.Admin, reference)).GetProperty("stage").GetString());
+    }
+
+    [Fact]
+    public async Task Emergency_work_goes_ahead_but_isnt_paid_until_the_board_confirms_it()
+    {
+        var s = await Scheme();
+        var (reference, quote, supplier) = await QuotedJob(s, 9_000);
+        Assert.True((await Refused(s.Admin, reference, new { type = "emergency-proceed", quoteId = quote })).TryGetProperty("reason", out _));
+        var noPasskey = await s.Admin.PostAsJsonAsync($"/api/jobs/{reference}/actions",
+            new { action = new { type = "emergency-proceed", quoteId = quote, reason = "Water is pouring into Unit 4" }, expectedVersion = (await Job(s.Admin, reference)).GetProperty("version").GetInt32() });
+        Assert.Equal("step-up-required", await noPasskey.ProblemCode());
+
+        await s.Admin.StepUp();
+        await Act(s.Admin, reference, new { type = "emergency-proceed", quoteId = quote, reason = "Water is pouring into Unit 4" });
+        var job = await Job(s.Admin, reference);
+        Assert.Equal(("approved", "to-confirm"), (job.GetProperty("stage").GetString(), job.GetProperty("emergency").GetProperty("status").GetString()));
+        await HumoApiFactory.Until(() => api.Email.Sent.Any(x => x.To == "bongani@trustee.example" && x.Subject.StartsWith("Emergency work above the limit")));
+
+        await Act(s.Admin, reference, new { type = "issue-work-order", scheduledFor = api.Clock.GetUtcNow().AddDays(1).ToString("O"), overrideVetting = true });
+        await Act(s.Admin, reference, new { type = "complete", notes = "Replaced the pipe" });
+        await Act(s.Admin, reference, new { type = "verify", outcome = "fixed", onBehalf = true });
+        await Act(s.Admin, reference, new { type = "capture-invoice", amount = 9_000, invoiceNo = "E-1" });
+        await api.Db(async db => { (await db.Suppliers.SingleAsync(x => x.Id == supplier)).BankVerified = true; return await db.SaveChangesAsync(); });
+        var invoice = (await Ok(await s.Admin.GetAsync($"/api/jobs/{reference}"))).GetProperty("invoice").GetProperty("invoice").GetProperty("id").GetString();
+        var held = await s.Admin.PostAsJsonAsync("/api/payables/batches", new { invoiceIds = new[] { invoice } });
+        Assert.Contains("emergency", (await held.FieldErrors()).GetProperty("invoiceIds").GetString());
+
+        var confirm = Assert.Single((await Ok(await s.Trustee.GetAsync("/api/work-items"))).EnumerateArray(), w => w.GetProperty("type").GetString() == "quote-approval");
+        await NoContent(await s.Trustee.PostAsJsonAsync($"/api/work-items/{confirm.GetProperty("id").GetString()}/decision", new { decision = "approved" }));
+        Assert.Equal("confirmed", (await Job(s.Admin, reference)).GetProperty("emergency").GetProperty("status").GetString());
+        Assert.Equal(HttpStatusCode.Created, (await s.Admin.PostAsJsonAsync("/api/payables/batches", new { invoiceIds = new[] { invoice } })).StatusCode);
+    }
+
+    [Fact]
+    public async Task A_signed_approval_is_refused_if_it_predates_the_item_or_names_someone_off_the_board()
+    {
+        var s = await Scheme();
+        var (reference, quote, _) = await QuotedJob(s, 18_500, "normal");
+        await Act(s.Admin, reference, new { type = "send-for-approval", quoteId = quote });
+        var item = (await Job(s.Admin, reference)).GetProperty("approval").GetProperty("workItemId").GetString();
+        var bongani = await api.Db(db => db.People.Where(p => p.Email == "bongani@trustee.example").Select(p => p.Id).SingleAsync());
+        MultipartFormDataContent Signed(Guid who, DateTimeOffset on) => new()
+        {
+            { new StringContent(who.ToString()), "signers" }, { new StringContent(on.ToString("yyyy-MM-dd")), "signedOn" },
+            { new ByteArrayContent(System.Text.Encoding.ASCII.GetBytes("%PDF-1.4\n%%EOF\n")), "file", "approval.pdf" },
+        };
+        await s.Admin.StepUp();
+        Assert.True((await (await s.Admin.PostAsync($"/api/work-items/{item}/board-approval", Signed(bongani, api.Clock.GetUtcNow().AddDays(-10)))).FieldErrors()).TryGetProperty("signedOn", out _));
+        Assert.True((await (await s.Admin.PostAsync($"/api/work-items/{item}/board-approval", Signed(Guid.NewGuid(), api.Clock.GetUtcNow()))).FieldErrors()).TryGetProperty("signers", out _));
+        Assert.Equal("approval", (await Job(s.Admin, reference)).GetProperty("stage").GetString());
     }
 
     [Fact]
