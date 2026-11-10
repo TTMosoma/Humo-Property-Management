@@ -162,6 +162,19 @@ public sealed class GovernanceTests : IDisposable
         var approval = await api.Db(db => db.WorkItems.Where(w => w.Type == "resolution-approval").Select(w => w.Id).SingleAsync());
         var trustee = await api.SignedIn("bongani@trustee.example");
         await NoContent(await trustee.PostAsJsonAsync($"/api/work-items/{approval}/decision", new { decision = "approved" }));
+        // D39: one of three trustees isn't a majority.
+        Assert.Equal("proposed", (await (await s.Admin.GetAsync($"/api/resolutions?schemeIds={s.Kc}")).Json()).GetProperty("items")[0].GetProperty("resolution").GetProperty("outcome").GetString());
+        // Ayesha isn't on Humo: her signed approval, uploaded by the agency, makes two of three.
+        await s.Admin.StepUp();
+        var signed = new MultipartFormDataContent
+        {
+            { new StringContent(s.Trustees[1].ToString()), "signers" }, { new StringContent(api.Clock.GetUtcNow().ToString("yyyy-MM-dd")), "signedOn" },
+            { new ByteArrayContent(System.Text.Encoding.ASCII.GetBytes("%PDF-1.4\n%%EOF\n")), "file", "resolution.pdf" },
+        };
+        await NoContent(await s.Admin.PostAsync($"/api/work-items/{approval}/board-approval", signed));
+        // Every trustee on record is told who is said to have signed.
+        await HumoApiFactory.Until(() => api.Email.Sent.Count(x => x.Subject.StartsWith("Board approval recorded")) == 3);
+        Assert.Contains(api.Email.Sent, x => x.To == "pieter@trustee.example" && x.Text.Contains("Ayesha Trustee"));
         var view = (await (await s.Admin.GetAsync($"/api/resolutions?schemeIds={s.Kc}")).Json()).GetProperty("items")[0];
         Assert.Equal(("passed", "in-progress"), (view.GetProperty("resolution").GetProperty("outcome").GetString(), view.GetProperty("progress").GetString()));
         Assert.Equal(1, await api.Db(db => db.WorkItems.CountAsync(w => w.Type == "meeting-action")));

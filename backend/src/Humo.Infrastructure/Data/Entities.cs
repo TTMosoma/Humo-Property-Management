@@ -145,6 +145,8 @@ public sealed class Scheme
     public int? FinancialYearEnd { get; set; }
     public bool HasLifts { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
+    /// <summary>D39: above this, spending is the board's to approve, not the agency's. Changing it needs a passkey.</summary>
+    public decimal DelegatedLimit { get; set; } = 5_000;
 }
 
 /// <summary>A section (sectional title), erf (HOA) or share block in a scheme (doc 24 §5).</summary>
@@ -685,6 +687,28 @@ public sealed class WorkItemRow
     public string Route { get; set; } = "";
     /// <summary>The record it's about, e.g. the billing run's id.</summary>
     public Guid? SourceId { get; set; }
+    /// <summary>D39: decided by a majority of the board register, not by one person.</summary>
+    public bool BoardMajority { get; set; }
+}
+
+/// <summary>
+/// D39: one trustee's decision on an approval for the board. On Humo ("humo"), or from the board's signed approval uploaded
+/// by the agency ("upload", with its file). One per trustee per approval.
+/// </summary>
+public sealed class BoardVote
+{
+    public Guid Id { get; set; }
+    public Guid WorkItemId { get; set; }
+    public Guid PersonId { get; set; }
+    public string TrusteeName { get; set; } = "";
+    /// <summary>approved or rejected.</summary>
+    public string Decision { get; set; } = "approved";
+    public string Source { get; set; } = "humo";
+    public Guid? FileId { get; set; }
+    public DateOnly? SignedOn { get; set; }
+    public string? Comment { get; set; }
+    public string RecordedBy { get; set; } = "";
+    public DateTimeOffset RecordedAt { get; set; }
 }
 
 /// <summary>A scheme that recovers water from owners, at one flat rate per kilolitre (docs/22 §2). No row: it doesn't.</summary>

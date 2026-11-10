@@ -8,6 +8,8 @@ import { ScopeService } from '../../core/scope/scope.service';
 import { StepUpService } from '../../core/security/step-up.service';
 import { SessionService } from '../../core/session/session.service';
 import { formatDate, formatRand, RandPipe } from '../../ui/format/money';
+import { DrawerService } from '../../ui/drawer/drawer.service';
+import { openForm } from '../shared/form-drawer';
 import { StatusPill } from '../../ui/status-pill/status-pill';
 import { workItemView } from './work-item-view';
 
@@ -31,10 +33,39 @@ export class ApprovalCard {
   private readonly scope = inject(ScopeService);
   private readonly stepUp = inject(StepUpService);
   protected readonly session = inject(SessionService);
+  private readonly drawer = inject(DrawerService);
+
+  /** D39: agency managers record the board's signed approval for trustees not on Humo. */
+  protected readonly canRecordBoard = computed(() => {
+    const w = this.item();
+    return !!w.board && w.status === 'open' && ['agency-admin', 'portfolio-manager'].includes(this.session.assignment()?.role ?? '') && !this.session.readOnly();
+  });
+
+  protected recordBoardApproval(): void {
+    const w = this.item();
+    const open = (w.board?.seats ?? []).filter((s) => !s.decision);
+    openForm(this.drawer, {
+      eyebrow: `${w.ref} · ${formatRand(w.amount)}`,
+      title: 'Record the board’s signed approval',
+      intro: `For trustees who aren’t on Humo: their signed resolution, letter or email approving this item. Every trustee on record is told at once, with the names you choose. ${w.board?.needed} of ${w.board?.trustees} must approve.`,
+      fields: [
+        { key: 'file', label: 'Signed approval (PDF)', type: 'file', required: true, accept: '.pdf' },
+        { key: 'signers', label: 'Who signed it', type: 'checks', required: true, options: open.map((s) => ({ value: s.personId, label: s.name })) },
+        { key: 'signedOn', label: 'Signed on', type: 'date', required: true, half: true },
+      ],
+      submitLabel: 'Verify and record',
+      stepUp: { action: 'approve-large-amount', detail: `Record the board’s approval of ${w.ref} · ${formatRand(w.amount)}` },
+      submit: (f, files) => this.attention.uploadBoardApproval(w.id, f['signers'].split(',').filter(Boolean), f['signedOn'], files['file']),
+      success: () => 'Recorded. Every trustee on record has been told.',
+      failure: 'The board’s approval wasn’t recorded',
+    });
+  }
 
   readonly item = input.required<WorkItem>();
   /** Inside a drawer: no title block or "details" link. */
   readonly compact = input(false);
+  /** Inside a record that already shows the context (e.g. the job): just the decision, without the detail line and evidence. */
+  readonly brief = input(false);
   readonly details = output<WorkItem>();
 
   protected readonly view = computed(() => workItemView(this.item()));

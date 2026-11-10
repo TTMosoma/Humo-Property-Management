@@ -6,6 +6,8 @@ import { RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { DELEGATED_LIMIT, DocStatus, suppliersFor, JobAction, JobDataSource, JobDetail, PRIORITY_LABEL, Priority, Quote, Supplier, Trade, describeFailure, docStatus, supplierCompliance, saDate } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
+import { DrawerService } from '../../ui/drawer/drawer.service';
+import { openForm } from '../shared/form-drawer';
 import { SessionService } from '../../core/session/session.service';
 import { organisationTeam } from '../../core/session/team';
 import { RandPipe, formatDate, formatRand } from '../../ui/format/money';
@@ -30,6 +32,7 @@ export class JobNextStep {
   private readonly jobs = inject(JobDataSource);
   private readonly network = inject(ContractorNetwork);
   private readonly feedback = inject(FeedbackService);
+  private readonly drawer = inject(DrawerService);
   protected readonly session = inject(SessionService);
 
   readonly detail = input.required<JobDetail>();
@@ -50,7 +53,12 @@ export class JobNextStep {
   protected readonly trades = TRADES;
   protected readonly priorities = Object.keys(PRIORITY_LABEL) as Priority[];
   protected readonly priorityLabel = PRIORITY_LABEL;
-  protected readonly limit = DELEGATED_LIMIT;
+  /** D39: the scheme's own limit for agency approval. */
+  protected readonly limit = computed(() => this.detail().scheme.delegatedLimit ?? DELEGATED_LIMIT);
+  /** D39: an urgent job can go ahead above the limit; agency managers only. */
+  protected readonly canGoAhead = computed(
+    () => this.canAct() && this.detail().job.priority === 'urgent' && ['agency-admin', 'portfolio-manager'].includes(this.session.assignment()?.role ?? ''),
+  );
   protected readonly formatDate = formatDate;
   protected readonly now = new Date().toISOString();
 
@@ -225,7 +233,23 @@ export class JobNextStep {
 
   protected sendForApproval(): void {
     const q = this.recommendedQuote();
-    if (q) this.run([{ type: 'send-for-approval', quoteId: q.id }], q.amount > DELEGATED_LIMIT ? 'Sent to the trustees for approval' : 'Sent for approval');
+    if (q) this.run([{ type: 'send-for-approval', quoteId: q.id }], q.amount > this.limit() ? 'Sent to the board for approval' : 'Sent for approval');
+  }
+
+  /** D39: go ahead before the board decides. A passkey and a reason; every trustee is told, and the invoice waits for the board. */
+  protected goAheadInEmergency(quote: Quote): void {
+    const job = this.detail().job;
+    openForm(this.drawer, {
+      eyebrow: `${job.ref} · ${formatRand(quote.amount)}`,
+      title: 'Go ahead before the board approves?',
+      intro: `This is above ${this.detail().scheme.name}’s limit of ${formatRand(this.limit())}. Only for an emergency: every trustee is told at once, the board confirms it in Approvals, and the invoice won’t be paid until it does.`,
+      fields: [{ key: 'reason', label: 'Why it can’t wait', type: 'textarea', required: true, placeholder: 'e.g. Water is coming through the ceiling of Unit 4' }],
+      submitLabel: 'Verify and go ahead',
+      stepUp: { action: 'approve-large-amount', detail: `Go ahead with ${job.ref} at ${formatRand(quote.amount)} before the board approves` },
+      submit: (f) => this.jobs.act(job.ref, { type: 'emergency-proceed', quoteId: quote.id, reason: f['reason'] }, job.version),
+      success: () => 'Going ahead. The trustees have been told, and the board confirms it in Approvals.',
+      failure: 'It wasn’t saved',
+    });
   }
 
   protected issueWorkOrder(): void {

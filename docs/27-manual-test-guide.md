@@ -339,6 +339,21 @@ Restart the API first. You'll need the System Administrator sign-in.
 - [ ] Platform › Audit log. **Expect:** "Read the technical log for…" and "Downloaded the technical log for…".
 - [ ] As a Humo Support user, or as Thandeka. **Expect:** no *Technical logs* menu, and `/platform/logs` is refused.
 
+## 30. Spending above the limit is the board's (D39)
+
+Restart the API first. You'll need a PDF, and Thandeka's and Sipho's sign-ins. Kingfisher Court's board register decides how many must approve: check it in Governance › Board.
+
+- [ ] As Thandeka: Settings › Agency › *Agency can approve up to*. **Expect:** R5 000 for each scheme. Change Kingfisher Court's to R6 000. **Expect:** it asks for your passkey, then shows R6 000.
+- [ ] On a Kingfisher Court job, record a quote of R5 500 and approve it. **Expect:** *Approve R5 500 (within the R6 000 limit)*. Put the limit back to R5 000.
+- [ ] On another job, record a quote of R8 000. **Expect:** no *Approve* button; *Send R8 000 to the board*. Send it.
+- [ ] In Approvals, as Thandeka. **Expect:** "The board decides: 0 of N approvals needed", the trustees listed, and no *Approve*: only *Record the board’s signed approval*.
+- [ ] As Sipho (trustee): approve it. **Expect:** if the board has more than one trustee, it stays open with 1 approval, and Sipho sees "You’ve decided".
+- [ ] As Thandeka: *Record the board’s signed approval*, choose another trustee, today's date, a PDF. **Expect:** passkey, then the job is approved once a majority is reached. Mailpit: every trustee with an email got "Board approval recorded", naming who signed.
+- [ ] Try again on a new item with a *Signed on* date before it was sent. **Expect:** refused: signed before it was sent to the board.
+- [ ] On a job marked *High* with a quote above the limit. **Expect:** no *Emergency* button. Press *Change priority…*, choose *Urgent* with a reason. **Expect:** the job's history says "Priority changed from high to urgent" with the reason, and *Emergency: go ahead now…* appears.
+- [ ] On an urgent job with a quote above the limit: *Emergency: go ahead now…* with a reason. **Expect:** passkey, the job is approved with "Went ahead in an emergency… The board to confirm", and the trustees are emailed.
+- [ ] Take that job to an approved invoice, then try to add it to a payment batch. **Expect:** refused until the board confirms it in Approvals; then it can be paid.
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.

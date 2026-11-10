@@ -93,7 +93,11 @@ export class AttentionService {
     const role = this.session.role();
     // D6: a staff trustee's own agency's work waits for another trustee, so it isn't "waiting for me".
     const conflicted = agencyConflict(this.session.identity(), this.session.assignment());
-    return this.open().filter((w) => w.kind === 'approval' && this.canDecide(w, role) && !(conflicted && AGENCY_WORK.includes(w.type)));
+    // D39: the board decides it, but the agency records trustees' signed approval, so it's waiting for them too.
+    const recordsBoard = role === 'agency-admin' || role === 'portfolio-manager';
+    return this.open().filter(
+      (w) => w.kind === 'approval' && ((this.canDecide(w, role) && !(conflicted && AGENCY_WORK.includes(w.type))) || (recordsBoard && !!w.board && !w.board.mySeat)),
+    );
   });
 
   readonly inbox = computed(() => {
@@ -127,6 +131,10 @@ export class AttentionService {
   }
 
   // ---- Commands (delegated to the port) ----
+  uploadBoardApproval(id: string, signers: string[], signedOn: string, file?: File): Observable<void> {
+    return this.source.uploadBoardApproval(id, signers, signedOn, file);
+  }
+
   complete(ids: string[]): Observable<void> {
     return this.source.complete(ids, this.session.identity().name);
   }

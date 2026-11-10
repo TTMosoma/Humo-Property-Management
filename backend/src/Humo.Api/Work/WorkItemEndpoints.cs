@@ -9,7 +9,7 @@ namespace Humo.Api.Work;
 
 public sealed record WorkItemDto(string Id, string Ref, string Kind, string Type, string Title, string Detail, string SchemeId, decimal? Amount, int? Count, string CreatedAt, string DueAt,
     string? AssigneeId, IReadOnlyList<string> ApproverRoles, IReadOnlyList<string> Evidence, string Status, string? DecidedBy, string? DecidedAt, string? Comment, string Route,
-    string? HeldUntil = null, string? HeldBy = null, SecondAuthoriserDto? SecondAuthoriser = null, Finance.BudgetLineSpendDto? Budget = null);
+    string? HeldUntil = null, string? HeldBy = null, SecondAuthoriserDto? SecondAuthoriser = null, Finance.BudgetLineSpendDto? Budget = null, BoardProgressDto? Board = null);
 public sealed record WorkIdsRequest(List<string> Ids);
 public sealed record AssignRequest(List<string> Ids, string? AssigneeId);
 /// <param name="Alone">Approve alone under the trustees' permission (D24), when that's the only way.</param>
@@ -44,7 +44,8 @@ public static class WorkItemEndpoints
         g.MapPost("/{id:guid}/cancel-hold", CancelHold);
     }
 
-    private static async Task<IResult> List(CurrentActor current, HumoDbContext db, IEnumerable<IApprovalHandler> handlers, SoleAuthority sole, Finance.Budgets budgets, CancellationToken ct)
+    private static async Task<IResult> List(CurrentActor current, HumoDbContext db, IEnumerable<IApprovalHandler> handlers, SoleAuthority sole, BoardApprovals board, Finance.Budgets budgets,
+        CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         if (actor.OrganisationId is not { } org || !actor.Can("Work.View")) return Results.Ok(Array.Empty<WorkItemDto>());
@@ -58,8 +59,10 @@ public static class WorkItemEndpoints
             if (w.Kind == "approval" && w.Status == "open" && handlers.FirstOrDefault(h => h.Type == w.Type) is { } handler && await handler.RefuseAsync(w, actor, true, ct) is not null)
                 second = await sole.SecondAuthoriserAsync(w, actor.Human.Id, ct);
             var dto = ToDto(w) with { SecondAuthoriser = second };
+            // D39: the board decides it, by a majority; who has decided so far.
+            if (w.BoardMajority) dto = dto with { Board = await board.ProgressAsync(w, actor, ct) };
             // With one authoriser at the agency, the scheme's trustees decide it too (D24).
-            if (w.Kind == "approval" && w.Status == "open" && w.SchemeId is not null && !dto.ApproverRoles.Contains(Domain.Access.Roles.Trustee)
+            if (w.Kind == "approval" && w.Status == "open" && w.SchemeId is not null && !w.BoardMajority && !dto.ApproverRoles.Contains(Domain.Access.Roles.Trustee)
                 && (await sole.StaffApproversAsync(w, ct)).Count <= 1)
                 dto = dto with { ApproverRoles = [.. dto.ApproverRoles, Domain.Access.Roles.Trustee] };
             // Quotes and invoices waiting for a decision show the job's budget line and what's been spent (D28).
@@ -108,7 +111,7 @@ public static class WorkItemEndpoints
     }
 
     private static async Task<IResult> Decide(Guid id, DecisionRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, IEnumerable<IApprovalHandler> handlers,
-        SoleAuthority sole, CancellationToken ct)
+        SoleAuthority sole, BoardApprovals board, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } me) return Results.Unauthorized();
         var item = await db.WorkItems.FirstOrDefaultAsync(w => w.Id == id && w.OrganisationId == me.OrganisationId, ct);
@@ -145,6 +148,12 @@ public static class WorkItemEndpoints
         }, async actor =>
         {
             if (!roles.Contains(actor.Assignment.Role) && !trusteeMay) throw new CommandRefused("forbidden", "Your role doesn’t decide this approval");
+            // D39: one trustee's vote; the board's majority decides.
+            if (item.BoardMajority)
+            {
+                await board.VoteAsync(item, actor, approve, body.Comment, ct);
+                return Results.NoContent();
+            }
             if (alone)
             {
                 sole.Hold(item, actor, permission!, body.Comment);

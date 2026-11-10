@@ -15,4 +15,6 @@ export abstract class WorkItemDataSource {
   abstract decide(id: string, decision: 'approved' | 'rejected', by: string, comment?: string, alone?: boolean): Observable<void>;
   /** Stops an approval in its cooling-off: it waits for a decision again. */
   abstract cancelHold(id: string): Observable<void>;
+  /** D39: the board's signed approval of this one item, for trustees not on Humo. Agency staff, with a passkey; every trustee on record is told. */
+  abstract uploadBoardApproval(id: string, signers: string[], signedOn: string, file?: File): Observable<void>;
 }

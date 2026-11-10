@@ -174,6 +174,8 @@ export interface SchemeAuthority {
   trusteesOnHumo: number;
   permission?: TrusteePermission;
   history: TrusteePermission[];
+  /** D39: the scheme's limit for agency approval. */
+  delegatedLimit?: number;
 }
 
 export interface NewTrusteePermission {

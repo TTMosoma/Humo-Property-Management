@@ -840,6 +840,34 @@ Photos on a maintenance request were kept by name only on the live system, so th
 - Photos recorded by name before this stay as named placeholders.
 - Removing a photo added by mistake is left for later.
 
+---
+
+## D39 — Spending above the limit is the board's to approve (9 November 2026)
+
+**Status:** approved by the product owner (Terry Mosoma). D38 is held for supplier emails and links.
+
+**The problem:** a quote above the delegated limit is "sent to the trustees", but Agency Administrators and Portfolio Managers can approve it too, including the person who sent it. An invoice above its quote is the same. So the limit doesn't limit anything. One trustee's approval also passes where a board decision needs a majority, trustee-only resolutions stick when no trustee is on Humo, and the limit is the same R5 000 for every scheme.
+
+**Decision:**
+1. **Above the limit, only the board decides.** Agency staff recommend; they can't approve. This covers a quote above the limit, and an invoice above its approved quote where the invoice is above the limit.
+2. **Each scheme has its own limit**, set in the scheme's settings with a passkey and recorded in the audit log. It starts at R5 000.
+3. **A majority of the board.** More than half of the trustees on the board register (D2), whether or not they have a Humo sign-in. A trustee who approves on Humo counts as one.
+4. **Trustees not on Humo: upload their signed approval.** For that one item, staff upload a PDF (a signed resolution, letter or email), choose from the board register who signed it, and give the date.
+   - An upload can count with approvals made on Humo towards the majority.
+   - It needs a passkey and is flagged in the audit log.
+   - It can't approve a different item or amount from the one it was uploaded for.
+5. **Every trustee on record is told at once**, by email, or SMS where they prefer it or have no email, with what was approved and who is said to have signed. Whoever is named can dispute a forged upload straight away.
+6. **A rejection by a majority ends it.** The item goes back to the agency, with the reason.
+7. **Emergencies.** On a job marked urgent, an Agency Administrator or Portfolio Manager can go ahead above the limit, to make the property safe, with a written reason and a passkey. It is flagged, every trustee is told at once, and the job shows "Board to confirm" until the board has approved it the usual way (points 3 to 5). The invoice can't be paid until then.
+8. **Written resolutions** use the same majority and the same upload.
+9. **D24 doesn't apply above the limit.** The trustees' 12-month written permission lets an agency with one approver approve its own routine items. It doesn't replace the board's approval of spending above the limit.
+
+**Consequences:**
+- The API enforces all of this; the screens follow it.
+- Existing approvals still open when this goes live follow the new rule.
+- How many must sign, and the emergency route, should be confirmed by a practising managing agent, because each scheme's mandate and rules may differ.
+- Item 9 (correcting a quote) and item 20 (write-offs) build on this.
+
 ## Still open (needs domain expertise before slice 2)
 
 - **Levies and participation quotas:** decided per scheme in **D13**. Still open: interest rules, special levies, VAT.

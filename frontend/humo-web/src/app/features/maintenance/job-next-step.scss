@@ -353,3 +353,14 @@ textarea {
     background: color-mix(in srgb, var(--c-accent-strong) 10%, var(--c-surface));
   }
 }
+
+/* D39: emergency work and the board's confirmation, set apart from the stage's own next step. */
+.emergency {
+  margin-bottom: var(--s-5);
+  padding-bottom: var(--s-5);
+  border-bottom: 1px solid var(--c-border);
+
+  .note {
+    margin-bottom: 0;
+  }
+}

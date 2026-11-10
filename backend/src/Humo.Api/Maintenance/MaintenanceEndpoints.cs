@@ -31,7 +31,7 @@ public static partial class MaintenanceEndpoints
     {
         ["triage"] = "Triaged", ["request-quotes"] = "Requested quotes for", ["record-quote"] = "Recorded a quote on", ["send-for-approval"] = "Sent for approval:",
         ["approve-within-delegation"] = "Approved within delegated authority:", ["issue-work-order"] = "Issued a work order for", ["start-work"] = "Started work on",
-        ["complete"] = "Completed", ["verify"] = "Confirmed the outcome of", ["capture-invoice"] = "Captured the invoice for", ["close"] = "Closed", ["comment"] = "Commented on",
+        ["complete"] = "Completed", ["verify"] = "Confirmed the outcome of", ["capture-invoice"] = "Captured the invoice for", ["close"] = "Closed", ["comment"] = "Commented on", ["change-priority"] = "Changed the priority of",
         ["cancel"] = "Cancelled",
     };
 
@@ -92,11 +92,17 @@ public static partial class MaintenanceEndpoints
         return Results.Ok(await m.JobSummariesAsync(rows, ct));
     }
 
-    private static async Task<IResult> Get(string reference, CurrentActor current, HumoDbContext db, MaintenanceService m, CancellationToken ct)
+    private static async Task<IResult> Get(string reference, CurrentActor current, HumoDbContext db, MaintenanceService m, Work.BoardApprovals board, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         if (!actor.Can("Maintenance.View") || await VisibleJobAsync(actor, db, reference, ct) is not { } row) return Problems.NotFound();
-        return Results.Ok(await m.DetailAsync(row, ct));
+        var detail = await m.DetailAsync(row, ct);
+        // D39: the board's progress on the approval shown on the job, as in My work.
+        async Task<Work.WorkItemDto?> WithBoard(Work.WorkItemDto? item) =>
+            item is not null && Guid.TryParse(item.Id, out var id) && await db.WorkItems.AsNoTracking().FirstOrDefaultAsync(w => w.Id == id && w.BoardMajority, ct) is { } w
+                ? item with { Board = await board.ProgressAsync(w, actor, ct) } : item;
+        detail = detail with { ApprovalItem = await WithBoard(detail.ApprovalItem), InvoiceApprovalItem = await WithBoard(detail.InvoiceApprovalItem) };
+        return Results.Ok(detail);
     }
 
     /// <summary>A resident's own requests: the ones they reported, and their unit's.</summary>
@@ -153,7 +159,8 @@ public static partial class MaintenanceEndpoints
         }, ct);
     }
 
-    private static async Task<IResult> Act(string reference, JobActionRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, MaintenanceService m, CancellationToken ct)
+    private static async Task<IResult> Act(string reference, JobActionRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, MaintenanceService m,
+        Work.BoardApprovals board, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } me) return Results.Unauthorized();
         var a = body.Action ?? new JobAction("");
@@ -172,6 +179,9 @@ public static partial class MaintenanceEndpoints
         var duplicateInvoice = a.Type == "capture-invoice" && chosen is not null && await db.SupplierInvoices.AnyAsync(i => i.SupplierId == chosen.Id && i.Number == (a.InvoiceNo ?? "").Trim(), ct);
         var permission = residentVerify && !me.Can("Maintenance.Manage") ? "Resident.Requests" : "Maintenance.Manage";
         var amount = a.Type is "record-quote" or "capture-invoice" ? $" ({BillingRules.Rand(a.Amount ?? 0)})" : "";
+        string Name(string? id) => id is not null && suppliers.TryGetValue(id, out var s) ? s.Name : "the supplier";
+        var limit = await db.Schemes.Where(s => s.Id == row.SchemeId).Select(s => s.DelegatedLimit).FirstAsync(ct);
+        var emergency = a.Type == "emergency-proceed";
 
         return await commands.RunAsync(new CommandSpec($"{Verbs.GetValueOrDefault(a.Type, a.Type)} {reference}: {job.Title}{amount}", permission)
         {
@@ -181,16 +191,29 @@ public static partial class MaintenanceEndpoints
             Feature = JobRules.Advanced.Contains(a.Type) && !residentVerify ? "maintenance-advanced" : "maintenance-basic",
             ExpectedVersion = body.ExpectedVersion,
             CurrentVersion = job.Version,
+            // D39: going ahead above the limit before the board decides is with a passkey, every time.
+            StepUp = emergency ? true : null,
             Validate = () =>
             {
-                var e = JobRules.Check(job, a, s => MaintenanceService.Block(suppliers.GetValueOrDefault(s), row.SchemeId), problems, m.Today);
+                var e = JobRules.Check(job, a, s => MaintenanceService.Block(suppliers.GetValueOrDefault(s), row.SchemeId), problems, m.Today, limit);
                 if (e.Count == 0 && !assigneeOk) e["assigneeId"] = "Choose someone in your team.";
                 if (e.Count == 0 && duplicateInvoice) e["invoiceNo"] = "That invoice from this supplier is already captured.";
                 return e;
             },
         }, async actor =>
         {
-            await ApplyAsync(row, job, a, actor, suppliers, problems, db, m, ct);
+            if (emergency && actor.Assignment.Role is not (Roles.AgencyAdmin or Roles.PortfolioManager))
+                throw new CommandRefused("forbidden", "An Agency Administrator or Portfolio Manager decides to go ahead in an emergency.");
+            await ApplyAsync(row, job, a, actor, suppliers, problems, db, m, ct, limit);
+            if (emergency)
+            {
+                var scheme = await db.Schemes.AsNoTracking().FirstAsync(s => s.Id == row.SchemeId, ct);
+                var q = job.Quotes.First(x => x.Recommended);
+                var what = $"{job.Ref}: {job.Title}, {Name(q.SupplierId)} at {BillingRules.Rand(q.Amount)}";
+                commands.AfterCommit(() => board.TellTrusteesAsync(row.OrganisationId, row.SchemeId, $"Emergency work above the limit: {job.Ref}",
+                    $"{actor.Human.Name} went ahead with {what} at {scheme.Name} before the board approved it, because: {a.Reason!.Trim()}. It’s above the scheme’s limit of {BillingRules.Rand(limit)}. The board confirms it in My work › Approvals, or by signed approval; the invoice won’t be paid until it does.",
+                    $"{scheme.Name}: emergency work {job.Ref} ({BillingRules.Rand(q.Amount)}) went ahead before the board approved it. Confirm it in Humo PM.", ct));
+            }
             job.Version++;
             MaintenanceService.Write(row, job);
             return Results.NoContent();
@@ -198,7 +221,7 @@ public static partial class MaintenanceEndpoints
     }
 
     private static async Task ApplyAsync(JobRow row, Job job, JobAction a, Actor actor, Dictionary<string, SupplierRow> suppliers, List<string> problems, HumoDbContext db,
-        MaintenanceService m, CancellationToken ct)
+        MaintenanceService m, CancellationToken ct, decimal limit)
     {
         var by = actor.Human.Name;
         var now = m.NowText;
@@ -238,8 +261,31 @@ public static partial class MaintenanceEndpoints
                 job.SupplierId = quote!.SupplierId;
                 job.Approval = new JobApproval { Status = "approved", DecidedBy = by, DecidedAt = now, WithinDelegation = true };
                 job.Stage = JobStages.Approved;
-                JobRules.Log(job, "approval", $"Approved {Name(quote.SupplierId)} at {BillingRules.Rand(quote.Amount)} within delegated authority (up to {BillingRules.Rand(JobRules.DelegatedLimit)})", by, now);
+                JobRules.Log(job, "approval", $"Approved {Name(quote.SupplierId)} at {BillingRules.Rand(quote.Amount)} within the scheme’s limit (up to {BillingRules.Rand(limit)})", by, now);
                 break;
+            case "emergency-proceed":
+            {
+                job.Quotes.ForEach(q => q.Recommended = q.Id == quote!.Id);
+                job.SupplierId = quote!.SupplierId;
+                job.Emergency = new JobEmergency(a.Reason!.Trim(), by, now, "to-confirm");
+                // Still waiting for the board: that approval now confirms the work. Otherwise it goes to the board now.
+                if (job.Approval is not { Status: "pending", WorkItemId: not null })
+                {
+                    var item = new WorkItemRow
+                    {
+                        Id = Guid.CreateVersion7(), OrganisationId = row.OrganisationId, SchemeId = row.SchemeId, Ref = job.Ref, Kind = "approval", Type = "quote-approval",
+                        Title = $"Confirm emergency work: {job.Title}", Detail = $"Went ahead before the board approved it: {a.Reason!.Trim()}", Amount = quote.Amount, CreatedAt = m.Now,
+                        DueAt = m.Now.AddDays(3), ApproverRoles = WorkItemEndpoints.Roles(Roles.Trustee), BoardMajority = true,
+                        Evidence = JsonSerializer.Serialize(new[] { $"Emergency: {a.Reason!.Trim()}", $"Decided by {by}" }), Route = $"/maintenance/{job.Ref}", SourceId = row.Id,
+                    };
+                    db.WorkItems.Add(item);
+                    job.Approval = new JobApproval { Status = "pending", WorkItemId = item.Id.ToString() };
+                }
+                job.Stage = JobStages.Approved;
+                JobRules.Log(job, "approval", $"Went ahead in an emergency, above the scheme’s limit: {Name(quote.SupplierId)} at {BillingRules.Rand(quote.Amount)}. The board to confirm. Why: {a.Reason!.Trim()}", by, now);
+                await m.CloseWorkAsync(row.Id, ["maintenance-triage"], by, ct);
+                break;
+            }
             case "send-for-approval":
             {
                 job.Quotes.ForEach(q => q.Recommended = q.Id == quote!.Id);
@@ -248,14 +294,14 @@ public static partial class MaintenanceEndpoints
                 {
                     Id = Guid.CreateVersion7(), OrganisationId = row.OrganisationId, SchemeId = row.SchemeId, Ref = job.Ref, Kind = "approval", Type = "quote-approval", Title = job.Title,
                     Detail = $"{received} {(received == 1 ? "quote" : "quotes")} compared. Recommended: {Name(quote!.SupplierId)}{(quote.GuaranteeMonths is { } g ? $" ({g}-month guarantee)" : "")}.",
-                    Amount = quote.Amount, CreatedAt = m.Now, DueAt = m.Now.AddDays(3), ApproverRoles = WorkItemEndpoints.Roles(MaintenanceService.QuoteApprovers(quote.Amount)),
+                    Amount = quote.Amount, CreatedAt = m.Now, DueAt = m.Now.AddDays(3), ApproverRoles = WorkItemEndpoints.Roles(MaintenanceService.QuoteApprovers(quote.Amount, limit)), BoardMajority = quote.Amount > limit,
                     Evidence = JsonSerializer.Serialize(new[] { $"{received} quotes compared", $"Recommendation by {by}" }.Concat(job.Photos.Count > 0 ? [$"Photos ({job.Photos.Count})"] : [])),
                     Route = $"/maintenance/{job.Ref}", SourceId = row.Id,
                 };
                 db.WorkItems.Add(item);
                 job.Approval = new JobApproval { Status = "pending", WorkItemId = item.Id.ToString() };
                 job.Stage = JobStages.Approval;
-                JobRules.Log(job, "approval", $"Sent for {(quote.Amount > JobRules.DelegatedLimit ? "trustee" : "agency")} approval: {Name(quote.SupplierId)}, {BillingRules.Rand(quote.Amount)}", by, now);
+                JobRules.Log(job, "approval", $"Sent for {(quote.Amount > limit ? "the board’s" : "agency")} approval: {Name(quote.SupplierId)}, {BillingRules.Rand(quote.Amount)}", by, now);
                 break;
             }
             case "issue-work-order":
@@ -315,7 +361,10 @@ public static partial class MaintenanceEndpoints
                         Id = Guid.CreateVersion7(), OrganisationId = row.OrganisationId, SchemeId = row.SchemeId, Ref = invoice.Number, Kind = "approval", Type = "invoice-approval",
                         Title = $"{supplier.Name} — {job.Title}",
                         Detail = variance is { } v ? $"Invoice is {BillingRules.Rand(v)} above the approved quote. Re-approval needed." : "No approved quote on file.",
-                        Amount = invoiceAmount, CreatedAt = m.Now, DueAt = m.Now.AddDays(3), ApproverRoles = WorkItemEndpoints.Roles(Roles.AgencyAdmin, Roles.PortfolioManager, Roles.Trustee),
+                        Amount = invoiceAmount, CreatedAt = m.Now, DueAt = m.Now.AddDays(3),
+                        // D39: above its quote and above the limit, the board decides; otherwise the agency.
+                        ApproverRoles = invoiceAmount > limit ? WorkItemEndpoints.Roles(Roles.Trustee) : WorkItemEndpoints.Roles(Roles.AgencyAdmin, Roles.PortfolioManager, Roles.Trustee),
+                        BoardMajority = invoiceAmount > limit,
                         Evidence = JsonSerializer.Serialize(new[] { approved is { } x ? $"Approved quote {BillingRules.Rand(x)}" : "No quote", variance is { } y ? $"Variance: + {BillingRules.Rand(y)}" : "Matches quote" }),
                         Route = $"/maintenance/{job.Ref}", SourceId = row.Id,
                     };
@@ -336,6 +385,11 @@ public static partial class MaintenanceEndpoints
                 break;
             case "comment":
                 JobRules.Log(job, "comment", a.Text!.Trim(), by, now);
+                break;
+            case "change-priority":
+                // Recorded with its reason: raising a job to urgent is what opens the emergency route (D39).
+                JobRules.Log(job, "stage", $"Priority changed from {job.Priority} to {a.Priority}: {a.Reason!.Trim()}", by, now);
+                job.Priority = a.Priority!;
                 break;
             case "cancel":
                 job.Stage = JobStages.Cancelled;

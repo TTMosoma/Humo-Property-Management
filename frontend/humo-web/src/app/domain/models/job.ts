@@ -96,6 +96,8 @@ export interface Job {
   approval?: { status: 'pending' | 'approved' | 'rejected'; workItemId?: string; decidedBy?: string; decidedAt?: string; comment?: string; withinDelegation?: boolean };
   supplierId?: string;
   workOrder?: { issuedAt: string; scheduledFor: string; accessNotes?: string };
+  /** D39: went ahead above the limit in an emergency; the board confirms it, and its invoice waits for that. */
+  emergency?: { reason: string; by: string; at: string; status: 'to-confirm' | 'confirmed' | 'rejected' };
   completion?: { completedAt: string; notes: string };
   verification?: { at: string; by: string; outcome: 'fixed' | 'not-fixed'; comment?: string };
   invoiceId?: string;

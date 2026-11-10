@@ -76,6 +76,8 @@ export type JobAction =
   | { type: 'request-quotes'; supplierIds: string[] }
   | { type: 'record-quote'; quoteId: string; amount: number; guaranteeMonths?: number; notes?: string }
   | { type: 'send-for-approval'; quoteId: string }
+  /** D39: an urgent job goes ahead above the scheme's limit; the board confirms it afterwards. Needs a passkey. */
+  | { type: 'emergency-proceed'; quoteId: string; reason: string }
   /** A quote chosen in a Humo Contractor quote request, compared against `compared` offers. */
   | { type: 'award-network-quote'; supplierId: string; amount: number; guaranteeMonths: number; quoteRequestId: string; compared: number; completeBy: string }
   | { type: 'approve-within-delegation'; quoteId: string }
@@ -87,6 +89,8 @@ export type JobAction =
   | { type: 'capture-invoice'; amount: number; invoiceNo: string }
   | { type: 'close' }
   | { type: 'comment'; text: string }
+  /** Any stage until it's closed or cancelled, with a reason in the job's history. */
+  | { type: 'change-priority'; priority: Priority; reason: string }
   | { type: 'cancel'; reason: string };
 
 export type SupplierDetails = Pick<Supplier, 'name' | 'trades' | 'contactName' | 'phone' | 'email' | 'schemeIds'> & { bbbeeLevel?: number };

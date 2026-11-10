@@ -37,6 +37,7 @@ const JOB_VERB: Record<JobAction['type'], string> = {
   'request-quotes': 'Requested quotes',
   'record-quote': 'Recorded a quote',
   'send-for-approval': 'Sent quote for approval',
+  'emergency-proceed': 'Went ahead in an emergency',
   'approve-within-delegation': 'Approved quote within delegated authority',
   'award-network-quote': 'Chose a quote from a Humo Contractor quote request',
   'issue-work-order': 'Issued work order',
@@ -46,6 +47,7 @@ const JOB_VERB: Record<JobAction['type'], string> = {
   'capture-invoice': 'Captured supplier invoice',
   close: 'Closed job',
   comment: 'Commented on job',
+  'change-priority': 'Changed the job’s priority',
   cancel: 'Cancelled job',
 };
 

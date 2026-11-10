@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
 import {
+  ApiError,
   AccountDataSource,
   BillingAction,
   BillingDataSource,
@@ -241,6 +242,15 @@ export class HttpWorkItemDataSource extends HttpPort implements WorkItemDataSour
 
   cancelHold(id: string): Observable<void> {
     return this.command('POST', `/work-items/${id}/cancel-hold`, {}, ['work-items']);
+  }
+
+  uploadBoardApproval(id: string, signers: string[], signedOn: string, file?: File): Observable<void> {
+    if (!file) return throwError(() => new ApiError('validation', 'Attach the signed approval as a PDF.', { file: 'Attach the signed approval as a PDF.' }));
+    const form = new FormData();
+    signers.forEach((s) => form.append('signers', s));
+    form.append('signedOn', signedOn);
+    form.append('file', file, file.name);
+    return this.command('POST', `/work-items/${id}/board-approval`, form, ['work-items', 'jobs', 'meetings']);
   }
 }
 

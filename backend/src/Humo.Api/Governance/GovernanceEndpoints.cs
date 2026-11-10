@@ -460,7 +460,7 @@ public static class GovernanceEndpoints
             {
                 Id = Guid.CreateVersion7(), OrganisationId = scheme.OrganisationId, SchemeId = scheme.Id, Ref = r.Ref, Kind = "approval", Type = "resolution-approval",
                 Title = $"Written resolution: {r.Title}", Detail = $"Round-robin to {trustees} trustee{(trustees == 1 ? "" : "s")} of {scheme.Name}", CreatedAt = governance.Now,
-                DueAt = governance.Now.AddDays(5), ApproverRoles = Work.WorkItemEndpoints.Roles(Domain.Access.Roles.Trustee), Evidence = JsonSerializer.Serialize(new[] { r.Text }),
+                DueAt = governance.Now.AddDays(5), ApproverRoles = Work.WorkItemEndpoints.Roles(Domain.Access.Roles.Trustee), BoardMajority = true, Evidence = JsonSerializer.Serialize(new[] { r.Text }),
                 Route = "/governance/resolutions", SourceId = id,
             };
             r.ApprovalWorkItemId = item.Id.ToString();

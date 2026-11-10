@@ -78,6 +78,10 @@ export class HttpSettingsDataSource extends HttpPort implements SettingsDataSour
     return this.createId('/trustee-permissions', form, ['settings', 'work-items']);
   }
 
+  setDelegatedLimit(schemeId: string, limit: number): Observable<void> {
+    return this.command('POST', `/schemes/${schemeId}/delegated-limit`, { limit }, ['settings', 'schemes', 'jobs']);
+  }
+
   withdrawTrusteePermission(id: string, reason: string): Observable<void> {
     return this.command('POST', `/trustee-permissions/${id}/withdraw`, { reason }, ['settings', 'work-items']);
   }

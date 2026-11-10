@@ -43,4 +43,6 @@ export interface Scheme {
    * is granting that role, in Users & access. Null when nobody is assigned.
    */
   portfolioManager: StaffRef | null;
+  /** D39: above this, spending is the board's to approve. Each scheme sets its own (R5 000 to start). */
+  delegatedLimit?: number;
 }
