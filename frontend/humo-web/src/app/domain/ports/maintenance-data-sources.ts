@@ -91,6 +91,10 @@ export type JobAction =
   | { type: 'comment'; text: string }
   /** Any stage until it's closed or cancelled, with a reason in the job's history. */
   | { type: 'change-priority'; priority: Priority; reason: string }
+  /** D41: a recorded amount changes with a reason, never by recording it again. */
+  | { type: 'correct-quote'; quoteId: string; amount: number; reason: string }
+  | { type: 'request-revision'; quoteId: string; reason: string }
+  | { type: 'reopen-quotes'; reason: string }
   | { type: 'cancel'; reason: string };
 
 export type SupplierDetails = Pick<Supplier, 'name' | 'trades' | 'contactName' | 'phone' | 'email' | 'schemeIds'> & { bbbeeLevel?: number };

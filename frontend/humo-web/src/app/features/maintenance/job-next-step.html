@@ -176,11 +176,17 @@
       } @else {
         <p class="muted">Waiting for approval.</p>
       }
+      @if (canAct() && !job.emergency) {
+        <button type="button" class="btn btn-ghost btn-sm" [disabled]="busy()" (click)="reopenQuotes()">Reopen quotes…</button>
+      }
     }
 
     <!-- ============================== APPROVED ============================== -->
     @case ('approved') {
       <p class="lead">Approved {{ approvedAmount() | rand }} — book {{ supplier()?.name }}.</p>
+      @if (canAct() && !job.emergency) {
+        <p class="muted small">A different supplier or different work? <button type="button" class="btn btn-ghost btn-sm" [disabled]="busy()" (click)="reopenQuotes()">Reopen quotes…</button></p>
+      }
       @if (supplierWarnings().length) {
         <div class="note warn">
           <ion-icon name="time-outline" aria-hidden="true" />

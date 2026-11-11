@@ -120,7 +120,8 @@ export class JobNextStep {
   // ---- Derived ----
 
   protected readonly received = computed(() => this.detail().job.quotes.filter((q) => q.status === 'received'));
-  protected readonly requested = computed(() => this.detail().job.quotes.filter((q) => q.status === 'requested'));
+  /** Waiting for an amount: requested, or a revision asked for (D41). */
+  protected readonly requested = computed(() => this.detail().job.quotes.filter((q) => q.status === 'requested' || q.status === 'revision-requested'));
   /** The chosen quote — or, until someone chooses, the cheapest received one. */
   protected readonly recommendedQuote = computed<Quote | undefined>(() => {
     const received = this.received();
@@ -249,6 +250,21 @@ export class JobNextStep {
       submit: (f) => this.jobs.act(job.ref, { type: 'emergency-proceed', quoteId: quote.id, reason: f['reason'] }, job.version),
       success: () => 'Going ahead. The trustees have been told, and the board confirms it in Approvals.',
       failure: 'It wasn’t saved',
+    });
+  }
+
+  /** D41: the approval no longer stands (another supplier, different work): back to quotes, to be approved again. */
+  protected reopenQuotes(): void {
+    const job = this.detail().job;
+    openForm(this.drawer, {
+      eyebrow: job.ref,
+      title: 'Reopen quotes?',
+      intro: job.stage === 'approval' ? 'The approval waiting now is withdrawn, and whoever was deciding it is told.' : 'The approval no longer stands: the job goes back to quotes, to be approved again.',
+      fields: [{ key: 'reason', label: 'Why', type: 'textarea', required: true, placeholder: 'e.g. A different supplier, or different work' }],
+      submitLabel: 'Reopen quotes',
+      submit: (f) => this.jobs.act(job.ref, { type: 'reopen-quotes', reason: f['reason'] }, job.version),
+      success: () => 'Quotes reopened.',
+      failure: 'Quotes weren’t reopened',
     });
   }
 

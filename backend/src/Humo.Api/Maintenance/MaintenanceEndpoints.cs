@@ -31,7 +31,8 @@ public static partial class MaintenanceEndpoints
     {
         ["triage"] = "Triaged", ["request-quotes"] = "Requested quotes for", ["record-quote"] = "Recorded a quote on", ["send-for-approval"] = "Sent for approval:",
         ["approve-within-delegation"] = "Approved within delegated authority:", ["issue-work-order"] = "Issued a work order for", ["start-work"] = "Started work on",
-        ["complete"] = "Completed", ["verify"] = "Confirmed the outcome of", ["capture-invoice"] = "Captured the invoice for", ["close"] = "Closed", ["comment"] = "Commented on", ["change-priority"] = "Changed the priority of",
+        ["complete"] = "Completed", ["verify"] = "Confirmed the outcome of", ["capture-invoice"] = "Captured the invoice for", ["close"] = "Closed", ["comment"] = "Commented on", ["change-priority"] = "Changed the priority of", ["correct-quote"] = "Corrected a quote on", ["request-revision"] = "Asked for a revised quote on",
+        ["reopen-quotes"] = "Reopened quotes on",
         ["cancel"] = "Cancelled",
     };
 
@@ -160,7 +161,7 @@ public static partial class MaintenanceEndpoints
     }
 
     private static async Task<IResult> Act(string reference, JobActionRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, MaintenanceService m,
-        Work.BoardApprovals board, CancellationToken ct)
+        Work.BoardApprovals board, Platform.Notices notices, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } me) return Results.Unauthorized();
         var a = body.Action ?? new JobAction("");
@@ -198,13 +199,16 @@ public static partial class MaintenanceEndpoints
                 var e = JobRules.Check(job, a, s => MaintenanceService.Block(suppliers.GetValueOrDefault(s), row.SchemeId), problems, m.Today, limit);
                 if (e.Count == 0 && !assigneeOk) e["assigneeId"] = "Choose someone in your team.";
                 if (e.Count == 0 && duplicateInvoice) e["invoiceNo"] = "That invoice from this supplier is already captured.";
+                // D41: whoever brought a quote within the limit doesn't approve it under the limit.
+                if (e.Count == 0 && a.Type == "approve-within-delegation" && job.Quotes.FirstOrDefault(q => q.Id == a.QuoteId)?.CorrectedWithinLimitBy == me.User.Id.ToString())
+                    e["quoteId"] = "You corrected this quote to within the limit: send it for approval, and someone else at the agency approves it.";
                 return e;
             },
         }, async actor =>
         {
             if (emergency && actor.Assignment.Role is not (Roles.AgencyAdmin or Roles.PortfolioManager))
                 throw new CommandRefused("forbidden", "An Agency Administrator or Portfolio Manager decides to go ahead in an emergency.");
-            await ApplyAsync(row, job, a, actor, suppliers, problems, db, m, ct, limit);
+            await ApplyAsync(row, job, a, actor, suppliers, problems, db, m, ct, limit, notices);
             if (emergency)
             {
                 var scheme = await db.Schemes.AsNoTracking().FirstAsync(s => s.Id == row.SchemeId, ct);
@@ -220,8 +224,33 @@ public static partial class MaintenanceEndpoints
         }, ct);
     }
 
+    /// <summary>D41: the approval no longer stands. One still waiting is withdrawn, and whoever was deciding it is told. The job goes back to quotes.</summary>
+    private static async Task WithdrawAsync(Job job, string by, string? why, Actor actor, HumoDbContext db, Platform.Notices notices, CancellationToken ct)
+    {
+        if (Guid.TryParse(job.Approval?.WorkItemId, out var id) && await db.WorkItems.FirstOrDefaultAsync(w => w.Id == id, ct) is { Status: "open" } item)
+        {
+            item.Status = "withdrawn";
+            item.DecidedBy = by;
+            item.DecidedById = actor.Human.Id;
+            item.DecidedAt = DateTimeOffset.UtcNow;
+            item.Comment = why;
+            if (item.BoardMajority && item.SchemeId is { } scheme)
+                await Work.BoardApprovals.TellTrusteesOnHumoAsync(db, notices, scheme, actor.Human.Id, $"Withdrawn: {item.Title}", $"{job.Ref} no longer needs your decision. {why}", "/approvals", ct);
+        }
+        job.Approval = null;
+        job.Stage = JobStages.Quoting;
+    }
+
+    /// <summary>D41: whoever approved it hears about a lower price: the board's trustees, or the person who decided.</summary>
+    private static async Task TellApproverAsync(Job job, string title, string detail, Actor actor, HumoDbContext db, Platform.Notices notices, CancellationToken ct)
+    {
+        if (!Guid.TryParse(job.Approval?.WorkItemId, out var id) || await db.WorkItems.AsNoTracking().FirstOrDefaultAsync(w => w.Id == id, ct) is not { } item) return;
+        if (item.BoardMajority && item.SchemeId is { } scheme) await Work.BoardApprovals.TellTrusteesOnHumoAsync(db, notices, scheme, actor.Human.Id, title, detail, $"/maintenance/{job.Ref}", ct);
+        else if (item.DecidedById is { } who) notices.ToPerson(who, actor.Human.Id, title, detail, $"/maintenance/{job.Ref}");
+    }
+
     private static async Task ApplyAsync(JobRow row, Job job, JobAction a, Actor actor, Dictionary<string, SupplierRow> suppliers, List<string> problems, HumoDbContext db,
-        MaintenanceService m, CancellationToken ct, decimal limit)
+        MaintenanceService m, CancellationToken ct, decimal limit, Platform.Notices notices)
     {
         var by = actor.Human.Name;
         var now = m.NowText;
@@ -248,13 +277,60 @@ public static partial class MaintenanceEndpoints
                 await m.CloseWorkAsync(row.Id, ["maintenance-triage"], by, ct);
                 break;
             case "record-quote":
-                quote!.Amount = Ledger.Round2(a.Amount!.Value);
+            {
+                var revised = quote!.Status == "revision-requested";
+                quote.Amount = Ledger.Round2(a.Amount!.Value);
+                quote.Versions.Add(new QuoteVersion(quote.Amount, now, by, revised ? "Revised quote" : null));
+                quote.RejectedReason = null;
                 quote.Status = "received";
                 quote.ReceivedAt = now;
                 quote.ValidUntil = m.Now.AddDays(30).ToString("O");
                 quote.GuaranteeMonths = a.GuaranteeMonths;
                 quote.Notes = string.IsNullOrWhiteSpace(a.Notes) ? null : a.Notes.Trim();
-                JobRules.Log(job, "quote", $"Quote received from {Name(quote.SupplierId)}: {BillingRules.Rand(quote.Amount)}", by, now);
+                JobRules.Log(job, "quote", $"{(revised ? "Revised quote" : "Quote")} received from {Name(quote.SupplierId)}: {BillingRules.Rand(quote.Amount)}", by, now);
+                break;
+            }
+            case "correct-quote":
+            {
+                var before = quote!.Amount;
+                var reason = a.Reason!.Trim();
+                // Old quotes were recorded before versions were kept: their first amount is the one they had.
+                if (quote.Versions.Count == 0) quote.Versions.Add(new QuoteVersion(before, quote.ReceivedAt ?? now, "", null));
+                quote.Amount = Ledger.Round2(a.Amount!.Value);
+                quote.Versions.Add(new QuoteVersion(quote.Amount, now, by, reason));
+                var crossed = before > limit && quote.Amount <= limit;
+                if (crossed) quote.CorrectedWithinLimitBy = actor.User.Id.ToString();
+                var text = $"Quote from {Name(quote.SupplierId)} corrected: {BillingRules.Rand(before)} → {BillingRules.Rand(quote.Amount)}: {reason}"
+                    + (crossed ? " (now within the scheme’s limit: someone else at the agency approves it)" : "");
+                if (job.Stage == JobStages.Approval)
+                {
+                    await WithdrawAsync(job, by, $"The quote changed: {BillingRules.Rand(before)} → {BillingRules.Rand(quote.Amount)}. {reason}", actor, db, notices, ct);
+                    text += ". The approval was withdrawn: send it again.";
+                }
+                else if (job.Stage == JobStages.Approved && quote.Amount > before)
+                {
+                    await WithdrawAsync(job, by, null, actor, db, notices, ct);
+                    quote.Recommended = false;
+                    text += ". It’s higher than was approved, so quotes are open again, to be approved again.";
+                }
+                else if (job.Stage == JobStages.Approved)
+                {
+                    await TellApproverAsync(job, $"Lower price on {job.Ref}: {BillingRules.Rand(before)} → {BillingRules.Rand(quote.Amount)}",
+                        $"{Name(quote.SupplierId)} now charges {BillingRules.Rand(quote.Amount)} for the approved work. {reason}", actor, db, notices, ct);
+                    text += ". The approved amount is updated.";
+                }
+                JobRules.Log(job, "quote", text, by, now);
+                break;
+            }
+            case "request-revision":
+                quote!.Status = "revision-requested";
+                quote.Recommended = false;
+                JobRules.Log(job, "quote", $"Asked {Name(quote.SupplierId)} for a revised quote: {a.Reason!.Trim()}", by, now);
+                break;
+            case "reopen-quotes":
+                await WithdrawAsync(job, by, a.Reason!.Trim(), actor, db, notices, ct);
+                job.Quotes.ForEach(q => q.Recommended = false);
+                JobRules.Log(job, "approval", $"Quotes reopened: {a.Reason!.Trim()}", by, now);
                 break;
             case "approve-within-delegation":
                 job.Quotes.ForEach(q => q.Recommended = q.Id == quote!.Id);

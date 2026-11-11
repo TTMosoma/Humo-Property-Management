@@ -57,6 +57,12 @@ public sealed class BoardApprovals(HumoDbContext db, TimeProvider clock, Audit.A
     private static async Task<HashSet<Guid>> TrusteePeopleOnHumoAsync(HumoDbContext db, Guid schemeId, CancellationToken ct) =>
         [.. (await TrusteeUsersAsync(db, schemeId, ct)).Select(x => x.PersonId)];
 
+    /// <summary>A notice to the scheme's trustees who sign in to Humo (in the app, and by email). The caller saves.</summary>
+    public static async Task TellTrusteesOnHumoAsync(HumoDbContext db, Platform.Notices notices, Guid schemeId, Guid actorId, string title, string detail, string link, CancellationToken ct)
+    {
+        foreach (var (_, userId) in await TrusteeUsersAsync(db, schemeId, ct)) notices.ToPerson(userId, actorId, title, detail, link);
+    }
+
     /// <summary>
     /// D39: something new for the board, in this command. Its trustees on Humo are told at once (in the app, and by email),
     /// so the board knows to act. Those not on Humo are the agency's to ask for a signed approval.

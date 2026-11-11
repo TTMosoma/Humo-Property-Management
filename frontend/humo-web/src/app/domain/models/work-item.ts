@@ -29,7 +29,8 @@ export type WorkItemType =
   | 'account-correction';
 
 /** 'cooling-off': approved alone under the trustees' permission, in effect after 24 hours (D24). */
-export type WorkItemStatus = 'open' | 'done' | 'approved' | 'rejected' | 'cooling-off';
+/** 'withdrawn': no longer needed, e.g. the quote it was about changed (D41). */
+export type WorkItemStatus = 'open' | 'done' | 'approved' | 'rejected' | 'cooling-off' | 'withdrawn';
 
 /**
  * Who approves an approval its preparer can't, when the agency has nobody else (D24): a trustee on Humo; the preparer
