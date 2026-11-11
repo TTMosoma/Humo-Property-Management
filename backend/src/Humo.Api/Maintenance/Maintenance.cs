@@ -215,7 +215,13 @@ public sealed class QuoteApprovalHandler(HumoDbContext db, MaintenanceService ma
 {
     public string Type => "quote-approval";
 
-    public Task<string?> RefuseAsync(WorkItemRow item, Actor actor, bool approve, CancellationToken ct) => Task.FromResult<string?>(null);
+    /// <summary>D41: whoever brought the quote within the limit doesn't approve it.</summary>
+    public async Task<string?> RefuseAsync(WorkItemRow item, Actor actor, bool approve, CancellationToken ct)
+    {
+        if (!approve || item.SourceId is not { } id || await db.Jobs.AsNoTracking().FirstOrDefaultAsync(j => j.Id == id, ct) is not { } row) return null;
+        return MaintenanceService.Read(row).Quotes.FirstOrDefault(q => q.Recommended)?.CorrectedWithinLimitBy == actor.User.Id.ToString()
+            ? "You corrected this quote to within the limit: someone else approves it." : null;
+    }
 
     public async Task DecidedAsync(WorkItemRow item, Actor actor, bool approve, string? comment, CancellationToken ct)
     {
@@ -247,6 +253,13 @@ public sealed class QuoteApprovalHandler(HumoDbContext db, MaintenanceService ma
         else
         {
             job.Stage = JobStages.Quoting;
+            // D41: the rejected quote stays on the job as rejected; the agency asks for a revision, or another quote.
+            if (q is not null)
+            {
+                q.Status = "rejected";
+                q.Recommended = false;
+                q.RejectedReason = comment;
+            }
             JobRules.Log(job, "approval", $"Rejected by {by}{(comment is null ? "" : $": “{comment}”")}", by, maintenance.NowText);
         }
         job.Version++;

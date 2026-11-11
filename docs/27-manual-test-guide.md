@@ -366,6 +366,18 @@ Restart the API first. You'll need Thandeka's and Priya's sign-ins, and a truste
 - [ ] Choose *The owner paid* with no payment chosen. **Expect:** refused: choose a payment on the account.
 - [ ] On an account page: *Journal adjustment* offers only a charge. *Correct the account…* sends a reversal or write-off for approval.
 
+## 32. Correcting a quote, and new quotes after a rejection (D41)
+
+Restart the API first. You'll need Thandeka's and Sipho's sign-ins, and another agency approver (Johan, the Kingfisher Court portfolio manager) for the last step.
+
+- [ ] On a Kingfisher Court job, record a quote of R10 000. Try to record it again. **Expect:** no field to record it again; the quotes table offers *Correct…*.
+- [ ] *Correct…* to R1 000 with the reason "Typing error". **Expect:** the table shows R1 000 with "was R10 000", and the job's history says "corrected: R10 000 → R1 000: Typing error (now within the scheme’s limit…)".
+- [ ] As Thandeka, *Approve*. **Expect:** refused: you corrected it to within the limit. As Johan, approve it. **Expect:** approved.
+- [ ] On another job, a quote of R9 000 sent to the board. As Sipho, reject it with a reason. **Expect:** the quote shows *Rejected* with the reason, and *Ask for a revision…*. Ask, then record R7 500. **Expect:** "Revised quote received", "was R9 000", and it can be sent to the board again.
+- [ ] While it waits for the board, *Correct…* it. **Expect:** the approval is withdrawn (Approvals shows it *Withdrawn*), Sipho gets "Withdrawn: …", and the job is back to quotes.
+- [ ] Once approved, *Correct…* to a lower price. **Expect:** it stays approved at the new amount. *Correct…* to a higher one. **Expect:** quotes reopen, to be approved again.
+- [ ] Once the work order is issued. **Expect:** no *Correct…*.
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.

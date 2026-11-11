@@ -31,7 +31,15 @@ public sealed class JobQuote
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? Notes { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public int? GuaranteeMonths { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public bool Recommended { get; set; }
+    /// <summary>D41: every amount it has had, oldest first, with who recorded it and why. Nothing is overwritten.</summary>
+    public List<QuoteVersion> Versions { get; set; } = [];
+    /// <summary>D41: why it was rejected, when it was.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? RejectedReason { get; set; }
+    /// <summary>D41: who brought it from above the scheme's limit to within it. They can't approve it under the limit.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? CorrectedWithinLimitBy { get; set; }
 }
+
+public sealed record QuoteVersion(decimal Amount, string At, string By, [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Reason = null);
 
 public sealed class JobEvent
 {
@@ -196,6 +204,8 @@ public static class JobRules
             case "record-quote":
                 StageIs("Recording a quote", JobStages.Quoting);
                 if (quote is null) e["quoteId"] = "That quote request isn’t on this job.";
+                // D41: a recorded amount is never quietly replaced.
+                else if (quote.Status is "received" or "rejected") e["quoteId"] = "This quote is already recorded: correct it, with the reason, or ask the supplier for a revision.";
                 if (!(a.Amount > 0)) e["amount"] = "Enter the quoted amount.";
                 if (a.GuaranteeMonths is < 0 or > 120) e["guaranteeMonths"] = "Months of guarantee, 0 to 120.";
                 break;
@@ -205,6 +215,25 @@ public static class JobRules
                 if (quote is not { Status: "received" }) e["quoteId"] = "Choose a quote you’ve received.";
                 else if (a.Type == "approve-within-delegation" && quote.Amount > limit)
                     e["quoteId"] = $"Above the scheme’s limit of {BillingRules.Rand(limit)}: send it to the board.";
+                break;
+            case "correct-quote":
+                StageIs("Correcting a quote", JobStages.Quoting, JobStages.Approval, JobStages.Approved);
+                if (job.Emergency is not null) e["quoteId"] = "This went ahead in an emergency: the board confirms the amount.";
+                else if (quote is not { Status: "received" }) e["quoteId"] = "Choose a quote that’s been received.";
+                else if (job.Stage != JobStages.Quoting && !quote.Recommended) e["quoteId"] = "Only the recommended quote can change now: reopen quotes to choose another.";
+                else if (!(a.Amount > 0)) e["amount"] = "Enter the corrected amount.";
+                else if (Ledger.Round2(a.Amount!.Value) == quote.Amount) e["amount"] = "That’s its amount already.";
+                if ((a.Reason ?? "").Trim().Length < 5) e["reason"] = "Say why, e.g. typing error, or the supplier’s revised price.";
+                break;
+            case "request-revision":
+                StageIs("Asking for a revised quote", JobStages.Quoting);
+                if (quote is not { Status: "received" or "rejected" }) e["quoteId"] = "Choose a quote that’s been received or rejected.";
+                if ((a.Reason ?? "").Trim().Length < 5) e["reason"] = "Say what you’re asking them to revise.";
+                break;
+            case "reopen-quotes":
+                StageIs("Reopening quotes", JobStages.Approval, JobStages.Approved);
+                if (job.Emergency is not null) e["stage"] = "This went ahead in an emergency: the board confirms it.";
+                if ((a.Reason ?? "").Trim().Length < 5) e["reason"] = "Say why, e.g. a different supplier, or different work.";
                 break;
             case "emergency-proceed":
                 StageIs("Going ahead in an emergency", JobStages.Quoting, JobStages.Approval);

@@ -48,6 +48,9 @@ const JOB_VERB: Record<JobAction['type'], string> = {
   close: 'Closed job',
   comment: 'Commented on job',
   'change-priority': 'Changed the job’s priority',
+  'correct-quote': 'Corrected a quote',
+  'request-revision': 'Asked for a revised quote',
+  'reopen-quotes': 'Reopened quotes',
   cancel: 'Cancelled job',
 };
 

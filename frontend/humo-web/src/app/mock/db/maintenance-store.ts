@@ -487,6 +487,11 @@ export class MaintenanceStore {
         this.log(job, 'stage', 'Job closed', by);
         break;
 
+      case 'correct-quote':
+      case 'request-revision':
+      case 'reopen-quotes':
+        throw new Error('Correcting quotes is only on Humo’s API');
+
       case 'change-priority':
         this.log(job, 'stage', `Priority changed from ${job.priority} to ${action.priority}: ${action.reason}`, by);
         job.priority = action.priority;

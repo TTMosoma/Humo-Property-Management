@@ -3,7 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { map } from 'rxjs';
-import { AGENCY_QUEUE, JobDataSource, JobEvent, JobStage, PRIORITY_LABEL, Photo, Priority, TimelineEvent, TimelineKind, supplierCompliance } from '../../domain';
+import { AGENCY_QUEUE, Job, JobDataSource, JobEvent, JobStage, PRIORITY_LABEL, Photo, Priority, Quote, TimelineEvent, TimelineKind, supplierCompliance } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
@@ -67,6 +67,66 @@ export class JobPage {
     const d = this.detail();
     return !!d && this.session.can('Maintenance.Manage') && !this.session.readOnly() && d.job.stage !== 'closed' && d.job.stage !== 'cancelled';
   });
+
+  protected quoteStatus(q: Quote): string {
+    switch (q.status) {
+      case 'received':
+        return 'Received ' + formatDate(q.receivedAt, true);
+      case 'requested':
+        return 'Requested';
+      case 'revision-requested':
+        return 'Revision requested';
+      case 'rejected':
+        return 'Rejected';
+      default:
+        return 'Declined';
+    }
+  }
+
+  /** D41: every amount the quote has had, for its tooltip. */
+  protected history(q: Quote): string {
+    return (q.versions ?? []).map((v) => `${formatRand(v.amount)}${v.reason ? ` — ${v.reason}` : ''}${v.by ? ` (${v.by})` : ''}`).join('\n');
+  }
+
+  /** D41: while collecting quotes, any received one; once recommended or approved, that one, until the work order. */
+  protected canCorrect(job: Job, q: Quote): boolean {
+    if (!this.canChangePriority() || job.emergency || q.status !== 'received') return false;
+    return job.stage === 'quoting' || ((job.stage === 'approval' || job.stage === 'approved') && !!q.recommended);
+  }
+
+  protected correctQuote(job: Job, q: Quote): void {
+    const after =
+      job.stage === 'approval' ? ' It’s waiting for approval: changing it withdraws that, and it’s sent again.'
+      : job.stage === 'approved' ? ' It’s approved: a lower price stands and the approver is told; a higher one reopens quotes, to be approved again.'
+      : '';
+    openForm(this.drawer, {
+      eyebrow: `${job.ref} · ${formatRand(q.amount)}`,
+      title: 'Correct the quote',
+      intro: `The amount changes with your reason, and the job’s history keeps every amount.${after}`,
+      fields: [
+        { key: 'amount', label: 'Correct amount (R)', type: 'number', required: true, half: true },
+        { key: 'reason', label: 'Why', type: 'textarea', required: true, placeholder: 'e.g. Typing error, or the supplier’s revised price' },
+      ],
+      submitLabel: 'Correct the quote',
+      submit: (f) => this.jobs.act(job.ref, { type: 'correct-quote', quoteId: q.id, amount: Number(f['amount']), reason: f['reason'] }, job.version),
+      success: () => 'Quote corrected.',
+      failure: 'The quote wasn’t corrected',
+    });
+  }
+
+  /** D41: ask the same supplier again, e.g. after a rejection. */
+  protected askRevision(job: Job, q: Quote): void {
+    openForm(this.drawer, {
+      eyebrow: `${job.ref} · ${formatRand(q.amount)}`,
+      title: 'Ask for a revised quote',
+      intro: 'The quote shows “Revision requested” until you record the new amount. The earlier amount stays in its history.',
+      fields: [{ key: 'reason', label: 'What to revise', type: 'textarea', required: true, placeholder: q.rejectedReason ?? 'e.g. The board asks for a lower price' }],
+      submitLabel: 'Ask for a revision',
+      submit: (f) => this.jobs.act(job.ref, { type: 'request-revision', quoteId: q.id, reason: f['reason'] }, job.version),
+      success: () => 'Revision asked for. Record the new amount when it comes in.',
+      failure: 'It wasn’t saved',
+    });
+  }
 
   /** A job can become more (or less) pressing at any stage; the reason goes in its history. */
   protected changePriority(): void {

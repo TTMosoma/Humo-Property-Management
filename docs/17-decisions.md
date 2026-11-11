@@ -895,6 +895,29 @@ Photos on a maintenance request were kept by name only on the live system, so th
 - What counts as a write-off the agency may make without the board (for example, small interest amounts under its mandate) is for a practising managing agent or auditor to confirm. Until then, every write-off goes to the board.
 - Builds on D39 (the board's approval and upload) and D24 (one approver).
 
+---
+
+## D41 — Correcting a quote, and new quotes after a rejection (11 November 2026)
+
+**Status:** approved by the product owner (Terry Mosoma).
+
+**The problem:** a quote recorded with the wrong amount can't be corrected on the screen, and recording it again quietly replaces the amount with no trace. After the board or the agency rejects a quote, the job goes back to quotes, but the rejected quote still counts as received and recommended, and only suppliers not yet asked can be asked, so the job is stuck. The amount decides who approves (D39), so a change to it must never go unnoticed.
+
+**Decision:**
+1. **Every change to a quote is kept.** A quote has its versions: the amount, who recorded it, when and why. The job's history and the audit log show "R10 000 → R1 000: typing error". Nothing is overwritten.
+2. **While collecting quotes:** staff can correct a recorded amount, with a reason, and record a late quote from any supplier asked.
+3. **Ask the same supplier again:** for a revised quote, at any time while collecting quotes, including after a rejection. The quote shows *Revision requested* until the new amount is recorded.
+4. **After a rejection:** the rejected quote is marked *Rejected*, with the reason, and is no longer recommended. The job is back to collecting quotes: ask the same supplier for a revision, ask another, or record a new quote.
+5. **Waiting for approval:** changing the recommended quote withdraws the approval. The approval closes as *Withdrawn*, whoever was deciding it is told (the board's trustees, D39), and the job goes back to collecting quotes.
+6. **Approved, before the work order:** a lower price from the same supplier, for the same work, updates the approved amount with a reason, and whoever approved it is told. A higher price, another supplier or different work reopens quotes, and it's approved again.
+7. **Once the work order is issued,** the quote is locked. A difference shows when the invoice is captured, where an invoice above its quote already needs approval (D39 above the limit).
+8. **Crossing the limit:** a correction that brings a quote from above the scheme's limit to within it can't be approved under the limit by the person who corrected it. It goes to a second agency approver, or, with one approver, follows D24. The correction is flagged in the audit log.
+
+**Consequences:**
+- Quotes recorded before this have one version: what they were recorded as.
+- With D38, suppliers will revise their own quote through their link until it's approved, as a new version, marked as the supplier's.
+- Item 21 (no way forward after a rejection) is points 3 and 4.
+
 ## Still open (needs domain expertise before slice 2)
 
 - **Levies and participation quotas:** decided per scheme in **D13**. Still open: interest rules, special levies, VAT.

@@ -403,6 +403,73 @@ public sealed class MaintenanceTests : IDisposable
     }
 
     [Fact]
+    public async Task A_recorded_quote_is_corrected_with_a_reason_never_overwritten()
+    {
+        var s = await Scheme();
+        var (reference, quote, _) = await QuotedJob(s, 10_000, "normal");
+        Assert.True((await Refused(s.Admin, reference, new { type = "record-quote", quoteId = quote, amount = 1_000 })).TryGetProperty("quoteId", out _));
+        Assert.True((await Refused(s.Admin, reference, new { type = "correct-quote", quoteId = quote, amount = 1_000 })).TryGetProperty("reason", out _));
+
+        await Act(s.Admin, reference, new { type = "correct-quote", quoteId = quote, amount = 1_000, reason = "Typing error" });
+        var job = await Job(s.Admin, reference);
+        var q = job.GetProperty("quotes")[0];
+        Assert.Equal(1_000m, q.GetProperty("amount").GetDecimal());
+        Assert.Equal([10_000m, 1_000m], q.GetProperty("versions").EnumerateArray().Select(v => v.GetProperty("amount").GetDecimal()));
+        Assert.Contains(job.GetProperty("events").EnumerateArray(), e => e.GetProperty("text").GetString()!.Contains("corrected:") && e.GetProperty("text").GetString()!.Contains("Typing error"));
+
+        // Brought within the limit by Thandeka: she can't approve it under the limit; another approver at the agency can.
+        Assert.Contains("someone else", (await Refused(s.Admin, reference, new { type = "approve-within-delegation", quoteId = quote })).GetProperty("quoteId").GetString());
+        await api.Person("johan@acacia.example", Roles.PortfolioManager, s.Org, [s.Kc]);
+        var johan = await api.SignedIn("johan@acacia.example");
+        await Act(johan, reference, new { type = "approve-within-delegation", quoteId = quote });
+        Assert.Equal("approved", (await Job(s.Admin, reference)).GetProperty("stage").GetString());
+    }
+
+    [Fact]
+    public async Task After_a_rejection_the_same_supplier_is_asked_for_a_revision()
+    {
+        var s = await Scheme();
+        var (reference, quote, _) = await QuotedJob(s, 9_000, "normal");
+        await Act(s.Admin, reference, new { type = "send-for-approval", quoteId = quote });
+        var item = Assert.Single((await Ok(await s.Trustee.GetAsync("/api/work-items"))).EnumerateArray(), w => w.GetProperty("type").GetString() == "quote-approval");
+        await NoContent(await s.Trustee.PostAsJsonAsync($"/api/work-items/{item.GetProperty("id").GetString()}/decision", new { decision = "rejected", comment = "Too expensive, get it cheaper" }));
+
+        var q = (await Job(s.Admin, reference)).GetProperty("quotes")[0];
+        Assert.Equal(("rejected", "Too expensive, get it cheaper"), (q.GetProperty("status").GetString(), q.GetProperty("rejectedReason").GetString()));
+        Assert.True((await Refused(s.Admin, reference, new { type = "send-for-approval", quoteId = quote })).TryGetProperty("quoteId", out _));
+
+        await Act(s.Admin, reference, new { type = "request-revision", quoteId = quote, reason = "The board asks for a lower price" });
+        Assert.Equal("revision-requested", (await Job(s.Admin, reference)).GetProperty("quotes")[0].GetProperty("status").GetString());
+        await Act(s.Admin, reference, new { type = "record-quote", quoteId = quote, amount = 7_500 });
+        Assert.Equal([9_000m, 7_500m], (await Job(s.Admin, reference)).GetProperty("quotes")[0].GetProperty("versions").EnumerateArray().Select(v => v.GetProperty("amount").GetDecimal()));
+        await Act(s.Admin, reference, new { type = "send-for-approval", quoteId = quote });
+        Assert.Equal("approval", (await Job(s.Admin, reference)).GetProperty("stage").GetString());
+    }
+
+    [Fact]
+    public async Task Changing_a_quote_withdraws_a_waiting_approval_and_a_higher_price_reopens_quotes()
+    {
+        var s = await Scheme();
+        var (reference, quote, _) = await QuotedJob(s, 9_000, "normal");
+        await Act(s.Admin, reference, new { type = "send-for-approval", quoteId = quote });
+        var item = (await Job(s.Admin, reference)).GetProperty("approval").GetProperty("workItemId").GetString();
+
+        await Act(s.Admin, reference, new { type = "correct-quote", quoteId = quote, amount = 8_000, reason = "Supplier revised the price" });
+        Assert.Equal("quoting", (await Job(s.Admin, reference)).GetProperty("stage").GetString());
+        Assert.Equal("withdrawn", await api.Db(db => db.WorkItems.Where(w => w.Id == Guid.Parse(item!)).Select(w => w.Status).SingleAsync()));
+        Assert.Contains(await api.Db(db => db.Notices.Select(n => n.Title).ToListAsync()), t => t.StartsWith("Withdrawn:"));
+
+        // Approved: a lower price stands, a higher one reopens quotes.
+        await Act(s.Admin, reference, new { type = "send-for-approval", quoteId = quote });
+        var again = Assert.Single((await Ok(await s.Trustee.GetAsync("/api/work-items"))).EnumerateArray(), w => w.GetProperty("type").GetString() == "quote-approval" && w.GetProperty("status").GetString() == "open");
+        await NoContent(await s.Trustee.PostAsJsonAsync($"/api/work-items/{again.GetProperty("id").GetString()}/decision", new { decision = "approved" }));
+        await Act(s.Admin, reference, new { type = "correct-quote", quoteId = quote, amount = 7_800, reason = "Discount for early booking" });
+        Assert.Equal(("approved", 7_800m), ((await Job(s.Admin, reference)).GetProperty("stage").GetString(), (await Job(s.Admin, reference)).GetProperty("quotes")[0].GetProperty("amount").GetDecimal()));
+        await Act(s.Admin, reference, new { type = "correct-quote", quoteId = quote, amount = 8_500, reason = "Extra materials needed" });
+        Assert.Equal("quoting", (await Job(s.Admin, reference)).GetProperty("stage").GetString());
+    }
+
+    [Fact]
     public async Task Each_scheme_sets_its_own_limit_with_a_passkey()
     {
         var s = await Scheme();

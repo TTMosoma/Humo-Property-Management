@@ -38,6 +38,8 @@ export function statusLabel(w: WorkItem): string {
       return 'Approved';
     case 'rejected':
       return 'Rejected';
+    case 'withdrawn':
+      return 'Withdrawn';
     default:
       return 'Open';
   }

@@ -56,12 +56,15 @@ export interface Quote {
   supplierId: string;
   amount: number;
   receivedAt?: string;
-  /** Requested but not yet received. */
-  status: 'requested' | 'received' | 'declined';
+  /** Requested but not yet received; a revision asked for (D41); rejected by whoever decided it. */
+  status: 'requested' | 'received' | 'declined' | 'revision-requested' | 'rejected';
   validUntil?: string;
   notes?: string;
   guaranteeMonths?: number;
   recommended?: boolean;
+  /** D41: every amount it has had, oldest first. Nothing is overwritten. */
+  versions?: { amount: number; at: string; by: string; reason?: string }[];
+  rejectedReason?: string;
 }
 
 export interface JobEvent {
