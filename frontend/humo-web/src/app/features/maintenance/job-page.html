@@ -56,7 +56,7 @@
                   </td>
                   <td class="end money">
                     {{ q.status === 'received' || q.status === 'rejected' || q.status === 'revision-requested' ? (q.amount | rand) : '—' }}
-                    @if ((q.versions?.length ?? 0) > 1) { <div class="muted small" [title]="history(q)">was {{ q.versions![q.versions!.length - 2].amount | rand }}</div> }
+                    @if (previous(q); as was) { <div class="muted small" [title]="history(q)">{{ was === q.amount ? 'revised: same price' : 'was ' + (was | rand) }}</div> }
                   </td>
                   <td>{{ q.guaranteeMonths ? q.guaranteeMonths + ' months' : '—' }}</td>
                   <td>@if (q.recommended) { <ui-status-pill [label]="d.job.approval?.status === 'approved' ? 'Approved' : 'Recommended'" [tone]="d.job.approval?.status === 'approved' ? 'success' : 'accent'" /> }</td>

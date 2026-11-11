@@ -370,7 +370,7 @@ Restart the API first. You'll need Thandeka's and Priya's sign-ins, and a truste
 
 Restart the API first. You'll need Thandeka's and Sipho's sign-ins, and another agency approver (Johan, the Kingfisher Court portfolio manager) for the last step.
 
-- [ ] On a Kingfisher Court job, record a quote of R10 000. Try to record it again. **Expect:** no field to record it again; the quotes table offers *Correct…*.
+- [ ] On a Kingfisher Court job, record a quote of R10 000. **Expect:** *Next step* no longer has a field to record that quote; the quotes table offers *Correct…* and *Ask for a revision…*. (A revision lets you record it again; if the supplier keeps the price, it shows "revised: same price".)
 - [ ] *Correct…* to R1 000 with the reason "Typing error". **Expect:** the table shows R1 000 with "was R10 000", and the job's history says "corrected: R10 000 → R1 000: Typing error (now within the scheme’s limit…)".
 - [ ] As Thandeka, *Approve*. **Expect:** refused: you corrected it to within the limit. As Johan, approve it. **Expect:** approved.
 - [ ] On another job, a quote of R9 000 sent to the board. As Sipho, reject it with a reason. **Expect:** the quote shows *Rejected* with the reason, and *Ask for a revision…*. Ask, then record R7 500. **Expect:** "Revised quote received", "was R9 000", and it can be sent to the board again.

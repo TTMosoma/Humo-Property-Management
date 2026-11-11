@@ -83,6 +83,12 @@ export class JobPage {
     }
   }
 
+  /** D41: the amount before the latest one, if it has changed or been revised. */
+  protected previous(q: Quote): number | undefined {
+    const v = q.versions ?? [];
+    return v.length > 1 ? v[v.length - 2].amount : undefined;
+  }
+
   /** D41: every amount the quote has had, for its tooltip. */
   protected history(q: Quote): string {
     return (q.versions ?? []).map((v) => `${formatRand(v.amount)}${v.reason ? ` — ${v.reason}` : ''}${v.by ? ` (${v.by})` : ''}`).join('\n');
