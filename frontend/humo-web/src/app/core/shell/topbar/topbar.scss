@@ -325,6 +325,8 @@
 .notif-head {
   position: sticky;
   top: 0;
+  /* Above the list it stays over: each notification's icon is positioned (for its unread dot) and would scroll over it. */
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
