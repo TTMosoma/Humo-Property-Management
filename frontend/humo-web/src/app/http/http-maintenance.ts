@@ -9,6 +9,7 @@ import {
   ListQuery,
   NewJobInput,
   Photo,
+  Quote,
   Page,
   SupplierDataSource,
   SupplierDetail,
@@ -37,6 +38,10 @@ export class HttpJobDataSource extends HttpPort implements JobDataSource {
 
   removePhoto(ref: string, photoId: string): Observable<void> {
     return this.command('DELETE', `/jobs/${encodeURIComponent(ref)}/photos/${encodeURIComponent(photoId)}`, null, ['jobs']);
+  }
+
+  quoteFileUrl(ref: string, quote: Quote): string | undefined {
+    return quote.fileId ? `${this.base}/jobs/${encodeURIComponent(ref)}/quotes/${encodeURIComponent(quote.id)}/file` : undefined;
   }
 
   photoUrl(ref: string, photo: Photo): string | undefined {

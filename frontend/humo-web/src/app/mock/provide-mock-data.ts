@@ -33,6 +33,7 @@ import {
   OrganisationDataSource,
   PlanDataSource,
   PlatformDataSource,
+  SupplierLinkDataSource,
   TechnicalLogDataSource,
   AccountRequestDataSource,
   SecurityDataSource,
@@ -49,6 +50,7 @@ import {
   WorkItemDataSource, PackageLimitsDataSource, OwnerInvoiceDataSource } from '../domain';
 import { InMemoryHumoTeamDataSource } from './data-sources/in-memory-humo-team-data-source';
 import { InMemoryTechnicalLogDataSource } from './data-sources/in-memory-technical-logs';
+import { InMemorySupplierLinkDataSource } from './data-sources/in-memory-supplier-links';
 import { InMemoryPackageLimitsDataSource } from './data-sources/in-memory-package-limits';
 import { InMemoryOwnerInvoiceDataSource } from './data-sources/in-memory-owner-invoices';
 import {
@@ -115,6 +117,7 @@ export function provideMockData(): EnvironmentProviders {
     { provide: ReceiptDataSource, useClass: InMemoryReceiptDataSource },
     { provide: TimelineDataSource, useClass: InMemoryTimelineDataSource },
     { provide: JobDataSource, useClass: InMemoryJobDataSource },
+    { provide: SupplierLinkDataSource, useClass: InMemorySupplierLinkDataSource },
     { provide: SupplierDataSource, useClass: InMemorySupplierDataSource },
     { provide: PayablesDataSource, useClass: InMemoryPayablesDataSource },
     { provide: AccessDataSource, useClass: InMemoryAccessDataSource },

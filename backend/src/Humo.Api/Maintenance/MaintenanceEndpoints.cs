@@ -161,7 +161,7 @@ public static partial class MaintenanceEndpoints
     }
 
     private static async Task<IResult> Act(string reference, JobActionRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, MaintenanceService m,
-        Work.BoardApprovals board, Platform.Notices notices, CancellationToken ct)
+        Work.BoardApprovals board, Platform.Notices notices, SupplierLinks links, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } me) return Results.Unauthorized();
         var a = body.Action ?? new JobAction("");
@@ -208,7 +208,32 @@ public static partial class MaintenanceEndpoints
         {
             if (emergency && actor.Assignment.Role is not (Roles.AgencyAdmin or Roles.PortfolioManager))
                 throw new CommandRefused("forbidden", "An Agency Administrator or Portfolio Manager decides to go ahead in an emergency.");
+            var asked = job.Quotes.Select(q => q.Id).ToHashSet();
             await ApplyAsync(row, job, a, actor, suppliers, problems, db, m, ct, limit, notices);
+            // D38: what the supplier needs goes to them by email, with their own link.
+            var agency = await db.Organisations.AsNoTracking().Where(o => o.Id == row.OrganisationId).Select(o => o.ShortName).FirstAsync(ct);
+            var area = await db.Schemes.AsNoTracking().Where(s => s.Id == row.SchemeId).Select(s => s.Suburb + ", " + s.City).FirstAsync(ct);
+            async Task Send(JobQuote q, string subject, string body)
+            {
+                if (!suppliers.TryGetValue(q.SupplierId, out var s) || string.IsNullOrWhiteSpace(s.Email)) return;
+                var token = await links.IssueAsync(row, q.SupplierId, SupplierLinks.Quote, q.Id, a.ExcludePhotoIds, ct);
+                links.SendAfterCommit(commands, row.Id, s.Email.Trim(), s.Name, subject, body, SupplierLinks.Quote, token, ct);
+            }
+            if (a.Type == "request-quotes")
+                foreach (var q in job.Quotes.Where(q => !asked.Contains(q.Id)))
+                    await Send(q, $"Quote request from {agency}: {job.Title}",
+                        $"{agency} asks {Name(q.SupplierId)} for a quote.\n\nWhat: {job.Title} ({job.Category})\nWhere: {area}\n\nSee the details and photos, and send your quote here:");
+            if (a.Type == "request-revision" && job.Quotes.FirstOrDefault(q => q.Id == a.QuoteId) is { } revised)
+                await Send(revised, $"Revised quote requested by {agency}: {job.Title}",
+                    $"{agency} asks {Name(revised.SupplierId)} for a revised quote: {a.Reason!.Trim()}\n\nWhat: {job.Title} ({job.Category})\nWhere: {area}\n\nSee the request and send your revised quote here:");
+            if (a.Type == "issue-work-order" && job.SupplierId is { } booked && suppliers.TryGetValue(booked, out var bookedSupplier) && !string.IsNullOrWhiteSpace(bookedSupplier.Email))
+            {
+                var token = await links.IssueAsync(row, booked, SupplierLinks.WorkOrder, null, a.ExcludePhotoIds, ct);
+                var when = DateTimeOffset.Parse(job.WorkOrder!.ScheduledFor, CultureInfo.InvariantCulture).ToOffset(TimeSpan.FromHours(2));
+                links.SendAfterCommit(commands, row.Id, bookedSupplier.Email.Trim(), bookedSupplier.Name, $"Work order from {agency}: {job.Title}, {when:ddd d MMM}",
+                    $"{agency} books {bookedSupplier.Name} for {job.Title} on {when:dddd d MMMM}.\n\nThe address, access arrangements and photos are on your work order. Confirm the date, or ask for another, here:",
+                    SupplierLinks.WorkOrder, token, ct);
+            }
             if (emergency)
             {
                 var scheme = await db.Schemes.AsNoTracking().FirstAsync(s => s.Id == row.SchemeId, ct);

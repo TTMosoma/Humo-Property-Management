@@ -65,11 +65,22 @@
             <li class="muted">No suppliers for {{ category() }} serve this scheme yet. <a routerLink="/suppliers">Add one in Suppliers</a>.</li>
           }
         </ul>
+        @if (job.photos.length) {
+          <h3 class="sub">Photos to send</h3>
+          <ul class="suppliers">
+            @for (p of job.photos; track p.id) {
+              <li><label class="check"><input type="checkbox" [checked]="!leftOut().includes(p.id)" (change)="togglePhoto(p.id)" /> {{ p.caption }}</label></li>
+            }
+          </ul>
+          <p class="muted small">Each supplier is emailed a link to the work and these photos. Untick any that show something private.</p>
+        }
+        @if (prototype) {
         <a class="humo-quotes" [routerLink]="['/maintenance', job.ref, 'quote-request']">
           <ion-icon name="hammer-outline" aria-hidden="true" />
           <span><strong>Request quotes through Humo Contractor</strong> — your suppliers quote in Humo Contractor and you compare offers side by side.</span>
           <ion-icon name="chevron-forward-outline" aria-hidden="true" />
         </a>
+        }
         <div class="actions">
           <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="triageAndRequest()">
             {{ chosenSuppliers().length ? 'Save & request ' + chosenSuppliers().length + ' quote' + (chosenSuppliers().length > 1 ? 's' : '') : 'Save triage' }}
@@ -233,6 +244,13 @@
         </div>
       } @else {
         <p class="lead">{{ supplier()?.name }} is booked for {{ formatDate(job.workOrder?.scheduledFor) }}.</p>
+      }
+      @if (job.workOrder?.confirmedAt) {
+        <p class="muted small">{{ supplier()?.name }} confirmed the date.</p>
+      } @else if (job.workOrder?.askedFor) {
+        <div class="note warn"><ion-icon name="calendar-outline" aria-hidden="true" /><span>{{ supplier()?.name }} asks to come on {{ formatDate(job.workOrder!.askedFor!) }} instead. Agree it with them, then record the visit.</span></div>
+      } @else {
+        <p class="muted small">Waiting for {{ supplier()?.name }} to confirm the date through their link.</p>
       }
       @if (canAct()) {
         <div class="actions">

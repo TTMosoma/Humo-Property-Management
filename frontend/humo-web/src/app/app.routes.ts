@@ -46,6 +46,12 @@ export const routes: Routes = [
     data: { kind: 'letter' },
     loadComponent: () => import('./features/documents/print-document-page').then((m) => m.PrintDocumentPage),
   },
+  // D38: a supplier's quote request or work order, from their email. Humo Contractor's page, no sign-in: the link is the key.
+  {
+    path: 'supplier/:kind/:token',
+    title: 'Humo Contractor',
+    loadComponent: () => import('./features/supplier-link/supplier-link-page').then((m) => m.SupplierLinkPage),
+  },
   // A statement's secure link from the email (docs/18 R-1): opens with a one-time code, no account or session.
   {
     path: 'd/:token',

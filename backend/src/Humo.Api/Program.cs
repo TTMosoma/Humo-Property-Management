@@ -58,6 +58,7 @@ builder.Services.AddScoped<Humo.Api.Work.IApprovalHandler, Humo.Api.Finance.Bank
 builder.Services.AddScoped<Humo.Api.Messaging.MessageUsage>();
 builder.Services.AddScoped<Humo.Api.Work.SoleAuthority>();
 builder.Services.AddScoped<Humo.Api.Work.BoardApprovals>();
+builder.Services.AddScoped<Humo.Api.Maintenance.SupplierLinks>();
 builder.Services.AddScoped<Humo.Api.Work.StaffCovers>();
 builder.Services.AddScoped<Humo.Api.Access.EmailChanges>();
 builder.Services.AddScoped<Humo.Api.Finance.Budgets>();
@@ -180,6 +181,7 @@ api.MapSchemes();
 api.MapUnits();
 api.MapPeople();
 Humo.Api.Maintenance.JobPhotoEndpoints.MapJobPhotos(api);
+Humo.Api.Maintenance.SupplierLinkEndpoints.MapSupplierLinks(api);
 Humo.Api.Access.EmailChangeEndpoints.MapEmailChanges(api);
 Humo.Api.Portfolio.PastResidentEndpoints.MapPastResident(api);
 api.MapBoards();

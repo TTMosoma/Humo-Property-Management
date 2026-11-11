@@ -918,6 +918,38 @@ Photos on a maintenance request were kept by name only on the live system, so th
 - With D38, suppliers will revise their own quote through their link until it's approved, as a new version, marked as the supplier's.
 - Item 21 (no way forward after a rejection) is points 3 and 4.
 
+---
+
+## D38 — Suppliers quote and take work orders by email, without an account (11 November 2026)
+
+**Status:** approved by the product owner (Terry Mosoma).
+
+**The problem:** asking a supplier for a quote only records it on the job; nothing reaches the supplier, and staff phone or email them and type the amount in by hand. Work orders don't reach them either. The *Request quotes through Humo Contractor* screen fails on the live system ("The quote request wasn't sent"), because Humo Contractor doesn't exist yet. Asking suppliers to sign up first would slow every job down.
+
+**Decision:**
+1. **Quote requests go to the supplier by email.** Asking a supplier to quote emails them: the job's title, the area (suburb, not the address), the trade, the reply-by date, and one button. No photos or personal details are in the email.
+2. **The button opens a private page, with no sign-in.** It shows the work, the requirements and the job's photos at full quality, and lets the supplier:
+   - quote an amount, a guarantee and notes, with a PDF of their quote if they have one;
+   - revise their quote until it's approved, each revision kept as a version marked as the supplier's (D41);
+   - decline to quote.
+   The quote lands on the job as received, exactly as if staff had recorded it. Staff can still record a quote that arrives by phone.
+3. **Work orders go the same way.** Issuing a work order emails the supplier a link to a page with the date, the access notes and the job's details, where they confirm the booking or ask for another date. Access notes and the address appear only here, never in a quote request.
+4. **What the supplier sees is limited.** Never a resident's name, phone number or email, or the agency's internal notes. Staff can untick photos before sending if any show something private.
+5. **The link is the key, so it's guarded:**
+   - one link per supplier per quote request or work order, stored only as a hash;
+   - it stops working once the quote is decided (approved or rejected) or quotes close; a work order link stops 30 days after the work is done;
+   - it only ever opens that one request, and is rate-limited like document links;
+   - pages aren't indexed by search engines, and every submission is in the audit log.
+6. **The page is Humo Contractor's**, branded as such, served from `pm.humo.co.za` until Humo Contractor has its own address. After submitting, the supplier sees a confirmation page with Humo Contractor's own promotion ("Save this quote to a free account"); no advertising networks (see the monetisation notes).
+7. **The *Request quotes through Humo Contractor* screen is replaced** on the live system by these emails. It stays in the prototype.
+
+**Later, in the next piece of work (item 4):** completion photos and the invoice uploaded through the work order link, the invoice's payment status shown there, a one-click free account after submitting, and *Request* on a missing vetting document emailing the supplier an upload link.
+
+**Consequences:**
+- Supplier emails need the supplier's email address, which the supplier record already requires.
+- Every email is sent after the change is saved, and a failed email doesn't undo it (docs/26 §8); the job shows whether it was sent.
+- Delivery reports for these emails come with item 14.
+
 ## Still open (needs domain expertise before slice 2)
 
 - **Levies and participation quotas:** decided per scheme in **D13**. Still open: interest rules, special levies, VAT.

@@ -68,6 +68,11 @@ export class JobPage {
     return !!d && this.session.can('Maintenance.Manage') && !this.session.readOnly() && d.job.stage !== 'closed' && d.job.stage !== 'cancelled';
   });
 
+  /** D38: the supplier's own quote document, if they sent one through their link. */
+  protected quoteFile(ref: string, q: Quote): string | undefined {
+    return this.jobs.quoteFileUrl(ref, q);
+  }
+
   protected quoteStatus(q: Quote): string {
     switch (q.status) {
       case 'received':

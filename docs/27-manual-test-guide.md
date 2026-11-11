@@ -378,6 +378,19 @@ Restart the API first. You'll need Thandeka's and Sipho's sign-ins, and another 
 - [ ] Once approved, *Correct…* to a lower price. **Expect:** it stays approved at the new amount. *Correct…* to a higher one. **Expect:** quotes reopen, to be approved again.
 - [ ] Once the work order is issued. **Expect:** no *Correct…*.
 
+## 33. Suppliers quote and take work orders by email (D38)
+
+Restart the API first. Emails arrive in Mailpit (localhost:8025). Use a supplier whose email you can read there, such as AquaFix Plumbing, and a job with a photo.
+
+- [ ] As Thandeka, on the job: *Ask for quotes* lists the job's photos under *Photos to send*. Untick one, tick AquaFix, and send. **Expect:** the job's history says "Quote request emailed to AquaFix Plumbing". *Request quotes through Humo Contractor* isn't offered.
+- [ ] In Mailpit, open the email. **Expect:** the title, area and a link; no photos, no resident's name, no address.
+- [ ] Open the link in a private window (not signed in). **Expect:** a Humo Contractor page with the work and the photos you left ticked; not the unticked one.
+- [ ] Send a quote of R1 200 with a PDF. **Expect:** "Your quote has been sent" and the Humo Contractor promotion. On the job: received, R1 200, "Their quote (PDF)" opens.
+- [ ] Send a revised quote of R1 100 from the same link. **Expect:** on the job, R1 100 with "was R1 200".
+- [ ] Approve it. Open the link again. **Expect:** "Your quote has been decided", with nothing to send.
+- [ ] Issue the work order. **Expect:** a "Work order" email; its page shows the address and the access notes. *Confirm this date*. **Expect:** the job says AquaFix confirmed the date.
+- [ ] On another job, *Ask for a revision…* of a supplier's quote. **Expect:** a new email; the old link says it isn't valid, the new one opens.
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.

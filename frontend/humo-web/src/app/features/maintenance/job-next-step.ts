@@ -6,6 +6,7 @@ import { RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { DELEGATED_LIMIT, DocStatus, suppliersFor, JobAction, JobDataSource, JobDetail, PRIORITY_LABEL, Priority, Quote, Supplier, Trade, describeFailure, docStatus, supplierCompliance, saDate } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
+import { PrototypeControls } from '../../core/prototype/prototype-controls';
 import { DrawerService } from '../../ui/drawer/drawer.service';
 import { openForm } from '../shared/form-drawer';
 import { SessionService } from '../../core/session/session.service';
@@ -63,6 +64,14 @@ export class JobNextStep {
   protected readonly now = new Date().toISOString();
 
   protected readonly busy = signal(false);
+  /** D38: photos left off the suppliers' links. */
+  protected readonly leftOut = signal<string[]>([]);
+  /** The Humo Contractor quote request exists only in the prototype until Humo Contractor does (D38). */
+  protected readonly prototype = !!inject(PrototypeControls, { optional: true });
+
+  protected togglePhoto(id: string): void {
+    this.leftOut.update((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]));
+  }
   /** Portfolio managers and agency admins run jobs; finance and trustees see the state. */
   // Permission-based: Operations runs jobs too; Observe impersonation removes both.
   protected readonly canAct = computed(() => this.session.can('Maintenance.Manage'));
@@ -209,7 +218,7 @@ export class JobNextStep {
     this.run(
       [
         { type: 'triage', assigneeId: this.assignee(), priority: this.priority(), category: this.category() },
-        ...(this.chosenSuppliers().length ? [{ type: 'request-quotes', supplierIds: this.chosenSuppliers() } as JobAction] : []),
+        ...(this.chosenSuppliers().length ? [{ type: 'request-quotes', supplierIds: this.chosenSuppliers(), excludePhotoIds: this.leftOut() } as JobAction] : []),
       ],
       this.chosenSuppliers().length ? `Quotes requested from ${this.chosenSuppliers().length} suppliers` : 'Triage saved',
       ref,
@@ -217,7 +226,7 @@ export class JobNextStep {
   }
 
   protected requestMore(id: string): void {
-    this.run([{ type: 'request-quotes', supplierIds: [id] }], `Quote requested from ${this.supplierName(id)}`);
+    this.run([{ type: 'request-quotes', supplierIds: [id], excludePhotoIds: this.leftOut() }], `Quote request emailed to ${this.supplierName(id)}`);
   }
 
   protected recordQuote(quoteId: string): void {

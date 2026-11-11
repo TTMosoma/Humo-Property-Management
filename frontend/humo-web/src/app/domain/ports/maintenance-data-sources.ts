@@ -1,6 +1,6 @@
 import { Observable } from 'rxjs';
 import { ListQuery, Page } from './list-query';
-import { Invoice, Job, PaymentBatch, Photo, Priority } from '../models/job';
+import { Invoice, Job, PaymentBatch, Photo, Priority, Quote } from '../models/job';
 import { Scheme } from '../models/scheme';
 import { BankDetailsInput, DocStatus, Supplier, SupplierStatus, Trade } from '../models/supplier';
 import { Unit } from '../models/unit';
@@ -73,7 +73,8 @@ export interface NewJobInput {
 /** Every change to a job is a named command — the same shape the .NET API will expose. */
 export type JobAction =
   | { type: 'triage'; assigneeId: string; priority: Priority; category: Trade }
-  | { type: 'request-quotes'; supplierIds: string[] }
+  /** D38: each supplier is emailed a link; `excludePhotoIds` are left off it. */
+  | { type: 'request-quotes'; supplierIds: string[]; excludePhotoIds?: string[] }
   | { type: 'record-quote'; quoteId: string; amount: number; guaranteeMonths?: number; notes?: string }
   | { type: 'send-for-approval'; quoteId: string }
   /** D39: an urgent job goes ahead above the scheme's limit; the board confirms it afterwards. Needs a passkey. */
@@ -121,6 +122,10 @@ export abstract class JobDataSource {
   abstract removePhoto(ref: string, photoId: string): Observable<void>;
   /** Where a stored photo's image is served from; none in the simulation, which keeps only the name. */
   photoUrl(_ref: string, _photo: Photo): string | undefined {
+    return undefined;
+  }
+  /** D38: where a supplier's own quote document is served from; none in the simulation. */
+  quoteFileUrl(_ref: string, _quote: Quote): string | undefined {
     return undefined;
   }
 }

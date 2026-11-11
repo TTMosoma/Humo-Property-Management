@@ -22,6 +22,7 @@ export * from './models/period';
 export * from './models/supplier';
 export * from './models/job';
 export * from './ports/maintenance-data-sources';
+export * from './ports/supplier-link-data-source';
 export * from './models/permission';
 export * from './models/entitlement';
 export * from './models/security';

@@ -37,6 +37,8 @@ public sealed class JobQuote
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? RejectedReason { get; set; }
     /// <summary>D41: who brought it from above the scheme's limit to within it. They can't approve it under the limit.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? CorrectedWithinLimitBy { get; set; }
+    /// <summary>D38: the supplier's own quote document (a PDF), sent through their link.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? FileId { get; set; }
 }
 
 public sealed record QuoteVersion(decimal Amount, string At, string By, [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Reason = null);
@@ -67,7 +69,10 @@ public sealed class JobApproval
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public bool? WithinDelegation { get; set; }
 }
 
-public sealed record WorkOrder(string IssuedAt, string ScheduledFor, [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? AccessNotes = null);
+/// <param name="ConfirmedAt">D38: the supplier confirmed the date through their link.</param>
+/// <param name="AskedFor">D38: the day the supplier asked to come instead (yyyy-MM-dd).</param>
+public sealed record WorkOrder(string IssuedAt, string ScheduledFor, [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? AccessNotes = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ConfirmedAt = null, [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? AskedFor = null);
 public sealed record JobCompletion(string CompletedAt, string Notes);
 public sealed record JobVerification(string At, string By, string Outcome, [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Comment = null);
 
@@ -109,7 +114,8 @@ public sealed class Job
 public sealed record JobAction(
     string Type, string? AssigneeId = null, string? Priority = null, string? Category = null, List<string>? SupplierIds = null, string? QuoteId = null, decimal? Amount = null,
     int? GuaranteeMonths = null, string? Notes = null, string? ScheduledFor = null, string? AccessNotes = null, bool? OverrideVetting = null, string? Outcome = null,
-    string? Comment = null, bool? OnBehalf = null, string? InvoiceNo = null, string? Text = null, string? Reason = null);
+    string? Comment = null, bool? OnBehalf = null, string? InvoiceNo = null, string? Text = null, string? Reason = null,
+    List<string>? ExcludePhotoIds = null);
 
 public static class JobStages
 {
