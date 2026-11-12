@@ -117,9 +117,10 @@ export const NAV: NavSection[] = [
         children: [
           { id: 'units', label: 'Units', route: '/units', permission: 'Portfolio.Browse', keywords: 'section erf flat' },
           { id: 'people', label: 'People', route: '/people', permission: 'Portfolio.Browse', keywords: 'owners tenants trustees residents contacts' },
-          { id: 'staff', label: 'Staff', route: '/staff', permission: 'Portfolio.Browse', feature: 'team-management', keywords: 'team portfolio managers employees workload' },
         ],
       },
+      // The agency's own people: who manages what, their workload and away cover. Not portfolio: that's what's managed.
+      { id: 'staff', label: 'Team', icon: 'people-outline', route: '/staff', permission: 'Portfolio.Browse', feature: 'team-management', keywords: 'staff team portfolio managers employees workload away cover' },
       {
         id: 'finance',
         label: 'Finance',
