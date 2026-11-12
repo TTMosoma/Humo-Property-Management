@@ -125,7 +125,8 @@ import { formatDate, formatRand } from '../../ui/format/money';
     </main>
   `,
   styles: `
-    :host { display: block; min-height: 100vh; background: var(--c-bg, #f5f6f8); color: var(--c-text, #111); }
+    /* Ionic fixes ion-app to the window with overflow hidden, so this page is its own scroll area (as the statement link). */
+    :host { display: block; height: 100%; overflow-y: auto; overscroll-behavior: contain; background: var(--c-bg, #f5f6f8); color: var(--c-text, #111); }
     .page { max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; }
     .brand { display: flex; align-items: baseline; gap: 10px; margin-bottom: 16px; }
     .mark { font-weight: 700; font-size: 18px; }
