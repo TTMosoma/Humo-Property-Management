@@ -205,7 +205,7 @@
         </div>
       }
       @if (supplierIssues().length) {
-        <div class="note danger" role="alert">
+        <div class="note danger" role="note">
           <ion-icon name="alert-circle-outline" aria-hidden="true" />
           <div>
             <strong>{{ supplier()?.name }} isn’t fully vetted:</strong>
@@ -238,7 +238,7 @@
     @case ('scheduled') {
       @let late = job.dueAt && job.dueAt < now;
       @if (late) {
-        <div class="note danger" role="alert">
+        <div class="note danger" role="note">
           <ion-icon name="alert-circle-outline" aria-hidden="true" />
           <span><strong>{{ supplier()?.name }} was booked for {{ formatDate(job.workOrder?.scheduledFor) }}</strong> and there’s no completion report yet. Call {{ supplier()?.contactName }} on {{ supplier()?.phone }}.</span>
         </div>

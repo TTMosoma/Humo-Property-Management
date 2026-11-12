@@ -405,6 +405,12 @@ Restart the API first. Emails arrive in Mailpit (localhost:8025). Use a supplier
 - [ ] Restart the API and open `http://localhost:5080/api/health`. **Expect:** `{"status":"ok","version":"0.9.0"}`.
 - [ ] Open CHANGELOG.md on GitHub. **Expect:** releases 0.1.0 to 0.9.0 with their dates, and an Unreleased section.
 
+## 36. Problems you can't see come up as a toast
+
+- [ ] As Thandeka, open *Communications › Compose*. Choose a scheme and Email, leave the subject empty, and write a message of a sentence. Make the browser window short (or zoom in) so the subject is out of view when you're at the *Send* button, then send. **Expect:** a red toast "Emails need a subject." with *Show*. *Show* scrolls to the subject.
+- [ ] Make the window tall enough to see the subject and send again. **Expect:** the message under the subject, and no toast.
+- [ ] Open a job whose supplier isn't vetted, with the red "isn't fully vetted" note below the fold. **Expect:** no toast just for opening the job.
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.

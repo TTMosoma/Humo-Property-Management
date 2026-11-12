@@ -45,6 +45,7 @@ Rules:
 
 - Angular 22 with Ionic 8. Use the existing data-source ports, not direct HTTP calls from components.
 - Feature flags only hide screens. The API must enforce the same rule.
+- Mark every problem message `role="alert"` (field errors, failed actions). A problem that appears off screen then also comes up as a toast with *Show* (`core/feedback/offscreen-alerts.ts`). Notes that are on the page from the start (status, warnings) use `role="note"`, not `alert`.
 - Calendar dates are South African dates. The tests run with `TZ=Africa/Johannesburg`.
 
 ## Commands

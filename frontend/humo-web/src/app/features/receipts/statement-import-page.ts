@@ -75,7 +75,7 @@ const GUESS: Record<keyof Omit<StatementMapping, 'dateFormat'>, RegExp> = {
           <label class="field">
             <span class="f-label">CSV file from the bank</span>
             <input type="file" accept=".csv,text/csv" (change)="pickFile($event)" />
-            @if (errors()['file']) { <span class="err">{{ errors()['file'] }}</span> }
+            @if (errors()['file']) { <span class="err" role="alert">{{ errors()['file'] }}</span> }
           </label>
         </div>
       </section>
@@ -94,7 +94,7 @@ const GUESS: Record<keyof Omit<StatementMapping, 'dateFormat'>, RegExp> = {
                     <option [value]="h" [selected]="h === mapping()[f.key]">{{ h }}</option>
                   }
                 </select>
-                @if (errors()[f.key]) { <span class="err">{{ errors()[f.key] }}</span> }
+                @if (errors()[f.key]) { <span class="err" role="alert">{{ errors()[f.key] }}</span> }
               </label>
             }
             <label class="field">

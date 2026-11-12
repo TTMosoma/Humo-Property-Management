@@ -68,7 +68,7 @@ import { formatDate, formatRand } from '../../ui/format/money';
             <form (submit)="$event.preventDefault(); sendQuote()">
               <label>Your price, including VAT if you charge it (R)
                 <input type="number" min="0" step="0.01" required [value]="amount()" (input)="amount.set($any($event.target).value)" />
-                @if (errors()['amount']) { <span class="error">{{ errors()['amount'] }}</span> }
+                @if (errors()['amount']) { <span class="error" role="alert">{{ errors()['amount'] }}</span> }
               </label>
               <label>Guarantee (months, optional)
                 <input type="number" min="0" max="120" [value]="guarantee()" (input)="guarantee.set($any($event.target).value)" />
@@ -78,7 +78,7 @@ import { formatDate, formatRand } from '../../ui/format/money';
               </label>
               <label>Your quote as a PDF (optional)
                 <input type="file" accept=".pdf" (change)="file.set($any($event.target).files?.[0])" />
-                @if (errors()['file']) { <span class="error">{{ errors()['file'] }}</span> }
+                @if (errors()['file']) { <span class="error" role="alert">{{ errors()['file'] }}</span> }
               </label>
               @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
               <div class="actions">
@@ -110,7 +110,7 @@ import { formatDate, formatRand } from '../../ui/format/money';
               <form class="decline" (submit)="$event.preventDefault(); reschedule()">
                 <label>The day you can come
                   <input type="date" required [value]="newDate()" (input)="newDate.set($any($event.target).value)" />
-                  @if (errors()['date']) { <span class="error">{{ errors()['date'] }}</span> }
+                  @if (errors()['date']) { <span class="error" role="alert">{{ errors()['date'] }}</span> }
                 </label>
                 <label>Note (optional)
                   <input type="text" [value]="reason()" (input)="reason.set($any($event.target).value)" />
