@@ -416,6 +416,14 @@ Restart the API first. Emails arrive in Mailpit (localhost:8025). Use a supplier
 - [ ] Sign in as a System Administrator. **Expect:** the menu ends with *Pricing & add-ons*, then *Audit log* and *Technical logs* together. (*Feature flags* and *Platform health* aren't on the live system yet; in the prototype they come just before the logs.)
 - [ ] Sign in as Humo Support. **Expect:** *Audit log* last, with no *Technical logs* (Support can't read them).
 
+## 38. Humo's menu in groups, and Settings split
+
+- [ ] Sign in as a System Administrator. **Expect:** *Overview*, then groups *Customers*, *Business*, *Product*, *People* and *Operations*. *Operations* has *System*, *Audit log* and *Technical logs*. No *Settings* at the bottom.
+- [ ] Sign in as an Account Manager. **Expect:** *My accounts*, then *Customers* (New accounts, Account health, Subscriptions, Opportunities, Support & requests) and *Business*.
+- [ ] Sign in as Thandeka (Agency Administrator). **Expect:** at the bottom, *Settings* (Agency, Users & access, Roles & permissions, Audit log, Notifications, Documents & templates, Levy billing rules) and *Plan & billing* (Plan & features, Humo billing & invoices). No *My profile* or *Security* there.
+- [ ] Open the account menu (your name, top right). **Expect:** *My profile* and *Security*. Press Ctrl+K and type "passkey". **Expect:** *Security* is found.
+- [ ] Sign in as Priya (Finance). **Expect:** *Levy billing rules* at the bottom, not a bare *Settings*.
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.

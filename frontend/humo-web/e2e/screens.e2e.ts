@@ -82,7 +82,8 @@ for (const person of PEOPLE) {
     });
     await signIn(page, person.email);
     await page.goto('/');
-    const links = await menuLinks(page);
+    // My profile and Security are in the account menu, not the sidebar.
+    const links = [...new Set([...(await menuLinks(page)), '/settings/profile', '/settings/security'])];
     expect(links.length, `${person.email} has a menu`).toBeGreaterThan(0);
 
     const broken: string[] = [];
