@@ -47,7 +47,7 @@
           }
         </div>
         <label class="check"><input type="checkbox" [checked]="includeTenants()" (change)="includeTenants.set($any($event.target).checked)" /> Include their tenants</label>
-        @if (errors()['units']; as m) { <div class="err">{{ m }}</div> }
+        @if (errors()['units']; as m) { <div class="err" role="alert">{{ m }}</div> }
       }
     </fieldset>
 
@@ -70,19 +70,19 @@
           }
         </div>
         <span class="help">Each person gets their own preferred channel among these.</span>
-        @if (errors()['channels']; as m) { <span class="err">{{ m }}</span> }
+        @if (errors()['channels']; as m) { <span class="err" role="alert">{{ m }}</span> }
       </div>
       @if (channels().includes('email')) {
         <label class="field">
           <span>Email subject</span>
           <input type="text" [value]="subject()" (input)="subject.set($any($event.target).value)" />
-          @if (errors()['subject']; as m) { <span class="err">{{ m }}</span> }
+          @if (errors()['subject']; as m) { <span class="err" role="alert">{{ m }}</span> }
         </label>
       }
       <label class="field">
         <span>Message</span>
         <textarea rows="7" [value]="body()" (input)="body.set($any($event.target).value)"></textarea>
-        @if (errors()['body']; as m) { <span class="err">{{ m }}</span> }
+        @if (errors()['body']; as m) { <span class="err" role="alert">{{ m }}</span> }
       </label>
       <div class="chips" aria-label="Insert a merge field">
         @for (f of mergeFields; track f.key) {
@@ -103,7 +103,7 @@
           <input type="datetime-local" [value]="sendAt()" (input)="sendAt.set($any($event.target).value)" />
         }
       </div>
-      @if (errors()['sendAt']; as m) { <span class="err">{{ m }}</span> }
+      @if (errors()['sendAt']; as m) { <span class="err" role="alert">{{ m }}</span> }
     </fieldset>
 
     <div class="submit">

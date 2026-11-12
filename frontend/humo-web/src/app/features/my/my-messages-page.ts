@@ -26,13 +26,13 @@ import { Skeleton } from '../../ui/states/skeleton';
         <label class="field">
           <span>About</span>
           <input type="text" [value]="subject()" (input)="subject.set($any($event.target).value)" placeholder="e.g. Clearance figures for my sale" />
-          @if (errors()['subject']; as m) { <span class="err">{{ m }}</span> }
+          @if (errors()['subject']; as m) { <span class="err" role="alert">{{ m }}</span> }
         </label>
       }
       <label class="field">
         <span>Message</span>
         <textarea rows="4" [value]="body()" (input)="body.set($any($event.target).value)"></textarea>
-        @if (errors()['body']; as m) { <span class="err">{{ m }}</span> }
+        @if (errors()['body']; as m) { <span class="err" role="alert">{{ m }}</span> }
       </label>
       <p class="muted">For a problem in your unit or the building, <a routerLink="/my/requests/new">report it as a request</a> so it can be tracked to the fix.</p>
       <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="send()"><ion-icon name="send-outline" aria-hidden="true" /> {{ busy() ? 'Sending…' : 'Send' }}</button>

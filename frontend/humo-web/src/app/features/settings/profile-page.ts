@@ -88,7 +88,7 @@ const WORK_CHANNELS: Channel[] = ['email', 'push', 'sms'];
                 <label><input type="checkbox" [checked]="draft().work.includes(c)" (change)="setChannel(c, $any($event.target).checked)" /> {{ label(c) }}</label>
               }
             </div>
-            @if (errors()['work']; as m) { <div class="err">{{ m }}</div> }
+            @if (errors()['work']; as m) { <div class="err" role="alert">{{ m }}</div> }
           </fieldset>
           <label class="field">
             <span>Summary email</span>
@@ -102,12 +102,12 @@ const WORK_CHANNELS: Channel[] = ['email', 'push', 'sms'];
             <label class="field">
               <span>Quiet from</span>
               <input type="time" [value]="draft().quietFrom ?? ''" (input)="set('quietFrom', $any($event.target).value)" />
-              @if (errors()['quietFrom']; as m) { <span class="err">{{ m }}</span> }
+              @if (errors()['quietFrom']; as m) { <span class="err" role="alert">{{ m }}</span> }
             </label>
             <label class="field">
               <span>Until</span>
               <input type="time" [value]="draft().quietTo ?? ''" (input)="set('quietTo', $any($event.target).value)" />
-              @if (errors()['quietTo']; as m) { <span class="err">{{ m }}</span> }
+              @if (errors()['quietTo']; as m) { <span class="err" role="alert">{{ m }}</span> }
             </label>
           </div>
           <p class="muted">No SMS or Humo Mobile notifications during quiet hours; they wait until morning. Email isn’t affected.</p>

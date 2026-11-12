@@ -405,6 +405,13 @@ Restart the API first. Emails arrive in Mailpit (localhost:8025). Use a supplier
 - [ ] Restart the API and open `http://localhost:5080/api/health`. **Expect:** `{"status":"ok","version":"0.9.0"}`.
 - [ ] Open CHANGELOG.md on GitHub. **Expect:** releases 0.1.0 to 0.9.0 with their dates, and an Unreleased section.
 
+## 36. Problems you can't see come up as a toast
+
+- [ ] As Thandeka, open *Settings › My profile*. Scroll so the *Quiet hours* fields are off screen at the top, set an end time before the start time some other way (or clear a required field near the top), then save from the bottom. **Expect:** a red toast with the problem and a *Show* button. *Show* scrolls to the field.
+- [ ] Do the same with the problem in view. **Expect:** the message under the field, and no extra toast.
+- [ ] On a supplier's quote link (Humo Contractor page), make the window short, scroll to *Send quote* and send with no price. **Expect:** a toast saying what's missing; *Show* takes you to the price.
+- [ ] Open a job whose supplier isn't vetted, so the red "isn't fully vetted" note is below the fold. **Expect:** no toast just for opening the job.
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.

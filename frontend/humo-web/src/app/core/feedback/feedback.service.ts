@@ -34,7 +34,12 @@ export class FeedbackService {
     await this.show(message, 'neutral');
   }
 
-  private async show(message: string, tone: 'success' | 'danger' | 'neutral', undo?: () => void): Promise<void> {
+  /** A problem shown somewhere on the page the person can't see, with a button that takes them to it. */
+  async offscreen(message: string, show: () => void): Promise<void> {
+    await this.show(message, 'danger', undefined, { text: 'Show', handler: show });
+  }
+
+  private async show(message: string, tone: 'success' | 'danger' | 'neutral', undo?: () => void, action?: { text: string; handler: () => void }): Promise<void> {
     await this.toasts.getTop().then((t) => t?.dismiss());
     const failure = tone === 'danger';
     const total = failure ? failureTimeout(message) : 0;
@@ -48,7 +53,10 @@ export class FeedbackService {
       buttons: undo
         ? [{ text: 'Undo', role: 'cancel', handler: undo }]
         : failure
-          ? [{ icon: 'close-outline', side: 'end', role: 'cancel', htmlAttributes: { 'aria-label': 'Close' } }]
+          ? [
+              ...(action ? [{ text: action.text, role: 'cancel', handler: action.handler }] : []),
+              { icon: 'close-outline', side: 'end' as const, role: 'cancel', htmlAttributes: { 'aria-label': 'Close' } },
+            ]
           : [],
     });
     // Ionic mounts overlays inside <ion-app>, whose stacking context sits below the

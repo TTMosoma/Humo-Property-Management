@@ -52,7 +52,7 @@ import { REASON_FIELD, openForm } from '../../shared/form-drawer';
           <label class="field">
             <span class="f-label">Read on</span>
             <input type="date" [value]="readOn()" (input)="readOn.set($any($event.target).value)" />
-            @if (errors()['readOn']) { <span class="err">{{ errors()['readOn'] }}</span> }
+            @if (errors()['readOn']) { <span class="err" role="alert">{{ errors()['readOn'] }}</span> }
           </label>
         </div>
         @if (sheet(); as s) {
@@ -81,10 +81,10 @@ import { REASON_FIELD, openForm } from '../../shared/form-drawer';
             }
           </div>
           @if (csvProblems().length) {
-            <ul class="err">@for (p of csvProblems(); track p.row) { <li>Row {{ p.row }}: {{ p.problem }}</li> }</ul>
+            <ul class="err" role="alert">@for (p of csvProblems(); track p.row) { <li>Row {{ p.row }}: {{ p.problem }}</li> }</ul>
           }
           @if (errors()['period'] || errors()['entries'] || errors()['schemeId']) {
-            <p class="err">{{ errors()['period'] || errors()['entries'] || errors()['schemeId'] }}</p>
+            <p class="err" role="alert">{{ errors()['period'] || errors()['entries'] || errors()['schemeId'] }}</p>
           }
           <table class="table">
             <thead><tr><th>Unit</th><th>Last reading</th><th>This reading (kl)</th><th class="end">Used</th><th class="end">Usual</th></tr></thead>
@@ -97,7 +97,7 @@ import { REASON_FIELD, openForm } from '../../shared/form-drawer';
                   <td>{{ r.previous ? r.previous.reading + ' (' + label(r.previous.period) + ')' : '—' }}</td>
                   <td>
                     <input type="number" min="0" step="0.01" [disabled]="!editable()" [value]="typed ?? r.reading ?? ''" (input)="type(r.unitNumber, $any($event.target).value)" [attr.aria-label]="'Reading for unit ' + r.unitNumber" />
-                    @if (errors()['unit-' + r.unitNumber]) { <div class="err">{{ errors()['unit-' + r.unitNumber] }}</div> }
+                    @if (errors()['unit-' + r.unitNumber]) { <div class="err" role="alert">{{ errors()['unit-' + r.unitNumber] }}</div> }
                   </td>
                   <td class="end">{{ used === undefined ? '—' : used + ' kl' }}@if (isUnusual(used, r.usual)) { <span class="tag">Unusual</span> }</td>
                   <td class="end muted">{{ r.usual === undefined ? '—' : r.usual + ' kl' }}</td>
