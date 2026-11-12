@@ -103,7 +103,7 @@
             <h1 #heading tabindex="-1">Confirm it’s you</h1>
             <p class="sub" role="status">
               @if (passkeyFor()) {
-                Use your fingerprint, face or screen lock to sign in as <strong>{{ passkeyFor() }}</strong>.
+                Use your fingerprint, face or screen lock to sign in as <strong class="email">{{ passkeyFor() }}</strong>.
               } @else {
                 Choose your Humo passkey and confirm with your fingerprint, face or screen lock.
               }
@@ -119,7 +119,7 @@
             <h1 #heading tabindex="-1">No passkey on this device</h1>
             <p class="sub">
               @if (passkeyFor()) {
-                There’s no passkey for <strong>{{ passkeyFor() }}</strong> on this device. Use the phone or computer you set it up on, or we’ll email you a one-time sign-in link.
+                There’s no passkey for <strong class="email">{{ passkeyFor() }}</strong> on this device. Use the phone or computer you set it up on, or we’ll email you a one-time sign-in link.
               } @else {
                 This device doesn’t have a Humo passkey. Enter your email and we’ll send you a one-time sign-in link.
               }
@@ -158,7 +158,7 @@
           <div class="centre">
             <div class="icon-badge ok" aria-hidden="true"><ion-icon name="mail-outline" /></div>
             <h1 #heading tabindex="-1">Check your email</h1>
-            <p class="sub">If <strong>{{ email() }}</strong> has a Humo account, a sign-in link is on its way. It works once, with the code below, and expires in 15 minutes.</p>
+            <p class="sub">If <strong class="email">{{ email() }}</strong> has a Humo account, a sign-in link is on its way. It works once, with the code below, and expires in 15 minutes.</p>
             <div class="code-box" role="group" aria-label="Your sign-in code">
               <span class="code-label">Your code</span>
               <strong class="code" aria-live="polite">{{ spacedCode() }}</strong>

@@ -253,6 +253,14 @@ h1 {
   line-height: 1.55;
   color: var(--c-text-muted);
 
+  // An email address moves to the next line whole, rather than breaking in the middle. Only an address wider than
+  // the screen breaks, so it's never cut off.
+  .email {
+    display: inline-block;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
   strong {
     color: var(--c-text);
     font-weight: var(--fw-semibold);
