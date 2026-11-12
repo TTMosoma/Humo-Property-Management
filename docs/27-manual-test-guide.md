@@ -407,10 +407,9 @@ Restart the API first. Emails arrive in Mailpit (localhost:8025). Use a supplier
 
 ## 36. Problems you can't see come up as a toast
 
-- [ ] As Thandeka, open *Settings › My profile*. Scroll so the *Quiet hours* fields are off screen at the top, set an end time before the start time some other way (or clear a required field near the top), then save from the bottom. **Expect:** a red toast with the problem and a *Show* button. *Show* scrolls to the field.
-- [ ] Do the same with the problem in view. **Expect:** the message under the field, and no extra toast.
-- [ ] On a supplier's quote link (Humo Contractor page), make the window short, scroll to *Send quote* and send with no price. **Expect:** a toast saying what's missing; *Show* takes you to the price.
-- [ ] Open a job whose supplier isn't vetted, so the red "isn't fully vetted" note is below the fold. **Expect:** no toast just for opening the job.
+- [ ] As Thandeka, open *Communications › Compose*. Choose a scheme and Email, leave the subject empty, and write a message of a sentence. Make the browser window short (or zoom in) so the subject is out of view when you're at the *Send* button, then send. **Expect:** a red toast "Emails need a subject." with *Show*. *Show* scrolls to the subject.
+- [ ] Make the window tall enough to see the subject and send again. **Expect:** the message under the subject, and no toast.
+- [ ] Open a job whose supplier isn't vetted, with the red "isn't fully vetted" note below the fold. **Expect:** no toast just for opening the job.
 
 ## Reporting back
 
