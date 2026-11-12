@@ -213,7 +213,7 @@ Write the exact commands here during the first setup. **Target: back up within 4
 4. **Smoke test:**
    - sign in;
    - open a scheme;
-   - check `/api/health`.
+   - check `/api/health`: it says `ok` and the version being deployed, and the sign-in page shows the same version (CHANGELOG.md).
 5. **If it's broken:**
    1. redeploy the previous image tag;
    2. restore the pre-deploy backup only if a migration damaged data.

@@ -8,6 +8,7 @@ import { HUMO_PRODUCTS } from '../../core/product/product';
 import { SessionService } from '../../core/session/session.service';
 import { Logo } from '../../ui/brand/logo';
 import { PasskeySetup } from '../security/passkey-setup';
+import { APP_VERSION } from '../../core/version';
 
 type Step = 'start' | 'passkey' | 'no-passkey' | 'paused' | 'link-sent' | 'enter-code' | 'redeeming' | 'link-failed' | 'unavailable' | 'ask-trust' | 'add-passkey' | 'no-role';
 
@@ -61,6 +62,7 @@ export class SignInPage {
   protected readonly story = signal(STORY);
   protected readonly signedOutName = computed(() => (this.mode === 'signed-out' ? (this.params().name ?? '') : null));
   protected readonly year = new Date().getFullYear();
+  protected readonly version = APP_VERSION;
 
   protected readonly step = signal<Step>(this.mode === 'link' ? 'enter-code' : 'start');
   /** Why creating a passkey after an email-link sign-in failed (not shown when they just closed the prompt). */

@@ -391,6 +391,13 @@ Restart the API first. Emails arrive in Mailpit (localhost:8025). Use a supplier
 - [ ] Issue the work order. **Expect:** a "Work order" email; its page shows the address and the access notes. *Confirm this date*. **Expect:** the job says AquaFix confirmed the date.
 - [ ] On another job, *Ask for a revision…* of a supplier's quote. **Expect:** a new email; the old link says it isn't valid, the new one opens.
 
+## 35. Version numbers
+
+- [ ] Open the sign-in page. **Expect:** the footer ends "version 0.9.0".
+- [ ] Sign in and open the account menu (your name, top right). **Expect:** "Humo Property Management · version 0.9.0" at the bottom, under *Sign out*.
+- [ ] Restart the API and open `http://localhost:5080/api/health`. **Expect:** `{"status":"ok","version":"0.9.0"}`.
+- [ ] Open CHANGELOG.md on GitHub. **Expect:** releases 0.1.0 to 0.9.0 with their dates, and an Unreleased section.
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.

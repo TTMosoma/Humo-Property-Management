@@ -13,6 +13,7 @@ import { RoleSwitcher } from '../../session/role-switcher';
 import { SignOutService } from '../../session/sign-out.service';
 import { visibleOrganisations } from '../../session/organisations';
 import { SessionService } from '../../session/session.service';
+import { APP_VERSION } from '../../version';
 
 interface QuickAction {
   label: string;
@@ -70,6 +71,7 @@ export class Topbar {
   protected readonly roleMeta = ROLE_META;
   protected readonly kindIcon = KIND_ICON;
   protected readonly relativeTime = relativeTime;
+  protected readonly version = APP_VERSION;
 
   // Nothing to create in Observe impersonation: it's read-only.
   protected readonly quickActions = computed(() =>
