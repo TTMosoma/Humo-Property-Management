@@ -6,6 +6,7 @@ What changed in Humo Property Management, release by release, in plain language.
 
 ## Unreleased
 
+- The email address on the sign-in screens stays on one line instead of breaking mid-word [#107]
 - Suppliers quote, revise, decline and confirm work orders through an emailed link, without an account. Staff choose which photos go; the address is only on work orders; links close once the quote is decided (D38) [#106]
 - Version numbers and this changelog. The version shows on the sign-in page and in the account menu, and `GET /api/health` returns it, so you can check the server and the web app match after a deploy.
 

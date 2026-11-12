@@ -392,18 +392,18 @@ Restart the API first. Emails arrive in Mailpit (localhost:8025). Use a supplier
 - [ ] Issue the work order. **Expect:** a "Work order" email; its page shows the address and the access notes. *Confirm this date*. **Expect:** the job says AquaFix confirmed the date.
 - [ ] On another job, *Ask for a revision…* of a supplier's quote. **Expect:** a new email; the old link says it isn't valid, the new one opens.
 
+## 34. The email address on the sign-in screens
+
+- [ ] Sign out. Make the window narrow (about the width of a phone held sideways), enter `thandeka@acacia.example` and continue. **Expect:** on *Confirm it's you*, the address is whole on one line, with the full stop after it.
+- [ ] Cancel and choose *Email me a sign-in link*. **Expect:** "If thandeka@acacia.example has a Humo account…" shows the address whole.
+- [ ] On a phone (or the browser's phone view), sign in with a long address. **Expect:** it fits on the screen without scrolling sideways.
+
 ## 35. Version numbers
 
 - [ ] Open the sign-in page. **Expect:** the footer ends "version 0.9.0".
 - [ ] Sign in and open the account menu (your name, top right). **Expect:** "Humo Property Management · version 0.9.0" at the bottom, under *Sign out*.
 - [ ] Restart the API and open `http://localhost:5080/api/health`. **Expect:** `{"status":"ok","version":"0.9.0"}`.
 - [ ] Open CHANGELOG.md on GitHub. **Expect:** releases 0.1.0 to 0.9.0 with their dates, and an Unreleased section.
-
-## 34. The email address on the sign-in screens
-
-- [ ] Sign out. Make the window narrow (about the width of a phone held sideways), enter `thandeka@acacia.example` and continue. **Expect:** on *Confirm it's you*, the address is whole on one line, with the full stop after it.
-- [ ] Cancel and choose *Email me a sign-in link*. **Expect:** "If thandeka@acacia.example has a Humo account…" shows the address whole.
-- [ ] On a phone (or the browser's phone view), sign in with a long address. **Expect:** it fits on the screen without scrolling sideways.
 
 ## Reporting back
 
