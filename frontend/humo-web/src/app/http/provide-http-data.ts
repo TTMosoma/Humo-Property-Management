@@ -17,6 +17,7 @@ import {
   HumoTeamDataSource,
   InboxDataSource,
   JobDataSource,
+  SupplierLinkDataSource,
   LevyDataSource,
   LibraryDataSource,
   PackageLimitsDataSource,
@@ -55,6 +56,7 @@ import { ContractorNetwork } from '../domain/contractor';
 import { HttpAccessDataSource } from './http-access';
 import { HttpCommunicationsDataSource, HttpInboxDataSource, HttpNoticeDataSource } from './http-communications';
 import { HttpJobDataSource, HttpSupplierDataSource } from './http-maintenance';
+import { HttpSupplierLinkDataSource } from './http-supplier-links';
 import { HttpAuditDataSource, HttpSecurityDataSource } from './http-audit-security';
 import { HttpBoardDataSource } from './http-board';
 import { HttpAccountDataSource, HttpBillingDataSource, HttpCollectionDataSource, HttpLevyDataSource, HttpMeterDataSource, HttpReceiptDataSource, HttpWorkItemDataSource } from './http-finance';
@@ -152,6 +154,7 @@ export function provideHttpData(): EnvironmentProviders {
     { provide: InboxDataSource, useClass: HttpInboxDataSource },
     // Slice 3a: maintenance jobs and suppliers; slice 3b: payables (payment batches, D27).
     { provide: JobDataSource, useClass: HttpJobDataSource },
+    { provide: SupplierLinkDataSource, useClass: HttpSupplierLinkDataSource },
     { provide: SupplierDataSource, useClass: HttpSupplierDataSource },
     { provide: PayablesDataSource, useClass: HttpPayablesDataSource },
     // Budgets (D28), and the scheme's financial year end, the part of Compliance already on the API.

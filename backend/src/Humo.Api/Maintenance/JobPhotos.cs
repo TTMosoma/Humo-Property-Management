@@ -76,6 +76,7 @@ public static class JobPhotoEndpoints
         j.MapPost("/{reference}/photos", Add);
         j.MapGet("/{reference}/photos/{photoId}", Get);
         j.MapDelete("/{reference}/photos/{photoId}", Remove);
+        j.MapGet("/{reference}/quotes/{quoteId}/file", QuoteFile);
     }
 
     /// <summary>Staff who can see the job (Maintenance.View, in their schemes); a resident, for a job they reported or one on their unit.</summary>
@@ -169,6 +170,17 @@ public static class JobPhotoEndpoints
             }
             return Task.FromResult(Results.NoContent());
         }, ct);
+    }
+
+    /// <summary>D38: the supplier's own quote document, sent through their link. Staff who can see the job.</summary>
+    private static async Task<IResult> QuoteFile(string reference, string quoteId, CurrentActor current, HumoDbContext db, IFileStore store, CancellationToken ct)
+    {
+        if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
+        if (!actor.Can("Maintenance.View") || await ReadableAsync(actor, db, reference, ct) is not { } row) return Problems.NotFound();
+        if (MaintenanceService.Read(row).Quotes.FirstOrDefault(q => q.Id == quoteId)?.FileId is not { } fid || !Guid.TryParse(fid, out var fileId)) return Problems.NotFound();
+        var file = await db.UploadedFiles.AsNoTracking().FirstOrDefaultAsync(f => f.Id == fileId && f.SchemeId == row.SchemeId, ct);
+        if (file is null || file.ScanResult != "clean") return Problems.NotFound();
+        return Results.File(await store.OpenAsync(file.StorageKey, ct), "application/pdf", file.Name);
     }
 
     private static async Task<IResult> Get(string reference, string photoId, HttpContext http, CurrentActor current, HumoDbContext db, IFileStore store, CancellationToken ct)

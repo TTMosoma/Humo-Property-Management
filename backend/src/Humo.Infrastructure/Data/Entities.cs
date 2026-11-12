@@ -720,6 +720,28 @@ public sealed class WorkItemRow
 }
 
 /// <summary>
+/// D38: a supplier's link to a quote request or work order, opened without signing in. Only the SHA-256 of the link's code
+/// is kept; the code itself is in the email alone.
+/// </summary>
+public sealed class SupplierLink
+{
+    public Guid Id { get; set; }
+    public Guid OrganisationId { get; set; }
+    public Guid SchemeId { get; set; }
+    public Guid JobId { get; set; }
+    public Guid SupplierId { get; set; }
+    /// <summary>quote or work-order.</summary>
+    public string Kind { get; set; } = "quote";
+    public string? QuoteId { get; set; }
+    public string TokenHash { get; set; } = "";
+    /// <summary>JSON list of photo ids staff chose not to show.</summary>
+    public string ExcludedPhotos { get; set; } = "[]";
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset? RevokedAt { get; set; }
+    public DateTimeOffset? LastOpenedAt { get; set; }
+}
+
+/// <summary>
 /// D39: one trustee's decision on an approval for the board. On Humo ("humo"), or from the board's signed approval uploaded
 /// by the agency ("upload", with its file). One per trustee per approval.
 /// </summary>

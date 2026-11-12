@@ -133,6 +133,11 @@ export class InMemoryJobDataSource extends Live implements JobDataSource {
     return undefined;
   }
 
+  /** The simulation stores no supplier documents. */
+  quoteFileUrl(): string | undefined {
+    return undefined;
+  }
+
   /** SIMULATED (docs/18 R-17): keeps the photo's name as its caption; the image isn't stored or counted. */
   addPhoto(ref: string, file: File, stage: Photo['stage'], caption?: string): Observable<void> {
     const job = this.store.detail(ref)?.job;

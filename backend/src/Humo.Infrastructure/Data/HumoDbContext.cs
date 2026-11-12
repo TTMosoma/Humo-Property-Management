@@ -36,6 +36,7 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
     public DbSet<BillingRunRow> BillingRuns => Set<BillingRunRow>();
     public DbSet<WorkItemRow> WorkItems => Set<WorkItemRow>();
     public DbSet<BoardVote> BoardVotes => Set<BoardVote>();
+    public DbSet<SupplierLink> SupplierLinks => Set<SupplierLink>();
     public DbSet<WaterSetting> WaterSettings => Set<WaterSetting>();
     public DbSet<MeterReading> MeterReadings => Set<MeterReading>();
     public DbSet<LevySetting> LevySettings => Set<LevySetting>();
@@ -867,6 +868,16 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
             e.Property(x => x.Status).HasMaxLength(20);
             e.Property(x => x.UpdatedBy).HasMaxLength(200);
             e.HasIndex(x => x.OrganisationId);
+        });
+
+        builder.Entity<SupplierLink>(e =>
+        {
+            e.ToTable("SupplierLinks");
+            e.HasIndex(x => x.TokenHash).IsUnique();
+            e.HasIndex(x => x.JobId);
+            e.Property(x => x.Kind).HasMaxLength(12);
+            e.Property(x => x.QuoteId).HasMaxLength(40);
+            e.Property(x => x.TokenHash).HasMaxLength(64);
         });
 
         builder.Entity<BoardVote>(e =>

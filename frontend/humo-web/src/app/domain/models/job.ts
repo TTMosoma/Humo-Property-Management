@@ -65,6 +65,8 @@ export interface Quote {
   /** D41: every amount it has had, oldest first. Nothing is overwritten. */
   versions?: { amount: number; at: string; by: string; reason?: string }[];
   rejectedReason?: string;
+  /** D38: the supplier's own quote document, sent through their link. */
+  fileId?: string;
 }
 
 export interface JobEvent {
@@ -98,7 +100,8 @@ export interface Job {
   quotes: Quote[];
   approval?: { status: 'pending' | 'approved' | 'rejected'; workItemId?: string; decidedBy?: string; decidedAt?: string; comment?: string; withinDelegation?: boolean };
   supplierId?: string;
-  workOrder?: { issuedAt: string; scheduledFor: string; accessNotes?: string };
+  /** D38: `confirmedAt` and `askedFor` come from the supplier, through their link. */
+  workOrder?: { issuedAt: string; scheduledFor: string; accessNotes?: string; confirmedAt?: string; askedFor?: string };
   /** D39: went ahead above the limit in an emergency; the board confirms it, and its invoice waits for that. */
   emergency?: { reason: string; by: string; at: string; status: 'to-confirm' | 'confirmed' | 'rejected' };
   completion?: { completedAt: string; notes: string };

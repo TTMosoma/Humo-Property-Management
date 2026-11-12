@@ -469,6 +469,90 @@ public sealed class MaintenanceTests : IDisposable
         Assert.Equal("quoting", (await Job(s.Admin, reference)).GetProperty("stage").GetString());
     }
 
+    private async Task<string> LinkFor(string to, string subjectStarts, string kind = "q")
+    {
+        string? text = null;
+        await HumoApiFactory.Until(() => (text = api.Email.Sent.LastOrDefault(x => x.To == to && x.Subject.StartsWith(subjectStarts))?.Text) is not null);
+        return System.Text.RegularExpressions.Regex.Match(text!, $"/supplier/{kind}/([A-Za-z0-9_-]+)").Groups[1].Value;
+    }
+
+    [Fact]
+    public async Task A_supplier_quotes_through_their_emailed_link_without_an_account()
+    {
+        var s = await Scheme();
+        var supplier = await Id(await NewSupplier(s.Admin, s.Kc));
+        var reference = await NewJob(s);
+        Assert.Equal(HttpStatusCode.Created, (await s.Admin.PostAsync($"/api/jobs/{reference}/photos", Photo(Jpeg))).StatusCode);
+        await Act(s.Admin, reference, new { type = "request-quotes", supplierIds = new[] { supplier.ToString() } });
+
+        var token = await LinkFor("jobs@aqua.example", "Quote request");
+        Assert.True(token.Length > 30);
+        // Only the fingerprint is stored.
+        Assert.False(await api.Db(db => db.SupplierLinks.AnyAsync(l => l.TokenHash == token)));
+        Assert.True(await api.Db(db => db.SupplierLinks.AnyAsync(l => l.TokenHash == Humo.Api.Maintenance.SupplierLinks.Hash(token))));
+        Assert.DoesNotContain("Kitchen", api.Email.Sent.Last(x => x.To == "jobs@aqua.example").Text);
+
+        var anonymous = api.Client();
+        var view = await Ok(await anonymous.GetAsync($"/api/supplier-links/{token}"));
+        Assert.True(view.GetProperty("open").GetBoolean());
+        Assert.Equal(JsonValueKind.Null, view.GetProperty("where").ValueKind);
+        var photo = view.GetProperty("photos")[0].GetProperty("id").GetString();
+        Assert.Equal(HttpStatusCode.OK, (await anonymous.GetAsync($"/api/supplier-links/{token}/photos/{photo}")).StatusCode);
+
+        MultipartFormDataContent Quote(decimal amount) => new() { { new StringContent(amount.ToString(System.Globalization.CultureInfo.InvariantCulture)), "amount" }, { new StringContent("6"), "guaranteeMonths" } };
+        await NoContent(await anonymous.PostAsync($"/api/supplier-links/{token}/quote", Quote(4_200)));
+        await NoContent(await anonymous.PostAsync($"/api/supplier-links/{token}/quote", Quote(3_900)));
+        var q = (await Job(s.Admin, reference)).GetProperty("quotes")[0];
+        Assert.Equal(("received", 3_900m), (q.GetProperty("status").GetString(), q.GetProperty("amount").GetDecimal()));
+        Assert.Contains("(supplier)", q.GetProperty("versions")[1].GetProperty("by").GetString());
+
+        // Decided: the link stops.
+        await Act(s.Admin, reference, new { type = "approve-within-delegation", quoteId = q.GetProperty("id").GetString() });
+        Assert.False((await Ok(await anonymous.GetAsync($"/api/supplier-links/{token}"))).GetProperty("open").GetBoolean());
+        Assert.Equal(HttpStatusCode.Conflict, (await anonymous.PostAsync($"/api/supplier-links/{token}/quote", Quote(3_000))).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await anonymous.GetAsync("/api/supplier-links/not-a-real-link")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Staff_can_leave_photos_out_and_a_revision_replaces_the_link()
+    {
+        var s = await Scheme();
+        var supplier = await Id(await NewSupplier(s.Admin, s.Kc));
+        var reference = await NewJob(s);
+        await s.Admin.PostAsync($"/api/jobs/{reference}/photos", Photo(Jpeg));
+        var photo = (await Job(s.Admin, reference)).GetProperty("photos")[0].GetProperty("id").GetString();
+        await Act(s.Admin, reference, new { type = "request-quotes", supplierIds = new[] { supplier.ToString() }, excludePhotoIds = new[] { photo } });
+        var first = await LinkFor("jobs@aqua.example", "Quote request");
+        var anonymous = api.Client();
+        Assert.Empty((await Ok(await anonymous.GetAsync($"/api/supplier-links/{first}"))).GetProperty("photos").EnumerateArray());
+        Assert.Equal(HttpStatusCode.NotFound, (await anonymous.GetAsync($"/api/supplier-links/{first}/photos/{photo}")).StatusCode);
+
+        await NoContent(await anonymous.PostAsync($"/api/supplier-links/{first}/quote", new MultipartFormDataContent { { new StringContent("9000"), "amount" } }));
+        var quote = (await Job(s.Admin, reference)).GetProperty("quotes")[0].GetProperty("id").GetString();
+        await Act(s.Admin, reference, new { type = "request-revision", quoteId = quote, reason = "Can you go lower?" });
+        var second = await LinkFor("jobs@aqua.example", "Revised quote requested");
+        Assert.NotEqual(first, second);
+        Assert.Equal(HttpStatusCode.NotFound, (await anonymous.GetAsync($"/api/supplier-links/{first}")).StatusCode);
+        Assert.True((await Ok(await anonymous.GetAsync($"/api/supplier-links/{second}"))).GetProperty("open").GetBoolean());
+    }
+
+    [Fact]
+    public async Task A_work_order_link_shows_the_address_and_the_supplier_confirms_the_date()
+    {
+        var s = await Scheme();
+        var (reference, quote, _) = await QuotedJob(s, 1_500, "normal");
+        await Act(s.Admin, reference, new { type = "approve-within-delegation", quoteId = quote });
+        await Act(s.Admin, reference, new { type = "issue-work-order", scheduledFor = api.Clock.GetUtcNow().AddDays(2).ToString("O"), accessNotes = "Caretaker has the keys", overrideVetting = true });
+        var token = await LinkFor("jobs@aqua.example", "Work order", "w");
+        var anonymous = api.Client();
+        var view = await Ok(await anonymous.GetAsync($"/api/supplier-links/{token}"));
+        Assert.Equal("Caretaker has the keys", view.GetProperty("workOrder").GetProperty("accessNotes").GetString());
+        Assert.Contains("Kingfisher Court", view.GetProperty("where").GetString());
+
+        await NoContent(await anonymous.PostAsync($"/api/supplier-links/{token}/confirm", null));
+        Assert.Equal(JsonValueKind.String, (await Job(s.Admin, reference)).GetProperty("workOrder").GetProperty("confirmedAt").ValueKind);
+    }
+
     [Fact]
     public async Task Each_scheme_sets_its_own_limit_with_a_passkey()
     {

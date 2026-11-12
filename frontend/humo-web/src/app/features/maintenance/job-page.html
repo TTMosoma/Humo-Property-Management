@@ -53,6 +53,7 @@
                   <td>
                     {{ quoteStatus(q) }}
                     @if (q.status === 'rejected' && q.rejectedReason) { <div class="muted small">“{{ q.rejectedReason }}”</div> }
+                    @if (quoteFile(d.job.ref, q); as url) { <div class="small"><a [href]="url" target="_blank" rel="noopener">Their quote (PDF)</a></div> }
                   </td>
                   <td class="end money">
                     {{ q.status === 'received' || q.status === 'rejected' || q.status === 'revision-requested' ? (q.amount | rand) : '—' }}
