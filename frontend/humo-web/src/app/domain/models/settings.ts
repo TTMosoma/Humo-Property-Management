@@ -2,7 +2,7 @@ import { TrustAccount } from './account';
 import { Scheme } from './scheme';
 
 /**
- * An agency's own settings (Settings › Agency, Levy billing rules,
+ * An agency's own settings (Settings › Agency, Finance › Billing rules,
  * Notifications) and each person's preferences (Settings › My profile).
  * The rules that billing, credit control and notifications follow come from
  * here, not from constants: the API reads them when it applies the rules.
