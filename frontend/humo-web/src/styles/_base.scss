@@ -252,6 +252,14 @@ kbd {
   }
 }
 
+// The release number at the foot of the account menu (CHANGELOG.md).
+.menu-version {
+  margin: var(--s-1) 0 0;
+  padding: var(--s-1) var(--s-3) 0;
+  font-size: var(--fs-xs);
+  color: var(--c-text-faint);
+}
+
 .menu-divider {
   height: 1px;
   margin: var(--s-1) 0;

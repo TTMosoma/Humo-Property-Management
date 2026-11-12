@@ -169,7 +169,7 @@ app.UseAuthorization();
 
 var api = app.MapGroup("/api");
 api.MapGet("/health", async (HumoDbContext db, CancellationToken ct) =>
-    await db.Database.CanConnectAsync(ct) ? Results.Ok(new { status = "ok" }) : Results.Problem("Database unavailable", statusCode: 503));
+    await db.Database.CanConnectAsync(ct) ? Results.Ok(new { status = "ok", version = Humo.Api.AppVersion.Current }) : Results.Problem("Database unavailable", statusCode: 503));
 api.MapHumoAuth();
 api.MapSmsWebhooks();
 api.MapMailWebhooks();

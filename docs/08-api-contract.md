@@ -24,6 +24,8 @@ Status: **frontend contract frozen after the P1 and P2 readiness cleanups** (Oct
   - One-click actions without typed input (approve, release a batch) may still verify first.
   - (H-2, fixed 10 Oct 2026.)
 
+**Health:** `GET /api/health` (no sign-in) returns `{ status: "ok", version }`, the release number from `contracts/version.json`; 503 when the database is unreachable.
+
 ## 2. Session bootstrap: `GET /me`
 
 `SessionDataSource.current()` returns a `CurrentSession`:

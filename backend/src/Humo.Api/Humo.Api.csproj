@@ -13,6 +13,11 @@
     <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The release number, shared with the frontend (CHANGELOG.md). -->
+    <EmbeddedResource Include="..\..\..\contracts\version.json" LogicalName="Humo.Api.version.json" Link="version.json" />
+  </ItemGroup>
+
   <PropertyGroup>
     <UserSecretsId>d905b14b-a3a5-44d9-b3a1-c6bd6f71d048</UserSecretsId>
   </PropertyGroup>

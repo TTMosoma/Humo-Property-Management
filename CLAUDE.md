@@ -83,6 +83,13 @@ docker compose -f backend/deploy/docker-compose.dev.yml up -d
 
 The production build must not contain demo data (`docs/18` R-6). CI fails if it does.
 
+## Versions
+
+- The release number is in `contracts/version.json`. The frontend shows it (sign-in page, account menu) and the API embeds it (`GET /api/health`). `frontend/humo-web/package.json` and the newest release in [CHANGELOG.md](CHANGELOG.md) carry the same number; a backend test fails on drift.
+- Every pull request adds a plain-language line under **Unreleased** in CHANGELOG.md, with its PR number.
+- To release (before a deploy, or when a set of work is done): move the Unreleased lines under a new heading `## x.y.z · d Month yyyy · title`, set the number in `contracts/version.json` and `package.json`, and after merging tag the merge commit `vx.y.z`.
+- `0.x` until the first client goes live (1.0.0). After that, the middle number goes up for features and the last for fixes.
+
 ## Git
 
 - Work on a branch and open a pull request into `main`. Don't commit straight to `main`.
