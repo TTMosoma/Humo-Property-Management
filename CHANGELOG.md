@@ -6,6 +6,7 @@ What changed in Humo Property Management, release by release, in plain language.
 
 ## Unreleased
 
+- Humo's menu keeps Platform health, the Audit log and Technical logs together at the end [#PR]
 - A problem shown off screen (further up a long page, or in a drawer) also comes up as a toast, with Show to scroll to it [#109]
 - The email address on the sign-in screens stays on one line instead of breaking mid-word [#107]
 - Suppliers quote, revise, decline and confirm work orders through an emailed link, without an account. Staff choose which photos go; the address is only on work orders; links close once the quote is decided (D38) [#106]
