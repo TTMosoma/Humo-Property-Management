@@ -320,6 +320,7 @@ Restart the API first. Have a PDF on hand.
 - [ ] In *Documents on file*, open one of those documents and try to archive it, or change its date. **Expect:** refused: upload the new one instead.
 - [ ] As Priya (Finance): open the supplier. **Expect:** no *Upload* on the vetting documents.
 - [ ] On a job booked with a supplier that has a document missing. **Expect:** the work order lists what's missing, and can't be issued without ticking *Proceed anyway*.
+
 ## 28. Tasks that close themselves
 
 - [ ] As Thandeka: Tasks › a debtor follow-up, such as "send a final demand". **Expect:** the button is *Open debtor case*, with no *Mark done*. The drawer says the task closes itself, and no longer mentions a "workflow slice".
@@ -390,6 +391,12 @@ Restart the API first. Emails arrive in Mailpit (localhost:8025). Use a supplier
 - [ ] Approve it. Open the link again. **Expect:** "Your quote has been decided", with nothing to send.
 - [ ] Issue the work order. **Expect:** a "Work order" email; its page shows the address and the access notes. *Confirm this date*. **Expect:** the job says AquaFix confirmed the date.
 - [ ] On another job, *Ask for a revision…* of a supplier's quote. **Expect:** a new email; the old link says it isn't valid, the new one opens.
+
+## 34. The email address on the sign-in screens
+
+- [ ] Sign out. Make the window narrow (about the width of a phone held sideways), enter `thandeka@acacia.example` and continue. **Expect:** on *Confirm it's you*, the address is whole on one line, with the full stop after it.
+- [ ] Cancel and choose *Email me a sign-in link*. **Expect:** "If thandeka@acacia.example has a Humo account…" shows the address whole.
+- [ ] On a phone (or the browser's phone view), sign in with a long address. **Expect:** it fits on the screen without scrolling sideways.
 
 ## 35. Version numbers
 
