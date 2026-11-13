@@ -347,6 +347,13 @@ export const routes: Routes = [
             loadComponent: () => import('./features/finance/payables-page').then((m) => m.PayablesPage),
           },
           {
+            // The agency's rules for billing owners: interest, due days, letters, each scheme's financial year.
+            path: 'billing-rules',
+            title: 'Billing rules',
+            data: { permission: 'Billing.View', breadcrumb: 'Billing rules' },
+            loadComponent: () => import('./features/settings/billing-settings-page').then((m) => m.BillingSettingsPage),
+          },
+          {
             path: 'budgets',
             data: { permission: 'Finance.View', breadcrumb: 'Budgets', feature: 'budgets' },
             children: [
@@ -650,13 +657,8 @@ export const routes: Routes = [
             data: { permission: 'Notifications.Configure', breadcrumb: 'Notifications' },
             loadComponent: () => import('./features/settings/notification-settings-page').then((m) => m.NotificationSettingsPage),
           },
-          {
-            // The agency's rules for billing owners. Its own address: /settings/billing is Humo's invoices to the agency.
-            path: 'billing-rules',
-            title: 'Levy billing rules',
-            data: { permission: 'Billing.View', breadcrumb: 'Levy billing rules' },
-            loadComponent: () => import('./features/settings/billing-settings-page').then((m) => m.BillingSettingsPage),
-          },
+          // Moved to Finance (menu review, 13 Nov 2026); old links and bookmarks still arrive.
+          { path: 'billing-rules', redirectTo: '/finance/billing-rules' },
           {
             path: 'system',
             title: 'System',
