@@ -11,6 +11,7 @@
 > | Visual direction: Ink + deep teal | ✅ Accepted |
 > | Repo: `/frontend/humo-web`, `/backend` later, git initialised | ✅ Accepted |
 > | Refined navigation (section 2) | ✅ Accepted with changes: **Staff stays under Portfolio**, **Compliance is top-level** |
+> | Menu review (13 Nov 2026) | ✅ Accepted by the product owner: Staff becomes its own item, **Team**, since it's the agency's people rather than what it manages. Supersedes "Staff stays under Portfolio". |
 > Phase: UI-first prototype. No backend, no EF Core, no auth infrastructure.
 
 ---
@@ -60,7 +61,7 @@ I propose the following, organised around **jobs**, not tables:
 |---|---|---|
 | **Home** | Dashboard | "What needs my attention today?" |
 | **Tasks** *(new)* | My tasks, Team tasks, Approvals | One work queue for everything actionable (overdue jobs, invoices to approve, debtors to follow up). The dashboard's "Requires attention" links into this. |
-| **Portfolio** | Schemes, Units, People (Owners · Tenants · Trustees tabs), Staff | "Find a scheme/unit/person/team member and understand its state and workload." |
+| **Portfolio** | Schemes, Units, People (Owners · Tenants · Trustees tabs) | "Find a scheme/unit/person/team member and understand its state and workload." |
 | **Finance** | Levies & billing, Receipts & allocation, Statements, Debtors, Supplier invoices, Budgets, Financial reports | "Bill correctly, get every rand allocated, chase arrears, pay suppliers, report." |
 | **Maintenance** | Requests (list + board), Quotes & approvals, History | "Take a problem from reported → resolved." |
 | **Suppliers** | Directory, Performance | Shared by Maintenance (jobs/quotes) and Finance (invoices/payments) so it gets its own top-level item. |
@@ -69,7 +70,7 @@ I propose the following, organised around **jobs**, not tables:
 | **Governance** | Meetings (incl. AGM/SGM as meeting types), Resolutions & actions, Trustee boards, Scheme rules | "Run meetings and track what was decided." |
 | **Compliance** | Compliance overview (all schemes), Calendar, Items | "Know what is due, overdue or complete across every scheme." |
 | **Reports** | Report catalogue | Portfolio & scheme reports. |
-| **Settings** | Agency profile, Users & access (logins, roles, permissions), Notifications, Billing configuration, System | Staff *profiles & scheme assignments* live in Portfolio › Staff; Settings only handles login access and permissions. |
+| **Settings** | Agency profile, Users & access (logins, roles, permissions), Notifications, Billing configuration, System | Staff *profiles & scheme assignments* live in Team (the menu item, address `/staff`); Settings only handles login access and permissions. |
 
 Merges proposed:
 - **Billing + Levies → "Levies & billing"** (levy schedules + billing runs are one job).

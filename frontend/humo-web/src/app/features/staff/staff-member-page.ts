@@ -27,7 +27,7 @@ import { coverForm } from './staff-forms';
     } @else if (result.failed()) {
       <div class="surface"><ui-error-state title="We couldn’t load this person" (retry)="result.retry()" /></div>
     } @else if (!d()) {
-      <div class="surface"><ui-empty-state illustration="not-found" title="Not on the team"><a class="btn btn-primary" routerLink="/staff">Staff</a></ui-empty-state></div>
+      <div class="surface"><ui-empty-state illustration="not-found" title="Not on the team"><a class="btn btn-primary" routerLink="/staff">Team</a></ui-empty-state></div>
     } @else {
       @let s = d()!;
       <ui-record-header [eyebrow]="roles()" [title]="s.name" [subtitle]="(s.title ?? '') + (s.title ? ' · ' : '') + s.email" [status]="status()" [facts]="facts()" [chain]="chain()">
@@ -131,7 +131,7 @@ export class StaffMemberPage {
       { label: 'Schemes', value: s.allSchemes ? 'All' : String(s.schemes.length) },
     ];
   });
-  protected readonly chain = computed<ChainLink[]>(() => [{ kind: 'Portfolio', label: 'Staff', route: '/staff' }, { kind: 'Person', label: this.d()?.name ?? '' }]);
+  protected readonly chain = computed<ChainLink[]>(() => [{ kind: 'Your agency', label: 'Team', route: '/staff' }, { kind: 'Person', label: this.d()?.name ?? '' }]);
   protected readonly canCover = computed(() => !this.session.readOnly() && (this.session.can('Users.Manage') || this.session.selfIds().includes(this.id())));
 
   protected readonly formatDate = formatDate;

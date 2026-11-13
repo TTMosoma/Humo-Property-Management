@@ -16,7 +16,7 @@ import { StatusPill } from '../../ui/status-pill/status-pill';
   imports: [PageHeader, DataTable, CellDef, StatusPill, EmptyState, ErrorState, Skeleton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <ui-page-header eyebrow="Portfolio" title="Staff" subtitle="Who manages which schemes, and each person’s open work. Roles and scheme assignments are set in Users & access." />
+    <ui-page-header eyebrow="Your agency" title="Team" subtitle="Who manages which schemes, and each person’s open work. Roles and scheme assignments are set in Users & access." />
 
     @if (result.loading()) {
       <ui-skeleton [count]="8" />
@@ -25,7 +25,7 @@ import { StatusPill } from '../../ui/status-pill/status-pill';
     } @else if (!rows().length) {
       <div class="surface"><ui-empty-state title="No staff yet" message="Add people in Users & access." /></div>
     } @else {
-      <ui-data-table caption="Staff" [rows]="rows()" [columns]="columns" [rowId]="rowId" (rowClick)="open($event)">
+      <ui-data-table caption="Team" [rows]="rows()" [columns]="columns" [rowId]="rowId" (rowClick)="open($event)">
         <ng-template uiCell="person" let-s>
           <div class="person">
             <span class="avatar" aria-hidden="true">{{ s.initials }}</span>

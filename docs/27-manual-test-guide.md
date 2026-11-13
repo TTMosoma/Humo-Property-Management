@@ -131,7 +131,7 @@ Sections 11 to 16 use the development seed instead of a hand-made agency.
 
 ## 13. Staff
 
-- [ ] As Thandeka: Portfolio › Staff. **Expect:** Thandeka, Priya and Johan with their schemes, open tasks and approvals waiting.
+- [ ] As Thandeka: Team. **Expect:** Thandeka, Priya and Johan with their schemes, open tasks and approvals waiting.
 - [ ] Open Priya: *Set away cover*, covered by Johan, from today. **Expect:** Priya's open tasks and messages move to Johan; approvals stay. Johan's row says he's covering.
 - [ ] *Priya is back*. **Expect:** what’s still open moves back to Priya.
 
@@ -231,7 +231,7 @@ Restart the API first.
 
 Restart the API first, so the migration runs.
 
-- [ ] Sign in as `annette@fynbos.example` (Essentials): Portfolio › Staff, which shows a lock. **Expect:** it says Team management isn't on your plan, with no list of staff. In the browser console, `await (await fetch('/api/staff')).json()`. **Expect:** `not-entitled`.
+- [ ] Sign in as `annette@fynbos.example` (Essentials): Team, which shows a lock. **Expect:** it says Team management isn't on your plan, with no list of staff. In the browser console, `await (await fetch('/api/staff')).json()`. **Expect:** `not-entitled`.
 - [ ] Sign in as `priya@acacia.example` (Finance). **Expect:** the menu has *Suppliers* and *Resolutions*, with no Maintenance jobs, Meetings, Trustee boards, Scheme rules or Compliance. On Professional, *Resolutions* shows a lock.
 - [ ] As Priya: Tasks, then the *Team* tab. **Expect:** no "Check whether Unit … has put right" and no maintenance tasks. Approvals has *Verify bank details* for SafeGuard Security.
 - [ ] As Priya: in the browser console, `(await (await fetch('/api/work-items')).json()).map(w => w.type)`. **Expect:** no `rule-breach`, `follow-up` or `maintenance-triage`.
@@ -242,7 +242,7 @@ Restart the API first, so the migration runs.
 - [ ] As Thandeka: Tasks › *Team* › a "Check whether…" task › *Assign…*. **Expect:** Johan and you are offered, not Priya. Choose Johan. **Expect:** it moves to him. In the browser console, `await (await fetch('/api/work-items/assign', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: ['<the task id>'], assigneeId: '<Priya’s id>' }) })).json()`. **Expect:** refused: it can only go to someone who enforces the rules.
 - [ ] As Thandeka: Tasks › *Team* › an ordinary task › *Assign…*, and tick a task to use the bar's *Assign to…*. **Expect:** both list every staff member, including Priya, and the *Assignee* filter lists them too.
 - [ ] As Thandeka: Inbox › a conversation, and Maintenance › a new job. **Expect:** the assignee lists show your staff, and choosing one works.
-- [ ] As Thandeka: Portfolio › Staff › Johan, and set Priya as his cover from today. **Expect:** his ordinary tasks move to Priya and his "Check whether…" tasks move to you. End the cover. **Expect:** they all go back to Johan.
+- [ ] As Thandeka: Team › Johan, and set Priya as his cover from today. **Expect:** his ordinary tasks move to Priya and his "Check whether…" tasks move to you. End the cover. **Expect:** they all go back to Johan.
 - [ ] As Johan: Tasks and Governance. **Expect:** everything as before, including *Log a breach* and the "Check whether…" tasks.
 
 ## 23. Editing a person, and someone with no property left (D33)
@@ -423,6 +423,11 @@ Restart the API first. Emails arrive in Mailpit (localhost:8025). Use a supplier
 - [ ] Sign in as Thandeka (Agency Administrator). **Expect:** at the bottom, *Settings* (Agency, Users & access, Roles & permissions, Audit log, Notifications, Documents & templates, Levy billing rules) and *Plan & billing* (Plan & features, Humo billing & invoices). No *My profile* or *Security* there.
 - [ ] Open the account menu (your name, top right). **Expect:** *My profile* and *Security*. Press Ctrl+K and type "passkey". **Expect:** *Security* is found.
 - [ ] Sign in as Priya (Finance). **Expect:** *Levy billing rules* at the bottom, not a bare *Settings*.
+
+## 39. Team in the menu
+
+- [ ] As Thandeka. **Expect:** *Portfolio* has Units and People; *Team* is its own item below it, and opens a page titled Team.
+- [ ] Open a person on Team. **Expect:** the trail at the top reads Your agency › Team. A link to an old `/staff` address still opens.
 
 ## Reporting back
 

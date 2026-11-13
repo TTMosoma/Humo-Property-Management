@@ -253,12 +253,12 @@ export const routes: Routes = [
       },
       {
         path: 'staff',
-        data: { section: 'Portfolio', breadcrumb: 'Staff' },
+        data: { section: 'Team', breadcrumb: 'Team' },
         children: [
-          { path: '', title: 'Staff', data: { permission: 'Portfolio.Browse', feature: 'team-management' }, loadComponent: () => import('./features/staff/staff-page').then((m) => m.StaffPage) },
+          { path: '', title: 'Team', data: { permission: 'Portfolio.Browse', feature: 'team-management' }, loadComponent: () => import('./features/staff/staff-page').then((m) => m.StaffPage) },
           {
             path: ':staffId',
-            title: 'Staff member',
+            title: 'Team member',
             data: { permission: 'Portfolio.Browse', breadcrumb: 'Person', feature: 'team-management' },
             loadComponent: () => import('./features/staff/staff-member-page').then((m) => m.StaffMemberPage),
           },
