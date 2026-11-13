@@ -16,13 +16,13 @@ import { openForm } from '../shared/form-drawer';
 
 const CHANNELS: Channel[] = ['email', 'sms', 'whatsapp', 'portal'];
 
-/** Communications › Templates: reusable messages with merge fields, used by Compose and the Inbox. */
+/** Communications › Message templates: reusable messages with merge fields, used by Compose and the Inbox. */
 @Component({
   selector: 'app-templates-page',
   imports: [PageHeader, StatusPill, EmptyState, ErrorState, Skeleton, IonIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <ui-page-header eyebrow="Communications" title="Templates" subtitle="Reusable messages. Merge fields like {person.firstName} are filled in for each recipient.">
+    <ui-page-header eyebrow="Communications" title="Message templates" subtitle="Reusable messages. Merge fields like {person.firstName} are filled in for each recipient.">
       @if (canEdit()) {
         <button type="button" class="btn btn-primary" (click)="edit()"><ion-icon name="add-outline" aria-hidden="true" /> New template</button>
       }

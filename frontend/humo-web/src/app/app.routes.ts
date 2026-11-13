@@ -462,8 +462,8 @@ export const routes: Routes = [
           },
           {
             path: 'templates',
-            title: 'Templates',
-            data: { permission: 'Messages.Reply', breadcrumb: 'Templates', feature: 'communications' },
+            title: 'Message templates',
+            data: { permission: 'Messages.Reply', breadcrumb: 'Message templates', feature: 'communications' },
             loadComponent: () => import('./features/communications/templates-page').then((m) => m.TemplatesPage),
           },
           { path: 'announcements', redirectTo: 'notices' },
@@ -555,7 +555,7 @@ export const routes: Routes = [
       },
       {
         path: 'compliance',
-        data: { section: 'Compliance', feature: 'compliance' },
+        data: { section: 'Governance', feature: 'compliance' },
         children: [
           { path: '', title: 'Compliance', data: { permission: 'Compliance.View' }, loadComponent: () => import('./features/compliance/compliance-page').then((m) => m.CompliancePage) },
           {

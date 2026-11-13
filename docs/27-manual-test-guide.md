@@ -440,6 +440,11 @@ Restart the API first. Emails arrive in Mailpit (localhost:8025). Use a supplier
 - [ ] Open `/settings/billing-rules` (an old bookmark). **Expect:** it lands on *Finance › Billing rules*.
 - [ ] As Priya (Finance). **Expect:** *Billing rules* under Finance, and no *Settings* at the bottom.
 
+## 41. Message templates, and Compliance under Governance
+
+- [ ] As Thandeka, open *Communications*. **Expect:** *Message templates* (not just *Templates*); the page is titled the same.
+- [ ] Open *Governance*. **Expect:** Meetings, Resolutions & actions, Trustee boards, Scheme rules, and *Compliance* last. On the live system Compliance isn't built yet, so it's not shown; in the prototype (`npm start`) it is, and when something's overdue the closed *Governance* group shows a red dot.
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.
