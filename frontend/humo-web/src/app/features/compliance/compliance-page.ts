@@ -40,7 +40,7 @@ interface MatrixRow {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (!fixedScheme()) {
-      <ui-page-header eyebrow="Records" title="Compliance" subtitle="What’s due, overdue or complete across your schemes, worked out from meetings, documents, suppliers and each scheme’s financial year.">
+      <ui-page-header eyebrow="Governance" title="Compliance" subtitle="What’s due, overdue or complete across your schemes, worked out from meetings, documents, suppliers and each scheme’s financial year.">
         @if (canManage()) {
           <button type="button" class="btn btn-secondary" (click)="add()"><ion-icon name="add-outline" aria-hidden="true" /> Add item</button>
         }
