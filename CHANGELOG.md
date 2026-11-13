@@ -8,6 +8,7 @@ What changed in Humo Property Management, release by release, in plain language.
 
 - Communications › Templates is renamed **Message templates**, and Compliance moves under **Governance** [#114]
 - Levy billing rules moves from Settings to **Finance › Billing rules**; the old address still opens it [#113]
+- The figures at the top of a record line up when a label runs onto two lines; on a team member, *Approvals they can decide* is now *Approvals to decide* [#116]
 - Staff is its own menu item, **Team**, instead of sitting under Portfolio [#112]
 - Humo's menu is grouped (Customers, Business, Product, People, Operations), with System under Operations. Settings holds the agency's settings, with Plan & billing beside it; My profile and Security are in the account menu only [#111]
 - Humo's menu keeps Platform health, the Audit log and Technical logs together at the end [#110]

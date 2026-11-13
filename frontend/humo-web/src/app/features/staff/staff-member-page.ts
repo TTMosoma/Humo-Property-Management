@@ -127,7 +127,7 @@ export class StaffMemberPage {
     return [
       { label: 'Open Tasks', value: String(s.openTasks), hint: s.overdueTasks ? `${s.overdueTasks} overdue` : undefined, tone: s.overdueTasks ? 'danger' : 'default' },
       { label: 'Messages', value: String(s.openMessages) },
-      { label: 'Approvals they can decide', value: String(s.approvalsWaiting) },
+      { label: 'Approvals to decide', value: String(s.approvalsWaiting) },
       { label: 'Schemes', value: s.allSchemes ? 'All' : String(s.schemes.length) },
     ];
   });
