@@ -6,6 +6,7 @@ What changed in Humo Property Management, release by release, in plain language.
 
 ## Unreleased
 
+- The roadmap lists what isn't in version 1; Compliance is built after go-live [#117]
 - The step-up box's tip for someone else's computer reads as one sentence instead of broken columns [#115]
 - Communications › Templates is renamed **Message templates**, and Compliance moves under **Governance** [#114]
 - Levy billing rules moves from Settings to **Finance › Billing rules**; the old address still opens it [#113]
