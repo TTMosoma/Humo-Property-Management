@@ -80,7 +80,7 @@ export class StaffPage {
     { key: 'person', header: 'Person', mobile: 'title', sort: (s) => s.name },
     { key: 'schemes', header: 'Schemes', width: '28%', sort: (s) => (s.allSchemes ? 999 : s.schemes.length) },
     { key: 'work', header: 'Open work', width: '170px', sort: (s) => s.overdueTasks * 1000 + s.openTasks },
-    { key: 'approvals', header: 'Approvals they can decide', width: '130px', align: 'end', sort: (s) => s.approvalsWaiting },
+    { key: 'approvals', header: 'Approvals to decide', width: '130px', align: 'end', sort: (s) => s.approvalsWaiting },
     { key: 'status', header: 'Today', width: '170px', mobile: 'meta' },
   ];
   protected readonly rowId = (s: StaffSummary) => s.id;
