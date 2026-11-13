@@ -6,6 +6,7 @@ What changed in Humo Property Management, release by release, in plain language.
 
 ## Unreleased
 
+- The step-up box's tip for someone else's computer reads as one sentence instead of broken columns [#115]
 - Staff is its own menu item, **Team**, instead of sitting under Portfolio [#112]
 - Humo's menu is grouped (Customers, Business, Product, People, Operations), with System under Operations. Settings holds the agency's settings, with Plan & billing beside it; My profile and Security are in the account menu only [#111]
 - Humo's menu keeps Platform health, the Audit log and Technical logs together at the end [#110]

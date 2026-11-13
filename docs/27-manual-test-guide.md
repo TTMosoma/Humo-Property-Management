@@ -429,6 +429,10 @@ Restart the API first. Emails arrive in Mailpit (localhost:8025). Use a supplier
 - [ ] As Thandeka. **Expect:** *Portfolio* has Units and People; *Team* is its own item below it, and opens a page titled Team.
 - [ ] Open a person on Team. **Expect:** the trail at the top reads Your agency › Team. A link to an old `/staff` address still opens.
 
+## 42. The step-up tip reads as a sentence
+
+- [ ] Sign in with an email link on an account that already has a passkey, and choose *Set up a passkey* (or add one in Settings › Security). **Expect:** in the *Additional verification required* box, the tip under *Use passkey* reads as one sentence: "On someone else’s computer? Choose **Use passkey**, then **Use a phone or tablet**, and scan the QR code with your phone."
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.
