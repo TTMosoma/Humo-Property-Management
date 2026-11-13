@@ -12,6 +12,7 @@
 > | Repo: `/frontend/humo-web`, `/backend` later, git initialised | ✅ Accepted |
 > | Refined navigation (section 2) | ✅ Accepted with changes: **Staff stays under Portfolio**, **Compliance is top-level** |
 > | Menu review (13 Nov 2026) | ✅ Accepted by the product owner: Staff becomes its own item, **Team**, since it's the agency's people rather than what it manages. Supersedes "Staff stays under Portfolio". |
+> | Menu review (13 Nov 2026) | ✅ Accepted by the product owner: **Compliance moves under Governance** (CSOS returns, insurance and statutory deadlines sit with meetings, trustees and rules). Supersedes "Compliance is top-level". Communications › Templates is renamed **Message templates**. |
 > Phase: UI-first prototype. No backend, no EF Core, no auth infrastructure.
 
 ---
@@ -67,7 +68,7 @@ I propose the following, organised around **jobs**, not tables:
 | **Suppliers** | Directory, Performance | Shared by Maintenance (jobs/quotes) and Finance (invoices/payments) so it gets its own top-level item. |
 | **Communications** | Inbox, Announcements & notices, Sent history, Templates | "Tell the right people the right thing, and prove that we did." |
 | **Documents** | Library (faceted) | "Find the right document for the right scheme quickly." One library with facets (scheme, category, date, related entity, uploader) instead of six sub-pages. |
-| **Governance** | Meetings (incl. AGM/SGM as meeting types), Resolutions & actions, Trustee boards, Scheme rules | "Run meetings and track what was decided." |
+| **Governance** | Meetings (incl. AGM/SGM as meeting types), Resolutions & actions, Trustee boards, Scheme rules, Compliance (since 13 Nov 2026) | "Run meetings and track what was decided." |
 | **Compliance** | Compliance overview (all schemes), Calendar, Items | "Know what is due, overdue or complete across every scheme." |
 | **Reports** | Report catalogue | Portfolio & scheme reports. |
 | **Settings** | Agency profile, Users & access (logins, roles, permissions), Notifications, Billing configuration, System | Staff *profiles & scheme assignments* live in Team (the menu item, address `/staff`); Settings only handles login access and permissions. |

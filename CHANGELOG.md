@@ -7,6 +7,7 @@ What changed in Humo Property Management, release by release, in plain language.
 ## Unreleased
 
 - The step-up box's tip for someone else's computer reads as one sentence instead of broken columns [#115]
+- Communications › Templates is renamed **Message templates**, and Compliance moves under **Governance** [#114]
 - Levy billing rules moves from Settings to **Finance › Billing rules**; the old address still opens it [#113]
 - The figures at the top of a record line up when a label runs onto two lines; on a team member, *Approvals they can decide* is now *Approvals to decide* [#116]
 - Staff is its own menu item, **Team**, instead of sitting under Portfolio [#112]
