@@ -429,11 +429,6 @@ Restart the API first. Emails arrive in Mailpit (localhost:8025). Use a supplier
 - [ ] As Thandeka. **Expect:** *Portfolio* has Units and People; *Team* is its own item below it, and opens a page titled Team.
 - [ ] Open a person on Team. **Expect:** the trail at the top reads Your agency › Team. A link to an old `/staff` address still opens.
 
-## 43. Figures at the top of a record line up
-
-- [ ] As Thandeka, open *Team* and then Johan. **Expect:** Open tasks, Messages, Approvals to decide and Schemes, with all four numbers on one line.
-- [ ] Make the window narrow until a label runs onto two lines (or open a unit or a job with long labels). **Expect:** the numbers in that row still line up along the bottom.
-
 ## 40. Billing rules in Finance
 
 - [ ] As Thandeka, open *Finance*. **Expect:** *Billing rules* last, after Budgets; it opens the interest, due day, letters and financial-year rules. *Settings* no longer lists it.
@@ -448,6 +443,11 @@ Restart the API first. Emails arrive in Mailpit (localhost:8025). Use a supplier
 ## 42. The step-up tip reads as a sentence
 
 - [ ] Sign in with an email link on an account that already has a passkey, and choose *Set up a passkey* (or add one in Settings › Security). **Expect:** in the *Additional verification required* box, the tip under *Use passkey* reads as one sentence: "On someone else’s computer? Choose **Use passkey**, then **Use a phone or tablet**, and scan the QR code with your phone."
+
+## 43. Figures at the top of a record line up
+
+- [ ] As Thandeka, open *Team* and then Johan. **Expect:** Open tasks, Messages, Approvals to decide and Schemes, with all four numbers on one line.
+- [ ] Make the window narrow until a label runs onto two lines (or open a unit or a job with long labels). **Expect:** the numbers in that row still line up along the bottom.
 
 ## Reporting back
 
