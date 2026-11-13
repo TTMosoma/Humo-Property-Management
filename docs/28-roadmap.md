@@ -64,11 +64,9 @@ More than a security key:
 
 ## 4. Not in version 1 (to do after go-live)
 
-Agreed with the product owner on 13 November 2026. Items marked *proposed* are Claude's suggestion and wait for the product owner's yes; until then they count as version 1.
+Agreed with the product owner on 13 November 2026. Everything still open that isn't listed here is in version 1.
 
-### Agreed for after version 1
-
-| Item | What it is | Notes |
+| Item | What it is | Notes or why it can wait |
 |---|---|---|
 | **Compliance** | The Compliance screen on the API: CSOS returns, insurance renewals, statutory deadlines, and the compliance status in Reports and on the dashboard. | **To do.** Hidden on the live system until built. Sits under Governance in the menu. |
 | Online trustee meetings | Self-hosted Jitsi in the meeting page (§3). Recording later still. | Version 2 or 3. |
@@ -79,11 +77,6 @@ Agreed with the product owner on 13 November 2026. Items marked *proposed* are C
 | Contractor documents from their profile | A supplier's documents kept on their Humo Contractor profile and picked up by the agency; contractor packages. | Parked with the Contractor plan. |
 | Sponsorships and other contractor revenue | Direct sponsorships (no ad networks), paid Contractor tier, featured listings. | After a few hundred live users. |
 | Push alerts to Humo's administrators | Failure alerts on a Humo mobile app. Email alerts come first. | Needs Humo Mobile. |
-
-### Proposed for after version 1 (waiting for the product owner)
-
-| Item | What it is | Why it can wait |
-|---|---|---|
 | Platform › Feature flags, Platform health, System settings | Humo's own operations screens on the API (`OpsDataSource`). | Humo's staff only; switches and health can be handled on the server until then. |
 | Document templates by package, and the Enterprise designer | Essentials usable, Professional updated, Enterprise the best, plus the agency's own design (HTML or a designer). Package-only templates. | Today's templates work; this needs a decision replacing D23 first. |
 | Letters and notices as secure links | Collection letters and notices opened by link and code, like statements (R-1). | They're emailed today. |
