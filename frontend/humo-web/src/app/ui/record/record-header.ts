@@ -75,9 +75,10 @@ export interface KeyFact {
       display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: var(--s-1) var(--s-6);
       margin: var(--s-2) 0 0; padding-top: var(--s-4); border-top: 1px solid var(--c-border);
     }
-    .fact { min-width: 0; }
+    /* Each fact is a column with its value at the bottom, so values line up when a label wraps to two lines. */
+    .fact { display: flex; flex-direction: column; min-width: 0; }
     dt { font-size: var(--fs-xs); color: var(--c-text-muted); }
-    dd { margin: 2px 0 0; overflow: hidden; font-family: var(--font-display); font-size: var(--fs-xl); font-weight: var(--fw-medium); font-variant-numeric: tabular-nums; white-space: nowrap; text-overflow: ellipsis; }
+    dd { margin: auto 0 0; padding-top: 2px; overflow: hidden; font-family: var(--font-display); font-size: var(--fs-xl); font-weight: var(--fw-medium); font-variant-numeric: tabular-nums; white-space: nowrap; text-overflow: ellipsis; }
     .tone-danger { color: var(--c-danger); }
     .tone-warning { color: var(--c-warning); }
     .tone-success { color: var(--c-success); }
