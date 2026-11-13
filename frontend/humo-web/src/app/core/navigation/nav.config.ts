@@ -36,31 +36,71 @@ export const NAV: NavSection[] = [
   {
     id: 'platform',
     nodes: [
-      // Executive: the business, read-only.
+      // Each Humo role's home page first; then the work, grouped by what it's for.
       { id: 'exec-overview', label: 'Overview', icon: 'analytics-outline', route: '/platform/executive', permission: 'Platform.Insights.View', keywords: 'mrr arr board business' },
-      // Account Manager: customer success.
       { id: 'am-accounts', label: 'My accounts', icon: 'heart-outline', route: '/platform/accounts', permission: 'Platform.Accounts.Own', keywords: 'customer portfolio' },
-      { id: 'platform-account-requests', label: 'New accounts', icon: 'person-add-outline', route: '/platform/account-requests', permission: 'Platform.Customers.Manage', keywords: 'onboard new customer account approval approve reject delegated activation' },
-      { id: 'platform-customers', label: 'Customers', icon: 'business-outline', route: '/platform/customers', permission: 'Platform.Customers.View', audience: ['system-admin', 'humo-support', 'humo-executive', 'humo-finance'], keywords: 'agencies organisations subscriptions marula' },
-      { id: 'exec-revenue', label: 'Revenue', icon: 'trending-up-outline', route: '/platform/executive/revenue', permission: 'Platform.Insights.View', audience: ['humo-executive'], keywords: 'mrr arr package' },
-      { id: 'exec-growth', label: 'Growth', icon: 'people-outline', route: '/platform/executive/growth', permission: 'Platform.Insights.View', audience: ['humo-executive'], keywords: 'new customers churn retention adoption' },
-      { id: 'exec-health', label: 'Account health', icon: 'pulse-outline', route: '/platform/executive/health', permission: 'Platform.Insights.View', audience: ['humo-executive'], keywords: 'at risk critical' },
-      { id: 'exec-opps', label: 'Opportunities', icon: 'rocket-outline', route: '/platform/executive/opportunities', permission: 'Platform.Insights.View', audience: ['humo-executive'], keywords: 'expansion upgrade' },
-      { id: 'am-health', label: 'Account health', icon: 'pulse-outline', route: '/platform/accounts/health', permission: 'Platform.Accounts.Own', keywords: 'at risk adoption' },
-      { id: 'am-subscriptions', label: 'Subscriptions', icon: 'card-outline', route: '/platform/accounts/subscriptions', permission: 'Platform.Accounts.Own', keywords: 'package add-ons renewals entitlements' },
-      { id: 'am-opps', label: 'Opportunities', icon: 'rocket-outline', route: '/platform/accounts/opportunities', permission: 'Platform.Accounts.Own', keywords: 'expansion upgrade training' },
-      { id: 'am-support', label: 'Support & requests', icon: 'help-buoy-outline', route: '/platform/accounts/support', permission: 'Platform.Accounts.Own', keywords: 'tickets escalations upgrade requests' },
-      { id: 'platform-templates', label: 'Document templates', icon: 'document-text-outline', route: '/platform/templates', permission: 'Platform.View', audience: ['system-admin', 'humo-account-manager', 'humo-executive'], keywords: 'statement templates enterprise custom adoption pdf' },
-      { id: 'platform-packages', label: 'Packages & features', icon: 'cube-outline', route: '/platform/packages', permission: 'Platform.Packages.Manage', keywords: 'entitlements add-ons catalogue nudges' },
-      { id: 'platform-users', label: 'Users & impersonation', icon: 'people-outline', route: '/platform/users', permission: 'Platform.Customers.Users', audience: ['system-admin', 'humo-support'], keywords: 'impersonate view as support customer user humo team roles' },
-      { id: 'platform-team', label: 'Humo team', icon: 'people-circle-outline', route: '/platform/team', permission: 'Platform.View', audience: ['system-admin', 'humo-account-manager', 'humo-support', 'humo-executive'], keywords: 'humo staff invite offboard system administrator account manager support roles' },
-      { id: 'platform-invoices', label: 'Invoices', icon: 'receipt-outline', route: '/platform/invoices', permission: 'Platform.Revenue.View', keywords: 'billing invoices payments overdue eft card outstanding' },
-      { id: 'platform-pricing', label: 'Pricing & add-ons', icon: 'card-outline', route: '/platform/pricing', permission: 'Platform.Revenue.View', keywords: 'prices catalogue add-ons storage whatsapp vat proration billing invoices' },
-      { id: 'platform-flags', label: 'Feature flags', icon: 'flag-outline', route: '/platform/flags', permission: 'Platform.Config.Manage' },
-      // Operations: how the platform is running, and what happened on it.
-      { id: 'platform-health', label: 'Platform health', icon: 'pulse-outline', route: '/platform/health', permission: 'Platform.Operations.View' },
-      { id: 'platform-audit', label: 'Audit log', icon: 'document-lock-outline', route: '/platform/audit', permission: 'Platform.Audit', keywords: 'audit activity security impersonation history' },
-      { id: 'platform-logs', label: 'Technical logs', icon: 'terminal-outline', route: '/platform/logs', permission: 'Platform.Logs', keywords: 'serilog errors failures trace' },
+      {
+        id: 'humo-customers',
+        label: 'Customers',
+        icon: 'business-outline',
+        aloneUsesChildLabel: true,
+        children: [
+          { id: 'platform-account-requests', label: 'New accounts', route: '/platform/account-requests', permission: 'Platform.Customers.Manage', keywords: 'onboard new customer account approval approve reject delegated activation' },
+          { id: 'platform-customers', label: 'All customers', route: '/platform/customers', permission: 'Platform.Customers.View', audience: ['system-admin', 'humo-support', 'humo-executive', 'humo-finance'], keywords: 'agencies organisations subscriptions marula' },
+          { id: 'exec-health', label: 'Account health', route: '/platform/executive/health', permission: 'Platform.Insights.View', audience: ['humo-executive'], keywords: 'at risk critical' },
+          { id: 'am-health', label: 'Account health', route: '/platform/accounts/health', permission: 'Platform.Accounts.Own', keywords: 'at risk adoption' },
+          { id: 'am-subscriptions', label: 'Subscriptions', route: '/platform/accounts/subscriptions', permission: 'Platform.Accounts.Own', keywords: 'package add-ons renewals entitlements' },
+          { id: 'exec-opps', label: 'Opportunities', route: '/platform/executive/opportunities', permission: 'Platform.Insights.View', audience: ['humo-executive'], keywords: 'expansion upgrade' },
+          { id: 'am-opps', label: 'Opportunities', route: '/platform/accounts/opportunities', permission: 'Platform.Accounts.Own', keywords: 'expansion upgrade training' },
+          { id: 'am-support', label: 'Support & requests', route: '/platform/accounts/support', permission: 'Platform.Accounts.Own', keywords: 'tickets escalations upgrade requests' },
+        ],
+      },
+      {
+        id: 'humo-business',
+        label: 'Business',
+        icon: 'trending-up-outline',
+        aloneUsesChildLabel: true,
+        children: [
+          { id: 'exec-revenue', label: 'Revenue', route: '/platform/executive/revenue', permission: 'Platform.Insights.View', audience: ['humo-executive'], keywords: 'mrr arr package' },
+          { id: 'exec-growth', label: 'Growth', route: '/platform/executive/growth', permission: 'Platform.Insights.View', audience: ['humo-executive'], keywords: 'new customers churn retention adoption' },
+          { id: 'platform-invoices', label: 'Invoices', route: '/platform/invoices', permission: 'Platform.Revenue.View', keywords: 'billing invoices payments overdue eft card outstanding' },
+          { id: 'platform-pricing', label: 'Pricing & add-ons', route: '/platform/pricing', permission: 'Platform.Revenue.View', keywords: 'prices catalogue add-ons storage whatsapp vat proration billing invoices' },
+        ],
+      },
+      {
+        id: 'humo-product',
+        label: 'Product',
+        icon: 'cube-outline',
+        aloneUsesChildLabel: true,
+        children: [
+          { id: 'platform-packages', label: 'Packages & features', route: '/platform/packages', permission: 'Platform.Packages.Manage', keywords: 'entitlements add-ons catalogue nudges' },
+          { id: 'platform-flags', label: 'Feature flags', route: '/platform/flags', permission: 'Platform.Config.Manage' },
+          { id: 'platform-templates', label: 'Document templates', route: '/platform/templates', permission: 'Platform.View', audience: ['system-admin', 'humo-account-manager', 'humo-executive'], keywords: 'statement templates enterprise custom adoption pdf' },
+        ],
+      },
+      {
+        id: 'humo-people',
+        label: 'People',
+        icon: 'people-circle-outline',
+        aloneUsesChildLabel: true,
+        children: [
+          { id: 'platform-team', label: 'Humo team', route: '/platform/team', permission: 'Platform.View', audience: ['system-admin', 'humo-account-manager', 'humo-support', 'humo-executive'], keywords: 'humo staff invite offboard system administrator account manager support roles' },
+          { id: 'platform-users', label: 'Users & impersonation', route: '/platform/users', permission: 'Platform.Customers.Users', audience: ['system-admin', 'humo-support'], keywords: 'impersonate view as support customer user humo team roles' },
+        ],
+      },
+      // How the platform is running, its settings, and what happened on it.
+      {
+        id: 'humo-operations',
+        label: 'Operations',
+        icon: 'pulse-outline',
+        aloneUsesChildLabel: true,
+        children: [
+          { id: 'platform-health', label: 'Platform health', route: '/platform/health', permission: 'Platform.Operations.View' },
+          { id: 'settings-system', label: 'System', route: '/settings/system', permission: 'Platform.Config.Manage' },
+          { id: 'platform-audit', label: 'Audit log', route: '/platform/audit', permission: 'Platform.Audit', keywords: 'audit activity security impersonation history' },
+          { id: 'platform-logs', label: 'Technical logs', route: '/platform/logs', permission: 'Platform.Logs', keywords: 'serilog errors failures trace' },
+        ],
+      },
     ],
   },
   {
@@ -131,6 +171,15 @@ export const NAV: NavSection[] = [
       { id: 'reports', label: 'Reports', icon: 'bar-chart-outline', route: '/reports', permission: 'Reports.View', feature: 'reporting-basic', keywords: 'financial reports income statement' },
     ],
   },
+  // Your own pages live in the account menu (your name, top right). Kept here so the command palette finds them;
+  // the sidebar doesn't show this section.
+  {
+    id: 'account',
+    nodes: [
+      { id: 'settings-profile', label: 'My profile', icon: 'person-circle-outline', route: '/settings/profile', permission: 'Security.ManageOwn', keywords: 'name phone quiet hours notifications' },
+      { id: 'settings-security', label: 'Security', icon: 'lock-closed-outline', route: '/settings/security', permission: 'Security.ManageOwn', keywords: 'passkey windows hello face id devices sessions sign out' },
+    ],
+  },
   {
     id: 'footer',
     nodes: [
@@ -138,19 +187,25 @@ export const NAV: NavSection[] = [
         id: 'settings',
         label: 'Settings',
         icon: 'settings-outline',
+        aloneUsesChildLabel: true,
         children: [
-          { id: 'settings-profile', label: 'My profile', route: '/settings/profile', permission: 'Security.ManageOwn' },
-          { id: 'settings-security', label: 'Security', route: '/settings/security', permission: 'Security.ManageOwn', keywords: 'passkey windows hello face id devices sessions sign out' },
           { id: 'settings-agency', label: 'Agency', route: '/settings/agency', permission: 'Organisation.Manage' },
           { id: 'settings-users', label: 'Users & access', route: '/settings/users', permission: 'Users.Manage', keywords: 'logins invite assign role scope' },
-          { id: 'settings-documents', label: 'Documents & templates', route: '/settings/documents', permission: 'Documents.Configure', keywords: 'statement template branding logo colours pdf print enterprise custom' },
-          { id: 'settings-billing', label: 'Humo billing & invoices', route: '/settings/billing', permission: 'Subscription.Request', keywords: 'humo invoices billing payment eft card download' },
-          { id: 'settings-plan', label: 'Plan & features', route: '/settings/plan', permission: 'Subscription.Request', keywords: 'subscription package upgrade add-on governance billing' },
           { id: 'settings-roles', label: 'Roles & permissions', route: '/settings/roles', permission: 'Users.Manage', keywords: 'permission matrix entitlements plan' },
           { id: 'settings-audit', label: 'Audit log', route: '/settings/audit', permission: 'Audit.View', feature: 'audit-log', keywords: 'activity security impersonation history humo access' },
           { id: 'settings-notifications', label: 'Notifications', route: '/settings/notifications', permission: 'Notifications.Configure' },
+          { id: 'settings-documents', label: 'Documents & templates', route: '/settings/documents', permission: 'Documents.Configure', keywords: 'statement template branding logo colours pdf print enterprise custom' },
           { id: 'settings-billing-rules', label: 'Levy billing rules', route: '/settings/billing-rules', permission: 'Billing.View', keywords: 'interest rate levy rules financial year-end lifts AGM deadline' },
-          { id: 'settings-system', label: 'System', route: '/settings/system', permission: 'Platform.Config.Manage' },
+        ],
+      },
+      {
+        id: 'subscription',
+        label: 'Plan & billing',
+        icon: 'card-outline',
+        aloneUsesChildLabel: true,
+        children: [
+          { id: 'settings-plan', label: 'Plan & features', route: '/settings/plan', permission: 'Subscription.Request', keywords: 'subscription package upgrade add-on governance billing' },
+          { id: 'settings-billing', label: 'Humo billing & invoices', route: '/settings/billing', permission: 'Subscription.Request', keywords: 'humo invoices billing payment eft card download' },
         ],
       },
     ],

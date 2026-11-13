@@ -31,7 +31,8 @@ export class Sidebar {
   /** Emitted after a link is followed, so the mobile menu can close itself. */
   readonly navigated = output<void>();
 
-  protected readonly mainSections = computed(() => this.nav.sections().filter((s) => s.id !== 'footer'));
+  // 'account' (My profile, Security) is in the account menu; it's in the navigation only for the command palette.
+  protected readonly mainSections = computed(() => this.nav.sections().filter((s) => s.id !== 'footer' && s.id !== 'account'));
   protected readonly footerNodes = computed(
     () => this.nav.sections().find((s) => s.id === 'footer')?.nodes ?? [],
   );
