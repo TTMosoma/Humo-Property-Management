@@ -420,9 +420,9 @@ Restart the API first. Emails arrive in Mailpit (localhost:8025). Use a supplier
 
 - [ ] Sign in as a System Administrator. **Expect:** *Overview*, then groups *Customers*, *Business*, *Product*, *People* and *Operations*. *Operations* has *System*, *Audit log* and *Technical logs*. No *Settings* at the bottom.
 - [ ] Sign in as an Account Manager. **Expect:** *My accounts*, then *Customers* (New accounts, Account health, Subscriptions, Opportunities, Support & requests) and *Business*.
-- [ ] Sign in as Thandeka (Agency Administrator). **Expect:** at the bottom, *Settings* (Agency, Users & access, Roles & permissions, Audit log, Notifications, Documents & templates, Levy billing rules) and *Plan & billing* (Plan & features, Humo billing & invoices). No *My profile* or *Security* there.
+- [ ] Sign in as Thandeka (Agency Administrator). **Expect:** at the bottom, *Settings* (Agency, Users & access, Roles & permissions, Audit log, Notifications, Documents & templates) and *Plan & billing* (Plan & features, Humo billing & invoices). No *My profile* or *Security* there.
 - [ ] Open the account menu (your name, top right). **Expect:** *My profile* and *Security*. Press Ctrl+K and type "passkey". **Expect:** *Security* is found.
-- [ ] Sign in as Priya (Finance). **Expect:** *Levy billing rules* at the bottom, not a bare *Settings*.
+- [ ] Sign in as Johan (Portfolio Manager). **Expect:** *Notifications* at the bottom, not a bare *Settings*.
 
 ## 39. Team in the menu
 
@@ -433,6 +433,12 @@ Restart the API first. Emails arrive in Mailpit (localhost:8025). Use a supplier
 
 - [ ] As Thandeka, open *Team* and then Johan. **Expect:** Open tasks, Messages, Approvals to decide and Schemes, with all four numbers on one line.
 - [ ] Make the window narrow until a label runs onto two lines (or open a unit or a job with long labels). **Expect:** the numbers in that row still line up along the bottom.
+
+## 40. Billing rules in Finance
+
+- [ ] As Thandeka, open *Finance*. **Expect:** *Billing rules* last, after Budgets; it opens the interest, due day, letters and financial-year rules. *Settings* no longer lists it.
+- [ ] Open `/settings/billing-rules` (an old bookmark). **Expect:** it lands on *Finance › Billing rules*.
+- [ ] As Priya (Finance). **Expect:** *Billing rules* under Finance, and no *Settings* at the bottom.
 
 ## Reporting back
 
