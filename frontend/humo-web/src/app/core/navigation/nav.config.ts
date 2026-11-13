@@ -132,6 +132,7 @@ export const NAV: NavSection[] = [
           { id: 'credit-control', label: 'Credit control', route: '/finance/credit-control', permission: 'Billing.View', feature: 'credit-control', badge: 'credit-control', keywords: 'debtors arrears collections ageing demand' },
           { id: 'payables', label: 'Payables', route: '/finance/payables', permission: 'Finance.View', feature: 'payables', badge: 'payables', keywords: 'creditors supplier invoices pay payment batch' },
           { id: 'budgets', label: 'Budgets', route: '/finance/budgets', permission: 'Finance.View', feature: 'budgets', keywords: 'budget actual variance' },
+          { id: 'billing-rules', label: 'Billing rules', route: '/finance/billing-rules', permission: 'Billing.View', keywords: 'interest rate levy rules financial year-end lifts AGM deadline settings levy billing rules' },
         ],
       },
       {
@@ -196,7 +197,6 @@ export const NAV: NavSection[] = [
           { id: 'settings-audit', label: 'Audit log', route: '/settings/audit', permission: 'Audit.View', feature: 'audit-log', keywords: 'activity security impersonation history humo access' },
           { id: 'settings-notifications', label: 'Notifications', route: '/settings/notifications', permission: 'Notifications.Configure' },
           { id: 'settings-documents', label: 'Documents & templates', route: '/settings/documents', permission: 'Documents.Configure', keywords: 'statement template branding logo colours pdf print enterprise custom' },
-          { id: 'settings-billing-rules', label: 'Levy billing rules', route: '/settings/billing-rules', permission: 'Billing.View', keywords: 'interest rate levy rules financial year-end lifts AGM deadline' },
         ],
       },
       {
