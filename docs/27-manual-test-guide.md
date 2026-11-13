@@ -411,6 +411,11 @@ Restart the API first. Emails arrive in Mailpit (localhost:8025). Use a supplier
 - [ ] Make the window tall enough to see the subject and send again. **Expect:** the message under the subject, and no toast.
 - [ ] Open a job whose supplier isn't vetted, with the red "isn't fully vetted" note below the fold. **Expect:** no toast just for opening the job.
 
+## 37. Humo's logs together in the menu
+
+- [ ] Sign in as a System Administrator. **Expect:** the menu ends with *Pricing & add-ons*, then *Audit log* and *Technical logs* together. (*Feature flags* and *Platform health* aren't on the live system yet; in the prototype they come just before the logs.)
+- [ ] Sign in as Humo Support. **Expect:** *Audit log* last, with no *Technical logs* (Support can't read them).
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.
