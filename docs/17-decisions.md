@@ -950,6 +950,98 @@ Photos on a maintenance request were kept by name only on the live system, so th
 - Every email is sent after the change is saved, and a failed email doesn't undo it (docs/26 §8); the job shows whether it was sent.
 - Delivery reports for these emails come with item 14.
 
+## D42 — When a passkey is lost: other ways back in (13 November 2026)
+
+**Status:** proposed, waiting for the product owner's approval.
+
+**The problem:**
+- Signing in works without a passkey: an email link and its code (R-8). But adding a passkey needs an existing one (D30), and so do bank details, releasing payments and other sensitive actions.
+- Someone whose only passkey is lost, broken, or tied to another computer can sign in but can't add a new passkey or do the work that needs one.
+- Today only Humo Support can remove lost passkeys (D30 point 3), and Humo has nobody set up as Support yet. The product owner was locked out this way on 13 November 2026, on the local system.
+- An agency can't depend on Humo answering the phone before its staff can work again.
+
+**The principle:** whatever can add a passkey is as strong as the account itself. So every way back in is either something the person set up beforehand (a second passkey, recovery codes, an authenticator app), or a check by a person who knows them. Every use is flagged, told to the person, and held back from the riskiest actions for a day.
+
+**Decision:**
+1. **Two ways in, from the start.** After someone adds their first passkey, Humo PM asks them to add a second way:
+   - a passkey on another device (usually their phone);
+   - recovery codes (point 2);
+   - an authenticator app (point 3).
+
+   Staff and trustees, who approve and pay, see a reminder in Settings › Security and on the dashboard until they have one. Owners and tenants are asked once and can skip it.
+2. **Recovery codes.** Ten codes, each used once.
+   - They're shown once, to print or keep in a password manager. Only their hashes are stored.
+   - A code stands in for a passkey for one thing only: adding a new passkey and removing the lost ones.
+   - Making a new set needs a passkey and cancels the old set.
+   - Settings › Security shows how many are left.
+3. **An authenticator app.** A six-digit code from an app such as Microsoft Authenticator, Google Authenticator, or a password manager.
+   - Setting it up needs a passkey and a scan of a QR code. The secret is stored encrypted.
+   - It can be used wherever D26's SMS code can (approvals in My work). It's stronger than SMS, so it's offered first when both are set up.
+   - It can also add a new passkey when all are lost.
+   - Like the SMS code, it never covers bank details, trust accounts, Payfast, users and access, or security settings, apart from adding that new passkey. It never applies while impersonating.
+   - 5 wrong codes lock it for 15 minutes.
+4. **A day's hold after any recovery.** For 24 hours, a passkey added through recovery (codes, the authenticator app, or a reset under points 5 to 7) can't do any of these:
+   - add or verify bank details;
+   - release payments;
+   - change a trust account or Payfast;
+   - change users and access.
+
+   Everything else works at once. The person is emailed straight away, with *This wasn't me*: it signs them out everywhere and removes the new passkey. For staff, the agency's administrators are told too.
+5. **Agency administrators reset their own people.** An Agency Administrator can remove the passkeys of anyone at their agency: staff, and the owners, tenants and trustees of its schemes. This needs:
+   - their own passkey: never an SMS or authenticator code, and never during their own 24-hour hold;
+   - a reason;
+   - how they checked it's the person: in person, by video call, or by calling the number already on file.
+
+   They can't do it for themselves. Another administrator can. The person is signed out everywhere and emailed, and the other administrators are told. This uses a new permission, `Users.ResetPasskeys`, for the Agency Administrator role.
+6. **Humo Support for the rest**, as D30 point 3:
+   - an agency's only administrator;
+   - Humo's own staff;
+   - anyone whose agency administrators can't be reached.
+
+   A System Administrator's passkeys are removed only by another System Administrator, as today.
+7. **Owners and tenants can recover by themselves, with a wait.**
+   - Who: someone who is only an owner or tenant (not a trustee, not staff).
+   - After signing in by email link, they can ask to remove their lost passkeys.
+   - They're emailed at once and again before the end. After 48 hours, unless they cancel from either email, the passkeys are removed and they add a new one.
+   - Owners and tenants don't approve spending, pay suppliers or change bank details, so the wait protects them without putting the scheme's money at risk.
+8. **No recovery by SMS.** SIM-swap fraud is common in South Africa, so an SMS code never adds a passkey. D26 is otherwise unchanged.
+9. **Humo is ready before go-live.** At least two people can reset passkeys: two System Administrators, or one System Administrator and one Humo Support. Each has two ways in. This goes on the go-live checks (docs/26 §3).
+
+**Changes to earlier decisions:**
+- **D30 point 1** ("no exception"): a passkey may also be added with a recovery code, an authenticator code, or after a reset. Each is flagged and followed by the hold in point 4. An email link alone is still not enough.
+- **D30 point 3:** agency administrators reset their own people (point 5), and owners and tenants can recover by themselves (point 7). Humo Support covers the rest.
+- **D26 point 2:** the authenticator app joins the SMS code as a way to confirm approvals, and is offered first.
+
+**Every recovery is visible.**
+- It's a security event in the audit log, flagged with the method: recovery code, authenticator, agency reset, Humo reset, or self-recovery after a wait.
+- The person is told by email and in the app.
+- For staff, their agency's administrators are told too.
+
+**For the product owner to confirm:**
+- **The hold's length:** 24 hours (recommended) or 48.
+- **The owner and tenant wait:** 48 hours (recommended) or 72.
+- **Trustees:** reset by their agency's administrator (recommended, since the agency knows them), or only by Humo Support.
+
+**Consequences (when built):**
+- **API:**
+  - `GET` and `POST /me/recovery-codes` (passkey);
+  - `POST /me/authenticator/setup`, `/verify` and `/remove`;
+  - `POST /me/step-up/authenticator`;
+  - `POST /me/recover` (a recovery code or authenticator code; it allows only adding a passkey and removing the lost ones);
+  - `POST /me/recover/request` and `/cancel` (owners and tenants);
+  - `GET /users/{id}/passkeys` and `POST /users/{id}/passkeys/remove` (agency, `Users.ResetPasskeys`).
+- **Commands:** the hold is a check in `CommandRunner` for commands that need a passkey only. It's refused with `recovery-hold` and the time it ends.
+- **Database:** a migration for recovery code hashes, the encrypted authenticator secret, self-recovery requests, and when each passkey was added through recovery.
+- **Contracts:** `contracts/role-permissions.json` gains `Users.ResetPasskeys`. Both contract tests change together.
+- **Screens:**
+  - Settings › Security: *Recovery codes* and *Authenticator app*.
+  - The step-up box: *Use a code from your authenticator app* and *I've lost my passkey*.
+  - Users & access: *Remove passkeys*.
+  - Sign-in after an email link, with no passkey to hand: *Get back in*.
+- **Not simulated:** everything is real on the API, with no stand-ins (no register entries).
+
+---
+
 ## Still open (needs domain expertise before slice 2)
 
 - **Levies and participation quotas:** decided per scheme in **D13**. Still open: interest rules, special levies, VAT.

@@ -94,7 +94,11 @@ Use ProblemDetails, with a `code` for policy errors and an `errors` map keyed by
 - **Queries are live.**
   - Ports promise to emit again when their data changes. In memory, that happens automatically.
   - Over HTTP, commands announce what they changed (`DataChanges.notify('receipts', 'accounts')`) and queries re-fetch on those topics (`liveQuery`, `core/data/data-changes.ts`).
-  - Push (SignalR) is needed only for other people's changes to work items and notifications.
+  - **Other people's changes arrive by push** (SignalR, 15 November 2026), for the bell and My work only.
+    - The app connects to `/api/hubs/updates` while someone is signed in (`http/http-live-updates.ts`). It reconnects when they switch role or impersonate, and catches up after a dropped connection.
+    - After every save, wherever it comes from, the API (`Live/LiveUpdates.cs`) sends `changed` with topic names only (`notifications`, `work-items`). It goes to the people a new notice is for, and to the agency whose work items changed.
+    - The app feeds the names into `DataChanges.notify`, so the bell and My work fetch again through the normal endpoints, with every permission check. No data travels over the push.
+    - Everything else still refreshes on the person's own commands and on navigation.
 - **Work is in the bell** (`Work/WorkNotices.cs`, 13 November 2026).
   - Every task or approval that lands on someone is also a notification, in the app only (emails about work stay as each feature sends them). That covers new work, and work assigned or moved to someone, including by away cover.
   - **Who hears:**
@@ -145,4 +149,3 @@ Use ProblemDetails, with a `code` for policy errors and an `errors` map keyed by
 ## 8. Still open
 
 - Custom (configurable) role profiles: the permission model is ready, but there's no UI to edit them.
-- A push channel (SignalR) for work items and notifications changed by other people.

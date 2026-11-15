@@ -62,6 +62,10 @@ Status: **started 18 October 2026**, before the server exists. Fill in the blank
 **Passkey domain (relying-party ID): `pm.humo.co.za`.**
 - **Never change it.** Every passkey is bound to it; changing it forces every user to register again.
 
+**People who can reset passkeys (D42, before go-live).**
+- At least two: two System Administrators, or one System Administrator and one Humo Support.
+- Each has two ways in (two passkeys, or a passkey and recovery codes), so Humo is never locked out of itself.
+
 **Rate limits** on sign-in, code requests and step-up: check them monthly in the logs (§5).
 
 **Patching .NET is security work:**
@@ -135,6 +139,10 @@ Status: **started 18 October 2026**, before the server exists. Fill in the blank
 - **OS security updates:** `unattended-upgrades`.
 - **Nightly database backup:** a cron job or a container (§6).
 - **Webway daily VM backups** ⚠: a second safety net, not the main backup.
+
+**Live updates (SignalR) at `/api/hubs/updates`.**
+- The app keeps a WebSocket open to the API while someone is signed in. Caddy passes WebSockets through `reverse_proxy` with no extra setting.
+- If the bell stops updating by itself, check that WebSockets reach the API (the browser's network tab shows `/api/hubs/updates` as 101 Switching Protocols). The app still works without it; it refreshes on the person's own actions.
 
 ## 5. Monitoring and alerts
 
