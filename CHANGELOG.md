@@ -6,6 +6,7 @@ What changed in Humo Property Management, release by release, in plain language.
 
 ## Unreleased
 
+- Jobs and the Inbox update by themselves too: when someone else moves a job on, every open page shows it at once, so nobody is offered a step that's already been taken. Residents hear only about their own requests and messages [#PR]
 - Removing someone's passkeys signs them out at once on every device, and their open app leaves for the signed-out page. Signing out a session, signing out everywhere else, and suspending someone do the same [#122]
 - The bell and My work update by themselves when someone else gives you work or a notice, without reloading (live updates over SignalR) [#121]
 - Every task or approval that lands on someone is in their bell too: new work, work assigned to them, and approvals they can decide [#120]
