@@ -5,6 +5,8 @@ using Humo.Api.Live;
 using Humo.Domain.Access;
 using Humo.Infrastructure.Data;
 using Microsoft.AspNetCore.Http.Connections;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Mvc.Testing.Handlers;
 using Microsoft.AspNetCore.SignalR.Client;
 
@@ -94,6 +96,53 @@ public sealed class LiveUpdateTests : IDisposable
 
         await HumoApiFactory.Until(() => priya.SelectMany(t => t).Contains("notifications"));
         Assert.Empty(other);
+    }
+
+    private async Task Passkey(Guid userId)
+    {
+        using var scope = api.Services.CreateScope();
+        var users = scope.ServiceProvider.GetRequiredService<UserManager<HumoUser>>();
+        var user = (await users.FindByIdAsync(userId.ToString()))!;
+        var info = new UserPasskeyInfo(Guid.NewGuid().ToByteArray(), [1, 2, 3], api.Clock.GetUtcNow(), 0, null, true, true, false, [1], [1]) { Name = "Phone" };
+        Assert.True((await users.AddOrUpdatePasskeyAsync(user, info)).Succeeded);
+    }
+
+    [Fact]
+    public async Task Removing_someones_passkeys_signs_them_out_at_once_and_their_open_app_hears_it()
+    {
+        var org = await api.Customer("Acacia");
+        var thandeka = await api.Person("thandeka@acacia.example", Roles.AgencyAdmin, org);
+        await Passkey(thandeka);
+        await api.Person("lerato@humo.co.za", Roles.Support, null);
+        var support = await api.SignedIn("lerato@humo.co.za");
+        await support.StepUp();
+        var (client, heard) = await Open("thandeka@acacia.example");
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/me")).StatusCode);
+        heard.Clear();
+
+        Assert.Equal(HttpStatusCode.NoContent,
+            (await support.PostAsJsonAsync($"/api/platform/users/{thandeka}/passkeys/remove", new { reason = "Lost phone, confirmed by a call to their office" })).StatusCode);
+
+        await HumoApiFactory.Until(() => heard.SelectMany(t => t).Contains("session"));
+        // No waiting for the cookie's 5-minute check: the very next request is refused.
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/me")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Signing_out_everywhere_else_tells_the_other_open_apps()
+    {
+        var org = await api.Customer("Acacia");
+        await api.Person("thandeka@acacia.example", Roles.AgencyAdmin, org);
+        var (laptop, laptopHeard) = await Open("thandeka@acacia.example");
+        var here = await api.SignedIn("thandeka@acacia.example");
+        await here.StepUp();
+        laptopHeard.Clear();
+
+        Assert.Equal(HttpStatusCode.NoContent, (await here.PostAsync("/api/me/security/sign-out-others", null)).StatusCode);
+
+        await HumoApiFactory.Until(() => laptopHeard.SelectMany(t => t).Contains("session"));
+        Assert.Equal(HttpStatusCode.Unauthorized, (await laptop.GetAsync("/api/me")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await here.GetAsync("/api/me")).StatusCode);
     }
 
     [Fact]

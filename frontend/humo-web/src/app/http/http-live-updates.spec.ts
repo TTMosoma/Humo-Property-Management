@@ -3,7 +3,7 @@ import { signal } from '@angular/core';
 import { HubConnection, HubConnectionState } from '@microsoft/signalr';
 import { DataChanges, DataTopic } from '../core/data/data-changes';
 import { SessionService } from '../core/session/session.service';
-import { HttpLiveUpdates, LIVE_CONNECTION } from './http-live-updates';
+import { HttpLiveUpdates, LIVE_CONNECTION, SESSION_CHECK } from './http-live-updates';
 
 /** A stand-in for the SignalR connection: records what the app asked of it, and lets the test push messages. */
 class FakeConnection {
@@ -35,6 +35,7 @@ describe('Live updates over SignalR (HttpLiveUpdates)', () => {
   const impersonation = signal<{ id: string } | null>(null);
   let made: FakeConnection[];
   let heard: DataTopic[][];
+  let checks: number;
 
   const settle = async () => {
     TestBed.tick();
@@ -44,12 +45,14 @@ describe('Live updates over SignalR (HttpLiveUpdates)', () => {
   beforeEach(() => {
     made = [];
     heard = [];
+    checks = 0;
     owner.set('');
     impersonation.set(null);
     TestBed.configureTestingModule({
       providers: [
         HttpLiveUpdates,
         { provide: SessionService, useValue: { dataOwner: owner, impersonation } },
+        { provide: SESSION_CHECK, useValue: () => checks++ },
         {
           provide: LIVE_CONNECTION,
           useValue: (url: string) => {
@@ -98,7 +101,7 @@ describe('Live updates over SignalR (HttpLiveUpdates)', () => {
     TestBed.inject(HttpLiveUpdates).start();
     await settle();
 
-    made[0].push(['session', 'payables']);
+    made[0].push(['payables', 'jobs']);
     made[0].push('notifications');
 
     expect(heard).toEqual([]);
@@ -125,6 +128,20 @@ describe('Live updates over SignalR (HttpLiveUpdates)', () => {
 
     made[0].reconnected?.();
 
-    expect(heard).toEqual([['notifications', 'work-items']]);
+    expect(heard).toEqual([['notifications', 'work-items', 'session']]);
+    expect(checks).toBe(1);
+  });
+
+  it('a change to their access checks the session at once, so an ended one leaves for the signed-out page', async () => {
+    owner.set('u-1|a-1');
+    TestBed.inject(HttpLiveUpdates).start();
+    await settle();
+
+    made[0].push(['notifications']);
+    expect(checks).toBe(0);
+
+    made[0].push(['session']);
+    expect(checks).toBe(1);
+    expect(heard).toEqual([['notifications'], ['session']]);
   });
 });
