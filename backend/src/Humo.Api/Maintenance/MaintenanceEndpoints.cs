@@ -213,7 +213,7 @@ public static partial class MaintenanceEndpoints
             var before = job.Stage;
             await ApplyAsync(row, job, a, actor, suppliers, problems, db, m, ct, limit, notices);
             // The resident who reported it hears about the step it reached (and it's in the job's history when they did).
-            if (await ResidentRequests.TellAsync(db, notices, job, before, a, Name(job.SupplierId), actor.Human.Id, ct) is { } told)
+            if (await ResidentRequests.TellAsync(db, notices, row.OrganisationId, job, before, a, Name(job.SupplierId), actor.Human.Id, ct) is { } told)
                 JobRules.Log(job, "message", $"{job.ReportedBy.Name} told: {told}", "Humo PM", m.NowText);
             // D38: what the supplier needs goes to them by email, with their own link.
             var agency = await db.Organisations.AsNoTracking().Where(o => o.Id == row.OrganisationId).Select(o => o.ShortName).FirstAsync(ct);

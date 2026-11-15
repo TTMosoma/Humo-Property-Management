@@ -83,7 +83,8 @@ public static class ResidentRequests
     /// emails go after the save, with the other notices. Returns what they were told, or null when nobody was (no step for
     /// them, or they have no sign-in).
     /// </summary>
-    public static async Task<string?> TellAsync(HumoDbContext db, Platform.Notices notices, Job job, string before, JobAction a, string supplier, Guid actorId, CancellationToken ct)
+    public static async Task<string?> TellAsync(HumoDbContext db, Platform.Notices notices, Guid organisationId, Job job, string before, JobAction a, string supplier, Guid actorId,
+        CancellationToken ct)
     {
         if (job.ReportedBy.Role == "staff" || !Guid.TryParse(job.ReportedBy.PersonId, out var personId)) return null;
 
@@ -107,12 +108,17 @@ public static class ResidentRequests
         };
         if (message is not { } m) return null;
 
+        // The agency's rule for "Request updated" (Settings › Notifications): switched off, it's in the app only; otherwise its channels.
+        var rules = await db.AgencySettings.AsNoTracking().Where(x => x.OrganisationId == organisationId).Select(x => x.NotificationsJson).FirstOrDefaultAsync(ct);
+        var rule = rules is null ? null : System.Text.Json.JsonSerializer.Deserialize<List<Settings.NotificationRuleDto>>(rules, Humo.Domain.Commercial.Json.Options)?.FirstOrDefault(r => r.Event == "job-updated");
+        var agencyEmails = rule is null || (rule.Enabled && rule.Channels.Contains("email"));
+
         var people = await db.Users.AsNoTracking()
             .Where(u => u.PersonId == personId.ToString() && u.Status == Humo.Domain.Access.IdentityStatuses.Active).Select(u => u.Id).ToListAsync(ct);
         foreach (var user in people)
         {
             var prefs = await db.PersonalPreferences.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == user, ct);
-            var byEmail = m.Email && (prefs?.Work ?? "email,portal").Split(',').Contains("email");
+            var byEmail = m.Email && agencyEmails && (prefs?.Work ?? "email,portal").Split(',').Contains("email");
             notices.ToPerson(user, actorId, m.Title, m.Detail, Link, sendEmail: byEmail, kind: "maintenance");
         }
         return people.Count == 0 ? null : $"“{m.Title}”";

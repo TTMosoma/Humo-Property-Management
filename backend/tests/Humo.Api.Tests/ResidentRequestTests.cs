@@ -143,6 +143,23 @@ public sealed class ResidentRequestTests : IDisposable
     }
 
     [Fact]
+    public async Task With_request_updates_switched_off_the_resident_still_sees_it_in_the_app_but_gets_no_email()
+    {
+        var s = await Scheme();
+        var version = (await (await s.Admin.GetAsync("/api/settings/agency")).Json()).GetProperty("version").GetInt32();
+        var off = await s.Admin.PutAsJsonAsync("/api/settings/agency/notifications",
+            new { rules = new[] { new { @event = "job-updated", enabled = false, channels = Array.Empty<string>() } }, expectedVersion = version });
+        Assert.True(off.StatusCode == HttpStatusCode.NoContent, await off.Content.ReadAsStringAsync());
+        var reference = await Report(s);
+
+        await Act(s.Admin, reference, new { type = "cancel", reason = "Already fixed by the caretaker" });
+
+        Assert.Contains("Cancelled: Geyser leaking", await Bell(s.Owner));
+        await Task.Delay(500);
+        Assert.DoesNotContain("Cancelled: Geyser leaking", EmailsTo("sipho@mail.example"));
+    }
+
+    [Fact]
     public async Task Closing_a_request_the_resident_already_confirmed_tells_them_nothing_more()
     {
         var s = await Scheme();
