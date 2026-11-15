@@ -6,7 +6,7 @@ What changed in Humo Property Management, release by release, in plain language.
 
 ## Unreleased
 
-- The bell and My work update by themselves when someone else gives you work or a notice, without reloading (live updates over SignalR) [#PR]
+- The bell and My work update by themselves when someone else gives you work or a notice, without reloading (live updates over SignalR) [#121]
 - Every task or approval that lands on someone is in their bell too: new work, work assigned to them, and approvals they can decide [#120]
 - The roadmap lists what isn't in version 1; Compliance is built after go-live [#117]
 - The step-up box's tip for someone else's computer reads as one sentence instead of broken columns [#115]
