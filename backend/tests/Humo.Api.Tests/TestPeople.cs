@@ -62,9 +62,11 @@ public static partial class TestPeople
     }
 
     /// <summary>A fresh client signed in as this person (email link).</summary>
-    public static async Task<HttpClient> SignedIn(this HumoApiFactory api, string email)
+    public static Task<HttpClient> SignedIn(this HumoApiFactory api, string email) => api.SignedIn(email, api.Client());
+
+    /// <summary>Signs in on a client the test made, e.g. one whose cookies it reads.</summary>
+    public static async Task<HttpClient> SignedIn(this HumoApiFactory api, string email, HttpClient client)
     {
-        var client = api.Client();
         api.Email.Sent.Clear();
         var sent = await client.PostAsJsonAsync("/api/auth/link", new { email });
         Assert.Equal(HttpStatusCode.Accepted, sent.StatusCode);
