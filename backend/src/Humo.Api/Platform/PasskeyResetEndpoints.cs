@@ -41,7 +41,7 @@ public static class PasskeyResetEndpoints
     }
 
     private static async Task<IResult> Remove(Guid userId, RemovePasskeysRequest body, CurrentActor current, CommandRunner commands, UserManager<HumoUser> users, HumoDbContext db,
-        IEmailSender email, IOptions<AppOptions> app, ILoggerFactory logs, CancellationToken ct)
+        IEmailSender email, IOptions<AppOptions> app, ILoggerFactory logs, Auth.SignInSessions sessions, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } me) return Results.Unauthorized();
         if (!me.Can(Permission) || await users.FindByIdAsync(userId.ToString()) is not { } user) return Problems.NotFound();
@@ -68,8 +68,10 @@ public static class PasskeyResetEndpoints
         }, async actor =>
         {
             foreach (var p in targets) await users.RemovePasskeyAsync(user, p.CredentialId);
-            // A lost or stolen device: whoever has it is signed out too.
+            // A lost or stolen device: whoever has it is signed out too, at once. The security stamp stops the cookie; ending
+            // the sessions stops it on the next request, and the app open on it leaves for the signed-out page straight away.
             await users.UpdateSecurityStampAsync(user);
+            await sessions.RevokeAllAsync(user.Id, ct);
             commands.AfterCommit(async () =>
             {
                 if (string.IsNullOrWhiteSpace(user.Email)) return;

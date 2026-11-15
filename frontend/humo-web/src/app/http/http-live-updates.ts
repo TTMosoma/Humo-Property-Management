@@ -3,10 +3,24 @@ import { HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } fro
 import { DataChanges, DataTopic } from '../core/data/data-changes';
 import { LiveUpdates } from '../core/data/live-updates';
 import { SessionService } from '../core/session/session.service';
-import { API_BASE_URL } from './http-session-data-source';
+import { SessionDataSource } from '../domain';
+import { API_BASE_URL, HttpSessionDataSource } from './http-session-data-source';
 
 /** The topics the API pushes (`Live/LiveUpdates.cs`); anything else is ignored. */
-const PUSHED: readonly DataTopic[] = ['notifications', 'work-items'];
+const PUSHED: readonly DataTopic[] = ['notifications', 'work-items', 'session'];
+
+/**
+ * Checks the session with the API again (GET /me). If it has ended (passkeys removed, signed out elsewhere, suspended),
+ * the shell leaves for the signed-out page. Tests replace it.
+ */
+export const SESSION_CHECK = new InjectionToken<() => void>('SESSION_CHECK', {
+  factory: () => {
+    const source = inject(SessionDataSource);
+    return () => {
+      if (source instanceof HttpSessionDataSource) source.reload().subscribe();
+    };
+  },
+});
 
 /** Builds the SignalR connection; tests replace it. */
 export const LIVE_CONNECTION = new InjectionToken<(url: string) => HubConnection>('LIVE_CONNECTION', {
@@ -29,6 +43,7 @@ export class HttpLiveUpdates implements LiveUpdates {
   private readonly session = inject(SessionService);
   private readonly changes = inject(DataChanges);
   private readonly connect = inject(LIVE_CONNECTION);
+  private readonly checkSession = inject(SESSION_CHECK);
   private readonly url = `${inject(API_BASE_URL)}/hubs/updates`;
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
@@ -60,8 +75,11 @@ export class HttpLiveUpdates implements LiveUpdates {
     if (!owner) return;
     const connection = this.connect(this.url);
     connection.on('changed', (topics: unknown) => this.heard(topics));
-    // Back after a gap: anything could have changed meanwhile.
-    connection.onreconnected(() => this.changes.notify(...PUSHED));
+    // Back after a gap: anything could have changed meanwhile, the session included.
+    connection.onreconnected(() => {
+      this.checkSession();
+      this.changes.notify(...PUSHED);
+    });
     this.connection = connection;
     try {
       await connection.start();
@@ -79,6 +97,8 @@ export class HttpLiveUpdates implements LiveUpdates {
 
   private heard(topics: unknown): void {
     const known = Array.isArray(topics) ? PUSHED.filter((t) => topics.includes(t)) : [];
+    // Their access changed: find out now whether this session still counts.
+    if (known.includes('session')) this.checkSession();
     if (known.length) this.changes.notify(...known);
   }
 }
