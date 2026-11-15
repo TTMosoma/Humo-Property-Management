@@ -16,9 +16,9 @@ public static class WorkItemAccess
     /// <summary>Tasks that stand for real work on a record. Each closes itself when that step is taken, so ticking one off could only say the work was done when it wasn't.</summary>
     public static readonly string[] ClosedByTheirOwnStep = ["debtor-follow-up", "maintenance-triage", RuleBreach];
 
-    private static readonly string[] FinanceTypes = ["receipt-allocation", "debtor-follow-up", "invoice-approval", "payment-batch-approval", "billing-run-approval", "account-correction"];
-    private static readonly string[] OperationsTypes = ["maintenance-triage", "maintenance-overdue", "document-expiry"];
-    private static readonly string[] NotForPortfolioManagers = ["receipt-allocation", "payment-batch-approval", "bank-details-verification", "billing-run-approval"];
+    internal static readonly string[] FinanceTypes = ["receipt-allocation", "debtor-follow-up", "invoice-approval", "payment-batch-approval", "billing-run-approval", "account-correction"];
+    internal static readonly string[] OperationsTypes = ["maintenance-triage", "maintenance-overdue", "document-expiry"];
+    internal static readonly string[] NotForPortfolioManagers = ["receipt-allocation", "payment-batch-approval", "bank-details-verification", "billing-run-approval"];
 
     /// <param name="approverRoles">Who can decide it, when that's been worked out for this request (D24 adds the trustees).</param>
     public static bool CanSee(Actor actor, WorkItemRow w, IReadOnlyCollection<string>? approverRoles = null)

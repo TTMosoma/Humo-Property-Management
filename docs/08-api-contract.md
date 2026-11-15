@@ -95,6 +95,13 @@ Use ProblemDetails, with a `code` for policy errors and an `errors` map keyed by
   - Ports promise to emit again when their data changes. In memory, that happens automatically.
   - Over HTTP, commands announce what they changed (`DataChanges.notify('receipts', 'accounts')`) and queries re-fetch on those topics (`liveQuery`, `core/data/data-changes.ts`).
   - Push (SignalR) is needed only for other people's changes to work items and notifications.
+- **Work is in the bell** (`Work/WorkNotices.cs`, 13 November 2026).
+  - Every task or approval that lands on someone is also a notification, in the app only (emails about work stay as each feature sends them). That covers new work, and work assigned or moved to someone, including by away cover.
+  - **Who hears:**
+    - the assignee;
+    - for an approval, the staff who can decide it, or the scheme's trustees on Humo when nobody else at the agency can (D24). Board approvals already tell the board (D39);
+    - for a task nobody has yet, the role that does that work (Finance, Operations) and the scheme's portfolio managers, as My work shows it to them (D32). The administrators hear only when nobody else would.
+  - The person who raised it never gets their own. Several items for one person in one change arrive as one notice.
 
 ## 6. Contact details (Humo Contractor)
 

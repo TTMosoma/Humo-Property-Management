@@ -449,6 +449,17 @@ Restart the API first. Emails arrive in Mailpit (localhost:8025). Use a supplier
 - [ ] As Thandeka, open *Team* and then Johan. **Expect:** Open tasks, Messages, Approvals to decide and Schemes, with all four numbers on one line.
 - [ ] Make the window narrow until a label runs onto two lines (or open a unit or a job with long labels). **Expect:** the numbers in that row still line up along the bottom.
 
+## 44. Tasks and approvals in the bell
+
+Reload the page after each step before checking the bell (it doesn't update by itself yet).
+
+- [ ] As Sipho (owner), report a problem on his unit. Then as Johan (Portfolio Manager for that scheme), open the bell. **Expect:** "New task: …" with the scheme and due date, and a maintenance icon. Thandeka (administrator) doesn't get it.
+- [ ] As Thandeka, open Tasks and assign a task to Priya. As Priya, open the bell. **Expect:** "Assigned to you: …"; opening it goes to the task's page. Thandeka has no notice of her own.
+- [ ] As Thandeka, assign three tasks to Johan at once. **Expect:** Johan has one notice, "3 tasks assigned to you", not three.
+- [ ] As Thandeka, enter a supplier's bank details. As Priya, open the bell. **Expect:** "To approve: …" with a finance icon. Johan doesn't get it.
+- [ ] Mark a task done. **Expect:** nobody gets a notice.
+- [ ] **Expect** no new emails for any of these (Mailpit).
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.
