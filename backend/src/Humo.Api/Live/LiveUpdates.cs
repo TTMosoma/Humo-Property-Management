@@ -12,7 +12,7 @@ namespace Humo.Api.Live;
 
 /// <summary>
 /// Live updates (docs/08 §5): when other people's changes land in someone's bell or work, their open app hears at once and
-/// fetches again. The hub sends only the names of what changed ("notifications", "work-items"), never the data: the app
+/// fetches again. The hub sends only the names of what changed ("notifications", "work-items", "session"), never the data: the app
 /// re-reads through the normal endpoints, which apply every permission check. So a message reaching a wider group than
 /// strictly needed shows nobody anything they couldn't already read.
 ///   /api/hubs/updates   (SignalR; signed in)
@@ -77,7 +77,30 @@ public sealed class LiveUpdates(IHubContext<UpdatesHub> hub, ILogger<LiveUpdates
         }
         foreach (var e in db.ChangeTracker.Entries<WorkItemRow>().Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted))
             Add(UpdatesHub.OrganisationGroup(e.Entity.OrganisationId), "work-items");
+        // Their access changed: suspended, removed, signed out everywhere (a new security stamp), or a role given or ended.
+        // The app checks /me again at once, and leaves for the signed-out page if the session no longer counts.
+        foreach (var e in db.ChangeTracker.Entries<HumoUser>().Where(e => e.State == EntityState.Modified
+            && (e.Property(u => u.Status).IsModified || e.Property(u => u.SecurityStamp).IsModified)))
+            Add(UpdatesHub.UserGroup(e.Entity.Id), "session");
+        foreach (var e in db.ChangeTracker.Entries<RoleAssignment>().Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted))
+            Add(UpdatesHub.UserGroup(e.Entity.UserId), "session");
         return targets;
+    }
+
+    /// <summary>
+    /// The person's sessions changed outside a tracked save (sessions are ended in bulk): their open apps check /me again
+    /// at once. Never throws.
+    /// </summary>
+    public async Task SessionChangedAsync(Guid userId)
+    {
+        try
+        {
+            await hub.Clients.Group(UpdatesHub.UserGroup(userId)).SendAsync(UpdatesHub.Changed, new[] { "session" });
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            logger.LogWarning(e, "Couldn't tell {User}'s open apps their session changed; they find out on their next request", userId);
+        }
     }
 
     public override ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData, InterceptionResult<int> result, CancellationToken ct = default)

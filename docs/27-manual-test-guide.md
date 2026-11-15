@@ -468,6 +468,16 @@ Use two browsers (or a normal and a private window), signed in as two people at 
 - [ ] Stop the API for half a minute, then start it again. **Expect:** the app carries on; once the API is back, a change made in window 1 shows in window 2 without reloading.
 - [ ] A person at another agency (e.g. Fynbos) in window 2. **Expect:** nothing changes when Thandeka assigns work at Acacia.
 
+## 46. Removing passkeys signs the person out at once
+
+Two browsers: Terry (System Administrator) in window 1, Thandeka in window 2. Thandeka needs a passkey: add one in Settings › Security first. Restart `npm run start:api` if you haven't since #121.
+
+- [ ] Window 1: Platform › Users & impersonation, on Thandeka's row choose *Passkeys*, pick *All* (or her only passkey), give a reason, *Remove*, and confirm with your passkey. **Expect:** window 2 goes to the signed-out page within a second or two, without Thandeka clicking anything. She gets the email saying her passkeys were removed.
+- [ ] Window 2: sign in again with an email link. **Expect:** it works, and she's offered a fresh first passkey.
+- [ ] Thandeka signed in on two browsers. In one, Settings › Security › *Sign out everywhere else*. **Expect:** the other goes to the signed-out page at once; this one carries on.
+- [ ] In Settings › Security, sign out one of the other sessions in the list. **Expect:** that browser goes to the signed-out page at once.
+- [ ] As Thandeka, suspend Johan (Settings › Users & access) while Johan is signed in in the other window. **Expect:** Johan's window goes to the signed-out page at once.
+
 ## 47. A resident follows their own request
 
 As Sipho (owner) and Johan (Portfolio Manager for Kingfisher Court). Check Sipho's email in Mailpit.
