@@ -710,6 +710,12 @@ export const routes: Routes = [
             loadComponent: () => import('./features/maintenance/request-form').then((m) => m.RequestForm),
           },
           {
+            path: 'requests/:ref',
+            title: 'Request',
+            data: { permission: 'Resident.Portal' },
+            loadComponent: () => import('./features/my/my-request-page').then((m) => m.MyRequestPage),
+          },
+          {
             path: 'documents',
             title: 'Documents',
             data: { permission: 'Resident.Portal' },

@@ -316,6 +316,12 @@ textarea {
   border-top: 1px dashed var(--c-border);
 }
 
+.cancel .hint {
+  margin: var(--s-1) 0 var(--s-2);
+  font-size: var(--fs-xs);
+  color: var(--c-text-muted);
+}
+
 @media (max-width: 600px) {
   .form-grid .wide {
     grid-column: auto;

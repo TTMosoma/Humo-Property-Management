@@ -6,6 +6,7 @@ What changed in Humo Property Management, release by release, in plain language.
 
 ## Unreleased
 
+- A resident hears about their own request as it moves on (being arranged, booked, done, cancelled or closed), by email for the booking, the finish and the end; each request opens on its own page, and the API no longer sends residents the quotes, prices or staff notes [#PR]
 - Every task or approval that lands on someone is in their bell too: new work, work assigned to them, and approvals they can decide [#120]
 - The roadmap lists what isn't in version 1; Compliance is built after go-live [#117]
 - The step-up box's tip for someone else's computer reads as one sentence instead of broken columns [#115]
