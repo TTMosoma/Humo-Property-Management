@@ -182,6 +182,8 @@ public sealed class SoleAuthority(HumoDbContext db, TimeProvider clock, Platform
             item.Route, sendEmail: channels.Contains("email"));
         if (channels.Contains("sms") && MobileNumber.TryNormalise(user.PhoneNumber, out var mobile))
             await TextAsync(mobile, $"Humo PM: your approval of {item.Ref} ({scheme.Name}) is now in effect after the 24-hour cooling-off.", item.OrganisationId, ct);
+        // Work the decision raised (e.g. a payment batch to release) reaches its people's bell, as after any command.
+        await WorkNotices.TellAsync(db, notices, null, ct);
         await db.SaveChangesAsync(ct);
         await notices.SendEmailsAsync(ct);
     }

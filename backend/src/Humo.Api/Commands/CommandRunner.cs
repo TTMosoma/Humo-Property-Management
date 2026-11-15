@@ -92,6 +92,8 @@ public sealed class CommandRunner(CurrentActor current, HumoDbContext db, AuditL
 
         // D39: anything this command sent to the board, its trustees on Humo hear about now.
         await Work.BoardApprovals.AskForAddedAsync(db, notices, actor.Human.Id, ct);
+        // Every task or approval that lands on someone is in their bell too.
+        await Work.WorkNotices.TellAsync(db, notices, actor.Human.Id, ct);
         audit.Record(spec.Action, "success", actor.Human, category: spec.Category, role: actor.Assignment.Role, organisationId: spec.OrganisationId ?? actor.OrganisationId,
             resource: spec.Resource, resourceId: spec.ResourceId, stepUpMethod: !needsProof ? null : passkeyFresh ? "passkey" : "sms",
             actingAs: actor.Impersonation is null ? null : actor.User, impersonation: actor.Impersonation, schemeId: spec.SchemeId);

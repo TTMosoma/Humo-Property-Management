@@ -23,10 +23,11 @@ public sealed class Notices(HumoDbContext db, TimeProvider clock, IEmailSender e
         Add(new Notice { Id = Guid.CreateVersion7(), Kind = kind, ToRole = role, ActorId = actorId, Title = title, Detail = detail, Link = link, OrganisationId = organisationId, At = clock.GetUtcNow() });
 
     /// <param name="sendEmail">False when the person chose not to hear about their work by email: the notice is in the app only.</param>
-    public void ToPerson(Guid identityId, Guid? actorId, string title, string detail, string link, bool sendEmail = true)
+    /// <param name="kind">The bell's icon: maintenance, finance, compliance, communication, governance or platform.</param>
+    public void ToPerson(Guid identityId, Guid? actorId, string title, string detail, string link, bool sendEmail = true, string kind = "platform")
     {
         if (identityId == actorId) return;
-        Add(new Notice { Id = Guid.CreateVersion7(), ToIdentityId = identityId, ActorId = actorId, Title = title, Detail = detail, Link = link, At = clock.GetUtcNow() }, sendEmail);
+        Add(new Notice { Id = Guid.CreateVersion7(), Kind = kind, ToIdentityId = identityId, ActorId = actorId, Title = title, Detail = detail, Link = link, At = clock.GetUtcNow() }, sendEmail);
     }
 
     private void Add(Notice notice, bool sendEmail = true)
