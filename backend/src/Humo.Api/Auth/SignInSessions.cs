@@ -15,7 +15,7 @@ namespace Humo.Api.Auth;
 /// session row decides whether the cookie still counts (see <see cref="SessionGuard"/>). Re-issuing the cookie
 /// (role switch, step-up) never extends a session: its lifetime comes from the row.
 /// </summary>
-public sealed class SignInSessions(HumoDbContext db, SessionBuilder sessions, TimeProvider clock, IHttpContextAccessor http)
+public sealed class SignInSessions(HumoDbContext db, SessionBuilder sessions, TimeProvider clock, IHttpContextAccessor http, Live.LiveUpdates live)
 {
     /// <summary>The cookie that marks a browser as the person's own. Its value is random; the server keeps only its hash.</summary>
     public const string DeviceCookie = "humo.device";
@@ -67,14 +67,31 @@ public sealed class SignInSessions(HumoDbContext db, SessionBuilder sessions, Ti
         await db.SaveChangesAsync(ct);
     }
 
-    /// <summary>Ends one session now (sign-out). Its cookie is refused from then on, even if the browser still holds it.</summary>
-    public Task RevokeAsync(Guid sessionId, CancellationToken ct) =>
-        db.UserSessions.Where(s => s.Id == sessionId && s.RevokedAt == null).ExecuteUpdateAsync(s => s.SetProperty(x => x.RevokedAt, Now), ct);
+    /// <summary>
+    /// Ends one session now (sign-out). Its cookie is refused from then on, even if the browser still holds it, and an
+    /// app open on it hears at once and leaves for the signed-out page.
+    /// </summary>
+    public async Task RevokeAsync(Guid sessionId, CancellationToken ct)
+    {
+        var userId = await db.UserSessions.Where(s => s.Id == sessionId).Select(s => (Guid?)s.UserId).FirstOrDefaultAsync(ct);
+        await db.UserSessions.Where(s => s.Id == sessionId && s.RevokedAt == null).ExecuteUpdateAsync(s => s.SetProperty(x => x.RevokedAt, Now), ct);
+        if (userId is { } user) await live.SessionChangedAsync(user);
+    }
 
     /// <summary>Ends every other session of the person, and keeps this one.</summary>
-    public Task RevokeOthersAsync(Guid userId, Guid keepSessionId, CancellationToken ct) =>
-        db.UserSessions.Where(s => s.UserId == userId && s.Id != keepSessionId && s.RevokedAt == null)
+    public async Task RevokeOthersAsync(Guid userId, Guid keepSessionId, CancellationToken ct)
+    {
+        await db.UserSessions.Where(s => s.UserId == userId && s.Id != keepSessionId && s.RevokedAt == null)
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.RevokedAt, Now), ct);
+        await live.SessionChangedAsync(userId);
+    }
+
+    /// <summary>Ends every session of the person now, e.g. when their passkeys are removed after a lost or stolen device.</summary>
+    public async Task RevokeAllAsync(Guid userId, CancellationToken ct)
+    {
+        await db.UserSessions.Where(s => s.UserId == userId && s.RevokedAt == null).ExecuteUpdateAsync(s => s.SetProperty(x => x.RevokedAt, Now), ct);
+        await live.SessionChangedAsync(userId);
+    }
 
     /// <summary>The browser's answer to "is this your own computer?", if it has one that's still in force.</summary>
     private async Task<TrustedBrowser?> BrowserAnswerAsync(HumoUser user, CancellationToken ct)

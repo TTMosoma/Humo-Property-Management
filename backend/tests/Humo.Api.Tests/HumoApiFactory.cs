@@ -68,7 +68,8 @@ public sealed class HumoApiFactory : WebApplicationFactory<Program>
         {
             services.RemoveAll<DbContextOptions<HumoDbContext>>();
             services.RemoveAll<IDbContextOptionsConfiguration<HumoDbContext>>();
-            services.AddDbContext<HumoDbContext>(o => o.UseSqlite($"Data Source={file};Pooling=False;Default Timeout=30"));
+            services.AddDbContext<HumoDbContext>((sp, o) => o.UseSqlite($"Data Source={file};Pooling=False;Default Timeout=30")
+                .AddInterceptors(sp.GetServices<Microsoft.EntityFrameworkCore.Diagnostics.IInterceptor>()));
             services.RemoveAll<TimeProvider>();
             services.AddSingleton<TimeProvider>(Clock);
             services.RemoveAll<IEmailSender>();
