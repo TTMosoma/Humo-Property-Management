@@ -1073,11 +1073,11 @@ Photos on a maintenance request were kept by name only on the live system, so th
 6. **Everyone sees it.**
    - Finance is told in the app (no email): "Paid up: Unit 44 (Grace Mokoena)", or "Collection reopened: …".
    - Each change is in the case history and the audit log, by "Humo credit control".
-7. **A daily check** ends any case still running on an account with nothing overdue, including cases paid before this decision, like Grace's.
+7. **A check every 15 minutes** ends any case still running on an account with nothing overdue, including cases paid before this decision, like Grace's.
 
 **Consequences:**
 - API:
-  - `CreditControl.SettleAsync` is run after any save that changes a levy account (`CommandRunner`), after a Payfast card payment, and daily with the ageing run (`SettleAllAsync`);
+  - `CreditControl.SettleAsync` is run after any save that changes a levy account (`CommandRunner`), after a Payfast card payment, and every 15 minutes in the background (`SettleAllAsync`, with the billing run's host);
   - the new `close` action is on `POST /collections/{accountId}/actions`;
   - the case keeps `closedPaidUpAt` and `paidUpWithAttorneys`.
 - The Credit control list keeps every case with the attorneys until it's closed, paid up or not.

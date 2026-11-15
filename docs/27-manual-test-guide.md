@@ -480,9 +480,9 @@ Two browsers: Terry (System Administrator) in window 1, Thandeka in window 2. Th
 
 ## 49. Collection ends when the arrears are paid (D43)
 
-As Priya (Finance). Restart the API first: the daily check runs with the next billing run.
+As Priya (Finance). Restart the API first: as it starts, and every 15 minutes after, it ends cases already paid up.
 
-- [ ] Grace Mokoena (Kingfisher Court, unit 44) was paid up on 9 November. After the API's next daily run, or straight away with the next payment on any account: open Finance › Credit control. **Expect:** unit 44 isn't listed, and the task "send a final demand" for her is gone from Tasks (done by Humo credit control).
+- [ ] Grace Mokoena (Kingfisher Court, unit 44) was paid up on 9 November. Once the API has started: open Finance › Credit control. **Expect:** unit 44 isn't listed, and the task "send a final demand" for her is gone from Tasks (done by Humo credit control).
 - [ ] Choose an account in arrears and send a reminder. Capture and allocate a payment that clears only part of what's overdue. **Expect:** the case stays at *Reminder sent*.
 - [ ] Allocate a payment for the rest. **Expect:** the case's history says "Paid up: nothing is overdue, so collection has ended"; its follow-up task is closed; Priya's bell says "Paid up: Unit …" (no email); the account drops off the Credit control list.
 - [ ] Reverse that payment (*Returned unpaid by the bank*). **Expect:** the case reopens at *Reminder sent*, with "Reopened: a payment that cleared it was reversed …", and a new follow-up task.
