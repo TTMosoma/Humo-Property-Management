@@ -235,6 +235,9 @@ public sealed class BillingRunHost(IServiceScopeFactory scopes, IConfiguration c
                 await billing.RunAsync("Humo billing run", stoppingToken);
                 // Levy accounts age as days pass: current becomes 30 days and so on (slice 2a).
                 await scope.ServiceProvider.GetRequiredService<Finance.AccountLedger>().RefreshAsync(null, stoppingToken);
+                // D43: any collection still running on an account with nothing overdue ends (e.g. one cleared before D43).
+                var ended = await scope.ServiceProvider.GetRequiredService<Finance.CreditControl>().SettleAllAsync(stoppingToken);
+                if (ended > 0) logger.LogInformation("Ended {Count} collection cases with nothing overdue", ended);
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {

@@ -179,7 +179,7 @@ public static partial class LevyCardPayments
     /// adds an allocated receipt and credits the account; FAILED or CANCELLED records that. A repeat changes nothing.
     /// </summary>
     private static async Task<IResult> Notify(HttpRequest request, HumoDbContext db, IPayfast payfast, IDataProtectionProvider protection, AccountLedger ledger, AuditLog audit,
-        TimeProvider clock, ILoggerFactory logs, CancellationToken ct)
+        TimeProvider clock, ILoggerFactory logs, CreditControl credit, Platform.Notices notices, CancellationToken ct)
     {
         var log = logs.CreateLogger("Humo.Payfast");
         using var reader = new StreamReader(request.Body);
@@ -237,7 +237,10 @@ public static partial class LevyCardPayments
         }
         audit.Record($"Payfast notification: {status} for a card payment of {CommercialEndpoints.Rand(payment.Amount)} on {account.AccountNo} (Payfast {pfId})", "success",
             category: "security", organisationId: payment.OrganisationId, schemeId: payment.SchemeId, resource: "Account", resourceId: account.Id.ToString(), system: "Payfast");
+        // D43: a card payment that clears the arrears ends the account's collection, as any other payment does.
+        if (status == "COMPLETE") await credit.SettleAsync(account, false, ct);
         await db.SaveChangesAsync(ct);
+        await notices.SendEmailsAsync(ct);
         return Results.Ok();
     }
 }

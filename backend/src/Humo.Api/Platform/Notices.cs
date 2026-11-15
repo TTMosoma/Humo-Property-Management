@@ -19,8 +19,10 @@ public sealed class Notices(HumoDbContext db, TimeProvider clock, IEmailSender e
 {
     private readonly List<(Notice Notice, Guid? ActorId)> queued = [];
 
-    public void ToRole(string role, Guid? actorId, string title, string detail, string link, Guid? organisationId = null, string kind = "platform") =>
-        Add(new Notice { Id = Guid.CreateVersion7(), Kind = kind, ToRole = role, ActorId = actorId, Title = title, Detail = detail, Link = link, OrganisationId = organisationId, At = clock.GetUtcNow() });
+    /// <param name="sendEmail">False for news that needs no action (e.g. a task that has closed itself): in the app only.</param>
+    public void ToRole(string role, Guid? actorId, string title, string detail, string link, Guid? organisationId = null, string kind = "platform", bool sendEmail = true) =>
+        Add(new Notice { Id = Guid.CreateVersion7(), Kind = kind, ToRole = role, ActorId = actorId, Title = title, Detail = detail, Link = link, OrganisationId = organisationId, At = clock.GetUtcNow() },
+            sendEmail);
 
     /// <param name="sendEmail">False when the person chose not to hear about their work by email: the notice is in the app only.</param>
     public void ToPerson(Guid identityId, Guid? actorId, string title, string detail, string link, bool sendEmail = true)

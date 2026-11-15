@@ -32,13 +32,17 @@ public sealed record LetterSnapshot(CollectionViewDto View, CollectionStep Step,
 /// prints it). A letter of demand needs the trustees' approval in My work; every active case has one follow-up Task.
 /// </summary>
 public sealed class CreditControl(HumoDbContext db, Commercial.CommercialRecords commercial, DocumentPrinter printer, IEmailSender email, SmsGateway sms, Messaging.SentRecords sent,
-    Messaging.MessageUsage usage, Messaging.EmailSignatures signatures, AccountCorrections corrections,
+    Messaging.MessageUsage usage, Messaging.EmailSignatures signatures, AccountCorrections corrections, Platform.Notices notices, Audit.AuditLog audit,
     TimeProvider clock, ILogger<CreditControl> logger) : IApprovalHandler
 {
     public const string Feature = "credit-control";
     public const string Permission = "Collections.Manage";
     public const string DemandApprovalType = "demand-approval";
     public const string FollowUpType = "debtor-follow-up";
+    /// <summary>D43: who does it when collection ends by itself.</summary>
+    public const string System = "Humo credit control";
+    /// <summary>D43: a reversal this soon after collection ended reopens it where it was.</summary>
+    public static readonly TimeSpan ReopenWithin = TimeSpan.FromDays(30);
 
     public string Type => DemandApprovalType;
 
@@ -204,6 +208,9 @@ public sealed class CreditControl(HumoDbContext db, Commercial.CommercialRecords
             case "note":
                 CreditControlRules.Log(c, c.Stage, action.Text!.Trim(), by, NowText);
                 break;
+            case "close":
+                await EndAsync(a, c, $"Closed: {action.Reason!.Trim()}", by, ct);
+                break;
         }
         c.Version++;
         await FollowUpAsync(a, c, by, ct);
@@ -254,6 +261,149 @@ public sealed class CreditControl(HumoDbContext db, Commercial.CommercialRecords
         };
         db.IssuedLetters.Add(issued);
         return issued;
+    }
+
+    // ---------------------------------------------------------------- D43: collection ends when nothing is overdue
+
+    /// <summary>
+    /// After a save changed these accounts (a payment, a reversal, a correction, a write-off, a billing run): a case with
+    /// nothing overdue any more ends by itself, and one whose clearing payment was reversed soon after reopens. The caller saves.
+    /// </summary>
+    public async Task SettleChangedAsync(CancellationToken ct)
+    {
+        var accounts = db.ChangeTracker.Entries<LevyAccount>().Where(e => e.State == EntityState.Modified).Select(e => e.Entity).ToList();
+        foreach (var a in accounts)
+        {
+            var reversed = db.ChangeTracker.Entries<LedgerEntry>().Any(e => e.State == EntityState.Added && e.Entity.AccountId == a.Id && e.Entity.Type == TransactionTypes.Reversal);
+            await SettleAsync(a, reversed, ct);
+        }
+    }
+
+    /// <summary>The daily check: every case still running whose account has nothing overdue (e.g. cleared before D43). Saves.</summary>
+    public async Task<int> SettleAllAsync(CancellationToken ct)
+    {
+        var running = await db.CollectionCases.Where(c => c.Stage != CollectionStages.NotStarted).Select(c => c.AccountId).ToListAsync(ct);
+        var accounts = await db.LevyAccounts.Where(a => running.Contains(a.Id)).ToListAsync(ct);
+        var ended = 0;
+        foreach (var a in accounts)
+            if (await SettleAsync(a, false, ct)) ended++;
+        await db.SaveChangesAsync(ct);
+        await notices.SendEmailsAsync(ct);
+        return ended;
+    }
+
+    /// <summary>One account: end its case if nothing is overdue, or reopen it after a reversal. True when the case changed.</summary>
+    public async Task<bool> SettleAsync(LevyAccount a, bool reversed, CancellationToken ct)
+    {
+        var row = await db.CollectionCases.FirstOrDefaultAsync(x => x.AccountId == a.Id, ct);
+        if (row is null) return false;
+        var c = Read(row);
+        var overdue = CreditControlRules.Overdue(Ageing(a));
+        var scheme = await db.Schemes.AsNoTracking().FirstAsync(s => s.Id == a.SchemeId, ct);
+        var unit = await db.Units.AsNoTracking().FirstAsync(u => u.Id == a.UnitId, ct);
+        var holder = a.HolderPersonId is { } h ? await db.People.AsNoTracking().Where(p => p.Id == h).Select(p => p.DisplayName).FirstOrDefaultAsync(ct) : null;
+        var who = $"Unit {unit.Number}{(holder is null ? "" : $" ({holder})")}";
+        var link = $"/finance/credit-control/{a.Id}";
+
+        if (overdue <= 0)
+        {
+            // Nothing running, or a reversal or write-off still to be decided (it settles the case when it posts).
+            if (c.Stage == CollectionStages.NotStarted || c.Resolving is not null) return false;
+
+            if (c.Stage == CollectionStages.HandedOver)
+            {
+                // The attorneys may have costs, and must hear it's paid: the agency tells them, then closes the case.
+                if (c.PaidUpWithAttorneys == true) return false;
+                await CloseFollowUpAsync(c, System, ct);
+                var attorney = c.Steps.FirstOrDefault(s => s.Text.StartsWith("Handed over to ", StringComparison.Ordinal))?.Text["Handed over to ".Length..].Split(" for collection")[0] ?? "the attorneys";
+                var item = new WorkItemRow
+                {
+                    Id = Guid.CreateVersion7(), OrganisationId = scheme.OrganisationId, SchemeId = a.SchemeId, Ref = a.AccountNo, Kind = "task", Type = FollowUpType,
+                    Title = $"{who} is paid up: tell {attorney}, then close the case",
+                    Detail = "Nothing is overdue any more. Tell the attorneys to stop, settle any costs they’re owed, and close the case with Close case.",
+                    CreatedAt = Now, DueAt = Now.AddDays(2), AssigneeId = (await AssigneeAsync(scheme.OrganisationId, ct)).Id, Route = link, SourceId = a.Id,
+                };
+                db.WorkItems.Add(item);
+                c.FollowUpWorkItemId = item.Id.ToString();
+                c.PaidUpWithAttorneys = true;
+                CreditControlRules.Log(c, c.Stage, $"Paid up while with {attorney}: nothing is overdue. Tell them to stop, then close the case.", System, NowText);
+                c.Version++;
+                await WriteAsync(a, c, row, ct);
+                audit.Record($"Collection on {a.AccountNo} paid up while handed over: the agency is asked to tell the attorneys and close it (D43)", "success",
+                    category: "activity", organisationId: scheme.OrganisationId, schemeId: a.SchemeId, resource: "Collection case", resourceId: a.Id.ToString(), system: System);
+                return true;
+            }
+
+            var was = CollectionStages.Labels[c.Stage];
+            await EndAsync(a, c, "Paid up: nothing is overdue, so collection has ended", System, ct);
+            await CloseFollowUpAsync(c, System, ct);
+            c.Version++;
+            await WriteAsync(a, c, row, ct);
+            notices.ToRole(Roles.Finance, null, $"Paid up: {who}", $"{a.AccountNo} has nothing overdue, so its collection ({was}) has ended and its task is closed.", link,
+                scheme.OrganisationId, "finance", sendEmail: false);
+            audit.Record($"Collection on {a.AccountNo} ended: paid up, nothing overdue (was {was}) (D43)", "success",
+                category: "activity", organisationId: scheme.OrganisationId, schemeId: a.SchemeId, resource: "Collection case", resourceId: a.Id.ToString(), system: System);
+            return true;
+        }
+
+        // A payment that cleared it bounced or was reversed soon after: collection picks up where it was, not from the start.
+        if (reversed && c.Stage == CollectionStages.NotStarted && c.ClosedPaidUpAt is { } closed
+            && Now - DateTimeOffset.Parse(closed, CultureInfo.InvariantCulture) <= ReopenWithin && c.PreviousStage is { } previous)
+        {
+            c.Stage = previous is CollectionStages.Reminder or CollectionStages.FinalDemand or CollectionStages.LetterOfDemand ? previous : CollectionStages.Reminder;
+            c.ClosedPaidUpAt = null;
+            c.PreviousStage = null;
+            CreditControlRules.Log(c, c.Stage, $"Reopened: a payment that cleared it was reversed, and {BillingRules.Rand(overdue)} is overdue again. Collection carries on from “{CollectionStages.Labels[c.Stage]}”.",
+                System, NowText);
+            c.Version++;
+            await FollowUpAsync(a, c, System, ct);
+            await WriteAsync(a, c, row, ct);
+            notices.ToRole(Roles.Finance, null, $"Collection reopened: {who}", $"A payment on {a.AccountNo} was reversed and {BillingRules.Rand(overdue)} is overdue again.", link,
+                scheme.OrganisationId, "finance", sendEmail: false);
+            audit.Record($"Collection on {a.AccountNo} reopened after a reversal (D43)", "success",
+                category: "activity", organisationId: scheme.OrganisationId, schemeId: a.SchemeId, resource: "Collection case", resourceId: a.Id.ToString(), system: System);
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Ends the case: back to not started, with nothing pending. A letter of demand waiting for approval is withdrawn and the
+    /// trustees on Humo are told; an arrangement or dispute ends; the account's status follows its ledger again.
+    /// </summary>
+    private async Task EndAsync(LevyAccount a, CollectionCase c, string text, string by, CancellationToken ct)
+    {
+        if (c.DemandApproval is { Status: "pending" } pending && Guid.TryParse(pending.WorkItemId, out var id)
+            && await db.WorkItems.FirstOrDefaultAsync(w => w.Id == id, ct) is { Status: "open" } approval)
+        {
+            approval.Status = "withdrawn";
+            approval.DecidedBy = by;
+            approval.DecidedAt = Now;
+            approval.Comment = "Paid up: no letter of demand is needed.";
+            await Work.BoardApprovals.TellTrusteesOnHumoAsync(db, notices, a.SchemeId, Guid.Empty, $"Withdrawn: {approval.Title}",
+                $"{a.AccountNo} is paid up, so the letter of demand no longer needs your decision.", "/approvals", ct);
+        }
+        c.PreviousStage = c.Stage;
+        c.Stage = CollectionStages.NotStarted;
+        c.Arrangement = null;
+        c.Dispute = null;
+        c.DemandApproval = null;
+        c.PaidUpWithAttorneys = null;
+        c.ClosedPaidUpAt = NowText;
+        a.Status = Ledger.Status(a.Balance, new Ageing(a.AgeingCurrent, a.AgeingD30, a.AgeingD60, a.AgeingD90, a.AgeingD120));
+        CreditControlRules.Log(c, c.Stage, text, by, NowText);
+    }
+
+    /// <summary>The case's open follow-up task is done: the step it asked for no longer applies.</summary>
+    private async Task CloseFollowUpAsync(CollectionCase c, string by, CancellationToken ct)
+    {
+        if (Guid.TryParse(c.FollowUpWorkItemId, out var id) && await db.WorkItems.FirstOrDefaultAsync(w => w.Id == id, ct) is { Status: "open" } task)
+        {
+            task.Status = "done";
+            task.DecidedBy = by;
+            task.DecidedAt = Now;
+        }
+        c.FollowUpWorkItemId = null;
     }
 
     /// <summary>One open follow-up Task per active case, due when the next step is. Taking a step closes it and opens the next.</summary>
