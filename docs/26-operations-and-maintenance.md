@@ -136,6 +136,10 @@ Status: **started 18 October 2026**, before the server exists. Fill in the blank
 - **Nightly database backup:** a cron job or a container (§6).
 - **Webway daily VM backups** ⚠: a second safety net, not the main backup.
 
+**Live updates (SignalR) at `/api/hubs/updates`.**
+- The app keeps a WebSocket open to the API while someone is signed in. Caddy passes WebSockets through `reverse_proxy` with no extra setting.
+- If the bell stops updating by itself, check that WebSockets reach the API (the browser's network tab shows `/api/hubs/updates` as 101 Switching Protocols). The app still works without it; it refreshes on the person's own actions.
+
 ## 5. Monitoring and alerts
 
 | What | How | Alert when |
