@@ -1,5 +1,6 @@
 import { Injectable, Injector, inject } from '@angular/core';
 import { simulationStorage } from '../simulation/simulation-storage';
+import { matchesJob } from '../../core/shell/command-palette/job-reference';
 import { Photo,
   forResident,
   BatchView,
@@ -125,7 +126,8 @@ export class MaintenanceStore {
     if (q.length < 2) return [];
     const ids = new Set(schemeIds);
     return this.jobs
-      .filter((j) => ids.has(j.schemeId) && `${j.ref} ${j.title} ${j.location}`.toLowerCase().includes(q))
+      // The same rule as the API and the search bar: a reference however it's typed, or every word.
+      .filter((j) => ids.has(j.schemeId) && matchesJob(j, query))
       .slice(0, limit)
       .map((j) => this.summary(j));
   }

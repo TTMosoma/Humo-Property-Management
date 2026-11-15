@@ -10,6 +10,7 @@ import { formatRand } from '../../../ui/format/money';
 import { NavService } from '../../navigation/nav.service';
 import { ScopeService } from '../../scope/scope.service';
 import { SessionService } from '../../session/session.service';
+import { jobReference, matchesJob } from './job-reference';
 
 interface PaletteItem {
   id: string;
@@ -128,11 +129,34 @@ export class CommandPalette {
     { initialValue: [] as PersonSummary[] },
   );
 
+  /**
+   * Jobs, for those who browse them. Words search the scheme being viewed; a reference ("MR-1022", "mr1022", "1022")
+   * searches every scheme the person can see, so a job is never hidden by the scheme picked at the top.
+   */
   private readonly jobHits = toSignal(
     toObservable(this.query).pipe(
       switchMap((q) =>
-        (this.session.isStaff() || this.session.role() === 'trustee') && q.trim().length >= 2
-          ? this.jobData.search(q, this.scope.effectiveIds(), 4).pipe(catchError(() => of([] as JobSummary[])))
+        this.session.can('Maintenance.Browse') && q.trim().length >= 2
+          ? this.jobData
+              .search(q, jobReference(q) ? this.scope.accessible().map((s) => s.id) : this.scope.effectiveIds(), 4)
+              .pipe(catchError(() => of([] as JobSummary[])))
+          : of([] as JobSummary[]),
+      ),
+    ),
+    { initialValue: [] as JobSummary[] },
+  );
+
+  /** A resident's own requests, by reference or words; each opens its own page. */
+  private readonly myRequests = toSignal(
+    toObservable(this.query).pipe(
+      switchMap((q) =>
+        this.session.can('Resident.Requests') && q.trim().length >= 2
+          ? this.jobData
+              .forResident(this.session.identity().personId ?? '', this.session.assignment().scope.unitId)
+              .pipe(
+                map((all) => all.filter((r) => matchesJob(r.job, q)).slice(0, 5)),
+                catchError(() => of([] as JobSummary[])),
+              )
           : of([] as JobSummary[]),
       ),
     ),
@@ -149,15 +173,31 @@ export class CommandPalette {
   );
 
   private readonly recordItems = computed<PaletteItem[]>(() => [
-    ...this.jobHits().map((j) => ({
-      id: 'job-' + j.job.id,
+    ...this.jobHits().map((j) => {
+      const viewing = this.scope.scopeId();
+      return {
+        id: 'job-' + j.job.id,
+        kind: 'Jobs' as const,
+        label: `${j.job.ref} · ${j.job.title}`,
+        hint: `${j.scheme.code} · ${j.job.location}${viewing && viewing !== j.job.schemeId ? ' · not in the scheme you’re viewing' : ''}`,
+        icon: 'construct-outline',
+        route: `/maintenance/${j.job.ref}`,
+        haystack: '',
+      };
+    }),
+    ...this.myRequests().map((r) => ({
+      id: 'request-' + r.job.id,
       kind: 'Jobs' as const,
-      label: `${j.job.ref} · ${j.job.title}`,
-      hint: `${j.scheme.code} · ${j.job.location}`,
+      label: `${r.job.ref} · ${r.job.title}`,
+      hint: r.job.location,
       icon: 'construct-outline',
-      route: `/maintenance/${j.job.ref}`,
+      route: `/my/requests/${r.job.ref}`,
       haystack: '',
     })),
+    // D32: Finance opens a job from its invoice, not by searching. Say so rather than show nothing.
+    ...(jobReference(this.query()) && this.session.can('Maintenance.View') && !this.session.can('Maintenance.Browse')
+      ? [{ id: 'job-finance', kind: 'Jobs' as const, label: 'Jobs open from their invoice', hint: 'Finance › Payables', icon: 'construct-outline', route: '/finance/payables', haystack: '' }]
+      : []),
     ...this.supplierHits().map((s) => ({
       id: 'supplier-' + s.supplier.id,
       kind: 'Suppliers' as const,

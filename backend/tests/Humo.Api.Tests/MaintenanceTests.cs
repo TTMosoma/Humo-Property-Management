@@ -301,6 +301,22 @@ public sealed class MaintenanceTests : IDisposable
     }
 
     [Fact]
+    public async Task A_job_is_found_by_its_reference_however_it_is_typed_or_by_its_words()
+    {
+        var s = await Scheme();
+        var reference = await Ref(await s.Admin.PostAsJsonAsync("/api/jobs", new { schemeId = s.Kc.ToString(), location = "Block A stairwell", title = "Burst pipe in stairwell", description = "Water on the stairs.", category = "Plumbing" }));
+        Assert.Equal("MR-1001", reference);
+
+        async Task<List<string>> Find(string q) =>
+            [.. (await Ok(await s.Admin.GetAsync($"/api/jobs/search?q={Uri.EscapeDataString(q)}&schemeIds={s.Kc}"))).EnumerateArray().Select(j => j.GetProperty("job").GetProperty("ref").GetString()!)];
+
+        foreach (var typed in new[] { "MR-1001", "mr1001", "MR 1001", "1001", "burst stairwell", "block a" })
+            Assert.True((await Find(typed)).Contains("MR-1001"), typed);
+        Assert.Empty(await Find("burst garden"));
+        Assert.Empty(await Find("MR-2001"));
+    }
+
+    [Fact]
     public async Task A_job_runs_from_report_to_invoice_within_delegated_authority()
     {
         var s = await Scheme();
