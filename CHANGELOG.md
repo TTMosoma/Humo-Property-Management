@@ -7,6 +7,10 @@ What changed in Humo Property Management, release by release, in plain language.
 ## Unreleased
 
 - Every task or approval that lands on someone is in their bell too: new work, work assigned to them, and approvals they can decide [#120]
+- Decision D42 (proposed): ways back in when a passkey is lost: recovery codes, an authenticator app, resets by the agency's administrators, and owners recovering after a wait [#119]
+
+## 0.10.0 · 13 November 2026 · Supplier links and a clearer menu
+
 - The roadmap lists what isn't in version 1; Compliance is built after go-live [#117]
 - The step-up box's tip for someone else's computer reads as one sentence instead of broken columns [#115]
 - Communications › Templates is renamed **Message templates**, and Compliance moves under **Governance** [#114]
