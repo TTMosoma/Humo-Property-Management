@@ -70,6 +70,8 @@ public sealed class WorkNoticeTests : IDisposable
         Assert.Equal(HttpStatusCode.Created, (await s.Owner.PostAsJsonAsync("/api/jobs", new { title = "Geyser leaking", description = "Dripping since this morning.", category = "Plumbing" })).StatusCode);
 
         var notice = Assert.Single(await Bell(s.Pm), n => n.GetProperty("title").GetString()!.StartsWith("New task:", StringComparison.Ordinal));
+        // Not "New task: New: Geyser leaking": the triage task's own "New:" is left off.
+        Assert.Equal("New task: Geyser leaking", notice.GetProperty("title").GetString());
         Assert.Equal("maintenance", notice.GetProperty("kind").GetString());
         Assert.Contains("Kingfisher Court", notice.GetProperty("detail").GetString());
         // The administrators see every task in My work, but the portfolio manager is the one who acts on it.

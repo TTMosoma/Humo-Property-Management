@@ -49,7 +49,8 @@ public static class WorkNotices
                 var (item, reassigned) = items[0];
                 var link = LinkOf(item);
                 if (AlreadyTold(db, person, link)) continue;
-                var title = reassigned ? $"Assigned to you: {item.Title}" : item.Kind == "approval" ? $"To approve: {item.Title}" : item.AssigneeId == person.ToString() ? $"For you: {item.Title}" : $"New task: {item.Title}";
+                var what = WhatOf(item);
+                var title = reassigned ? $"Assigned to you: {what}" : item.Kind == "approval" ? $"To approve: {what}" : item.AssigneeId == person.ToString() ? $"For you: {what}" : $"New task: {what}";
                 notices.ToPerson(person, actorId, title, Detail(item, schemes), link, sendEmail: false, kind: KindOf(item.Type));
             }
             else
@@ -108,6 +109,10 @@ public static class WorkNotices
     /// <summary>A feature that already told this person about this record in the same change, e.g. a breach's trustees.</summary>
     private static bool AlreadyTold(HumoDbContext db, Guid person, string link) =>
         db.ChangeTracker.Entries<Notice>().Any(e => e.State == EntityState.Added && e.Entity.ToIdentityId == person && e.Entity.Link == link);
+
+    /// <summary>The item's title without its own "New:" (a triage task's), so the notice doesn't read "New task: New: …".</summary>
+    private static string WhatOf(WorkItemRow item) =>
+        item.Title.StartsWith("New: ", StringComparison.Ordinal) ? item.Title["New: ".Length..] : item.Title;
 
     private static string LinkOf(WorkItemRow item) =>
         !string.IsNullOrWhiteSpace(item.Route) ? item.Route : item.Kind == "approval" ? "/approvals" : "/tasks";
