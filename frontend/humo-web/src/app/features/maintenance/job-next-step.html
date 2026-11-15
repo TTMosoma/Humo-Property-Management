@@ -374,6 +374,7 @@
       <label class="block">Why isn’t this a valid request?
         <input type="text" placeholder="e.g. Owner’s responsibility (inside the unit), duplicate of MR-1061" [value]="cancelReason()" (input)="cancelReason.set($any($event.target).value)" />
       </label>
+      <p class="hint">A resident who reported it is told this reason, in the app and by email.</p>
       <button type="button" class="btn btn-danger btn-sm" [disabled]="busy() || !cancelReason().trim()" (click)="cancel()">Cancel job</button>
     </div>
   }
