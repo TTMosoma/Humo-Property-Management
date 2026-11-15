@@ -18,7 +18,8 @@ public static class InfrastructureServices
     {
         var connection = config.GetConnectionString("Humo")
             ?? throw new InvalidOperationException("ConnectionStrings:Humo is missing (see backend/deploy/.env.example).");
-        services.AddDbContext<HumoDbContext>(o => o.UseNpgsql(connection));
+        // Interceptors registered by the API (e.g. live updates after a save) apply to every context.
+        services.AddDbContext<HumoDbContext>((sp, o) => o.UseNpgsql(connection).AddInterceptors(sp.GetServices<Microsoft.EntityFrameworkCore.Diagnostics.IInterceptor>()));
 
         // Sign-in cookies and one-time codes are encrypted with these keys: keep them in the database, so they're backed up (doc 26 §3).
         services.AddDataProtection().SetApplicationName("Humo").PersistKeysToDbContext<HumoDbContext>();

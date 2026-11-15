@@ -6,6 +6,7 @@ What changed in Humo Property Management, release by release, in plain language.
 
 ## Unreleased
 
+- The bell and My work update by themselves when someone else gives you work or a notice, without reloading (live updates over SignalR) [#121]
 - Every task or approval that lands on someone is in their bell too: new work, work assigned to them, and approvals they can decide [#120]
 - Decision D42 (proposed): ways back in when a passkey is lost: recovery codes, an authenticator app, resets by the agency's administrators, and owners recovering after a wait [#119]
 

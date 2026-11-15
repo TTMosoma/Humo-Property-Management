@@ -64,6 +64,8 @@ import { HttpCatalogueDataSource, HttpCommercialDataSource, HttpNudgeDataSource,
 import { HttpAccountRequestDataSource, HttpHumoTeamDataSource, HttpNotificationDataSource } from './http-platform';
 import { HttpOrganisationDataSource, HttpPersonDataSource, HttpSchemeDataSource, HttpStepUpAuthenticator, HttpUnitDataSource, HttpTimelineDataSource } from './http-portfolio';
 import { NOT_CONNECTED } from '../core/availability/not-connected';
+import { LIVE_UPDATES } from '../core/data/live-updates';
+import { HttpLiveUpdates } from './http-live-updates';
 import { HttpSessionDataSource } from './http-session-data-source';
 import { HttpLibraryDataSource } from './http-library';
 import { HttpTechnicalLogDataSource } from './http-technical-logs';
@@ -112,6 +114,8 @@ export function provideHttpData(): EnvironmentProviders {
     { provide: BoardDataSource, useClass: HttpBoardDataSource },
     { provide: AccountRequestDataSource, useClass: HttpAccountRequestDataSource },
     { provide: NotificationDataSource, useClass: HttpNotificationDataSource },
+    // Other people's changes to the bell and My work, pushed by the API (docs/08 §5).
+    { provide: LIVE_UPDATES, useClass: HttpLiveUpdates },
     { provide: HumoTeamDataSource, useClass: HttpHumoTeamDataSource },
     { provide: AuditDataSource, useClass: HttpAuditDataSource },
     { provide: SecurityDataSource, useClass: HttpSecurityDataSource },

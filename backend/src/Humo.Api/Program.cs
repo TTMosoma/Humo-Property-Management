@@ -31,6 +31,10 @@ builder.Services.AddProblemDetails(o => o.CustomizeProblemDetails = TechnicalLog
 builder.AddTechnicalLogging();
 
 builder.Services.AddHumoInfrastructure(config);
+// Live updates (docs/08 §5): after a save, the people whose bell or work changed hear at once.
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<Humo.Api.Live.LiveUpdates>();
+builder.Services.AddSingleton<Microsoft.EntityFrameworkCore.Diagnostics.IInterceptor>(sp => sp.GetRequiredService<Humo.Api.Live.LiveUpdates>());
 builder.Services.AddScoped<SessionBuilder>();
 builder.Services.AddScoped<Humo.Api.Commercial.PackageLimits>();
 builder.Services.AddScoped<Humo.Api.Auth.SignInSessions>();
@@ -170,6 +174,7 @@ app.UseAuthorization();
 var api = app.MapGroup("/api");
 api.MapGet("/health", async (HumoDbContext db, CancellationToken ct) =>
     await db.Database.CanConnectAsync(ct) ? Results.Ok(new { status = "ok", version = Humo.Api.AppVersion.Current }) : Results.Problem("Database unavailable", statusCode: 503));
+app.MapHub<Humo.Api.Live.UpdatesHub>(Humo.Api.Live.UpdatesHub.Path);
 api.MapHumoAuth();
 api.MapSmsWebhooks();
 api.MapMailWebhooks();

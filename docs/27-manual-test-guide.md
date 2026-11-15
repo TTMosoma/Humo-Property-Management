@@ -451,14 +451,22 @@ Restart the API first. Emails arrive in Mailpit (localhost:8025). Use a supplier
 
 ## 44. Tasks and approvals in the bell
 
-Reload the page after each step before checking the bell (it doesn't update by itself yet).
-
 - [ ] As Sipho (owner), report a problem on his unit. Then as Johan (Portfolio Manager for that scheme), open the bell. **Expect:** "New task: …" with the scheme and due date, and a maintenance icon. Thandeka (administrator) doesn't get it.
 - [ ] As Thandeka, open Tasks and assign a task to Priya. As Priya, open the bell. **Expect:** "Assigned to you: …"; opening it goes to the task's page. Thandeka has no notice of her own.
 - [ ] As Thandeka, assign three tasks to Johan at once. **Expect:** Johan has one notice, "3 tasks assigned to you", not three.
 - [ ] As Thandeka, enter a supplier's bank details. As Priya, open the bell. **Expect:** "To approve: …" with a finance icon. Johan doesn't get it.
 - [ ] Mark a task done. **Expect:** nobody gets a notice.
 - [ ] **Expect** no new emails for any of these (Mailpit).
+
+## 45. The bell and My work update by themselves
+
+Use two browsers (or a normal and a private window), signed in as two people at the same agency. Restart `npm run start:api` first: the proxy now passes WebSockets.
+
+- [ ] Window 1: Thandeka. Window 2: Priya, on any page. In window 1, assign a task to Priya. **Expect:** in window 2, without reloading, the bell's count goes up within a second or two, and *Tasks* shows the task.
+- [ ] As Sipho (owner) in window 1, report a problem. Window 2: Johan. **Expect:** Johan's bell shows "New task: …" without reloading.
+- [ ] In window 2, switch Priya's role (if she has two) or have a System Administrator impersonate someone. Then repeat step 1 for the person now showing. **Expect:** it still updates by itself.
+- [ ] Stop the API for half a minute, then start it again. **Expect:** the app carries on; once the API is back, a change made in window 1 shows in window 2 without reloading.
+- [ ] A person at another agency (e.g. Fynbos) in window 2. **Expect:** nothing changes when Thandeka assigns work at Acacia.
 
 ## Reporting back
 
