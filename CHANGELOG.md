@@ -6,6 +6,8 @@ What changed in Humo Property Management, release by release, in plain language.
 
 ## Unreleased
 
+- Decision D42 (proposed): ways back in when a passkey is lost: recovery codes, an authenticator app, resets by the agency's administrators, and owners recovering after a wait [#119]
+
 ## 0.10.0 · 13 November 2026 · Supplier links and a clearer menu
 
 - The roadmap lists what isn't in version 1; Compliance is built after go-live [#117]

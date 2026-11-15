@@ -62,6 +62,10 @@ Status: **started 18 October 2026**, before the server exists. Fill in the blank
 **Passkey domain (relying-party ID): `pm.humo.co.za`.**
 - **Never change it.** Every passkey is bound to it; changing it forces every user to register again.
 
+**People who can reset passkeys (D42, before go-live).**
+- At least two: two System Administrators, or one System Administrator and one Humo Support.
+- Each has two ways in (two passkeys, or a passkey and recovery codes), so Humo is never locked out of itself.
+
 **Rate limits** on sign-in, code requests and step-up: check them monthly in the logs (§5).
 
 **Patching .NET is security work:**
