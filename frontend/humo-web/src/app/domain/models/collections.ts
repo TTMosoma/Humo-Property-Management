@@ -77,6 +77,10 @@ export interface CollectionCase {
   demandApproval?: { workItemId: string; status: 'pending' | 'approved' | 'rejected'; decidedBy?: string; decidedAt?: string };
   /** The open follow-up Task. */
   followUpWorkItemId?: string;
+  /** D43: when collection ended because nothing was overdue any more. A reversal within 30 days reopens it. */
+  closedPaidUpAt?: string;
+  /** D43: paid up while with the attorneys: the agency tells them, then closes the case. */
+  paidUpWithAttorneys?: boolean;
 }
 
 export type CollectionAction =
@@ -88,7 +92,9 @@ export type CollectionAction =
   | { type: 'dispute'; reason: string }
   /** D40: what happened decides the accounting. A reversal or write-off waits for its approval before the dispute closes. */
   | { type: 'resolve-dispute'; outcome: 'stands' | 'paid' | 'reversal' | 'write-off'; note: string; lineId?: string; amount?: number }
-  | { type: 'note'; text: string };
+  | { type: 'note'; text: string }
+  /** D43: close a case with nothing overdue, e.g. once the attorneys have been told. */
+  | { type: 'close'; reason: string };
 
 // ---------------------------------------------------------------- Read models
 

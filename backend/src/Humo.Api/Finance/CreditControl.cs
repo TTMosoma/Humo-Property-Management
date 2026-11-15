@@ -63,13 +63,15 @@ public sealed class CreditControl(HumoDbContext db, Commercial.CommercialRecords
 
     public static CollectionCase Read(CollectionCaseRow row) => JsonSerializer.Deserialize<CollectionCase>(row.Json, Json.Options)!;
 
-    /// <summary>Every account in arrears in these schemes, plus accounts still owing with an arrangement, dispute or hand-over.</summary>
+    /// <summary>Every account in arrears in these schemes, plus accounts still owing with an arrangement or dispute, and every case with the attorneys.</summary>
     public async Task<List<CollectionViewDto>> ListAsync(IReadOnlyCollection<Guid> schemeIds, CancellationToken ct)
     {
         var accounts = await db.LevyAccounts.Where(a => schemeIds.Contains(a.SchemeId) && a.HolderPersonId != null).ToListAsync(ct);
         var cases = await db.CollectionCases.Where(c => schemeIds.Contains(c.SchemeId)).ToDictionaryAsync(c => c.AccountId, ct);
         string[] active = [CollectionStages.Arrangement, CollectionStages.Disputed, CollectionStages.HandedOver];
-        var chased = accounts.Where(a => CreditControlRules.Overdue(Ageing(a)) > 0 || (a.Balance > 0 && cases.TryGetValue(a.Id, out var c) && active.Contains(c.Stage))).ToList();
+        // D43: a case with the attorneys stays listed, paid up or not, until the agency closes it.
+        var chased = accounts.Where(a => CreditControlRules.Overdue(Ageing(a)) > 0
+            || (cases.TryGetValue(a.Id, out var c) && (c.Stage == CollectionStages.HandedOver || (a.Balance > 0 && active.Contains(c.Stage))))).ToList();
         var views = await ViewsAsync(chased, cases, ct);
         return [.. views.OrderByDescending(v => v.DaysInArrears).ThenByDescending(v => v.OverdueAmount)];
     }

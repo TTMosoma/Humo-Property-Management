@@ -1042,6 +1042,49 @@ Photos on a maintenance request were kept by name only on the live system, so th
 
 ---
 
+## D43 — Collection ends when nothing is overdue (16 November 2026)
+
+**Status:** approved by the product owner (Terry Mosoma), 15 November 2026.
+
+**The problem:**
+- A collection case ran until someone took its next step, and nothing ended it when the owner paid.
+- Grace Mokoena (Kingfisher Court, unit 44) paid in full on 9 November. Her case stayed at *Reminder sent*, with a task to "send a final demand" to someone who owed nothing.
+- The task couldn't be ticked off (tasks for real work close only when the work is done), and there was no way to close the case.
+
+**Decision:**
+1. **Collection ends by itself once nothing is overdue,** whatever cleared it:
+   - a receipt allocated;
+   - a card payment;
+   - a correction or write-off;
+   - a dispute resolved in the owner's favour.
+
+   It ends on arrears, not on a zero balance: if only a charge that isn't yet due is outstanding, the account isn't in arrears and the case ends.
+2. **Everything pending stops with it:**
+   - the case goes back to *Not started*, with "Paid up: nothing is overdue, so collection has ended" in its history;
+   - its follow-up task closes, done by Humo credit control;
+   - an arrangement or dispute ends;
+   - a letter of demand waiting for the trustees is withdrawn, and the trustees on Humo are told.
+3. **Not while a reversal or write-off is waiting for approval** (D40). The case ends when that's decided and posted.
+4. **With the attorneys, the agency closes it.**
+   - A handed-over account that's paid up keeps its case, because the attorneys must be told to stop and may be owed costs.
+   - Its task becomes "Unit 44 (Grace Mokoena) is paid up: tell Botha & Partners, then close the case".
+   - The agency closes it with **Close case** and a reason. *Close case* is offered on any case with nothing overdue, and refused while something is.
+5. **A reversal soon after reopens it.** If a payment that ended a case is reversed within 30 days, for example a bounced EFT, the case reopens at the step it had reached (reminder, final demand or letter of demand), not back at a first reminder. A new follow-up task is opened.
+6. **Everyone sees it.**
+   - Finance is told in the app (no email): "Paid up: Unit 44 (Grace Mokoena)", or "Collection reopened: …".
+   - Each change is in the case history and the audit log, by "Humo credit control".
+7. **A daily check** ends any case still running on an account with nothing overdue, including cases paid before this decision, like Grace's.
+
+**Consequences:**
+- API:
+  - `CreditControl.SettleAsync` is run after any save that changes a levy account (`CommandRunner`), after a Payfast card payment, and daily with the ageing run (`SettleAllAsync`);
+  - the new `close` action is on `POST /collections/{accountId}/actions`;
+  - the case keeps `closedPaidUpAt` and `paidUpWithAttorneys`.
+- The Credit control list keeps every case with the attorneys until it's closed, paid up or not.
+- The prototype has the same *Close case* rule. Its accounts don't age or take payments, so it doesn't end cases by itself.
+
+---
+
 ## Still open (needs domain expertise before slice 2)
 
 - **Levies and participation quotas:** decided per scheme in **D13**. Still open: interest rules, special levies, VAT.

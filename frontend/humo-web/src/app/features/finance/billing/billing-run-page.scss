@@ -256,3 +256,12 @@
   font-size: var(--fs-sm);
   color: var(--c-text-2);
 }
+
+/* D43: a case with the attorneys that's paid up, waiting for the agency to tell them and close it. */
+.paid-up {
+  margin: var(--s-3) 0 0;
+  padding: var(--s-3) var(--s-4);
+  font-size: var(--fs-sm);
+  background: var(--c-success-soft, var(--c-surface-sunken));
+  border-radius: var(--r);
+}

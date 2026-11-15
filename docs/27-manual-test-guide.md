@@ -478,6 +478,17 @@ Two browsers: Terry (System Administrator) in window 1, Thandeka in window 2. Th
 - [ ] In Settings › Security, sign out one of the other sessions in the list. **Expect:** that browser goes to the signed-out page at once.
 - [ ] As Thandeka, suspend Johan (Settings › Users & access) while Johan is signed in in the other window. **Expect:** Johan's window goes to the signed-out page at once.
 
+## 49. Collection ends when the arrears are paid (D43)
+
+As Priya (Finance). Restart the API first: the daily check runs with the next billing run.
+
+- [ ] Grace Mokoena (Kingfisher Court, unit 44) was paid up on 9 November. After the API's next daily run, or straight away with the next payment on any account: open Finance › Credit control. **Expect:** unit 44 isn't listed, and the task "send a final demand" for her is gone from Tasks (done by Humo credit control).
+- [ ] Choose an account in arrears and send a reminder. Capture and allocate a payment that clears only part of what's overdue. **Expect:** the case stays at *Reminder sent*.
+- [ ] Allocate a payment for the rest. **Expect:** the case's history says "Paid up: nothing is overdue, so collection has ended"; its follow-up task is closed; Priya's bell says "Paid up: Unit …" (no email); the account drops off the Credit control list.
+- [ ] Reverse that payment (*Returned unpaid by the bank*). **Expect:** the case reopens at *Reminder sent*, with "Reopened: a payment that cleared it was reversed …", and a new follow-up task.
+- [ ] Take a case to *Handed over* (reminder, final demand, the trustees approve, letter of demand, hand over), then pay it off. **Expect:** it stays listed, with "Paid up while with the attorneys", a task "… is paid up: tell [attorney], then close the case", and a *Close case* button. *Close case* needs a reason; after it, the case is *Not started* and the task is closed.
+- [ ] On a case with something still overdue. **Expect:** no *Close case* button.
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.
