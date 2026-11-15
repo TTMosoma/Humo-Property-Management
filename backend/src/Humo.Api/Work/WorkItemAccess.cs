@@ -14,10 +14,13 @@ public static class WorkItemAccess
     public const string RuleBreach = "rule-breach";
 
     /// <summary>Tasks that stand for real work on a record. Each closes itself when that step is taken, so ticking one off could only say the work was done when it wasn't.</summary>
-    public static readonly string[] ClosedByTheirOwnStep = ["debtor-follow-up", "maintenance-triage", RuleBreach];
+    /// <summary>A resident says the work isn't fixed: book the supplier's return. Closes when the return is booked, or the job moves on.</summary>
+    public const string MaintenanceCallback = "maintenance-callback";
+
+    public static readonly string[] ClosedByTheirOwnStep = ["debtor-follow-up", "maintenance-triage", MaintenanceCallback, RuleBreach];
 
     internal static readonly string[] FinanceTypes = ["receipt-allocation", "debtor-follow-up", "invoice-approval", "payment-batch-approval", "billing-run-approval", "account-correction"];
-    internal static readonly string[] OperationsTypes = ["maintenance-triage", "maintenance-overdue", "document-expiry"];
+    internal static readonly string[] OperationsTypes = ["maintenance-triage", "maintenance-overdue", MaintenanceCallback, "document-expiry"];
     internal static readonly string[] NotForPortfolioManagers = ["receipt-allocation", "payment-batch-approval", "bank-details-verification", "billing-run-approval"];
 
     /// <param name="approverRoles">Who can decide it, when that's been worked out for this request (D24 adds the trustees).</param>

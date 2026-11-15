@@ -154,7 +154,7 @@ public static class JobRules
         ["COIDA letter of good standing", "Public liability insurance", "Tax compliance (SARS PIN)", "B-BBEE certificate", "Bank confirmation letter"];
 
     /// <summary>Actions that need the advanced maintenance feature (quotes, approvals, work orders, verification, invoices).</summary>
-    public static readonly string[] Advanced = ["request-quotes", "record-quote", "send-for-approval", "approve-within-delegation", "issue-work-order", "start-work", "verify", "capture-invoice"];
+    public static readonly string[] Advanced = ["request-quotes", "record-quote", "send-for-approval", "approve-within-delegation", "issue-work-order", "book-return", "start-work", "verify", "capture-invoice"];
 
     /// <summary>Every vetting document, with any not recorded yet shown as not on file: having no record of one is not the same as being vetted.</summary>
     public static List<SupplierDocument> WithRequired(IEnumerable<SupplierDocument> docs)
@@ -255,6 +255,14 @@ public static class JobRules
                 if (job.SupplierId is { } s && supplierBlock(s) is { } blocked) e["supplierId"] = blocked;
                 else if (supplierProblems.Count > 0 && a.OverrideVetting != true)
                     e["overrideVetting"] = $"Their {string.Join(" and ", supplierProblems)}: confirm you’ll proceed anyway (it’s recorded on the job).";
+                break;
+            // A call-back: the resident says it isn't fixed, so the same supplier comes back (under their guarantee).
+            case "book-return":
+                StageIs("Booking a return visit", JobStages.Scheduled, JobStages.InProgress);
+                if (!DateTimeOffset.TryParse(a.ScheduledFor, out var back)) e["scheduledFor"] = "When will they come back?";
+                else if (DateOnly.FromDateTime(back.UtcDateTime) < today.AddDays(-1)) e["scheduledFor"] = "That date has passed.";
+                if (job.SupplierId is null) e["supplierId"] = "There’s no supplier booked on this job.";
+                else if (supplierBlock(job.SupplierId) is { } stopped) e["supplierId"] = stopped;
                 break;
             case "start-work":
                 StageIs("Starting work", JobStages.Scheduled);

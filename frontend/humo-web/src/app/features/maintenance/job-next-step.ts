@@ -88,6 +88,9 @@ export class JobNextStep {
   protected readonly accessNotes = signal('');
   protected readonly overrideCompliance = signal(false);
   protected readonly completionNotes = signal('');
+  /** A call-back: when the supplier comes back, and any new access arrangements. */
+  protected readonly returnDate = signal('');
+  protected readonly returnAccess = signal('');
   protected readonly notFixedComment = signal('');
   protected readonly showNotFixed = signal(false);
   protected readonly invoiceNo = signal('');
@@ -284,6 +287,15 @@ export class JobNextStep {
 
   protected start(): void {
     this.run([{ type: 'start-work' }], 'Marked as in progress');
+  }
+
+  protected bookReturn(): void {
+    if (!this.returnDate()) return;
+    const access = this.returnAccess().trim();
+    this.run(
+      [{ type: 'book-return', scheduledFor: new Date(`${this.returnDate()}T08:00:00+02:00`).toISOString(), ...(access ? { accessNotes: access } : {}) }],
+      'Return visit booked: the supplier and the resident are told',
+    );
   }
 
   protected complete(): void {

@@ -370,3 +370,12 @@ textarea {
     margin-bottom: 0;
   }
 }
+
+/* A call-back: booking the supplier's return visit. */
+.return {
+  display: grid;
+  gap: var(--s-2);
+  margin: var(--s-3) 0 var(--s-4);
+  padding-bottom: var(--s-3);
+  border-bottom: 1px dashed var(--c-border);
+}

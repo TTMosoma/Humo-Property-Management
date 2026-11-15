@@ -98,6 +98,71 @@ public sealed class ResidentRequestTests : IDisposable
         Assert.Contains(events, e => e.StartsWith("Sipho Khumalo told: “Booked", StringComparison.Ordinal));
     }
 
+    /// <summary>A request taken to "the supplier says it's done", handled (triaged to) Thandeka, with Aqua Plumbing booked.</summary>
+    private async Task<(string Reference, Guid Supplier)> Done(Setup s)
+    {
+        var supplier = await Id(await s.Admin.PostAsJsonAsync("/api/suppliers", new
+        {
+            name = "Aqua Plumbing", trades = new[] { "Plumbing" }, contactName = "Peter Nel", phone = "082 555 0142", email = "jobs@aqua.example", schemeIds = new[] { s.Kc.ToString() },
+        }));
+        var reference = await Report(s);
+        var admin = await api.Db(db => db.Users.Where(u => u.Email == "thandeka@acacia.example").Select(u => u.Id).SingleAsync());
+        await Act(s.Admin, reference, new { type = "triage", assigneeId = admin.ToString(), priority = "normal", category = "Plumbing" });
+        await Act(s.Admin, reference, new { type = "request-quotes", supplierIds = new[] { supplier.ToString() } });
+        var quote = (await (await s.Admin.GetAsync($"/api/jobs/{reference}")).Json()).GetProperty("job").GetProperty("quotes")[0].GetProperty("id").GetString();
+        await Act(s.Admin, reference, new { type = "record-quote", quoteId = quote, amount = 1_200 });
+        await Act(s.Admin, reference, new { type = "approve-within-delegation", quoteId = quote });
+        await Act(s.Admin, reference, new { type = "issue-work-order", scheduledFor = api.Clock.GetUtcNow().AddDays(1).ToString("O"), accessNotes = "Caretaker has keys", overrideVetting = true });
+        await Act(s.Admin, reference, new { type = "complete", notes = "Valve replaced" });
+        return (reference, supplier);
+    }
+
+    private Task<List<WorkItemRow>> Callbacks() => api.Db(db => db.WorkItems.Where(w => w.Type == "maintenance-callback").ToListAsync());
+
+    [Fact]
+    public async Task Not_fixed_gives_the_handler_a_call_back_task_and_booking_the_return_closes_it_and_tells_everyone()
+    {
+        var s = await Scheme();
+        var (reference, supplier) = await Done(s);
+
+        await Act(s.Owner, reference, new { type = "verify", outcome = "not-fixed", comment = "Still leaking" }, resident: true);
+
+        // Thandeka handles it: a task for her, in her bell, that only booking the return (or moving the job on) closes.
+        var task = Assert.Single(await Callbacks());
+        Assert.Equal(("open", "Sipho Khumalo says " + reference + " isn’t fixed: book Aqua Plumbing’s return", "“Still leaking”"), (task.Status, task.Title, task.Detail));
+        Assert.Contains("For you: Sipho Khumalo says " + reference + " isn’t fixed: book Aqua Plumbing’s return", await Bell(s.Admin));
+        var markDone = await s.Admin.PostAsJsonAsync("/api/work-items/complete", new { ids = new[] { task.Id.ToString() } });
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, markDone.StatusCode);
+
+        api.Email.Sent.Clear();
+        await Act(s.Admin, reference, new { type = "book-return", scheduledFor = api.Clock.GetUtcNow().AddDays(2).ToString("O") });
+
+        Assert.Equal("done", Assert.Single(await Callbacks()).Status);
+        var job = (await (await s.Admin.GetAsync($"/api/jobs/{reference}")).Json()).GetProperty("job");
+        Assert.Equal("scheduled", job.GetProperty("stage").GetString());
+        Assert.Equal("Caretaker has keys", job.GetProperty("workOrder").GetProperty("accessNotes").GetString());
+        await HumoApiFactory.Until(() => api.Email.Sent.Any(m => m.To == "jobs@aqua.example") && api.Email.Sent.Any(m => m.To == "sipho@mail.example"));
+        Assert.StartsWith("Return visit for Acacia", api.Email.Sent.Single(m => m.To == "jobs@aqua.example").Subject);
+        Assert.Contains("Still leaking", api.Email.Sent.Single(m => m.To == "jobs@aqua.example").Text);
+        Assert.Equal("Booked: return visit for Geyser leaking", api.Email.Sent.Single(m => m.To == "sipho@mail.example").Subject);
+
+        // It counts against the supplier.
+        var performance = (await (await s.Admin.GetAsync($"/api/suppliers/{supplier}")).Json()).GetProperty("supplier").GetProperty("performance");
+        Assert.Equal(1, performance.GetProperty("callbacks").GetInt32());
+    }
+
+    [Fact]
+    public async Task Fixed_tells_the_handler_the_job_is_ready_to_finish()
+    {
+        var s = await Scheme();
+        var (reference, _) = await Done(s);
+
+        await Act(s.Owner, reference, new { type = "verify", outcome = "fixed" }, resident: true);
+
+        Assert.Contains("Confirmed fixed: Geyser leaking", await Bell(s.Admin));
+        Assert.Empty(await Callbacks());
+    }
+
     [Fact]
     public async Task A_cancelled_request_tells_the_resident_why_by_bell_and_email_and_shows_it()
     {

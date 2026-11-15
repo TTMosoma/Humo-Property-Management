@@ -30,7 +30,7 @@ public static partial class MaintenanceEndpoints
     private static readonly Dictionary<string, string> Verbs = new()
     {
         ["triage"] = "Triaged", ["request-quotes"] = "Requested quotes for", ["record-quote"] = "Recorded a quote on", ["send-for-approval"] = "Sent for approval:",
-        ["approve-within-delegation"] = "Approved within delegated authority:", ["issue-work-order"] = "Issued a work order for", ["start-work"] = "Started work on",
+        ["approve-within-delegation"] = "Approved within delegated authority:", ["issue-work-order"] = "Issued a work order for", ["book-return"] = "Booked a return visit for", ["start-work"] = "Started work on",
         ["complete"] = "Completed", ["verify"] = "Confirmed the outcome of", ["capture-invoice"] = "Captured the invoice for", ["close"] = "Closed", ["comment"] = "Commented on", ["change-priority"] = "Changed the priority of", ["correct-quote"] = "Corrected a quote on", ["request-revision"] = "Asked for a revised quote on",
         ["reopen-quotes"] = "Reopened quotes on",
         ["cancel"] = "Cancelled",
@@ -231,13 +231,18 @@ public static partial class MaintenanceEndpoints
             if (a.Type == "request-revision" && job.Quotes.FirstOrDefault(q => q.Id == a.QuoteId) is { } revised)
                 await Send(revised, $"Revised quote requested by {agency}: {job.Title}",
                     $"{agency} asks {Name(revised.SupplierId)} for a revised quote: {a.Reason!.Trim()}\n\nWhat: {job.Title} ({job.Category})\nWhere: {area}\n\nSee the request and send your revised quote here:");
-            if (a.Type == "issue-work-order" && job.SupplierId is { } booked && suppliers.TryGetValue(booked, out var bookedSupplier) && !string.IsNullOrWhiteSpace(bookedSupplier.Email))
+            if (a.Type is "issue-work-order" or "book-return" && job.SupplierId is { } booked && suppliers.TryGetValue(booked, out var bookedSupplier) && !string.IsNullOrWhiteSpace(bookedSupplier.Email))
             {
                 var token = await links.IssueAsync(row, booked, SupplierLinks.WorkOrder, null, a.ExcludePhotoIds, ct);
                 var when = DateTimeOffset.Parse(job.WorkOrder!.ScheduledFor, CultureInfo.InvariantCulture).ToOffset(TimeSpan.FromHours(2));
-                links.SendAfterCommit(commands, row.Id, bookedSupplier.Email.Trim(), bookedSupplier.Name, $"Work order from {agency}: {job.Title}, {when:ddd d MMM}",
-                    $"{agency} books {bookedSupplier.Name} for {job.Title} on {when:dddd d MMMM}.\n\nThe address, access arrangements and photos are on your work order. Confirm the date, or ask for another, here:",
-                    SupplierLinks.WorkOrder, token, ct);
+                if (a.Type == "book-return")
+                    links.SendAfterCommit(commands, row.Id, bookedSupplier.Email.Trim(), bookedSupplier.Name, $"Return visit for {agency}: {job.Title}, {when:ddd d MMM}",
+                        $"The resident says {job.Title} isn’t fixed{(job.Verification?.Comment is { } why ? $": “{why}”" : "")}. {agency} books {bookedSupplier.Name} to come back on {when:dddd d MMMM}, under your guarantee.\n\nConfirm the date, or ask for another, here:",
+                        SupplierLinks.WorkOrder, token, ct);
+                else
+                    links.SendAfterCommit(commands, row.Id, bookedSupplier.Email.Trim(), bookedSupplier.Name, $"Work order from {agency}: {job.Title}, {when:ddd d MMM}",
+                        $"{agency} books {bookedSupplier.Name} for {job.Title} on {when:dddd d MMMM}.\n\nThe address, access arrangements and photos are on your work order. Confirm the date, or ask for another, here:",
+                        SupplierLinks.WorkOrder, token, ct);
             }
             if (emergency)
             {
@@ -427,23 +432,53 @@ public static partial class MaintenanceEndpoints
             case "complete":
                 job.Completion = new JobCompletion(now, a.Notes!.Trim());
                 job.Stage = JobStages.Completed;
+                await m.CloseWorkAsync(row.Id, [Work.WorkItemAccess.MaintenanceCallback], by, ct);
                 JobRules.Log(job, "stage", $"Completed: {job.Completion.Notes}", by, now);
                 break;
             case "verify":
             {
                 var who = a.OnBehalf == true ? $"{by} (on behalf of resident)" : by;
                 job.Verification = new JobVerification(now, who, a.Outcome!, string.IsNullOrWhiteSpace(a.Comment) ? null : a.Comment.Trim());
+                // The name on the person record (the sign-in's own name may be shorter), when it's the person who reported it.
+                var resident = a.OnBehalf == true || actor.User.PersonId == job.ReportedBy.PersonId ? job.ReportedBy.Name : by;
+                var handler = Guid.TryParse(job.AssigneeId, out var h) ? h : (Guid?)null;
                 if (a.Outcome == "fixed")
                 {
                     job.Stage = JobStages.Verified;
                     JobRules.Log(job, "stage", $"Verified as fixed by {who}", by, now);
+                    await m.CloseWorkAsync(row.Id, [Work.WorkItemAccess.MaintenanceCallback], by, ct);
+                    // Whoever handles the job hears it's ready to finish: the supplier's invoice, then close.
+                    if (handler is { } person)
+                        notices.ToPerson(person, actor.Human.Id, $"Confirmed fixed: {job.Title}", $"{resident} confirmed {job.Ref} is fixed. Capture the supplier’s invoice, or close the job.",
+                            $"/maintenance/{job.Ref}", sendEmail: false, kind: "maintenance");
                 }
                 else
                 {
                     job.Stage = job.WorkOrder is null ? JobStages.Reported : JobStages.Scheduled;
                     job.Completion = null;
                     JobRules.Log(job, "stage", $"Reported as NOT fixed{(job.Verification.Comment is { } c ? $": “{c}”" : "")} — supplier to return", by, now);
+                    // A call-back: someone books the supplier's return (or looks at it again, for work done in-house). The task closes itself.
+                    await m.CloseWorkAsync(row.Id, [Work.WorkItemAccess.MaintenanceCallback], by, ct);
+                    db.WorkItems.Add(new WorkItemRow
+                    {
+                        Id = Guid.CreateVersion7(), OrganisationId = row.OrganisationId, SchemeId = row.SchemeId, Ref = job.Ref, Kind = "task", Type = Work.WorkItemAccess.MaintenanceCallback,
+                        Title = job.WorkOrder is null ? $"{resident} says {job.Ref} isn’t fixed: look at it again" : $"{resident} says {job.Ref} isn’t fixed: book {Name(job.SupplierId)}’s return",
+                        Detail = job.Verification.Comment is { } why ? $"“{why}”" : "No details given.", CreatedAt = DateTimeOffset.UtcNow, DueAt = DateTimeOffset.UtcNow.AddDays(job.Priority == "urgent" ? 1 : 2),
+                        AssigneeId = job.AssigneeId, ApproverRoles = "[]", Evidence = "[]", Route = $"/maintenance/{job.Ref}", SourceId = row.Id,
+                    });
                 }
+                break;
+            }
+            case "book-return":
+            {
+                var back = DateTimeOffset.Parse(a.ScheduledFor!, CultureInfo.InvariantCulture);
+                var notes = string.IsNullOrWhiteSpace(a.AccessNotes) ? job.WorkOrder?.AccessNotes : a.AccessNotes.Trim();
+                job.WorkOrder = new WorkOrder(now, back.ToString("O"), notes);
+                job.Stage = JobStages.Scheduled;
+                job.Completion = null;
+                job.DueAt = back.AddHours(8).ToString("O");
+                JobRules.Log(job, "stage", $"Return visit booked with {Name(job.SupplierId)} for {back.ToOffset(TimeSpan.FromHours(2)):ddd d MMM}{(job.Verification?.Comment is { } why ? $" (not fixed: “{why}”)" : "")}", by, now);
+                await m.CloseWorkAsync(row.Id, [Work.WorkItemAccess.MaintenanceCallback], by, ct);
                 break;
             }
             case "capture-invoice":
@@ -484,6 +519,7 @@ public static partial class MaintenanceEndpoints
                 break;
             }
             case "close":
+                await m.CloseWorkAsync(row.Id, [Work.WorkItemAccess.MaintenanceCallback], by, ct);
                 job.Stage = JobStages.Closed;
                 JobRules.Log(job, "stage", "Job closed", by, now);
                 break;
@@ -498,7 +534,7 @@ public static partial class MaintenanceEndpoints
             case "cancel":
                 job.Stage = JobStages.Cancelled;
                 JobRules.Log(job, "stage", $"Cancelled: {a.Reason!.Trim()}", by, now);
-                await m.CloseWorkAsync(row.Id, ["maintenance-triage", "quote-approval"], by, ct);
+                await m.CloseWorkAsync(row.Id, ["maintenance-triage", "quote-approval", Work.WorkItemAccess.MaintenanceCallback], by, ct);
                 break;
         }
     }

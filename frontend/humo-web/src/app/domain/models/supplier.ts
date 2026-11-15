@@ -69,6 +69,8 @@ export interface Supplier {
     avgVariance: number;
     /** % of jobs residents confirmed as fixed first time. */
     verifiedRate: number;
+    /** Times a resident said the work wasn't fixed and the supplier had to come back. */
+    callbacks?: number;
   };
   /** On hold: no new work orders. Archived: no longer used (kept for history and payments). */
   status: SupplierStatus;

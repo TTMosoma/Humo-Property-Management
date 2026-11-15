@@ -84,6 +84,8 @@ export type JobAction =
   | { type: 'approve-within-delegation'; quoteId: string }
   /** `overrideVetting`: the supplier's site-work documents are missing or expired and you proceed anyway (recorded on the job). */
   | { type: 'issue-work-order'; scheduledFor: string; accessNotes?: string; overrideVetting?: boolean }
+  /** A call-back: the same supplier comes back after the resident says it isn't fixed. */
+  | { type: 'book-return'; scheduledFor: string; accessNotes?: string }
   | { type: 'start-work' }
   | { type: 'complete'; notes: string }
   | { type: 'verify'; outcome: 'fixed' | 'not-fixed'; comment?: string; onBehalf: boolean }

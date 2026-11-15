@@ -490,6 +490,16 @@ As Sipho (owner) and Johan (Portfolio Manager for Kingfisher Court). Check Sipho
 - [ ] As Thandeka, Settings › Notifications: switch *Request updated* off. Cancel another of Sipho's requests. **Expect:** it's in Sipho's bell, but no email.
 - [ ] On a job's history (as Johan). **Expect:** "Sipho Khumalo told: “Booked: …”" when he was told, instead of the old "notified of the booking" that was written even when nothing was sent.
 
+## 50. The resident's answer reaches the agency
+
+As Sipho (owner) and Johan (Portfolio Manager for Kingfisher Court). Johan triages the request to himself.
+
+- [ ] Take one of Sipho's requests to *done* (quote, approve, work order, *Record completion*). As Sipho, answer *No, still a problem*: "Still leaking". **Expect:** Johan's bell: "For you: Sipho Khumalo says MR-… isn't fixed: book [supplier]'s return". In Tasks, it offers *Open the job*, not *Mark done*.
+- [ ] As Johan, open the job. **Expect:** a red note, "Sipho Khumalo says it isn't fixed: “Still leaking”", and *Book return visit* with a date.
+- [ ] Book it for tomorrow. **Expect:** the supplier gets an email "Return visit for …" with Sipho's words and their link; Sipho's bell and email say "Booked: return visit for …"; Johan's task is closed.
+- [ ] Open the supplier's page. **Expect:** *Call-backs* 1.
+- [ ] Take another request to *done*; as Sipho answer *Yes, it's fixed*. **Expect:** Johan's bell: "Confirmed fixed: …".
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.

@@ -405,6 +405,14 @@ export class MaintenanceStore {
         if (job.reportedBy.role !== 'staff') this.log(job, 'message', `${job.reportedBy.name} notified of the booking`, 'Humo PM');
         break;
 
+      case 'book-return':
+        job.workOrder = { issuedAt: new Date().toISOString(), scheduledFor: action.scheduledFor, accessNotes: action.accessNotes ?? job.workOrder?.accessNotes };
+        job.stage = 'scheduled';
+        job.completion = undefined;
+        job.dueAt = new Date(new Date(action.scheduledFor).getTime() + 8 * 3_600_000).toISOString();
+        this.log(job, 'stage', `Return visit booked with ${this.supplier(job.supplierId)?.name} for ${fmtDay(action.scheduledFor)}`, by);
+        break;
+
       case 'start-work':
         job.stage = 'in-progress';
         this.log(job, 'stage', 'Supplier on site — work in progress', by);

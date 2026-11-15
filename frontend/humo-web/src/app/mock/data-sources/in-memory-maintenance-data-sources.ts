@@ -41,6 +41,7 @@ const JOB_VERB: Record<JobAction['type'], string> = {
   'approve-within-delegation': 'Approved quote within delegated authority',
   'award-network-quote': 'Chose a quote from a Humo Contractor quote request',
   'issue-work-order': 'Issued work order',
+  'book-return': 'Booked a return visit',
   'start-work': 'Marked supplier on site',
   complete: 'Marked job completed',
   verify: 'Recorded whether the job was fixed',

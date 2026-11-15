@@ -13,7 +13,8 @@ using Microsoft.EntityFrameworkCore;
 namespace Humo.Api.Maintenance;
 
 // The shapes match the app's maintenance ports (maintenance-data-sources.ts, job.ts, supplier.ts).
-public sealed record PerformanceDto(int JobsCompleted, int OnTimeRate, decimal AvgVariance, int VerifiedRate);
+/// <param name="Callbacks">Times a resident said the work wasn't fixed and the supplier had to come back.</param>
+public sealed record PerformanceDto(int JobsCompleted, int OnTimeRate, decimal AvgVariance, int VerifiedRate, int Callbacks = 0);
 /// <param name="BankChange">A bank account waiting for verification (D27): who entered it, when, and the verification in My work.</param>
 public sealed record SupplierDto(string Id, int Version, string? PartyId, string Name, List<string> Trades, string ContactName, string Phone, string Email, string BankAccount,
     bool BankVerified, int? BbbeeLevel, List<string> SchemeIds, List<SupplierDocument> Documents, PerformanceDto Performance, string Status,
@@ -65,8 +66,9 @@ public sealed class MaintenanceService(HumoDbContext db, TimeProvider clock)
             var verified = done.Where(j => j.Verification is not null).ToList();
             var firstTime = verified.Count(j => j.Verification!.Outcome == "fixed" && !j.Events.Any(e => e.Text.StartsWith("Reported as NOT fixed", StringComparison.Ordinal)));
             var variances = invoices.Where(i => i.SupplierId == id && i.ApprovedAmount > 0).Select(i => (i.Amount - i.ApprovedAmount!.Value) / i.ApprovedAmount.Value * 100).ToList();
+            var callbacks = jobs.Where(j => j.Value == id).Sum(j => j.Job.Events.Count(e => e.Text.StartsWith("Reported as NOT fixed", StringComparison.Ordinal)));
             return new PerformanceDto(done.Count, done.Count == 0 ? 0 : (int)Math.Round(onTime * 100.0 / done.Count), variances.Count == 0 ? 0 : Math.Round(variances.Average(), 1),
-                verified.Count == 0 ? 0 : (int)Math.Round(firstTime * 100.0 / verified.Count));
+                verified.Count == 0 ? 0 : (int)Math.Round(firstTime * 100.0 / verified.Count), callbacks);
         });
     }
 
