@@ -101,7 +101,7 @@ describe('Live updates over SignalR (HttpLiveUpdates)', () => {
     TestBed.inject(HttpLiveUpdates).start();
     await settle();
 
-    made[0].push(['payables', 'jobs']);
+    made[0].push(['payables', 'meetings']);
     made[0].push('notifications');
 
     expect(heard).toEqual([]);
@@ -128,8 +128,20 @@ describe('Live updates over SignalR (HttpLiveUpdates)', () => {
 
     made[0].reconnected?.();
 
-    expect(heard).toEqual([['notifications', 'work-items', 'session']]);
+    expect(heard).toEqual([['notifications', 'work-items', 'session', 'jobs', 'inbox']]);
     expect(checks).toBe(1);
+  });
+
+  it('a job or Inbox change refreshes the pages showing them (another person moved the job on)', async () => {
+    owner.set('u-1|a-1');
+    TestBed.inject(HttpLiveUpdates).start();
+    await settle();
+
+    made[0].push(['jobs']);
+    made[0].push(['inbox']);
+
+    expect(heard).toEqual([['jobs'], ['inbox']]);
+    expect(checks).toBe(0);
   });
 
   it('a change to their access checks the session at once, so an ended one leaves for the signed-out page', async () => {

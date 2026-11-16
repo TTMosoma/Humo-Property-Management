@@ -74,6 +74,9 @@ export function residentStatus(j: Job): { label: string; tone: Tone } {
       return { label: 'Done — was it fixed?', tone: 'warning' };
     case 'cancelled':
       return { label: 'Cancelled', tone: 'neutral' };
+    // Closed without the resident confirming it: say so, don't claim it was fixed.
+    case 'closed':
+      return j.verification?.outcome === 'fixed' ? { label: 'Fixed', tone: 'success' } : { label: 'Closed', tone: 'neutral' };
     default:
       return { label: 'Fixed', tone: 'success' };
   }

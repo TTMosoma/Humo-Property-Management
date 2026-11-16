@@ -478,6 +478,28 @@ Two browsers: Terry (System Administrator) in window 1, Thandeka in window 2. Th
 - [ ] In Settings › Security, sign out one of the other sessions in the list. **Expect:** that browser goes to the signed-out page at once.
 - [ ] As Thandeka, suspend Johan (Settings › Users & access) while Johan is signed in in the other window. **Expect:** Johan's window goes to the signed-out page at once.
 
+## 47. A resident follows their own request
+
+As Sipho (owner) and Johan (Portfolio Manager for Kingfisher Court). Check Sipho's email in Mailpit.
+
+- [ ] As Sipho, report a problem. As Johan, triage it and ask a supplier to quote. **Expect:** Sipho's bell: "Your request MR-… is being arranged". No email for this one.
+- [ ] As Johan, record the quote, approve it and issue the work order with access notes. **Expect:** Sipho's bell and email: "Booked: …" with the supplier, the day and the access notes.
+- [ ] As Johan, mark the work done. **Expect:** Sipho's bell and email: "Was it fixed? …". In *Maintenance*, the request asks *Was it fixed?*.
+- [ ] As Sipho, open the request (its title, or a line under *Done*). **Expect:** its own page with the status, booking, what the supplier said, the photos and a history in plain words. No quote amounts, no staff notes, no supplier phone or email.
+- [ ] Report another problem as Sipho; as Johan, cancel it with a reason. **Expect:** the cancel form says the resident is told the reason. Sipho's bell and email: "Cancelled: …" with the reason. Under *Done* it shows *Cancelled* and the reason, and its page says the same, with links to report it again or send a message.
+- [ ] As Thandeka, Settings › Notifications: switch *Request updated* off. Cancel another of Sipho's requests. **Expect:** it's in Sipho's bell, but no email.
+- [ ] On a job's history (as Johan). **Expect:** "Sipho Khumalo told: “Booked: …”" when he was told, instead of the old "notified of the booking" that was written even when nothing was sent.
+
+## 48. Jobs and the Inbox update by themselves
+
+Two windows: Thandeka in window 1, Johan in window 2. Restart `npm run start:api` and the API first.
+
+- [ ] Both open the same request (Maintenance › the job). In window 1, Thandeka requests quotes. **Expect:** window 2 moves to the same step within a second or two, without reloading. Johan isn't offered *Request quotes* any more.
+- [ ] Window 2 on *Maintenance* (the list). As Sipho, report a problem. **Expect:** it appears in Johan's list without reloading.
+- [ ] Window 2 on *Inbox*. As Sipho, send a message from *Messages*. **Expect:** it appears in Johan's Inbox without reloading.
+- [ ] Sipho on *Maintenance* (his requests). As Johan, move his request on (triage, or cancel with a reason). **Expect:** Sipho's page shows the new status without reloading.
+- [ ] Lindiwe (another unit) on her *Maintenance* page while Johan moves Sipho's request on. **Expect:** nothing changes on her page.
+
 ## 49. Collection ends when the arrears are paid (D43)
 
 As Priya (Finance). Restart the API first: as it starts, and every 15 minutes after, it ends cases already paid up.
