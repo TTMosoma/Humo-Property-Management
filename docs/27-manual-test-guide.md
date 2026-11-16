@@ -500,6 +500,11 @@ Two windows: Thandeka in window 1, Johan in window 2. Restart `npm run start:api
 - [ ] Sipho on *Maintenance* (his requests). As Johan, move his request on (triage, or cancel with a reason). **Expect:** Sipho's page shows the new status without reloading.
 - [ ] Lindiwe (another unit) on her *Maintenance* page while Johan moves Sipho's request on. **Expect:** nothing changes on her page.
 
+## 52. The supplier link after a decided quote
+
+- [ ] `npm run start:api`. **Expect:** no NG8107 warning in the build output.
+- [ ] Open a supplier's quote link (Mailpit) for a quote that has since been approved or rejected. **Expect:** the page says it's decided and shows "Your quote: R…", as before.
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.
