@@ -1042,6 +1042,78 @@ Photos on a maintenance request were kept by name only on the live system, so th
 
 ---
 
+## D45 — Collections with the attorneys (16 November 2026)
+
+**Status:** proposed, waiting for the product owner's approval.
+
+**The problem:**
+- Once a case is handed over, Humo PM knows the attorney's name and little else. Progress lives in free-text notes, with a monthly "check progress with the attorney" task.
+- The owner's legal costs, which most scheme rules let the body corporate recover, aren't on their account.
+- An acknowledgement of debt agreed through the attorney can't be recorded or monitored.
+- There's no way to take a case back from the attorney.
+- Agencies, trustees and auditors can't see where each case stands: summons served? Judgment? CSOS order?
+
+D43 already covers the commonest ending: paid in full, the attorney told, then *Close case*.
+
+**The principle:** a handed-over case is still the scheme's case. Every step is recorded with a date and a document, so the trustees and the agency can see where it stands. Every cost charged to the owner is backed by the scheme's rules and the attorney's invoice. Nothing reaches the owner's account without both.
+
+**Decision:**
+1. **Legal milestones** are recorded on the case, each with its date, an optional document (PDF) and a note:
+   - attorney's letter of demand;
+   - summons issued;
+   - summons served;
+   - judgment granted;
+   - CSOS application lodged;
+   - CSOS adjudication order;
+   - emoluments attachment order;
+   - warrant of execution;
+   - other (named).
+
+   The case shows the latest, and the history shows them all. Credit control's list, the scheme's page and the debtors report show it for every handed-over case.
+2. **Legal costs on the owner's account.** A *legal costs* charge can be raised on the owner's levy account from a handed-over case, only if:
+   - the scheme's rules allow it: the rule is cited, and on Professional and Enterprise it's chosen from the scheme's rules (D29), or typed on Essentials;
+   - it's backed by the attorney's invoice, captured in Payables (D27) and linked to the case;
+   - the amount is no more than that invoice.
+
+   It's raised by Finance or an Agency Administrator and approved by a second person, as a correction is (D40). It's never automatic. It appears on the owner's statement as *Legal costs: [attorney], [invoice number]*. The attorney's invoice is paid through Payables like any supplier's.
+3. **Acknowledgement of debt** (AOD), while handed over. The signed AOD is uploaded (PDF), with:
+   - the instalment amount;
+   - the day of the month;
+   - the number of months;
+   - the date of the first payment.
+
+   Humo PM watches it the way it watches a payment arrangement: each month it checks that the instalment was received. A missed instalment raises a task, "Tell [attorney]: [owner] missed the [month] instalment", and the case stays with the attorney. Paid in full ends it (D43: tell the attorney, then *Close case*).
+4. **Recall from the attorney.** With a reason (the owner disputes it, the agency is taking it back, the attorney isn't acting), the case is recalled:
+   - The case returns to the agency at *Letter of demand sent*, and the attorney's task becomes "Tell [attorney] the matter is withdrawn".
+   - Costs the attorney is owed are their invoice, through Payables.
+   - Recalling needs an Agency Administrator, and the trustees on Humo are told.
+5. **The attorney's progress** keeps its monthly task, now asking for the next milestone. If no milestone has been recorded for **90 days**, the task says so plainly ("No progress recorded since …: ask the attorney or consider recalling"), and the trustees on Humo are told once.
+6. **Interest** keeps running on the arrears as the scheme's billing rules set (unchanged). An AOD may say otherwise, and Humo PM records that with the AOD.
+7. **The trustees see it.** On every plan, a trustee reads the scheme's handed-over cases: stage, latest milestone, amounts outstanding, and costs charged. They don't see the attorney's correspondence.
+
+**Not in this decision:**
+- **Levy clearance certificates on a sale:** a decision of their own (conveyancers, the clearance figure, certificates).
+- **Selling the unit in execution:** recorded as a milestone ("Other"), but not managed.
+
+**For the product owner to confirm:**
+- **Legal costs need the rule cited and a second person** (recommended), or the rule only.
+- **The progress warning comes after 90 days without a milestone** (recommended), or 60.
+- **Recalling from the attorney needs an Agency Administrator** (recommended), or anyone with credit control.
+
+**Consequences (when built):**
+- **Cases gain** milestones (type, date, document, note), an AOD (amounts, schedule, document, instalments seen), and a recall.
+- **New credit control actions:**
+  - `record-milestone`;
+  - `record-aod` and `aod-missed` (raised by Humo PM);
+  - `recall`;
+  - `charge-legal-costs` (an approval, like an account correction, linked to a Payables invoice).
+- **Ledger:** a new charge type, *legal costs*, with its invoice reference.
+- **Tasks:** "tell the attorney" (missed instalment, withdrawal) and the monthly progress task with its 90-day warning.
+- **Reports:** a *Handed-over cases* view with milestones and costs.
+- **Tests:** each route; that a legal-cost charge is refused without a rule, an invoice, or a second person, and above the invoice; and that a missed AOD instalment is caught.
+
+---
+
 ## Still open (needs domain expertise before slice 2)
 
 - **Levies and participation quotas:** decided per scheme in **D13**. Still open: interest rules, special levies, VAT.
