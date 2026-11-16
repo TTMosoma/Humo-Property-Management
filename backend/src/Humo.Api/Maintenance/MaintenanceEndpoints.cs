@@ -114,7 +114,8 @@ public static partial class MaintenanceEndpoints
         var units = await db.Relationships.Where(r => r.PersonId == personId && r.UnitId != null && (r.Type == "owner" || r.Type == "tenant")).Select(r => r.UnitId!.Value).ToListAsync(ct);
         var rows = (await db.Jobs.Where(x => x.ReportedByPersonId == personId || (x.UnitId != null && units.Contains(x.UnitId.Value))).ToListAsync(ct))
             .OrderByDescending(x => x.ReportedAt).ToList();
-        return Results.Ok(await m.JobSummariesAsync(rows, ct));
+        // Only what's meant for them: no quotes, prices, approvals, invoices, staff notes or the supplier's details.
+        return Results.Ok((await m.JobSummariesAsync(rows, ct)).Select(s => s with { Job = ResidentRequests.ForResident(s.Job), Supplier = ResidentRequests.ForResident(s.Supplier) }));
     }
 
     // ---------------------------------------------------------------- Jobs: commands
@@ -209,7 +210,11 @@ public static partial class MaintenanceEndpoints
             if (emergency && actor.Assignment.Role is not (Roles.AgencyAdmin or Roles.PortfolioManager))
                 throw new CommandRefused("forbidden", "An Agency Administrator or Portfolio Manager decides to go ahead in an emergency.");
             var asked = job.Quotes.Select(q => q.Id).ToHashSet();
+            var before = job.Stage;
             await ApplyAsync(row, job, a, actor, suppliers, problems, db, m, ct, limit, notices);
+            // The resident who reported it hears about the step it reached (and it's in the job's history when they did).
+            if (await ResidentRequests.TellAsync(db, notices, row.OrganisationId, job, before, a, Name(job.SupplierId), actor.Human.Id, ct) is { } told)
+                JobRules.Log(job, "message", $"{job.ReportedBy.Name} told: {told}", "Humo PM", m.NowText);
             // D38: what the supplier needs goes to them by email, with their own link.
             var agency = await db.Organisations.AsNoTracking().Where(o => o.Id == row.OrganisationId).Select(o => o.ShortName).FirstAsync(ct);
             var area = await db.Schemes.AsNoTracking().Where(s => s.Id == row.SchemeId).Select(s => s.Suburb + ", " + s.City).FirstAsync(ct);
@@ -413,7 +418,6 @@ public static partial class MaintenanceEndpoints
                 job.DueAt = when.AddHours(8).ToString("O");
                 JobRules.Log(job, "stage", $"Work order issued to {Name(job.SupplierId)} for {when.ToOffset(TimeSpan.FromHours(2)):ddd d MMM}", by, now);
                 if (problems.Count > 0) JobRules.Log(job, "comment", $"Issued despite vetting: {string.Join("; ", problems)}. {by} will get the documents.", by, now);
-                if (job.ReportedBy.Role != "staff") JobRules.Log(job, "message", $"{job.ReportedBy.Name} notified of the booking", "Humo PM", now);
                 break;
             }
             case "start-work":
@@ -424,7 +428,6 @@ public static partial class MaintenanceEndpoints
                 job.Completion = new JobCompletion(now, a.Notes!.Trim());
                 job.Stage = JobStages.Completed;
                 JobRules.Log(job, "stage", $"Completed: {job.Completion.Notes}", by, now);
-                if (job.ReportedBy.Role != "staff") JobRules.Log(job, "message", $"Asked {job.ReportedBy.Name} to confirm it’s fixed", "Humo PM", now);
                 break;
             case "verify":
             {

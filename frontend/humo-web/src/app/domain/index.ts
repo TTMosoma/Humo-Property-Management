@@ -21,6 +21,7 @@ export * from './ports/portfolio-data-sources';
 export * from './models/period';
 export * from './models/supplier';
 export * from './models/job';
+export * from './models/resident-request';
 export * from './ports/maintenance-data-sources';
 export * from './ports/supplier-link-data-source';
 export * from './models/permission';
