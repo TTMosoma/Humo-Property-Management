@@ -141,6 +141,7 @@ const COLLECTION_VERB: Record<CollectionAction['type'], string> = {
   dispute: 'Recorded a dispute on',
   'resolve-dispute': 'Resolved the dispute on',
   note: 'Added a credit control note to',
+  close: 'Closed the collection case on',
 };
 
 @Injectable()

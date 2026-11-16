@@ -89,6 +89,23 @@ export function missedInstalmentForm(drawer: DrawerService, data: CollectionData
   });
 }
 
+/** D43: nothing is overdue. With the attorneys, the agency tells them (and settles any costs) before closing the case. */
+export function closeCaseForm(drawer: DrawerService, data: CollectionDataSource, v: CollectionView): void {
+  openForm(drawer, {
+    eyebrow: eyebrow(v),
+    title: 'Close the case',
+    intro:
+      v.case.stage === 'handed-over'
+        ? 'Nothing is overdue any more. Tell the attorneys to stop and settle any costs they’re owed, then close the case here. It’s recorded in the case history.'
+        : 'Nothing is overdue any more. Closing ends collection; it’s recorded in the case history.',
+    fields: [{ key: 'reason', label: 'How it was closed', type: 'textarea', required: true, placeholder: 'e.g. Botha & Partners told on 16 Nov; no costs owed' }],
+    submitLabel: 'Close case',
+    submit: (f) => data.act(v.account.id, { type: 'close', reason: f['reason'] }, v.case.version),
+    success: () => 'Case closed.',
+    failure: 'The case wasn’t closed',
+  });
+}
+
 export function disputeForm(drawer: DrawerService, data: CollectionDataSource, v: CollectionView): void {
   openForm(drawer, {
     eyebrow: eyebrow(v),

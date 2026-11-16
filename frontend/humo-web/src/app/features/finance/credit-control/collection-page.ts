@@ -23,6 +23,7 @@ import {
   arrangementForm,
   disputeForm,
   handOverForm,
+  closeCaseForm,
   missedInstalmentForm,
   requestDemandApprovalForm,
   resolveDisputeForm,
@@ -133,6 +134,10 @@ export class CollectionPage {
 
   protected arrangement(): void {
     arrangementForm(this.drawer, this.data, this.v());
+  }
+
+  protected close(): void {
+    closeCaseForm(this.drawer, this.data, this.v());
   }
 
   protected missed(): void {

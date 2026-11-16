@@ -215,7 +215,10 @@ public sealed partial class BillingService(HumoDbContext db, CommercialRecords c
     private static partial Regex EmailFormat();
 }
 
-/// <summary>Runs the billing run once a day, after <c>Billing:RunHour</c> (South African time). <c>Billing:Enabled=false</c> switches it off.</summary>
+/// <summary>
+/// Runs the billing run once a day, after <c>Billing:RunHour</c> (South African time), and every 15 minutes ends paid-up collection
+/// cases (D43). <c>Billing:Enabled=false</c> switches both off.
+/// </summary>
 public sealed class BillingRunHost(IServiceScopeFactory scopes, IConfiguration config, TimeProvider clock, ILogger<BillingRunHost> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -225,6 +228,18 @@ public sealed class BillingRunHost(IServiceScopeFactory scopes, IConfiguration c
         using var timer = new PeriodicTimer(TimeSpan.FromMinutes(15), clock);
         do
         {
+            // D43: every 15 minutes, a collection still running on an account with nothing overdue ends (one cleared by a path
+            // that didn't settle it, or before D43). It looks only at cases still running, so it's light.
+            try
+            {
+                using var settle = scopes.CreateScope();
+                var ended = await settle.ServiceProvider.GetRequiredService<Finance.CreditControl>().SettleAllAsync(stoppingToken);
+                if (ended > 0) logger.LogInformation("Ended {Count} collection cases with nothing overdue", ended);
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                logger.LogError(e, "Ending paid-up collection cases failed; it tries again in 15 minutes");
+            }
             try
             {
                 var now = clock.GetUtcNow().ToOffset(CommercialRules.SouthAfricaOffset);
