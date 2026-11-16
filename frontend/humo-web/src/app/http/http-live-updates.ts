@@ -7,7 +7,7 @@ import { SessionDataSource } from '../domain';
 import { API_BASE_URL, HttpSessionDataSource } from './http-session-data-source';
 
 /** The topics the API pushes (`Live/LiveUpdates.cs`); anything else is ignored. */
-const PUSHED: readonly DataTopic[] = ['notifications', 'work-items', 'session'];
+const PUSHED: readonly DataTopic[] = ['notifications', 'work-items', 'session', 'jobs', 'inbox'];
 
 /**
  * Checks the session with the API again (GET /me). If it has ended (passkeys removed, signed out elsewhere, suspended),
