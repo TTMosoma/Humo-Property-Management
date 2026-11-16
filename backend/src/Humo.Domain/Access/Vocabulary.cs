@@ -63,6 +63,8 @@ public static class IdentityStatuses
 /// <summary>Belonging to an organisation. Suspending it pauses every assignment there.</summary>
 public static class MembershipStatuses
 {
+    /// <summary>D46: another agency invited someone who already has a Humo sign-in; nothing applies until they accept.</summary>
+    public const string Invited = "invited";
     public const string Active = "active";
     public const string Suspended = "suspended";
     public const string Ended = "ended";

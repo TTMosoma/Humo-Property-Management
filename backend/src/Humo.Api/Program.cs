@@ -191,6 +191,7 @@ Humo.Api.Access.EmailChangeEndpoints.MapEmailChanges(api);
 Humo.Api.Portfolio.PastResidentEndpoints.MapPastResident(api);
 api.MapBoards();
 api.MapAccess();
+api.MapAgencyInvitations();
 api.MapAccountRequests();
 api.MapHumoTeam();
 api.MapTechnicalLogs();

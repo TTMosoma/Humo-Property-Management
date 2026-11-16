@@ -500,6 +500,19 @@ Two windows: Thandeka in window 1, Johan in window 2. Restart `npm run start:api
 - [ ] Sipho on *Maintenance* (his requests). As Johan, move his request on (triage, or cancel with a reason). **Expect:** Sipho's page shows the new status without reloading.
 - [ ] Lindiwe (another unit) on her *Maintenance* page while Johan moves Sipho's request on. **Expect:** nothing changes on her page.
 
+## 49. One sign-in, many agencies
+
+Two agencies, and someone who already signs in to the first. Restart the API first (there's a migration). Check Mailpit.
+
+- [ ] As the second agency's administrator, invite Lindiwe (lindiwe@mail.example) as the owner of one of your units, typing her name a little differently (e.g. "Lindi Dube"). **Expect:** Users & access shows her as *Invited* under the name you typed; nothing from the other agency shows. The audit log says "Invited Lindi Dube (lindiwe@mail.example) as Owner · …".
+- [ ] Mailpit. **Expect:** "{Agency} invites you to Humo Property Management", addressed by her own name, with a link to *Invitations*. It's in her bell too.
+- [ ] As Lindiwe, before accepting. **Expect:** the role switcher still lists only her first agency.
+- [ ] As Lindiwe, open *Invitations*. **Expect:** the agency, her roles there, and the name, email and mobile it has for her.
+- [ ] *Check and accept*, correct the name and add a mobile number. **Expect:** the role switcher lists both agencies. The second agency's administrator gets a bell notice: "… accepted their invitation" with what she corrected. Its audit log says the same. The first agency's record of her hasn't changed.
+- [ ] Invite her from a third agency (or remove and re-invite), then *Decline*. **Expect:** that agency is told she declined; her other agencies aren't affected.
+- [ ] As the second agency's administrator, before she accepts, try to *Restore access* for her. **Expect:** "They haven't accepted the invitation yet. You can withdraw it."
+- [ ] After she accepts, edit her in Users & access and change her email. **Expect:** refused, because only she can change it. Changing her name changes it only for this agency.
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.

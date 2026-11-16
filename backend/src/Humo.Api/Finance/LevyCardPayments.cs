@@ -116,7 +116,7 @@ public static partial class LevyCardPayments
     }
 
     private static bool IsHolder(Actor actor, LevyAccount account) =>
-        actor.User.PersonId is { } person && account.HolderPersonId?.ToString() == person;
+        actor.PersonId is { } person && account.HolderPersonId?.ToString() == person;
 
     /// <summary>The due date of the latest month with charges: the agency's due day (Settings › Billing rules) in that month.</summary>
     private static async Task<string?> DueByAsync(HumoDbContext db, LevyAccount account, Guid organisationId, CancellationToken ct)

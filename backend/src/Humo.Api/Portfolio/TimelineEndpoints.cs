@@ -160,7 +160,7 @@ public static class TimelineEndpoints
         TimeProvider clock, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } me) return Results.Unauthorized();
-        if (await AccountEndpoints.Readable(me, db, id, ct) is not { } account || me.User.PersonId != account.HolderPersonId?.ToString()) return Problems.NotFound();
+        if (await AccountEndpoints.Readable(me, db, id, ct) is not { } account || me.PersonId != account.HolderPersonId?.ToString()) return Problems.NotFound();
         var unit = await db.Units.AsNoTracking().FirstAsync(u => u.Id == account.UnitId, ct);
         var scheme = await db.Schemes.AsNoTracking().FirstAsync(s => s.Id == account.SchemeId, ct);
         var text = (body.Text ?? "").Trim();

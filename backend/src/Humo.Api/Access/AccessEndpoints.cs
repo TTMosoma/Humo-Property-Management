@@ -96,10 +96,13 @@ public static partial class AccessEndpoints
             && (await db.Relationships.Where(r => r.PersonId == person.Id && r.UnitId == unitId && r.Type == a.Role).ToListAsync(ct)).Any(reads.IsCurrent);
         var name = Regex.Replace((body.Name ?? "").Trim(), @"\s+", " ");
         var id = existing?.Id ?? Guid.CreateVersion7();
+        // D46: someone who already uses Humo with another agency joins this one only when they accept. Until then this agency
+        // sees what it would for anyone new it invites: its own record and words, "invited", nothing from elsewhere.
+        var joining = existing is { Status: IdentityStatuses.Active } && !existing.Memberships.Any(m => m.OrganisationId == orgId && m.Status != MembershipStatuses.Ended);
 
-        return await commands.RunAsync(new CommandSpec(existing is null
+        return await commands.RunAsync(new CommandSpec(existing is null || !existing.Memberships.Any(m => m.OrganisationId == orgId && m.Status != MembershipStatuses.Ended)
             ? $"Invited {name} ({address}) as {Roles.Label(a.Role)} · {a.Label}"
-            : $"Gave {existing.Name} access: {Roles.Label(a.Role)} · {a.Label}",
+            : $"Gave {existing.Memberships.FirstOrDefault(m => m.OrganisationId == orgId)?.Name ?? name} access: {Roles.Label(a.Role)} · {a.Label}",
             // Humo staff onboarding a customer invite its first administrator; inside an agency, its administrators invite staff,
             // and Portfolio Managers may invite residents and trustees of their schemes (D3).
             actor.IsHumo ? "Platform.Customers.Manage" : a.Role == Roles.AgencyAdmin ? "Users.ManageAdmins" : resident ? "Residents.Invite" : "Users.Manage")
@@ -118,7 +121,8 @@ public static partial class AccessEndpoints
                 if (name.Split(' ').Length < 2) e["name"] = "Enter their first name and surname.";
                 if (!Email().IsMatch(address)) e["email"] = "Enter the email address the invitation goes to.";
                 else if (existing?.Kind == IdentityKinds.Humo || HumoEmail.IsHumoAddress(address)) e["email"] = "That’s a Humo staff address. Humo staff are managed by Humo, not from an agency.";
-                else if (existing?.Memberships.Any(m => m.OrganisationId == orgId && m.Status != MembershipStatuses.Ended) == true) e["email"] = $"{existing.Name} already has access here. Add the role from their access instead.";
+                else if (existing?.Memberships.Any(m => m.OrganisationId == orgId && m.Status == MembershipStatuses.Invited) == true) e["email"] = $"{name} has already been invited. Resend the invitation from their access if it went astray.";
+                else if (existing?.Memberships.Any(m => m.OrganisationId == orgId && m.Status != MembershipStatuses.Ended) == true) e["email"] = $"{existing!.Memberships.First(m => m.OrganisationId == orgId).Name ?? name} already has access here. Add the role from their access instead.";
                 if (body.PersonId is not null && person is null) e["name"] = "That person isn’t in the directory any more.";
                 var scopeError = CheckScope(a);
                 if (scopeError is not null) e[scopeError.Value.Field] = scopeError.Value.Message;
@@ -142,34 +146,42 @@ public static partial class AccessEndpoints
                 var created = await users.CreateAsync(user);
                 if (!created.Succeeded) throw new CommandRefused("forbidden", string.Join("; ", created.Errors.Select(x => x.Description)));
             }
-            else if (user.PersonId is null && person is not null)
+            else if (user.PersonId is null && person is not null && !joining)
             {
                 user.PersonId = person.Id.ToString();
             }
-            Grant(db, user, orgId, a, actor.User.Name, clock.GetUtcNow());
+            Grant(db, user, orgId, a, actor.User.Name, clock.GetUtcNow(), person?.Id, person?.DisplayName ?? name, joining ? MembershipStatuses.Invited : MembershipStatuses.Active);
             // Invited as an owner but already on the board, say: they get every role the record gives them.
             if (person is not null) await Portfolio.PeopleEndpoints.SyncResidentAccessAsync(db, reads, person.Id, actor.User.Name, ct);
-            if (user.Status == IdentityStatuses.Invited) await SendInvitation(db, email, app.Value, clock, user, org.ShortName, logs, ct);
+            if (joining) AgencyInvitations.Tell(notices, user, actor.Human.Id, org.ShortName, Roles.Label(a.Role));
+            else if (user.Status == IdentityStatuses.Invited) await SendInvitation(db, email, app.Value, clock, user, org.ShortName, logs, ct);
             return Results.Created($"/api/access/identities/{user.Id}", new { id = user.Id.ToString() });
         }, ct);
     }
 
     private static async Task<IResult> Resend(Guid id, CurrentActor current, CommandRunner commands, HumoDbContext db, IEmailSender email, IOptions<AppOptions> app,
-        TimeProvider clock, ILoggerFactory logs, CancellationToken ct)
+        TimeProvider clock, ILoggerFactory logs, Platform.Notices notices, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         var user = await Target(db, actor, id, ct);
         if (user is null) return Problems.NotFound();
         var orgName = actor.OrganisationId is { } org ? await db.Organisations.Where(o => o.Id == org).Select(o => o.ShortName).FirstAsync(ct) : "Humo";
 
-        return await commands.RunAsync(new CommandSpec($"Resent the invitation to {user.Name} ({user.Email})", "Users.Manage")
+        var here = actor.OrganisationId is { } o ? user.Memberships.FirstOrDefault(m => m.OrganisationId == o) : null;
+        var joining = here?.Status == MembershipStatuses.Invited;
+        return await commands.RunAsync(new CommandSpec($"Resent the invitation to {here?.Name ?? user.Name} ({user.Email})", "Users.Manage")
         {
             Resource = "Identity",
             ResourceId = id.ToString(),
-            Validate = () => user.Status == IdentityStatuses.Invited ? [] : new() { ["status"] = "They’ve already accepted their invitation." },
+            Validate = () => user.Status == IdentityStatuses.Invited || joining ? [] : new() { ["status"] = "They’ve already accepted their invitation." },
         }, async _ =>
         {
-            await SendInvitation(db, email, app.Value, clock, user, orgName, logs, ct);
+            if (joining)
+            {
+                var role = user.Assignments.FirstOrDefault(x => x.OrganisationId == here!.OrganisationId && x.Status == AssignmentStatuses.Active);
+                AgencyInvitations.Tell(notices, user, actor.Human.Id, orgName, role is null ? "a member" : Roles.Label(role.Role));
+            }
+            else await SendInvitation(db, email, app.Value, clock, user, orgName, logs, ct);
             return Results.NoContent();
         }, ct);
     }
@@ -186,6 +198,10 @@ public static partial class AccessEndpoints
         var name = Regex.Replace((body.Name ?? "").Trim(), @"\s+", " ");
         // D34: moving a sign-in needs a passkey, and the new address confirms it before anything changes.
         var emailChanged = !string.Equals(address, user.Email, StringComparison.OrdinalIgnoreCase);
+        // D46: a sign-in used at other agencies too is theirs as much as this one's. This agency changes only its own name for
+        // them, and can't move the sign-in to another address.
+        var here = actor.OrganisationId is { } org ? user.Memberships.FirstOrDefault(m => m.OrganisationId == org) : null;
+        var shared = here is not null && user.Memberships.Any(m => m.OrganisationId != here.OrganisationId && m.Status != MembershipStatuses.Ended);
         var action = emailChanged ? $"Updated {name}’s details: asked to change their sign-in email from {user.Email} to {address}" : $"Updated {name}’s details";
 
         return await commands.RunAsync(new CommandSpec(action, "Users.Manage")
@@ -203,15 +219,21 @@ public static partial class AccessEndpoints
                 if (!Email().IsMatch(address)) e["email"] = "Enter a valid email address.";
                 else if (taken) e["email"] = "Someone else already signs in with this email.";
                 else if (user.Kind == IdentityKinds.Customer && HumoEmail.IsHumoAddress(address)) e["email"] = "That’s a Humo staff address. Use the person’s own email.";
+                else if (emailChanged && (shared || here?.Status == MembershipStatuses.Invited))
+                    e["email"] = "They use this email to sign in elsewhere on Humo too, so only they can change it. Ask them to, or invite their new address.";
                 return e;
             },
         }, async a =>
         {
-            user.Name = name;
-            user.Title = string.IsNullOrWhiteSpace(body.Title) ? null : body.Title.Trim();
+            if (here is not null) here.Name = name;
+            if (!shared && here?.Status != MembershipStatuses.Invited)
+            {
+                user.Name = name;
+                user.Title = string.IsNullOrWhiteSpace(body.Title) ? null : body.Title.Trim();
+            }
             user.Version++;
             if (emailChanged)
-                await changes.RequestAsync(user, Guid.TryParse(user.PersonId, out var person) ? person : null, a.OrganisationId, address, a.Human.Name, commands, ct);
+                await changes.RequestAsync(user, here?.PersonId ?? (Guid.TryParse(user.PersonId, out var person) ? person : null), a.OrganisationId, address, a.Human.Name, commands, ct);
             return Results.NoContent();
         }, ct);
     }
@@ -225,7 +247,9 @@ public static partial class AccessEndpoints
         var isAdmin = user.Assignments.Any(a => a.Role == Roles.AgencyAdmin && a.OrganisationId == orgId && a.Status == AssignmentStatuses.Active);
         var verb = body.Status switch { "suspended" => "Suspended access for", "ended" => "Removed", _ => "Restored access for" };
 
-        return await commands.RunAsync(new CommandSpec($"{verb} {user.Name}{(body.Status == "ended" ? " from the organisation" : "")} — {body.Reason}", isAdmin ? "Users.ManageAdmins" : "Users.Manage")
+        var waiting = membership?.Status == MembershipStatuses.Invited;
+        if (waiting && body.Status == "ended") verb = "Withdrew the invitation to";
+        return await commands.RunAsync(new CommandSpec($"{verb} {membership?.Name ?? user.Name}{(body.Status == "ended" && !waiting ? " from the organisation" : "")} — {body.Reason}", isAdmin ? "Users.ManageAdmins" : "Users.Manage")
         {
             Resource = "Membership",
             ResourceId = id.ToString(),
@@ -238,6 +262,8 @@ public static partial class AccessEndpoints
                 if (membership is null) return new() { ["status"] = "They aren’t a member of this organisation." };
                 if (membership.Status == MembershipStatuses.Ended) return new() { ["status"] = "Their membership has already ended." };
                 if (membership.Status == body.Status) return new() { ["status"] = $"Their access is already {body.Status}." };
+                // D46: only they can accept; the agency can withdraw the invitation.
+                if (waiting && body.Status != "ended") return new() { ["status"] = "They haven’t accepted the invitation yet. You can withdraw it." };
                 return (body.Reason ?? "").Trim().Length < 5 ? new() { ["reason"] = PortfolioRules.ReasonMessage } : [];
             },
         }, actor =>
@@ -251,7 +277,7 @@ public static partial class AccessEndpoints
                 foreach (var a in user.Assignments.Where(a => a.OrganisationId == orgId && a.Status == AssignmentStatuses.Active)) End(a, actor.User.Name);
             }
             // Suspending or removing someone signs them out within minutes (security stamp).
-            if (body.Status != "active") user.SecurityStamp = Guid.NewGuid().ToString();
+            if (body.Status != "active" && !waiting) user.SecurityStamp = Guid.NewGuid().ToString();
             return Task.FromResult(Results.NoContent());
         }, ct);
     }
@@ -265,7 +291,7 @@ public static partial class AccessEndpoints
         if (user is null) return Problems.NotFound();
         var orgId = actor.OrganisationId;
         var schemeIds = a.Scope.SchemeIds ?? [];
-        Guid? personId = Guid.TryParse(user.PersonId, out var p) ? p : null;
+        Guid? personId = user.Memberships.FirstOrDefault(m => m.OrganisationId == orgId)?.PersonId ?? (Guid.TryParse(user.PersonId, out var p) ? p : null);
         var onBoard = await OnBoard(db, reads, personId, schemeIds, ct);
         var duplicate = user.Assignments.Any(x => x.Status == AssignmentStatuses.Active && x.Role == a.Role && x.ScopeType == a.Scope.Type && x.OrganisationId == orgId
             && string.Join(',', x.SchemeIds) == string.Join(',', schemeIds) && x.UnitId == a.Scope.UnitId);
@@ -381,11 +407,19 @@ public static partial class AccessEndpoints
     }
 
     /// <summary>Adds the role, creating (or reopening) the membership of the organisation.</summary>
-    private static void Grant(HumoDbContext db, HumoUser user, Guid orgId, NewAssignmentRequest a, string by, DateTimeOffset now)
+    private static void Grant(HumoDbContext db, HumoUser user, Guid orgId, NewAssignmentRequest a, string by, DateTimeOffset now, Guid? personId = null, string? name = null,
+        string status = MembershipStatuses.Active)
     {
         var membership = user.Memberships.FirstOrDefault(m => m.OrganisationId == orgId);
-        if (membership is null) db.Memberships.Add(new Membership { Id = Guid.CreateVersion7(), UserId = user.Id, OrganisationId = orgId, Since = now });
-        else if (membership.Status == MembershipStatuses.Ended) { membership.Status = MembershipStatuses.Active; membership.Since = now; membership.EndedAt = null; }
+        var accepted = status == MembershipStatuses.Active ? now : (DateTimeOffset?)null;
+        if (membership is null)
+            db.Memberships.Add(new Membership { Id = Guid.CreateVersion7(), UserId = user.Id, OrganisationId = orgId, Since = now, Status = status, PersonId = personId, Name = name, AcceptedAt = accepted });
+        else
+        {
+            if (membership.Status == MembershipStatuses.Ended) { membership.Status = status; membership.Since = now; membership.EndedAt = null; membership.AcceptedAt = accepted; }
+            membership.PersonId ??= personId;
+            membership.Name ??= name;
+        }
         db.RoleAssignments.Add(new RoleAssignment
         {
             Id = Guid.CreateVersion7(), UserId = user.Id, Role = a.Role, ScopeType = a.Scope.Type, OrganisationId = orgId,
@@ -426,8 +460,18 @@ public static partial class AccessEndpoints
     {
         var dto = SessionBuilder.ToDto(u);
         if (org is not { } id) return dto;
+        // D46: an agency sees its own record of the person (its name for them), never what another agency holds. Someone
+        // who hasn't accepted yet is "invited" here, whatever they are elsewhere.
+        var here = u.Memberships.FirstOrDefault(m => m.OrganisationId == id);
+        var waiting = here?.Status == MembershipStatuses.Invited;
+        var name = here?.Name ?? u.Name;
         return dto with
         {
+            Name = name,
+            Initials = SessionBuilder.Initials(name),
+            Status = waiting ? IdentityStatuses.Invited : dto.Status,
+            Title = waiting ? null : dto.Title,
+            PersonId = here?.PersonId?.ToString() ?? dto.PersonId,
             Memberships = dto.Memberships.Where(m => m.OrganisationId == id.ToString()).ToList(),
             Assignments = dto.Assignments.Where(a => a.Scope.OrganisationId == id.ToString()).ToList(),
         };

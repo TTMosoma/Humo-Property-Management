@@ -111,8 +111,8 @@ public static partial class PeopleEndpoints
         // D34: their sign-in moves only once the new address confirms it. With no sign-in, the record just changes.
         var address = (body.Email ?? "").Trim();
         var emailChanged = !string.Equals(address, person.Email, StringComparison.OrdinalIgnoreCase);
-        var key = id.ToString();
-        var signIn = emailChanged ? await db.Users.FirstOrDefaultAsync(u => u.PersonId == key && u.Kind == IdentityKinds.Customer && u.Status != IdentityStatuses.Deactivated, ct) : null;
+        var linked = emailChanged ? await Access.PersonSignIns.ForAsync(db, id, ct, includeInvited: true) : [];
+        var signIn = emailChanged ? await db.Users.FirstOrDefaultAsync(u => linked.Contains(u.Id) && u.Kind == IdentityKinds.Customer && u.Status != IdentityStatuses.Deactivated, ct) : null;
         var signInTaken = signIn is not null && await db.Users.AnyAsync(u => u.Id != signIn.Id && u.NormalizedEmail == address.ToUpperInvariant(), ct);
 
         return await commands.RunAsync(new CommandSpec($"Updated contact details for {body.FirstName?.Trim()} {body.LastName?.Trim()}{Changes(person, body, signIn is not null)}", "People.Manage")
@@ -295,7 +295,7 @@ public static partial class PeopleEndpoints
             || (await db.IssuedLetters.Where(l => l.AccountId == account).Select(l => l.IssuedAt).ToListAsync(ct)).Any(t => t >= from)
             || (await db.OwnerInvoices.Where(i => i.AccountId == account).Select(i => i.Date).ToListAsync(ct)).Any(d => d >= rel.Since);
         if (sent) return "Statements, letters or invoices have gone out for this unit since they joined it, so the record stays. Use End instead (sold, transferred or moved out).";
-        var signsIn = await db.Users.Where(u => u.PersonId == rel.PersonId.ToString()).Select(u => u.Id).ToListAsync(ct);
+        var signsIn = await Access.PersonSignIns.ForAsync(db, rel.PersonId, ct, includeInvited: true);
         if (signsIn.Count > 0 && await db.RoleAssignments.AnyAsync(a => signsIn.Contains(a.UserId) && a.UnitId == unitId.ToString() && a.Status == Humo.Domain.Access.AssignmentStatuses.Active, ct))
             return "They sign in to this unit’s portal. Use End instead, which also ends their access.";
         return null;
@@ -322,9 +322,10 @@ public static partial class PeopleEndpoints
     /// </summary>
     public static async Task SyncResidentAccessAsync(HumoDbContext db, PortfolioReads reads, Guid personId, string by, CancellationToken ct)
     {
-        var key = personId.ToString();
+        // D46: the sign-ins linked to this agency's record of the person (an invitation still waiting counts: its roles wait with it).
+        var linked = await Access.PersonSignIns.ForAsync(db, personId, ct, includeInvited: true);
         var users = await db.Users.Include(u => u.Assignments).Include(u => u.Memberships)
-            .Where(u => u.PersonId == key && u.Kind == IdentityKinds.Customer && u.Status != IdentityStatuses.Deactivated).ToListAsync(ct);
+            .Where(u => linked.Contains(u.Id) && u.Kind == IdentityKinds.Customer && u.Status != IdentityStatuses.Deactivated).ToListAsync(ct);
         if (users.Count == 0) return;
         // As this change leaves them: added and changed links count, removed ones don't.
         var all = (await db.Relationships.Where(r => r.PersonId == personId && (r.Type == "owner" || r.Type == "tenant" || r.Type == "trustee")).ToListAsync(ct))
@@ -349,14 +350,15 @@ public static partial class PeopleEndpoints
                 var unit = units[r.UnitId!.Value];
                 var scheme = schemes[unit.SchemeId];
                 if (!user.Memberships.Any(m => m.OrganisationId == scheme.OrganisationId && m.Status != MembershipStatuses.Ended))
-                    db.Memberships.Add(new Membership { Id = Guid.CreateVersion7(), UserId = user.Id, OrganisationId = scheme.OrganisationId, Since = now });
+                    db.Memberships.Add(new Membership { Id = Guid.CreateVersion7(), UserId = user.Id, OrganisationId = scheme.OrganisationId, Since = now, PersonId = personId, AcceptedAt = now });
                 db.RoleAssignments.Add(new RoleAssignment
                 {
                     Id = Guid.CreateVersion7(), UserId = user.Id, Role = r.Type, ScopeType = ScopeTypes.Unit, OrganisationId = scheme.OrganisationId, SchemeIds = [scheme.Id.ToString()],
                     UnitId = unitId, Label = $"{scheme.Name} · Unit {unit.Number}", GrantedBy = $"{by} ({r.Type} of the unit)", GrantedAt = now,
                 });
             }
-            foreach (var a in user.Assignments.Where(a => a.Status == AssignmentStatuses.Active && a.ScopeType == ScopeTypes.Unit && a.Role is Roles.Owner or Roles.Tenant))
+            // D46: only this agency's roles. Another agency's units are its own record's to keep or end.
+            foreach (var a in user.Assignments.Where(a => a.Status == AssignmentStatuses.Active && a.ScopeType == ScopeTypes.Unit && a.Role is Roles.Owner or Roles.Tenant && a.OrganisationId == organisation))
             {
                 if (rels.Any(r => r.Type == a.Role && r.UnitId?.ToString() == a.UnitId)) continue;
                 a.Status = AssignmentStatuses.Ended;
@@ -373,7 +375,7 @@ public static partial class PeopleEndpoints
                 var scheme = schemes[seat.SchemeId];
                 if (user.Assignments.Any(a => a.Role == Roles.Trustee && a.Status == AssignmentStatuses.Active && a.SchemeIds.Contains(scheme.Id.ToString()))) continue;
                 if (!user.Memberships.Any(m => m.OrganisationId == scheme.OrganisationId && m.Status != MembershipStatuses.Ended))
-                    db.Memberships.Add(new Membership { Id = Guid.CreateVersion7(), UserId = user.Id, OrganisationId = scheme.OrganisationId, Since = now });
+                    db.Memberships.Add(new Membership { Id = Guid.CreateVersion7(), UserId = user.Id, OrganisationId = scheme.OrganisationId, Since = now, PersonId = personId, AcceptedAt = now });
                 db.RoleAssignments.Add(new RoleAssignment
                 {
                     Id = Guid.CreateVersion7(), UserId = user.Id, Role = Roles.Trustee, ScopeType = ScopeTypes.Schemes, OrganisationId = scheme.OrganisationId, SchemeIds = [scheme.Id.ToString()],
@@ -409,7 +411,8 @@ public static partial class PeopleEndpoints
     /// <summary>The minute loop: portal access catches up with ownerships and tenancies that started or ended by date.</summary>
     public static async Task SyncAllResidentAccessAsync(HumoDbContext db, PortfolioReads reads, CancellationToken ct)
     {
-        var people = (await db.Users.Where(u => u.PersonId != null && u.Kind == IdentityKinds.Customer && u.Status != IdentityStatuses.Deactivated).Select(u => u.PersonId!).ToListAsync(ct))
+        // D46: every agency's record that a sign-in links to, so each agency's roles are kept in step with its own record.
+        var people = (await Access.PersonSignIns.PeopleWithSignInsAsync(db, ct, activeSignInsOnly: false))
             .Select(p => Guid.TryParse(p, out var g) ? g : Guid.Empty).Where(g => g != Guid.Empty).Distinct().ToList();
         foreach (var person in people) await SyncResidentAccessAsync(db, reads, person, "Humo Property Management", ct);
         await db.SaveChangesAsync(ct);

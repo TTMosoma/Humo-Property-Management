@@ -162,8 +162,10 @@ public static class BoardEndpoints
         var rels = await db.Relationships.Where(r => r.SchemeId == scheme.Id && (r.Type == "trustee" || r.Type == "owner")).ToListAsync(ct);
         var personIds = rels.Select(r => r.PersonId).Distinct().ToList();
         var people = await db.People.Where(p => personIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id, ct);
-        var keys = personIds.Select(p => p.ToString()).ToList();
-        var signIns = await db.Users.Where(u => u.PersonId != null && keys.Contains(u.PersonId)).Select(u => new { u.PersonId, u.Status, u.Id }).ToListAsync(ct);
+        var links = await Access.PersonSignIns.ForAsync(db, personIds, ct, includeInvited: true);
+        var linkedUsers = links.Values.SelectMany(x => x).ToList();
+        var statuses = await db.Users.Where(u => linkedUsers.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Status, ct);
+        var signIns = links.SelectMany(kv => kv.Value.Where(statuses.ContainsKey).Select(u => new { PersonId = kv.Key.ToString(), Status = statuses[u], Id = u })).ToList();
         var unitIds = rels.Where(r => r.UnitId != null).Select(r => r.UnitId!.Value).ToList();
         var accountNos = await db.Units.Where(u => unitIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.AccountNo, ct);
 

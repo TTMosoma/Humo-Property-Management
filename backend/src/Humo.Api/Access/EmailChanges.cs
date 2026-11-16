@@ -154,8 +154,8 @@ public static class EmailChangeEndpoints
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         if ((await reads.People(await reads.ReadableSchemes(actor, null, ct), q => q.Where(p => p.Id == id), ct)).Count == 0) return Problems.NotFound();
-        var key = id.ToString();
-        var user = await db.Users.FirstOrDefaultAsync(u => u.PersonId == key && u.Kind == IdentityKinds.Customer && u.Status != IdentityStatuses.Deactivated, ct);
+        var linked = await PersonSignIns.ForAsync(db, id, ct, includeInvited: true);
+        var user = await db.Users.FirstOrDefaultAsync(u => linked.Contains(u.Id) && u.Kind == IdentityKinds.Customer && u.Status != IdentityStatuses.Deactivated, ct);
         var open = user is null || !actor.Can("People.Manage") ? null : await changes.OpenForAsync(user.Id, ct);
         return Results.Ok(new PersonEmailStateDto(user is not null, open is null ? null : EmailChanges.ToDto(open, user!.Name), user?.Status));
     }
@@ -193,8 +193,10 @@ public static class EmailChangeEndpoints
         var names = await db.Users.Where(u => waiting.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Name, ct);
         var people = await db.People.Where(p => p.OrganisationId == org).Select(p => new { p.Id, p.DisplayName, p.Email }).ToListAsync(ct);
         var byId = people.ToDictionary(p => p.Id.ToString());
-        var users = await db.Users.Where(u => u.PersonId != null && u.Kind == IdentityKinds.Customer && u.Status != IdentityStatuses.Deactivated && u.Memberships.Any(m => m.OrganisationId == org))
-            .Select(u => new { u.Id, u.PersonId, u.Email }).ToListAsync(ct);
+        // D46: each sign-in against this agency's own record of the person (its membership's).
+        var users = (await db.Users.Where(u => u.Kind == IdentityKinds.Customer && u.Status != IdentityStatuses.Deactivated && u.Memberships.Any(m => m.OrganisationId == org))
+            .Select(u => new { u.Id, u.PersonId, u.Email, Here = u.Memberships.Where(m => m.OrganisationId == org).Select(m => m.PersonId).FirstOrDefault() }).ToListAsync(ct))
+            .Select(u => new { u.Id, PersonId = u.Here?.ToString() ?? u.PersonId, u.Email }).Where(u => u.PersonId != null).ToList();
         var mismatches = users
             .Where(u => !waiting.Contains(u.Id) && byId.ContainsKey(u.PersonId!) && byId[u.PersonId!].Email.Trim().Length > 0 && !string.Equals(byId[u.PersonId!].Email.Trim(), u.Email, StringComparison.OrdinalIgnoreCase))
             .Select(u => new EmailMismatchDto(u.Id.ToString(), u.PersonId!, byId[u.PersonId!].DisplayName, byId[u.PersonId!].Email.Trim(), u.Email ?? ""))

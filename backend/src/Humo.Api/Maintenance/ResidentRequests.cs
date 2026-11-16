@@ -113,8 +113,9 @@ public static class ResidentRequests
         var rule = rules is null ? null : System.Text.Json.JsonSerializer.Deserialize<List<Settings.NotificationRuleDto>>(rules, Humo.Domain.Commercial.Json.Options)?.FirstOrDefault(r => r.Event == "job-updated");
         var agencyEmails = rule is null || (rule.Enabled && rule.Channels.Contains("email"));
 
+        var linked = await Access.PersonSignIns.ForAsync(db, personId, ct);
         var people = await db.Users.AsNoTracking()
-            .Where(u => u.PersonId == personId.ToString() && u.Status == Humo.Domain.Access.IdentityStatuses.Active).Select(u => u.Id).ToListAsync(ct);
+            .Where(u => linked.Contains(u.Id) && u.Status == Humo.Domain.Access.IdentityStatuses.Active).Select(u => u.Id).ToListAsync(ct);
         foreach (var user in people)
         {
             var prefs = await db.PersonalPreferences.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == user, ct);

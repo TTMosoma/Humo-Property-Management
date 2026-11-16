@@ -47,11 +47,12 @@ import {
   SessionDataSource,
   TimelineDataSource,
   UnitDataSource,
-  WorkItemDataSource, PackageLimitsDataSource, OwnerInvoiceDataSource } from '../domain';
+  WorkItemDataSource, PackageLimitsDataSource, OwnerInvoiceDataSource, AgencyInvitationsDataSource } from '../domain';
 import { InMemoryHumoTeamDataSource } from './data-sources/in-memory-humo-team-data-source';
 import { InMemoryTechnicalLogDataSource } from './data-sources/in-memory-technical-logs';
 import { InMemorySupplierLinkDataSource } from './data-sources/in-memory-supplier-links';
 import { InMemoryPackageLimitsDataSource } from './data-sources/in-memory-package-limits';
+import { InMemoryAgencyInvitationsDataSource } from './data-sources/in-memory-agency-invitations';
 import { InMemoryOwnerInvoiceDataSource } from './data-sources/in-memory-owner-invoices';
 import {
   InMemoryAccountDataSource,
@@ -106,6 +107,7 @@ export function provideMockData(): EnvironmentProviders {
   return makeEnvironmentProviders([
     { provide: SessionDataSource, useClass: InMemorySessionDataSource },
     { provide: PackageLimitsDataSource, useClass: InMemoryPackageLimitsDataSource },
+    { provide: AgencyInvitationsDataSource, useClass: InMemoryAgencyInvitationsDataSource },
     { provide: OwnerInvoiceDataSource, useClass: InMemoryOwnerInvoiceDataSource },
     { provide: OrganisationDataSource, useClass: InMemoryOrganisationDataSource },
     { provide: NotificationDataSource, useClass: InMemoryNotificationDataSource },

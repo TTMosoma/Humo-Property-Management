@@ -175,8 +175,9 @@ public sealed class Governance(HumoDbContext db, PortfolioReads reads, Commercia
             .Where(a => a.OrganisationId == scheme.OrganisationId && a.Status == AssignmentStatuses.Active && StaffCovers.StaffRoles.Contains(a.Role)).ToListAsync(ct))
             .Where(a => a.ScopeType == ScopeTypes.Organisation || a.SchemeIds.Contains(scheme.Id.ToString())).Select(a => a.UserId).Distinct().ToList();
         var staff = await db.Users.AsNoTracking().Where(u => staffAssignments.Contains(u.Id) && u.Status == IdentityStatuses.Active).OrderBy(u => u.Name).ToListAsync(ct);
-        var trusteePeople = (await TrusteesAsync(scheme.Id, ct)).Select(t => t.Person.Id.ToString()).ToList();
-        var trustees = await db.Users.AsNoTracking().Where(u => u.PersonId != null && trusteePeople.Contains(u.PersonId) && u.Status == IdentityStatuses.Active).OrderBy(u => u.Name).ToListAsync(ct);
+        var trusteePeople = (await TrusteesAsync(scheme.Id, ct)).Select(t => t.Person.Id).ToList();
+        var trusteeUsers = (await Access.PersonSignIns.ForAsync(db, trusteePeople, ct)).Values.SelectMany(x => x).ToList();
+        var trustees = await db.Users.AsNoTracking().Where(u => trusteeUsers.Contains(u.Id) && u.Status == IdentityStatuses.Active).OrderBy(u => u.Name).ToListAsync(ct);
         return [.. staff.Select(u => new AssigneeDto(u.Id.ToString(), u.Name, "staff")), .. trustees.Where(u => staff.All(s => s.Id != u.Id)).Select(u => new AssigneeDto(u.Id.ToString(), u.Name, "trustee"))];
     }
 

@@ -36,7 +36,7 @@ public static class PastResidentEndpoints
     /// <summary>The person's record at this agency: a person belongs to one agency, and a sign-in can span several.</summary>
     private static async Task<(Guid Organisation, Guid Person)?> WhoAsync(Actor actor, HumoDbContext db, CancellationToken ct)
     {
-        if (!actor.Can(Permission) || actor.OrganisationId is not { } org || !Guid.TryParse(actor.User.PersonId, out var person)) return null;
+        if (!actor.Can(Permission) || actor.OrganisationId is not { } org || !Guid.TryParse(actor.PersonId, out var person)) return null;
         return await db.People.AnyAsync(p => p.Id == person && p.OrganisationId == org, ct) ? (org, person) : null;
     }
 

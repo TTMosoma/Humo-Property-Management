@@ -86,7 +86,7 @@ public static class JobPhotoEndpoints
         var row = await db.Jobs.FirstOrDefaultAsync(x => x.OrganisationId == org && x.Ref == reference, ct);
         if (row is null) return null;
         if (actor.Can("Maintenance.View")) return await Portfolio.SchemeEndpoints.Visible(actor, db).AnyAsync(s => s.Id == row.SchemeId, ct) ? row : null;
-        if (!actor.Can("Resident.Requests") || !Guid.TryParse(actor.User.PersonId, out var person)) return null;
+        if (!actor.Can("Resident.Requests") || !Guid.TryParse(actor.PersonId, out var person)) return null;
         if (row.ReportedByPersonId == person) return row;
         var units = await db.Relationships.Where(r => r.PersonId == person && r.UnitId != null && (r.Type == "owner" || r.Type == "tenant")).Select(r => r.UnitId!.Value).ToListAsync(ct);
         return row.UnitId is { } unit && units.Contains(unit) ? row : null;

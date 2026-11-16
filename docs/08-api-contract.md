@@ -67,6 +67,10 @@ Identity (status: invited | active | suspended | deactivated)
   - Granting a role in an organisation creates (or keeps) the membership.
 - **Scheme managers are derived.** `Scheme.portfolioManager` is a read-only join from active portfolio-manager assignments; the longest-standing one wins.
 - **Schemes have a lifecycle:** `prospect | onboarding | active | closed | archived`.
+- **One sign-in, many agencies (D46).**
+  - A membership links the sign-in to that agency's own person record (`personId`), and carries the agency's own name for them.
+  - An agency's reads (`/access/directory`) show only its own membership, roles and name.
+  - An invitation to someone who already signs in creates a membership with status `invited`. Its roles apply only after `POST /me/invitations/{organisationId}/accept`, which takes optional `{ name, phone }` corrections to that agency's record. `…/decline` ends it. `GET /me/invitations` lists those waiting.
 - **Names come from the directory, not fixtures.** Assignee pickers and names use `AccessDataSource.directory()` (`core/session/team.ts`).
 
 **The server must scope every query.** Client parameters such as `schemeIds` only narrow the result; the server intersects them with the token's scope. `SchemeDataSource.list()`, `WorkItemDataSource.watch()` and `NotificationDataSource.list()` must return only what the caller may see.

@@ -110,7 +110,7 @@ public static partial class MaintenanceEndpoints
     private static async Task<IResult> Mine(CurrentActor current, HumoDbContext db, MaintenanceService m, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
-        if (!actor.Can("Resident.Requests") || !Guid.TryParse(actor.User.PersonId, out var personId)) return Results.Ok(Array.Empty<JobSummaryDto>());
+        if (!actor.Can("Resident.Requests") || !Guid.TryParse(actor.PersonId, out var personId)) return Results.Ok(Array.Empty<JobSummaryDto>());
         var units = await db.Relationships.Where(r => r.PersonId == personId && r.UnitId != null && (r.Type == "owner" || r.Type == "tenant")).Select(r => r.UnitId!.Value).ToListAsync(ct);
         var rows = (await db.Jobs.Where(x => x.ReportedByPersonId == personId || (x.UnitId != null && units.Contains(x.UnitId.Value))).ToListAsync(ct))
             .OrderByDescending(x => x.ReportedAt).ToList();
@@ -127,7 +127,7 @@ public static partial class MaintenanceEndpoints
         var resident = me.Assignment.Role is Roles.Owner or Roles.Tenant;
         var schemeId = Guid.TryParse(resident ? me.Assignment.SchemeIds.FirstOrDefault() : body.SchemeId, out var sid) ? sid : Guid.Empty;
         var scheme = await SchemeEndpoints.Visible(me, db).FirstOrDefaultAsync(x => x.Id == schemeId, ct);
-        var person = Guid.TryParse(me.User.PersonId, out var pid) ? await db.People.FirstOrDefaultAsync(p => p.Id == pid, ct) : null;
+        var person = Guid.TryParse(me.PersonId, out var pid) ? await db.People.FirstOrDefaultAsync(p => p.Id == pid, ct) : null;
         Guid? unitId = Guid.TryParse(body.UnitId, out var u) ? u : null;
         if (resident && unitId is null && person is not null)
             unitId = await db.Relationships.Where(r => r.PersonId == person.Id && r.SchemeId == schemeId && r.UnitId != null && (r.Type == "owner" || r.Type == "tenant")).Select(r => r.UnitId).FirstOrDefaultAsync(ct);
@@ -170,7 +170,7 @@ public static partial class MaintenanceEndpoints
         if (!(me.Can("Maintenance.View") || residentVerify) || await VisibleJobAsync(me, db, reference, ct) is not { } row) return Problems.NotFound();
         var job = MaintenanceService.Read(row);
         // Residents only ever confirm their own requests.
-        var ownRequest = Guid.TryParse(me.User.PersonId, out var personId) && (job.ReportedBy.PersonId == personId.ToString()
+        var ownRequest = Guid.TryParse(me.PersonId, out var personId) && (job.ReportedBy.PersonId == personId.ToString()
             || (row.UnitId is { } unit && await db.Relationships.AnyAsync(r => r.PersonId == personId && r.UnitId == unit, ct)));
         if (residentVerify && !me.Can("Maintenance.Manage") && !ownRequest) return Problems.NotFound();
 

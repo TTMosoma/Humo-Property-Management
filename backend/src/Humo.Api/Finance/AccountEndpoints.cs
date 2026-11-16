@@ -36,7 +36,7 @@ public static class AccountEndpoints
         var account = await db.LevyAccounts.FirstOrDefaultAsync(a => a.Id == id, ct);
         if (account is null) return null;
         if (actor.Can("Accounts.View") && await SchemeEndpoints.Visible(actor, db).AnyAsync(s => s.Id == account.SchemeId, ct)) return account;
-        if (actor.Can("Account.ViewOwn") && actor.User.PersonId is { } person && account.HolderPersonId?.ToString() == person) return account;
+        if (actor.Can("Account.ViewOwn") && actor.PersonId is { } person && account.HolderPersonId?.ToString() == person) return account;
         return null;
     }
 
@@ -47,7 +47,7 @@ public static class AccountEndpoints
     internal static async Task<DateOnly?> OwnedFromAsync(Actor actor, HumoDbContext db, PortfolioReads reads, LevyAccount account, CancellationToken ct)
     {
         if (actor.Can("Accounts.View") && await SchemeEndpoints.Visible(actor, db).AnyAsync(s => s.Id == account.SchemeId, ct)) return null;
-        if (!Guid.TryParse(actor.User.PersonId, out var person)) return null;
+        if (!Guid.TryParse(actor.PersonId, out var person)) return null;
         var mine = (await db.Relationships.AsNoTracking().Where(r => r.UnitId == account.UnitId && r.PersonId == person && r.Type == "owner").ToListAsync(ct)).Where(reads.IsCurrent).ToList();
         return mine.Count == 0 ? null : mine.Min(r => r.Since);
     }
