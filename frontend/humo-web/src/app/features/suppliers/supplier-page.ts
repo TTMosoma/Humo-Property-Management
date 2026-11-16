@@ -102,6 +102,7 @@ export class SupplierPage {
       { label: 'On time', value: `${p.onTimeRate}%`, tone: p.onTimeRate < 80 ? 'warning' : 'default' },
       { label: 'Invoice vs quote', value: `${p.avgVariance > 0 ? '+' : ''}${p.avgVariance}%`, tone: p.avgVariance > 3 ? 'warning' : 'default', hint: 'Average difference between invoices and approved quotes' },
       { label: 'Fixed first time', value: `${p.verifiedRate}%`, hint: 'Residents confirmed fixed on the first visit' },
+      { label: 'Call-backs', value: String(p.callbacks ?? 0), hint: 'Times a resident said it wasn’t fixed and they had to come back' },
       { label: 'Jobs completed', value: String(p.jobsCompleted) },
       { label: 'Spend (12 mo.)', value: formatRand(d.spend12m, { compact: true }) },
     ];

@@ -12,6 +12,8 @@ export type WorkItemType =
   | 'debtor-follow-up'
   | 'maintenance-triage'
   | 'maintenance-overdue'
+  /** A resident says it isn't fixed: book the supplier's return. */
+  | 'maintenance-callback'
   | 'quote-approval'
   | 'invoice-approval'
   | 'payment-batch-approval'
@@ -118,6 +120,7 @@ export const WORK_TYPE_LABELS: Record<WorkItemType, string> = {
   'receipt-allocation': 'Receipt allocation',
   'debtor-follow-up': 'Debtor follow-up',
   'maintenance-triage': 'New maintenance request',
+  'maintenance-callback': 'Not fixed: book the return',
   'maintenance-overdue': 'Overdue maintenance',
   'quote-approval': 'Quote approval',
   'invoice-approval': 'Invoice approval',
@@ -144,6 +147,7 @@ export const WORK_TYPE_LABELS: Record<WorkItemType, string> = {
 const CLOSES_ITSELF: Partial<Record<WorkItemType, string>> = {
   'debtor-follow-up': 'Open debtor case',
   'maintenance-triage': 'Open the job',
+  'maintenance-callback': 'Open the job',
   'rule-breach': 'Open the breach',
 };
 
@@ -157,6 +161,7 @@ export const WORK_TYPE_AREA: Record<WorkItemType, 'Finance' | 'Maintenance' | 'G
   'debtor-follow-up': 'Finance',
   'maintenance-triage': 'Maintenance',
   'maintenance-overdue': 'Maintenance',
+  'maintenance-callback': 'Maintenance',
   'quote-approval': 'Maintenance',
   'invoice-approval': 'Finance',
   'payment-batch-approval': 'Finance',

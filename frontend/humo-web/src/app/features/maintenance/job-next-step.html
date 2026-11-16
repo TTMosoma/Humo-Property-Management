@@ -237,6 +237,25 @@
     <!-- ============================== SCHEDULED / IN PROGRESS ============================== -->
     @case ('scheduled') {
       @let late = job.dueAt && job.dueAt < now;
+      @if (job.verification?.outcome === 'not-fixed') {
+        <div class="note danger" role="note">
+          <ion-icon name="alert-circle-outline" aria-hidden="true" />
+          <span><strong>{{ job.verification!.by }} says it isn’t fixed</strong>@if (job.verification!.comment) { : “{{ job.verification!.comment }}”} ({{ formatDate(job.verification!.at) }}). Book {{ supplier()?.name }}’s return visit under their guarantee.</span>
+        </div>
+        @if (canAct()) {
+          <div class="return">
+            <label class="block">When are they coming back?
+              <input type="date" [value]="returnDate()" (input)="returnDate.set($any($event.target).value)" />
+            </label>
+            <label class="block">Access (optional)
+              <input type="text" [placeholder]="job.workOrder?.accessNotes ?? 'e.g. Caretaker has keys'" [value]="returnAccess()" (input)="returnAccess.set($any($event.target).value)" />
+            </label>
+            <div class="actions">
+              <button type="button" class="btn btn-primary" [disabled]="busy() || !returnDate()" (click)="bookReturn()">Book return visit</button>
+            </div>
+          </div>
+        }
+      }
       @if (late) {
         <div class="note danger" role="note">
           <ion-icon name="alert-circle-outline" aria-hidden="true" />

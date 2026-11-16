@@ -132,7 +132,7 @@ public static class WorkNotices
     {
         "receipt-allocation" or "debtor-follow-up" or "demand-approval" or "invoice-approval" or "payment-batch-approval" or "billing-run-approval"
             or "account-correction" or "bank-details-verification" => "finance",
-        "maintenance-triage" or "maintenance-overdue" or "quote-approval" => "maintenance",
+        "maintenance-triage" or "maintenance-overdue" or WorkItemAccess.MaintenanceCallback or "quote-approval" => "maintenance",
         "document-expiry" => "compliance",
         "owner-message" => "communication",
         "resolution-approval" or "minutes-approval" or "meeting-action" or WorkItemAccess.RuleBreach => "governance",

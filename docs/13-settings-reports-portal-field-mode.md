@@ -80,6 +80,15 @@ Every report is worked out from the same live records the screens use (`InMemory
 
 **A resident hears about their own request** (live system, 15 November 2026). Whoever reported it is told, in the bell, when it's being arranged, booked, done (*Was it fixed?*), sent back to the supplier, and cancelled or closed (closed only if they hadn't confirmed it). **Booked, done, and cancelled or closed also go by email**, when the agency's *Request updated* rule (Settings › Notifications) has email on and the resident hasn't turned email off. With the rule switched off, they still see it in the app. Staff see a hint under *Cancel* that the resident is told the reason.
 
+**The resident's answer reaches the agency** (16 November 2026).
+- **"Yes, it's fixed":** whoever handles the job hears it in the bell ("Confirmed fixed: …"), so the job can be finished: the supplier's invoice, then close.
+- **"No, still a problem"** is a **call-back**:
+  - Whoever handles the job gets a task, "Sipho Khumalo says MR-1022 isn't fixed: book Aqua Plumbing's return", with the resident's words. It's in their bell.
+  - The job page says it plainly, with **Book return visit** (a date, and new access notes if they've changed).
+  - Booking it emails the supplier a work order link for the return, under their guarantee, with the resident's words. The resident is told the date, by bell and email, as for any booking. The task then closes itself.
+  - It can't be ticked off by hand; it also closes if the job is marked done again, cancelled or closed.
+- **Call-backs count against the supplier**, shown as *Call-backs* beside *Fixed first time* on their page.
+
 **Visibility is enforced in the data layer, as the API will.**
 - **Trustees** see documents shared with trustees or owners (no staff-only ones, no unit ones).
 - **Residents** see only what's shared with them.

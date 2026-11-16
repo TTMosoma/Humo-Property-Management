@@ -95,6 +95,8 @@ public static class ResidentRequests
                 ($"Your request {job.Ref} is being arranged", $"{job.Title}: the managing agent is arranging a supplier.", false),
             "issue-work-order" when job.WorkOrder is { } w =>
                 ($"Booked: {job.Title}", $"{supplier} is booked for {Day(w.ScheduledFor)}.{(w.AccessNotes is { } n ? $" Access: {n}" : "")}", true),
+            "book-return" when job.WorkOrder is { } back =>
+                ($"Booked: return visit for {job.Title}", $"{supplier} is coming back on {Day(back.ScheduledFor)}.{(back.AccessNotes is { } n ? $" Access: {n}" : "")}", true),
             "complete" =>
                 ($"Was it fixed? {job.Title}", $"{supplier} says the work on {job.Ref} is done. Let us know whether it’s fixed, in My requests.", true),
             "verify" when a.Outcome == "not-fixed" =>
