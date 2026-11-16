@@ -1,6 +1,7 @@
 import { Injectable, Injector, inject } from '@angular/core';
 import { simulationStorage } from '../simulation/simulation-storage';
 import { Photo,
+  forResident,
   BatchView,
   DELEGATED_LIMIT,
   Invoice,
@@ -90,10 +91,12 @@ export class MaintenanceStore {
     return this.jobs.filter((j) => ids.has(j.schemeId)).map((j) => this.summary(j));
   }
 
+  /** A resident's own requests, as the API sends them: only what's meant for them (`forResident`). */
   jobsForResident(personId: string, unitId?: string): JobSummary[] {
     return this.jobs
       .filter((j) => j.reportedBy.personId === personId || (unitId && j.unitId === unitId))
-      .map((j) => this.summary(j));
+      .map((j) => this.summary(j))
+      .map((s) => ({ ...s, job: forResident(s.job), supplier: s.supplier ? ({ id: s.supplier.id, name: s.supplier.name, trades: s.supplier.trades } as Supplier) : undefined, assigneeName: '' }));
   }
 
   detail(ref: string): JobDetail | undefined {

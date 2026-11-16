@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { of, switchMap } from 'rxjs';
-import { JobDataSource, JobSummary, UnitDataSource } from '../../domain';
+import { JobDataSource, JobSummary, UnitDataSource, cancelReason } from '../../domain';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { loadable } from '../../core/data/loadable';
 import { SessionService } from '../../core/session/session.service';
@@ -53,7 +53,7 @@ const RESIDENT_STAGES = [
             <header>
               <div>
                 <div class="ref">{{ r.job.ref }} · {{ r.job.location }}</div>
-                <h2>{{ r.job.title }}</h2>
+                <h2><a class="open" [routerLink]="['/my/requests', r.job.ref]">{{ r.job.title }}</a></h2>
               </div>
               <ui-status-pill [label]="st.label" [tone]="st.tone" />
             </header>
@@ -83,7 +83,19 @@ const RESIDENT_STAGES = [
         <h2 class="section-title done-title">Done</h2>
         <ul class="done">
           @for (r of closed(); track r.job.id) {
-            <li><span>{{ r.job.title }}</span><span class="muted">{{ r.job.ref }} · {{ formatDate(r.job.reportedAt) }}</span></li>
+            @let st = status(r);
+            <li>
+              <a class="done-row" [routerLink]="['/my/requests', r.job.ref]">
+                <span class="done-what">
+                  <span class="done-title-text">{{ r.job.title }}</span>
+                  @if (reason(r); as why) { <span class="muted">Cancelled: {{ why }}</span> }
+                </span>
+                <span class="done-meta">
+                  <ui-status-pill [label]="st.label" [tone]="st.tone" />
+                  <span class="muted">{{ r.job.ref }} · {{ formatDate(r.job.reportedAt) }}</span>
+                </span>
+              </a>
+            </li>
           }
         </ul>
       }
@@ -103,7 +115,13 @@ const RESIDENT_STAGES = [
     textarea { width: 100%; padding: var(--s-2); font: inherit; border: 1px solid var(--c-border-strong); border-radius: var(--r); background: var(--c-surface); color: var(--c-text); }
     .done-title { margin: var(--s-8) 0 var(--s-3); font-size: var(--fs-md); }
     .done { max-width: 760px; margin: 0; padding: 0; list-style: none; }
-    .done li { display: flex; justify-content: space-between; gap: var(--s-3); padding: var(--s-3) 0; border-bottom: 1px solid var(--c-border); font-size: var(--fs-sm); }
+    .done li { border-bottom: 1px solid var(--c-border); font-size: var(--fs-sm); }
+    .done-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--s-2) var(--s-3); padding: var(--s-3) 0; color: inherit; text-decoration: none; }
+    .done-row:hover .done-title-text { text-decoration: underline; }
+    .done-what { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .done-meta { display: flex; align-items: center; gap: var(--s-2); }
+    .open { color: inherit; text-decoration: none; }
+    .open:hover { text-decoration: underline; }
     .muted { color: var(--c-text-muted); }
   `,
 })
@@ -132,6 +150,11 @@ export class MyRequestsPage {
 
   protected status(r: JobSummary) {
     return residentStatus(r.job);
+  }
+
+  /** Why staff cancelled it, when they did. */
+  protected reason(r: JobSummary): string | undefined {
+    return r.job.stage === 'cancelled' ? cancelReason(r.job) : undefined;
   }
 
   protected residentStage(r: JobSummary): string {
