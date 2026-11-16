@@ -12,7 +12,7 @@ namespace Humo.Api.Live;
 
 /// <summary>
 /// Live updates (docs/08 §5): when other people's changes land in someone's bell or work, their open app hears at once and
-/// fetches again. The hub sends only the names of what changed ("notifications", "work-items", "session"), never the data: the app
+/// fetches again. The hub sends only the names of what changed ("notifications", "work-items", "session", "jobs", "inbox"), never the data: the app
 /// re-reads through the normal endpoints, which apply every permission check. So a message reaching a wider group than
 /// strictly needed shows nobody anything they couldn't already read.
 ///   /api/hubs/updates   (SignalR; signed in)
@@ -24,7 +24,15 @@ public sealed class UpdatesHub(HumoDbContext db, UserManager<HumoUser> users) : 
     public const string Changed = "changed";
 
     public static string UserGroup(Guid id) => $"user:{id}";
+    /// <summary>The agency's own people (staff and trustees): its work, jobs and Inbox. Residents aren't in it.</summary>
     public static string OrganisationGroup(Guid id) => $"org:{id}";
+    /// <summary>A resident (their person record): their own requests and messages.</summary>
+    public static string PersonGroup(Guid id) => $"person:{id}";
+    /// <summary>The residents of a unit: requests about their unit.</summary>
+    public static string UnitGroup(Guid id) => $"unit:{id}";
+
+    /// <summary>Residents hear only about what's theirs, not every change at their agency.</summary>
+    private static readonly string[] ResidentRoles = [Roles.Owner, Roles.Tenant, Roles.PastResident];
     /// <summary>A role across Humo (no organisation), or within one agency.</summary>
     public static string RoleGroup(string role, Guid? organisationId) => organisationId is { } org ? $"role:{role}:{org}" : $"role:{role}";
 
@@ -41,11 +49,15 @@ public sealed class UpdatesHub(HumoDbContext db, UserManager<HumoUser> users) : 
         if (await CurrentActor.ActiveImpersonation(db, principal, id, Context.ConnectionAborted) is { } imp) people.Add(imp.TargetId);
 
         var assignments = await db.RoleAssignments.AsNoTracking()
-            .Where(a => people.Contains(a.UserId) && a.Status == AssignmentStatuses.Active).Select(a => new { a.Role, a.OrganisationId }).ToListAsync(Context.ConnectionAborted);
+            .Where(a => people.Contains(a.UserId) && a.Status == AssignmentStatuses.Active).Select(a => new { a.Role, a.OrganisationId, a.UnitId }).ToListAsync(Context.ConnectionAborted);
+        var personIds = (await db.Users.AsNoTracking().Where(u => people.Contains(u.Id)).Select(u => u.PersonId).ToListAsync(Context.ConnectionAborted))
+            .Select(p => Guid.TryParse(p, out var g) ? g : Guid.Empty).Where(g => g != Guid.Empty);
         var groups = people.Select(UserGroup)
             .Concat(assignments.Select(a => RoleGroup(a.Role, a.OrganisationId)))
             .Concat(assignments.Select(a => RoleGroup(a.Role, null)))
-            .Concat(assignments.Where(a => a.OrganisationId != null).Select(a => OrganisationGroup(a.OrganisationId!.Value)))
+            .Concat(assignments.Where(a => a.OrganisationId != null && !ResidentRoles.Contains(a.Role)).Select(a => OrganisationGroup(a.OrganisationId!.Value)))
+            .Concat(personIds.Select(PersonGroup))
+            .Concat(assignments.Where(a => Guid.TryParse(a.UnitId, out _)).Select(a => UnitGroup(Guid.Parse(a.UnitId!))))
             .Distinct();
         foreach (var group in groups) await Groups.AddToGroupAsync(Context.ConnectionId, group, Context.ConnectionAborted);
         await base.OnConnectedAsync();
@@ -77,6 +89,18 @@ public sealed class LiveUpdates(IHubContext<UpdatesHub> hub, ILogger<LiveUpdates
         }
         foreach (var e in db.ChangeTracker.Entries<WorkItemRow>().Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted))
             Add(UpdatesHub.OrganisationGroup(e.Entity.OrganisationId), "work-items");
+        // A job or a conversation: the agency's people, and the resident it's about (their own request or their unit's).
+        foreach (var e in db.ChangeTracker.Entries<JobRow>().Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted))
+        {
+            Add(UpdatesHub.OrganisationGroup(e.Entity.OrganisationId), "jobs");
+            if (e.Entity.ReportedByPersonId is { } reporter) Add(UpdatesHub.PersonGroup(reporter), "jobs");
+            if (e.Entity.UnitId is { } unit) Add(UpdatesHub.UnitGroup(unit), "jobs");
+        }
+        foreach (var e in db.ChangeTracker.Entries<ConversationRow>().Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted))
+        {
+            Add(UpdatesHub.OrganisationGroup(e.Entity.OrganisationId), "inbox");
+            Add(UpdatesHub.PersonGroup(e.Entity.PersonId), "inbox");
+        }
         // Their access changed: suspended, removed, signed out everywhere (a new security stamp), or a role given or ended.
         // The app checks /me again at once, and leaves for the signed-out page if the session no longer counts.
         foreach (var e in db.ChangeTracker.Entries<HumoUser>().Where(e => e.State == EntityState.Modified

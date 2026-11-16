@@ -94,11 +94,13 @@ Use ProblemDetails, with a `code` for policy errors and an `errors` map keyed by
 - **Queries are live.**
   - Ports promise to emit again when their data changes. In memory, that happens automatically.
   - Over HTTP, commands announce what they changed (`DataChanges.notify('receipts', 'accounts')`) and queries re-fetch on those topics (`liveQuery`, `core/data/data-changes.ts`).
-  - **Other people's changes arrive by push** (SignalR, 15 November 2026), for the bell and My work only.
+  - **Other people's changes arrive by push** (SignalR, 15 November 2026), for the bell, My work, jobs and the Inbox.
     - The app connects to `/api/hubs/updates` while someone is signed in (`http/http-live-updates.ts`). It reconnects when they switch role or impersonate, and catches up after a dropped connection.
-    - After every save, wherever it comes from, the API (`Live/LiveUpdates.cs`) sends `changed` with topic names only (`notifications`, `work-items`). It goes to the people a new notice is for, and to the agency whose work items changed.
+    - After every save, wherever it comes from, the API (`Live/LiveUpdates.cs`) sends `changed` with topic names only (`notifications`, `work-items`, `jobs`, `inbox`, `session`). It goes to the people a new notice is for, and to the agency whose work items, jobs or conversations changed.
+    - **Residents hear only what's theirs** (16 November 2026). Owners, tenants and past residents aren't in their agency's group. They hear about jobs they reported or on their unit, and their own conversations, through a group for their person record and one for their unit.
     - The app feeds the names into `DataChanges.notify`, so the bell and My work fetch again through the normal endpoints, with every permission check. No data travels over the push.
     - **Signed out at once** (15 November 2026). `session` goes to a person's open apps when their access changes: passkeys removed by Humo, a session signed out from Settings › Security, *Sign out everywhere else*, suspended or removed, or a role given or ended. The app checks `GET /me` straight away, and if the session no longer counts, the shell leaves for the signed-out page. Removing someone's passkeys also ends all their sessions on the server, so the next request is refused rather than up to 5 minutes later (when the cookie's security stamp is next checked).
+    - **A job page stays in step:** if someone else moves a job on while it's open, the page fetches it again at once, so nobody is offered a step that's already been taken. If they still act on an old version, the API refuses it (409, *Someone else changed this first*).
     - Everything else still refreshes on the person's own commands and on navigation.
 - **Work is in the bell** (`Work/WorkNotices.cs`, 13 November 2026).
   - Every task or approval that lands on someone is also a notification, in the app only (emails about work stay as each feature sends them). That covers new work, and work assigned or moved to someone, including by away cover.
