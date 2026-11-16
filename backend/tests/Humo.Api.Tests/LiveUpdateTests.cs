@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Mvc.Testing.Handlers;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.EntityFrameworkCore;
 
 namespace Humo.Api.Tests;
 
@@ -143,6 +144,72 @@ public sealed class LiveUpdateTests : IDisposable
         await HumoApiFactory.Until(() => laptopHeard.SelectMany(t => t).Contains("session"));
         Assert.Equal(HttpStatusCode.Unauthorized, (await laptop.GetAsync("/api/me")).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await here.GetAsync("/api/me")).StatusCode);
+    }
+
+    /// <summary>Acacia with Kingfisher Court: Thandeka (admin), Johan (portfolio manager), and two owners in different units.</summary>
+    private async Task<(Guid Org, HttpClient Admin)> Residents()
+    {
+        var org = await api.Customer("Acacia");
+        await api.Person("thandeka@acacia.example", Roles.AgencyAdmin, org);
+        var admin = await api.SignedIn("thandeka@acacia.example");
+        var kc = Guid.Parse((await (await admin.PostAsJsonAsync("/api/schemes", new { name = "Kingfisher Court", code = "KC", type = "Sectional Title", suburb = "Morningside", city = "Sandton", province = "Gauteng" })).Json()).GetProperty("id").GetString()!);
+        await api.Person("johan@acacia.example", Roles.PortfolioManager, org, [kc]);
+        foreach (var (number, first, email) in new[] { ("42", "Sipho", "sipho@mail.example"), ("12", "Lindiwe", "lindiwe@mail.example") })
+        {
+            var unit = Guid.Parse((await (await admin.PostAsJsonAsync($"/api/schemes/{kc}/units", new { number, description = "2-bed", sizeM2 = 86, participationQuota = 1.25, monthlyLevy = 1800, occupancy = "owner-occupied" })).Json()).GetProperty("id").GetString()!);
+            await admin.PostAsJsonAsync("/api/people", new
+            {
+                details = new { firstName = first, lastName = "Owner", kind = "individual", email, phone = "083 551 0274", preferredChannel = "email" },
+                link = new { type = "owner", schemeId = kc.ToString(), unitId = unit.ToString(), since = "2019-05-01" },
+            });
+            var user = await api.Person(email, Roles.Owner, org, [kc]);
+            await api.Db(async db =>
+            {
+                (await db.Users.SingleAsync(u => u.Id == user)).PersonId = (await db.People.SingleAsync(p => p.Email == email)).Id.ToString();
+                foreach (var a in await db.RoleAssignments.Where(a => a.UserId == user).ToListAsync()) a.UnitId = unit.ToString();
+                return await db.SaveChangesAsync();
+            });
+        }
+        return (org, admin);
+    }
+
+    [Fact]
+    public async Task A_change_to_a_job_reaches_the_agencys_open_pages_and_its_residents_but_not_their_neighbours()
+    {
+        var (org, admin) = await Residents();
+        var (_, johan) = await Open("johan@acacia.example");
+        var (sipho, siphoHeard) = await Open("sipho@mail.example");
+        var (_, lindiweHeard) = await Open("lindiwe@mail.example");
+
+        var reported = await sipho.PostAsJsonAsync("/api/jobs", new { title = "Geyser leaking", description = "Dripping since this morning.", category = "Plumbing" });
+        Assert.Equal(HttpStatusCode.Created, reported.StatusCode);
+        var reference = (await reported.Json()).GetProperty("id").GetString();
+        await HumoApiFactory.Until(() => johan.SelectMany(t => t).Contains("jobs") && siphoHeard.SelectMany(t => t).Contains("jobs"));
+        johan.Clear();
+        siphoHeard.Clear();
+
+        // Thandeka moves it on while Johan has it open: his page hears at once, and so does Sipho's.
+        var version = (await (await admin.GetAsync($"/api/jobs/{reference}")).Json()).GetProperty("job").GetProperty("version").GetInt32();
+        var cancelled = await admin.PostAsJsonAsync($"/api/jobs/{reference}/actions", new { action = new { type = "cancel", reason = "Duplicate of an earlier request" }, expectedVersion = version });
+        Assert.Equal(HttpStatusCode.NoContent, cancelled.StatusCode);
+        await HumoApiFactory.Until(() => johan.SelectMany(t => t).Contains("jobs") && siphoHeard.SelectMany(t => t).Contains("jobs"));
+
+        // Lindiwe, in another unit, hears nothing about Sipho's request, nor the agency's own work.
+        Assert.DoesNotContain("jobs", lindiweHeard.SelectMany(t => t));
+        Assert.DoesNotContain("work-items", lindiweHeard.SelectMany(t => t));
+    }
+
+    [Fact]
+    public async Task A_residents_message_reaches_the_agencys_open_inbox()
+    {
+        await Residents();
+        var (_, johan) = await Open("johan@acacia.example");
+        var (sipho, _) = await Open("sipho@mail.example");
+
+        var sent = await sipho.PostAsJsonAsync("/api/me/conversations", new { subject = "Leaking geyser", body = "Water is coming through my ceiling from the unit above." });
+        Assert.Equal(HttpStatusCode.Created, sent.StatusCode);
+
+        await HumoApiFactory.Until(() => johan.SelectMany(t => t).Contains("inbox"));
     }
 
     [Fact]
