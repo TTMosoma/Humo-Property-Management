@@ -490,6 +490,16 @@ As Sipho (owner) and Johan (Portfolio Manager for Kingfisher Court). Check Sipho
 - [ ] As Thandeka, Settings › Notifications: switch *Request updated* off. Cancel another of Sipho's requests. **Expect:** it's in Sipho's bell, but no email.
 - [ ] On a job's history (as Johan). **Expect:** "Sipho Khumalo told: “Booked: …”" when he was told, instead of the old "notified of the booking" that was written even when nothing was sent.
 
+## 54. Proof of payment with "I've already paid"
+
+As Sipho (owner) and Priya (Finance). Restart the API first: there's a database change (notes can carry a file).
+
+- [ ] As Sipho, *My account* › *I've already paid*. Write when and how much, and attach a PDF proof of payment. **Expect:** "Thanks — we'll match your payment"; Priya's bell: "KC-…: owner says they've paid (proof attached)".
+- [ ] As Priya, open the unit (from the notice). **Expect:** on its timeline, the note "Owner reports payment: …" with **Proof of payment: [file name]**; clicking it opens the PDF.
+- [ ] As Sipho, report again with a photo or screenshot (JPEG or PNG). **Expect:** accepted, and it opens the same way.
+- [ ] Attach something else (e.g. a .txt or .docx). **Expect:** under the field, "Attach your proof of payment as a PDF, or a JPEG, PNG or WebP photo or screenshot"; nothing is sent.
+- [ ] Report without a file. **Expect:** it works as before.
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.

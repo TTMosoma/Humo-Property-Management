@@ -3,7 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { combineLatest, map, switchMap, throwError } from 'rxjs';
-import { AccountDataSource, ApiError, UnitDataSource, describeFailure, periodLabel, periodOf } from '../../domain';
+import { AccountDataSource, ApiError, UnitDataSource, describeFailure, fieldErrorsOf, periodLabel, periodOf } from '../../domain';
 import { goToCheckout } from '../billing/invoice-view-page';
 import { FeedbackService } from '../../core/feedback/feedback.service';
 import { loadable } from '../../core/data/loadable';
@@ -59,6 +59,9 @@ export class OwnerAccountPage {
 
   protected readonly paidOpen = signal(false);
   protected readonly paidText = signal('');
+  /** Their proof of payment, if they have one: a PDF, or a photo or screenshot. */
+  protected readonly paidProof = signal<File | undefined>(undefined);
+  protected readonly paidErrors = signal<Record<string, string>>({});
 
   protected readonly current = computed(() => {
     const d = this.detail();
@@ -99,13 +102,19 @@ export class OwnerAccountPage {
   protected sendPaid(): void {
     const s = this.summary();
     if (!s) return;
-    this.accounts.reportPayment(s.account.id, this.paidText().trim()).subscribe({
+    this.paidErrors.set({});
+    this.accounts.reportPayment(s.account.id, this.paidText().trim(), this.paidProof()).subscribe({
       next: () => {
         this.paidOpen.set(false);
         this.paidText.set('');
+        this.paidProof.set(undefined);
         this.feedback.success('Thanks — we’ll match your payment and let you know.');
       },
-      error: (e) => this.feedback.error(describeFailure(e, 'That didn’t send')),
+      error: (e) => {
+        const fields = fieldErrorsOf(e);
+        this.paidErrors.set(fields);
+        if (!Object.keys(fields).length) this.feedback.error(describeFailure(e, 'That didn’t send'));
+      },
     });
   }
 }

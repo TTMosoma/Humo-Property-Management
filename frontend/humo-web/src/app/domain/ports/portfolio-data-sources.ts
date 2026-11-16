@@ -128,7 +128,8 @@ export abstract class AccountDataSource {
   /** The holder starts paying the balance by card on Payfast's page, into the scheme's own merchant (D25). Not a payment until Payfast confirms it. */
   abstract startCardPayment(accountId: string): Observable<CheckoutSession>;
   /** "I've already paid": the holder tells the agency when and how much. It lands on the unit as a note and finance is told. */
-  abstract reportPayment(accountId: string, text: string): Observable<void>;
+  /** "I've already paid": what, when and how; with their proof of payment (a PDF or a photo) if they have one. */
+  abstract reportPayment(accountId: string, text: string, proof?: File): Observable<void>;
 }
 
 export abstract class ReceiptDataSource {
@@ -165,4 +166,8 @@ export abstract class TimelineDataSource {
   abstract forUnit(unitId: string): Observable<TimelineEvent[]>;
   abstract forPerson(personId: string): Observable<TimelineEvent[]>;
   abstract addNote(note: Omit<Note, 'id' | 'at' | 'author'>): Observable<void>;
+  /** A short-lived link to a file on the timeline (signed for the person asking). None in the simulation, which keeps no files. */
+  fileLink(_fileId: string): Observable<string | undefined> {
+    return of(undefined);
+  }
 }

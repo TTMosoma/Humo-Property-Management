@@ -215,3 +215,21 @@
     }
   }
 }
+
+/* "I've already paid": the optional proof of payment, and problems with what was sent. */
+.paid {
+  .proof-label {
+    margin-top: var(--s-2);
+  }
+
+  input[type='file'] {
+    font: inherit;
+    font-size: var(--fs-sm);
+  }
+
+  .field-error {
+    margin: 0;
+    font-size: var(--fs-sm);
+    color: var(--c-danger);
+  }
+}

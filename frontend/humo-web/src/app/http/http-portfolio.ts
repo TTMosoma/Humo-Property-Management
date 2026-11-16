@@ -246,4 +246,9 @@ export class HttpTimelineDataSource extends HttpPort implements TimelineDataSour
   addNote(note: Omit<Note, 'id' | 'at' | 'author'>): Observable<void> {
     return this.command<unknown>('POST', '/notes', note, ['timeline']).pipe(map(() => undefined));
   }
+
+  /** Signed for this person and short-lived, so it's asked for when opened. */
+  fileLink(fileId: string): Observable<string | undefined> {
+    return this.http.get<{ url: string }>(`${this.base}/files/${fileId}/link`, { withCredentials: true }).pipe(map((r) => r.url));
+  }
 }

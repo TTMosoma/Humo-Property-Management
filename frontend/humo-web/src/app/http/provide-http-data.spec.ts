@@ -271,4 +271,27 @@ describe('Production data layer (provideHttpData)', () => {
     http.expectOne({ method: 'POST', url: '/api/access/invitations' }).flush({ id: 'p-2' }, { status: 201, statusText: 'Created' });
     expect(await invited).toBe('p-2');
   });
+  it('"I’ve already paid" sends the proof of payment as a file, and plain text without one', async () => {
+    const accounts = TestBed.inject(AccountDataSource);
+    const proof = new File(['%PDF-1.4'], 'proof.pdf', { type: 'application/pdf' });
+    const withProof = firstValueFrom(accounts.reportPayment('acc-1', 'Paid R1 850 on 3 Nov', proof));
+    const upload = http.expectOne({ method: 'POST', url: '/api/accounts/acc-1/payment-report' });
+    expect(upload.request.body instanceof FormData).toBe(true);
+    expect((upload.request.body as FormData).get('text')).toBe('Paid R1 850 on 3 Nov');
+    expect(((upload.request.body as FormData).get('file') as File).name).toBe('proof.pdf');
+    upload.flush(null, { status: 204, statusText: 'No Content' });
+    await withProof;
+
+    const textOnly = firstValueFrom(accounts.reportPayment('acc-1', 'Paid R1 850 on 3 Nov'));
+    const json = http.expectOne({ method: 'POST', url: '/api/accounts/acc-1/payment-report' });
+    expect(json.request.body).toEqual({ text: 'Paid R1 850 on 3 Nov' });
+    json.flush(null, { status: 204, statusText: 'No Content' });
+    await textOnly;
+  });
+
+  it('opens a timeline file through a signed link', async () => {
+    const link = firstValueFrom(TestBed.inject(TimelineDataSource).fileLink('f-1'));
+    http.expectOne('/api/files/f-1/link').flush({ url: '/api/files/f1/content?exp=1&sig=x', expiresAt: '2026-11-16T10:00:00Z' });
+    expect(await link).toBe('/api/files/f1/content?exp=1&sig=x');
+  });
 });

@@ -849,6 +849,8 @@ public sealed class NoteRow
     public string Author { get; set; } = "";
     public Guid AuthorId { get; set; }
     public DateTimeOffset At { get; set; }
+    /// <summary>A file with the note (an UploadedFile), e.g. the owner's proof of payment.</summary>
+    public Guid? FileId { get; set; }
 }
 
 /// <summary>

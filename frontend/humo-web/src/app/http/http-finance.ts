@@ -71,8 +71,12 @@ export class HttpAccountDataSource extends HttpPort implements AccountDataSource
     return this.live<PaymentOptions>(`/accounts/${accountId}/payment-options`, ['accounts', 'settings']);
   }
 
-  reportPayment(accountId: string, text: string): Observable<void> {
-    return this.command('POST', `/accounts/${accountId}/payment-report`, { text }, ['timeline']);
+  reportPayment(accountId: string, text: string, proof?: File): Observable<void> {
+    if (!proof) return this.command('POST', `/accounts/${accountId}/payment-report`, { text }, ['timeline']);
+    const form = new FormData();
+    form.append('text', text);
+    form.append('file', proof, proof.name);
+    return this.command('POST', `/accounts/${accountId}/payment-report`, form, ['timeline']);
   }
 
   startCardPayment(accountId: string): Observable<CheckoutSession> {

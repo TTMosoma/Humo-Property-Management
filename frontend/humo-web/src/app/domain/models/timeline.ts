@@ -16,6 +16,9 @@ export interface TimelineEvent {
   actor?: string;
   amount?: number;
   link?: string;
+  /** A file with the entry, e.g. an owner's proof of payment, opened through `TimelineDataSource.fileLink`. */
+  fileId?: string;
+  fileName?: string;
 }
 
 /** A note or call log entered by staff. */
