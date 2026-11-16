@@ -50,8 +50,11 @@ public sealed class UpdatesHub(HumoDbContext db, UserManager<HumoUser> users) : 
 
         var assignments = await db.RoleAssignments.AsNoTracking()
             .Where(a => people.Contains(a.UserId) && a.Status == AssignmentStatuses.Active).Select(a => new { a.Role, a.OrganisationId, a.UnitId }).ToListAsync(Context.ConnectionAborted);
+        // D46: their record at each agency (the memberships'), as well as the one the sign-in points at.
+        var viaMemberships = await db.Memberships.AsNoTracking().Where(m => people.Contains(m.UserId) && m.PersonId != null && m.Status == MembershipStatuses.Active)
+            .Select(m => m.PersonId!.Value).ToListAsync(Context.ConnectionAborted);
         var personIds = (await db.Users.AsNoTracking().Where(u => people.Contains(u.Id)).Select(u => u.PersonId).ToListAsync(Context.ConnectionAborted))
-            .Select(p => Guid.TryParse(p, out var g) ? g : Guid.Empty).Where(g => g != Guid.Empty);
+            .Select(p => Guid.TryParse(p, out var g) ? g : Guid.Empty).Where(g => g != Guid.Empty).Concat(viaMemberships).Distinct();
         var groups = people.Select(UserGroup)
             .Concat(assignments.Select(a => RoleGroup(a.Role, a.OrganisationId)))
             .Concat(assignments.Select(a => RoleGroup(a.Role, null)))

@@ -604,8 +604,9 @@ public static class SchemeRules
     /// <summary>The board decides the next step, so the trustees with a sign-in are told as well as the task being raised.</summary>
     private static async Task NotifyTrusteesAsync(HumoDbContext db, Notices notices, PortfolioReads reads, BreachRow b, string title, string detail, string route, Actor writer, CancellationToken ct)
     {
-        var trustees = (await db.Relationships.AsNoTracking().Where(r => r.SchemeId == b.SchemeId && r.Type == "trustee").ToListAsync(ct)).Where(reads.IsCurrent).Select(r => r.PersonId.ToString()).ToList();
-        var users = await db.Users.AsNoTracking().Where(u => u.PersonId != null && trustees.Contains(u.PersonId) && u.Status == Humo.Domain.Access.IdentityStatuses.Active).Select(u => u.Id).ToListAsync(ct);
+        var trustees = (await db.Relationships.AsNoTracking().Where(r => r.SchemeId == b.SchemeId && r.Type == "trustee").ToListAsync(ct)).Where(reads.IsCurrent).Select(r => r.PersonId).ToList();
+        var signedIn = (await Access.PersonSignIns.ForAsync(db, trustees, ct)).Values.SelectMany(x => x).ToList();
+        var users = await db.Users.AsNoTracking().Where(u => signedIn.Contains(u.Id) && u.Status == Humo.Domain.Access.IdentityStatuses.Active).Select(u => u.Id).ToListAsync(ct);
         foreach (var user in users) notices.ToPerson(user, writer.Human.Id, title, detail, route);
     }
 }

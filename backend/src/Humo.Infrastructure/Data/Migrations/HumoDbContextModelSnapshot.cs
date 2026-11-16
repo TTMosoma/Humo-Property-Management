@@ -1717,10 +1717,20 @@ namespace Humo.Infrastructure.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<DateTimeOffset?>("AcceptedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTimeOffset?>("EndedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Name")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<Guid>("OrganisationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("PersonId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("Since")
@@ -1736,6 +1746,8 @@ namespace Humo.Infrastructure.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("OrganisationId");
+
+                    b.HasIndex("PersonId");
 
                     b.HasIndex("UserId", "OrganisationId");
 

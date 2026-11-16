@@ -126,9 +126,7 @@ public sealed class PortfolioReads(HumoDbContext db, TimeProvider clock)
     /// <summary>People who have a Humo sign-in (invited or active), by their People record.</summary>
     private async Task<Dictionary<Guid, string>> Personas(List<Guid> personIds, CancellationToken ct)
     {
-        var keys = personIds.Select(id => id.ToString()).ToList();
-        return (await db.Users.Where(u => u.PersonId != null && keys.Contains(u.PersonId)).Select(u => new { u.PersonId, u.Id }).ToListAsync(ct))
-            .GroupBy(x => Guid.Parse(x.PersonId!)).ToDictionary(g => g.Key, g => g.First().Id.ToString());
+        return (await Access.PersonSignIns.ForAsync(db, personIds, ct, includeInvited: true)).ToDictionary(kv => kv.Key, kv => kv.Value[0].ToString());
     }
 
     public static PageDto<T> Page<T>(List<T> items, int? page, int? pageSize)

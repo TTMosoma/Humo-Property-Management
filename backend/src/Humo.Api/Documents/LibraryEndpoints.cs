@@ -278,7 +278,7 @@ public static class LibraryEndpoints
         var trusteeSchemes = actor.Assignment.Role == Roles.Trustee
             ? actor.Assignment.SchemeIds.Select(s => Guid.TryParse(s, out var g) ? g : Guid.Empty).Where(g => g != Guid.Empty).ToHashSet()
             : new HashSet<Guid>();
-        var person = Guid.TryParse(actor.User.PersonId, out var p) ? p : (Guid?)null;
+        var person = Guid.TryParse(actor.PersonId, out var p) ? p : (Guid?)null;
         var relationships = person is null ? [] : await db.Relationships.AsNoTracking()
             .Where(r => r.PersonId == person && (r.Type == "owner" || r.Type == "tenant")).ToListAsync(ct);
         var current = relationships.Where(r => r.Until is null || r.Until >= today).ToList();

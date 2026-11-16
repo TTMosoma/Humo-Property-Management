@@ -362,10 +362,13 @@ public static class ReceiptEndpoints
             }
             receipt.Version++;
             // The owners whose accounts changed, if they sign in: in the app and by email.
-            var holders = accounts.Values.Select(a => a.HolderPersonId).Concat([moveTo?.HolderPersonId]).Where(h => h is not null).Select(h => h!.Value.ToString()).Distinct().ToList();
-            var users = await db.Users.Where(u => u.PersonId != null && holders.Contains(u.PersonId) && u.Status == Domain.Access.IdentityStatuses.Active).ToListAsync(ct);
-            foreach (var u in users)
+            var holders = accounts.Values.Select(a => a.HolderPersonId).Concat([moveTo?.HolderPersonId]).Where(h => h is not null).Select(h => h!.Value).Distinct().ToList();
+            var signIns = await Access.PersonSignIns.ForAsync(db, holders, ct);
+            var signedIn = signIns.Values.SelectMany(x => x).ToList();
+            var active = (await db.Users.Where(u => signedIn.Contains(u.Id) && u.Status == Domain.Access.IdentityStatuses.Active).Select(u => u.Id).ToListAsync(ct)).ToHashSet();
+            foreach (var (holder, userId) in signIns.SelectMany(kv => kv.Value.Where(active.Contains).Select(user => (kv.Key, user))))
             {
+                var u = new { Id = userId, PersonId = holder.ToString() };
                 var mine = accounts.Values.FirstOrDefault(a => a.HolderPersonId?.ToString() == u.PersonId);
                 if (mine is not null)
                     notices.ToPerson(u.Id, actor.Human.Id, $"A payment on {mine.AccountNo} was reversed",

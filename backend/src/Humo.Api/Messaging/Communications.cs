@@ -121,8 +121,7 @@ public sealed partial class Communications(HumoDbContext db, SentRecords sent, I
     {
         var scheme = await db.Schemes.FirstAsync(s => s.Id == schemeId, ct);
         var org = await db.Organisations.FirstAsync(o => o.Id == scheme.OrganisationId, ct);
-        var portal = (await db.Users.Where(u => u.PersonId != null && u.Status == IdentityStatuses.Active).Select(u => u.PersonId!).ToListAsync(ct))
-            .Select(s => Guid.TryParse(s, out var g) ? g : Guid.Empty).ToHashSet();
+        var portal = (await Access.PersonSignIns.PeopleWithSignInsAsync(db, ct)).Select(s => Guid.TryParse(s, out var g) ? g : Guid.Empty).ToHashSet();
         return (new Dictionary<string, string> { ["scheme.name"] = scheme.Name, ["agency.name"] = org.ShortName, ["agency.phone"] = await SentRecords.AgencyPhoneAsync(db, org.Id, ct) }, portal);
     }
 
@@ -545,7 +544,7 @@ public static class CommunicationsEndpoints
     private static async Task<IResult> ReadNotice(Guid id, CurrentActor current, HumoDbContext db, SentRecords sent, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
-        if (!Guid.TryParse(actor.User.PersonId, out var personId) || await db.SchemeNotices.FirstOrDefaultAsync(n => n.Id == id, ct) is not { } n) return Problems.NotFound();
+        if (!Guid.TryParse(actor.PersonId, out var personId) || await db.SchemeNotices.FirstOrDefaultAsync(n => n.Id == id, ct) is not { } n) return Problems.NotFound();
         if (n.SentMessageId is { } m) await sent.MarkReadAsync([m], personId, ct);
         return Results.NoContent();
     }

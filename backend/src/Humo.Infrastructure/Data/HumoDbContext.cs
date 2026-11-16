@@ -764,6 +764,8 @@ public sealed class HumoDbContext(DbContextOptions<HumoDbContext> options)
         {
             e.ToTable("Memberships");
             e.HasIndex(m => new { m.UserId, m.OrganisationId });
+            e.HasIndex(m => m.PersonId);
+            e.Property(m => m.Name).HasMaxLength(200);
             e.HasOne<Organisation>().WithMany().HasForeignKey(m => m.OrganisationId);
         });
 

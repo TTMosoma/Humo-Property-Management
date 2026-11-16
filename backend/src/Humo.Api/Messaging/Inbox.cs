@@ -272,7 +272,7 @@ public static class InboxEndpoints
 
     private static async Task<(Person Person, Guid SchemeId, Guid? UnitId)?> ResidentAsync(Actor actor, HumoDbContext db, CancellationToken ct)
     {
-        if (!actor.Can("Resident.Portal") || !Guid.TryParse(actor.User.PersonId, out var personId)) return null;
+        if (!actor.Can("Resident.Portal") || !Guid.TryParse(actor.PersonId, out var personId)) return null;
         if (await db.People.FirstOrDefaultAsync(p => p.Id == personId, ct) is not { } person) return null;
         Guid? unitId = Guid.TryParse(actor.Assignment.UnitId, out var u) ? u : null;
         var schemeId = Guid.TryParse(actor.Assignment.SchemeIds.FirstOrDefault(), out var s) ? s

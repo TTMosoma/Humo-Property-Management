@@ -53,7 +53,8 @@ export interface RoleAssignment {
   endedAt?: string;
 }
 
-export type MembershipStatus = 'active' | 'suspended' | 'ended';
+/** `invited`: another agency's invitation to someone who already signs in, waiting for them to accept (D46). */
+export type MembershipStatus = 'invited' | 'active' | 'suspended' | 'ended';
 
 /** Belonging to an organisation. Suspending it pauses every assignment in that organisation. */
 export interface OrganisationMembership {

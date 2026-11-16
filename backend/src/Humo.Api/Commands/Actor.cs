@@ -25,6 +25,13 @@ public sealed record Actor(HumoUser User, RoleAssignment Assignment, IReadOnlySe
     public HumoUser Human => ImpersonatedBy ?? User;
 
     /// <summary>
+    /// D46: who they are at the agency they're working in: that agency's own record of them (its membership's), never
+    /// another agency's. A sign-in from before D46, or Humo staff, falls back to the record the sign-in points at.
+    /// </summary>
+    public string? PersonId =>
+        (Assignment.OrganisationId is { } org ? User.Memberships.FirstOrDefault(m => m.OrganisationId == org && m.PersonId != null)?.PersonId?.ToString() : null) ?? User.PersonId;
+
+    /// <summary>
     /// D26: when they last confirmed it's them with an SMS code instead of a passkey. It counts only for commands that
     /// allow it (<see cref="CommandSpec.SmsStepUpAllowed"/>: approvals), and never while impersonating.
     /// </summary>

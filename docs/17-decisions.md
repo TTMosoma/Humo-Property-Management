@@ -1040,6 +1040,31 @@ Photos on a maintenance request were kept by name only on the live system, so th
   - Sign-in after an email link, with no passkey to hand: *Get back in*.
 - **Not simulated:** everything is real on the API, with no stand-ins (no register entries).
 
+## D46 — One sign-in, many agencies (16 November 2026)
+
+**Why.** Lindiwe owns units managed by two agencies. The second agency invited her with the same email, and two things went wrong. First, her profile showed only the first agency. Second, her new owner role there ended twelve seconds after it was granted, because the nightly access check read the first agency's record of her.
+
+**Decision.**
+
+- **One person, one sign-in.** A person keeps one Humo sign-in (email and passkeys) however many agencies they work with. The role switcher lists every agency.
+- **Each agency keeps its own record.** Under POPIA each agency is the responsible party for what it holds. The sign-in links to one person record at each agency, through its membership there. An agency's checks, lists, notices and statements use only its own record. Records are never merged or shared between agencies.
+- **An invitation looks the same to the agency either way.** The agency never learns whether the person already uses Humo:
+  - the audit line is always "Invited {name} ({email}) as …";
+  - Users & access shows the agency's own name for them, and *Invited*, until they accept;
+  - nothing from another agency is shown.
+- **Nothing applies until they accept.** Someone who already signs in gets an email and a bell notice, by their own name: "{Agency} invites you". On *Invitations* they see what the agency recorded about them (name, email, mobile). They can put the name or mobile right as they accept. The agency is told, the change goes in its audit log, and it updates only that agency's record. Or they decline: the agency is told, its roles for them end, and its directory record stays.
+- **The agency can't accept for them.** It can withdraw the invitation (remove them), and resending sends the same invitation again.
+- **Their sign-in is theirs.** Once a sign-in is shared with another agency, an agency changes only its own name for the person. Only the person can move the sign-in to another email address.
+
+**Built.**
+
+- `Membership` gains `PersonId`, `Name` and `AcceptedAt`, plus a new status `invited`.
+- The migration links existing memberships to the agency's own record, by the old link or by a unique email match.
+- Endpoints: `GET /api/me/invitations`, and `POST /api/me/invitations/{organisationId}/accept` and `…/decline`.
+- The access check now ends owner and tenant roles only at the agency whose records changed.
+
+**Not simulated:** everything is real on the API, with no stand-ins (no register entries).
+
 ---
 
 ## Still open (needs domain expertise before slice 2)

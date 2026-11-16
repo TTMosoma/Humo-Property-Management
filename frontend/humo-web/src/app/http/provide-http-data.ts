@@ -21,6 +21,7 @@ import {
   LevyDataSource,
   LibraryDataSource,
   PackageLimitsDataSource,
+  AgencyInvitationsDataSource,
   OwnerInvoiceDataSource,
   MeetingDataSource,
   MeterDataSource,
@@ -72,6 +73,7 @@ import { HttpTechnicalLogDataSource } from './http-technical-logs';
 import { HttpPayablesDataSource } from './http-payables';
 import { HttpPastResidentDataSource, HttpStaffDataSource } from './http-staff';
 import { HttpPackageLimitsDataSource } from './http-package-limits';
+import { HttpAgencyInvitationsDataSource } from './http-agency-invitations';
 import { HttpOwnerInvoiceDataSource } from './http-owner-invoices';
 import { HttpDocumentTemplateDataSource, HttpPlatformTemplateDataSource, HttpSettingsDataSource } from './http-settings';
 import { notConnected, partlyConnected } from './not-connected';
@@ -121,6 +123,7 @@ export function provideHttpData(): EnvironmentProviders {
     { provide: SecurityDataSource, useClass: HttpSecurityDataSource },
     { provide: LibraryDataSource, useClass: HttpLibraryDataSource },
     { provide: PackageLimitsDataSource, useClass: HttpPackageLimitsDataSource },
+    { provide: AgencyInvitationsDataSource, useClass: HttpAgencyInvitationsDataSource },
     { provide: OwnerInvoiceDataSource, useClass: HttpOwnerInvoiceDataSource },
     { provide: CatalogueDataSource, useClass: HttpCatalogueDataSource },
     { provide: PlatformDataSource, useClass: HttpPlatformDataSource },

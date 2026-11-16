@@ -89,6 +89,13 @@ export const routes: Routes = [
       },
       { path: 'tasks/approvals', redirectTo: 'approvals' },
       {
+        // D46: invitations from another agency, for someone who already signs in to Humo.
+        path: 'invitations',
+        title: 'Invitations',
+        data: { permission: 'Security.ManageOwn', breadcrumb: 'Invitations' },
+        loadComponent: () => import('./features/settings/invitations-page').then((m) => m.InvitationsPage),
+      },
+      {
         path: 'inbox',
         data: { section: 'My work' },
         children: [

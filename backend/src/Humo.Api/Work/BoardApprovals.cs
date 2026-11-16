@@ -50,8 +50,13 @@ public sealed class BoardApprovals(HumoDbContext db, TimeProvider clock, Audit.A
     {
         var assignments = await db.RoleAssignments.AsNoTracking().Where(a => a.Role == Roles.Trustee && a.Status == AssignmentStatuses.Active).ToListAsync(ct);
         var users = assignments.Where(a => a.SchemeIds.Contains(schemeId.ToString())).Select(a => a.UserId).Distinct().ToList();
-        return (await db.Users.AsNoTracking().Where(u => users.Contains(u.Id) && u.Status == IdentityStatuses.Active && u.PersonId != null).Select(u => new { u.Id, u.PersonId }).ToListAsync(ct))
-            .Where(u => Guid.TryParse(u.PersonId, out _)).Select(u => (Guid.Parse(u.PersonId!), u.Id)).ToList();
+        // D46: each trustee as this scheme's agency knows them (its record), not another agency's.
+        var org = await db.Schemes.AsNoTracking().Where(s => s.Id == schemeId).Select(s => s.OrganisationId).FirstAsync(ct);
+        var here = await db.Memberships.AsNoTracking().Where(m => users.Contains(m.UserId) && m.OrganisationId == org && m.PersonId != null && m.Status == MembershipStatuses.Active)
+            .ToDictionaryAsync(m => m.UserId, m => m.PersonId!.Value, ct);
+        return (await db.Users.AsNoTracking().Where(u => users.Contains(u.Id) && u.Status == IdentityStatuses.Active).Select(u => new { u.Id, u.PersonId }).ToListAsync(ct))
+            .Select(u => (Person: here.TryGetValue(u.Id, out var p) ? p : Guid.TryParse(u.PersonId, out var legacy) ? legacy : Guid.Empty, u.Id))
+            .Where(x => x.Person != Guid.Empty).ToList();
     }
 
     private static async Task<HashSet<Guid>> TrusteePeopleOnHumoAsync(HumoDbContext db, Guid schemeId, CancellationToken ct) =>
@@ -84,7 +89,7 @@ public sealed class BoardApprovals(HumoDbContext db, TimeProvider clock, Audit.A
     {
         var seats = item.SchemeId is { } s ? await SeatsAsync(s, ct) : [];
         var votes = await db.BoardVotes.AsNoTracking().Where(v => v.WorkItemId == item.Id).ToListAsync(ct);
-        var me = Guid.TryParse(actor?.User.PersonId, out var p) ? p : Guid.Empty;
+        var me = Guid.TryParse(actor?.PersonId, out var p) ? p : Guid.Empty;
         var onHumo = item.SchemeId is { } scheme ? await TrusteePeopleOnHumoAsync(db, scheme, ct) : [];
         return new BoardProgressDto(seats.Count, Majority(seats.Count), votes.Count(v => v.Decision == "approved"), votes.Count(v => v.Decision == "rejected"),
             [.. seats.Select(x => votes.FirstOrDefault(v => v.PersonId == x.PersonId) is { } v ? new BoardSeatDto(x.PersonId.ToString(), x.Name, v.Decision, v.Source, onHumo.Contains(x.PersonId))
@@ -95,7 +100,7 @@ public sealed class BoardApprovals(HumoDbContext db, TimeProvider clock, Audit.A
     /// <summary>A trustee's own decision on Humo: one vote. The item is decided once a majority agrees.</summary>
     public async Task VoteAsync(WorkItemRow item, Actor actor, bool approve, string? comment, CancellationToken ct)
     {
-        if (!Guid.TryParse(actor.User.PersonId, out var person) || item.SchemeId is not { } scheme || (await SeatsAsync(scheme, ct)).All(x => x.PersonId != person))
+        if (!Guid.TryParse(actor.PersonId, out var person) || item.SchemeId is not { } scheme || (await SeatsAsync(scheme, ct)).All(x => x.PersonId != person))
             throw new CommandRefused("forbidden", "Only a trustee on this scheme’s board decides this.");
         if (await db.BoardVotes.AnyAsync(v => v.WorkItemId == item.Id && v.PersonId == person, ct))
             throw new CommandRefused("conflict-of-interest", "You’ve already decided this. The rest of the board decides the outcome.");

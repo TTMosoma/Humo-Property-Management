@@ -242,6 +242,15 @@ public sealed class Membership
     public string Status { get; set; } = MembershipStatuses.Active;
     public DateTimeOffset Since { get; set; }
     public DateTimeOffset? EndedAt { get; set; }
+    /// <summary>
+    /// D46: this agency's own record of the person (People), if it has one. One sign-in links to a record at each agency;
+    /// the records are the agencies' own and are never shared between them.
+    /// </summary>
+    public Guid? PersonId { get; set; }
+    /// <summary>D46: the name this agency knows them by (its record's, or the name it invited them with). Never another agency's.</summary>
+    public string? Name { get; set; }
+    /// <summary>D46: when they accepted this agency's invitation (null while it's waiting).</summary>
+    public DateTimeOffset? AcceptedAt { get; set; }
 }
 
 /// <summary>A role, and where it applies. Ended, never deleted.</summary>
