@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Injector, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { TimelineDataSource, TimelineEvent, TimelineKind } from '../../domain';
@@ -111,12 +111,14 @@ export class Timeline {
   readonly initial = input(12);
 
   private readonly timeline = inject(TimelineDataSource, { optional: true });
-  private readonly feedback = inject(FeedbackService);
+  /** Loaded only when a file is opened: the timeline itself only shows. */
+  private readonly injector = inject(Injector);
 
   protected readonly icon = ICON;
 
   /** Opens a file on an entry (e.g. a proof of payment) through a link signed for this person, asked for now because it's short-lived. */
   protected openFile(fileId: string): void {
+    const feedback = this.injector.get(FeedbackService);
     // Opened before the link arrives, so the browser treats it as the person's own click and doesn't block it.
     const tab = window.open('', '_blank');
     this.timeline?.fileLink(fileId).subscribe({
@@ -124,12 +126,12 @@ export class Timeline {
         if (url && tab) tab.location.href = url;
         else {
           tab?.close();
-          this.feedback.error('The file can’t be opened here.');
+          feedback.error('The file can’t be opened here.');
         }
       },
       error: () => {
         tab?.close();
-        this.feedback.error('The file couldn’t be opened. Try again.');
+        feedback.error('The file couldn’t be opened. Try again.');
       },
     });
   }
