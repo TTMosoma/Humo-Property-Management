@@ -490,6 +490,16 @@ As Sipho (owner) and Johan (Portfolio Manager for Kingfisher Court). Check Sipho
 - [ ] As Thandeka, Settings › Notifications: switch *Request updated* off. Cancel another of Sipho's requests. **Expect:** it's in Sipho's bell, but no email.
 - [ ] On a job's history (as Johan). **Expect:** "Sipho Khumalo told: “Booked: …”" when he was told, instead of the old "notified of the booking" that was written even when nothing was sent.
 
+## 48. Jobs and the Inbox update by themselves
+
+Two windows: Thandeka in window 1, Johan in window 2. Restart `npm run start:api` and the API first.
+
+- [ ] Both open the same request (Maintenance › the job). In window 1, Thandeka requests quotes. **Expect:** window 2 moves to the same step within a second or two, without reloading. Johan isn't offered *Request quotes* any more.
+- [ ] Window 2 on *Maintenance* (the list). As Sipho, report a problem. **Expect:** it appears in Johan's list without reloading.
+- [ ] Window 2 on *Inbox*. As Sipho, send a message from *Messages*. **Expect:** it appears in Johan's Inbox without reloading.
+- [ ] Sipho on *Maintenance* (his requests). As Johan, move his request on (triage, or cancel with a reason). **Expect:** Sipho's page shows the new status without reloading.
+- [ ] Lindiwe (another unit) on her *Maintenance* page while Johan moves Sipho's request on. **Expect:** nothing changes on her page.
+
 ## 54. Proof of payment with "I've already paid"
 
 As Sipho (owner) and Priya (Finance). Restart the API first: there's a database change (notes can carry a file).
