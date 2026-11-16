@@ -500,6 +500,16 @@ Two windows: Thandeka in window 1, Johan in window 2. Restart `npm run start:api
 - [ ] Sipho on *Maintenance* (his requests). As Johan, move his request on (triage, or cancel with a reason). **Expect:** Sipho's page shows the new status without reloading.
 - [ ] Lindiwe (another unit) on her *Maintenance* page while Johan moves Sipho's request on. **Expect:** nothing changes on her page.
 
+## 53. The resident hears about their conversations
+
+As Sipho (owner) and Johan. Sipho writes from *Messages*.
+
+- [ ] As Johan, reply in the Inbox. **Expect:** Sipho's bell: "Reply from Acacia: [subject]", with the start of the reply; it opens *Messages*.
+- [ ] As Johan, *Make a job* from the conversation. **Expect:** Sipho's bell: "Logged as request MR-…: [title]"; it opens *Maintenance*.
+- [ ] As Johan, close the conversation. **Expect:** Sipho's bell: "Closed: [subject]".
+- [ ] As Johan, assign it or make an internal task. **Expect:** nothing in Sipho's bell.
+- [ ] **Expect** no extra emails for these (Mailpit): a reply by email is still just the one reply email.
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.
