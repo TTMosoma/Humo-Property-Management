@@ -6,6 +6,7 @@ What changed in Humo Property Management, release by release, in plain language.
 
 ## Unreleased
 
+- The build no longer warns about the supplier link page (NG8107); the page shows the same [#PR]
 - A resident hears about their own request as it moves on (being arranged, booked, done, cancelled or closed), by email for the booking, the finish and the end; each request opens on its own page, and the API no longer sends residents the quotes, prices or staff notes [#123]
 - Removing someone's passkeys signs them out at once on every device, and their open app leaves for the signed-out page. Signing out a session, signing out everywhere else, and suspending someone do the same [#122]
 - The bell and My work update by themselves when someone else gives you work or a notice, without reloading (live updates over SignalR) [#121]

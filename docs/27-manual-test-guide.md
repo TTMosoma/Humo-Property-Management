@@ -490,6 +490,11 @@ As Sipho (owner) and Johan (Portfolio Manager for Kingfisher Court). Check Sipho
 - [ ] As Thandeka, Settings › Notifications: switch *Request updated* off. Cancel another of Sipho's requests. **Expect:** it's in Sipho's bell, but no email.
 - [ ] On a job's history (as Johan). **Expect:** "Sipho Khumalo told: “Booked: …”" when he was told, instead of the old "notified of the booking" that was written even when nothing was sent.
 
+## 52. The supplier link after a decided quote
+
+- [ ] `npm run start:api`. **Expect:** no NG8107 warning in the build output.
+- [ ] Open a supplier's quote link (Mailpit) for a quote that has since been approved or rejected. **Expect:** the page says it's decided and shows "Your quote: R…", as before.
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.

@@ -58,7 +58,7 @@ import { formatDate, formatRand } from '../../ui/format/money';
         } @else if (!v.open) {
           <section class="card closed">
             <h2>{{ v.closedReason }}</h2>
-            @if (v.quote?.amount !== undefined && v.quote?.amount !== null) { <p>Your quote: {{ rand(v.quote!.amount!) }}</p> }
+            @if (v.quote && v.quote.amount !== undefined && v.quote.amount !== null) { <p>Your quote: {{ rand(v.quote.amount) }}</p> }
           </section>
         } @else if (v.kind === 'quote') {
           <section class="card">
