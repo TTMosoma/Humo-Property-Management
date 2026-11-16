@@ -87,8 +87,13 @@ public static partial class MaintenanceEndpoints
         var needle = (q ?? "").Trim().ToLowerInvariant();
         if (!actor.Can("Maintenance.Browse") || needle.Length < 2) return Results.Ok(Array.Empty<JobSummaryDto>());
         var ids = await SchemesAsync(actor, db, schemeIds, ct);
+        // A reference however it's typed ("MR-1022", "mr1022", "MR 1022", "1022"), or every word in the reference, title or location.
+        var reference = JobReference().Match(needle) is { Success: true } r ? r.Groups[1].Value : null;
+        var terms = needle.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var rows = (await db.Jobs.Where(x => ids.Contains(x.SchemeId)).ToListAsync(ct))
-            .Where(x => $"{x.Ref} {x.Title}".ToLowerInvariant().Contains(needle) || MaintenanceService.Read(x).Location.ToLowerInvariant().Contains(needle))
+            .Where(x => reference is not null
+                ? new string([.. x.Ref.Where(char.IsDigit)]).Contains(reference, StringComparison.Ordinal)
+                : terms.All(t => $"{x.Ref} {x.Title} {MaintenanceService.Read(x).Location}".ToLowerInvariant().Contains(t)))
             .OrderByDescending(x => x.ReportedAt).Take(Math.Clamp(limit ?? 5, 1, 20)).ToList();
         return Results.Ok(await m.JobSummariesAsync(rows, ct));
     }
@@ -561,6 +566,10 @@ public static partial class MaintenanceEndpoints
 
     [GeneratedRegex(@"^[+\d][\d\s]{8,}$")]
     private static partial Regex Phone();
+
+    /// <summary>A job reference: "mr-1022", "mr1022", "mr 1022" or "1022" (the digits).</summary>
+    [GeneratedRegex(@"^(?:mr)?[\s-]*(\d{3,})$")]
+    private static partial Regex JobReference();
 
     private static void Apply(SupplierRow row, SupplierRequest d)
     {

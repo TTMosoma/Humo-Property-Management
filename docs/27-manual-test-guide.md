@@ -500,6 +500,16 @@ Two windows: Thandeka in window 1, Johan in window 2. Restart `npm run start:api
 - [ ] Sipho on *Maintenance* (his requests). As Johan, move his request on (triage, or cancel with a reason). **Expect:** Sipho's page shows the new status without reloading.
 - [ ] Lindiwe (another unit) on her *Maintenance* page while Johan moves Sipho's request on. **Expect:** nothing changes on her page.
 
+## 51. Finding a job from the search bar
+
+Press Ctrl+K (or click the search bar at the top).
+
+- [ ] As Johan, with *All schemes* picked at the top left, type `MR-1022`, then `mr1022`, `MR 1022` and `1022`. **Expect:** MR-1022 each time, under *Jobs*; Enter opens it.
+- [ ] Pick another scheme at the top left (one MR-1022 isn't in) and type `MR-1022`. **Expect:** still found, marked "not in the scheme you're viewing".
+- [ ] Type words from a job's title, e.g. `sink cabinet`. **Expect:** the matching jobs in the scheme you're viewing.
+- [ ] As Sipho (owner), type the reference of one of his requests, or a word from it. **Expect:** it's listed, and Enter opens its own page in *Maintenance*.
+- [ ] As Priya (Finance), type `MR-1022`. **Expect:** "Jobs open from their invoice", leading to Finance › Payables (D32: Finance doesn't browse jobs).
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.
