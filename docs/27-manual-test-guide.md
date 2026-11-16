@@ -500,6 +500,16 @@ Two windows: Thandeka in window 1, Johan in window 2. Restart `npm run start:api
 - [ ] Sipho on *Maintenance* (his requests). As Johan, move his request on (triage, or cancel with a reason). **Expect:** Sipho's page shows the new status without reloading.
 - [ ] Lindiwe (another unit) on her *Maintenance* page while Johan moves Sipho's request on. **Expect:** nothing changes on her page.
 
+## 54. Proof of payment with "I've already paid"
+
+As Sipho (owner) and Priya (Finance). Restart the API first: there's a database change (notes can carry a file).
+
+- [ ] As Sipho, *My account* › *I've already paid*. Write when and how much, and attach a PDF proof of payment. **Expect:** "Thanks — we'll match your payment"; Priya's bell: "KC-…: owner says they've paid (proof attached)".
+- [ ] As Priya, open the unit (from the notice). **Expect:** on its timeline, the note "Owner reports payment: …" with **Proof of payment: [file name]**; clicking it opens the PDF.
+- [ ] As Sipho, report again with a photo or screenshot (JPEG or PNG). **Expect:** accepted, and it opens the same way.
+- [ ] Attach something else (e.g. a .txt or .docx). **Expect:** under the field, "Attach your proof of payment as a PDF, or a JPEG, PNG or WebP photo or screenshot"; nothing is sent.
+- [ ] Report without a file. **Expect:** it works as before.
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.

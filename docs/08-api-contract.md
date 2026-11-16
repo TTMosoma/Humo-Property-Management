@@ -149,6 +149,8 @@ Use ProblemDetails, with a `code` for policy errors and an `errors` map keyed by
   - The domain constants are now only the mock server's seed.
 - **Prototype tools** (the toolbar, "Sign in as", the state simulator and nudge reset) appear only when the data layer provides `PrototypeControls`. `provideMockData()` provides it; the HTTP data layer won't.
 
+- **Files on the timeline** (16 November 2026). A timeline entry can carry a file (`fileId`, `fileName`), for now an owner's proof of payment. Staff open it through `GET /files/{id}/link`: a link signed for them that lasts a few minutes (`Documents.View`, within the file's scheme), asked for when they click. `POST /accounts/{id}/payment-report` takes JSON (`text`), or a form (`text`, and an optional `file`: a PDF, JPEG, PNG or WebP). The file is checked like every upload (its real type, the size limit, a virus scan) and counted in the agency's storage.
+
 ## 8. Still open
 
 - Custom (configurable) role profiles: the permission model is ready, but there's no UI to edit them.

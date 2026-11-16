@@ -75,6 +75,11 @@
     <section class="surface paid">
       <label for="paid-text" class="label">Tell us when and how much you paid — we’ll find it</label>
       <textarea id="paid-text" rows="2" placeholder="e.g. Paid R 3 480 on 5 Oct from my Capitec account, reference ANELE M" [value]="paidText()" (input)="paidText.set($any($event.target).value)"></textarea>
+      @if (paidErrors()['text']) { <p class="field-error" role="alert">{{ paidErrors()['text'] }}</p> }
+      <label for="paid-proof" class="label proof-label">Proof of payment (optional)</label>
+      <input id="paid-proof" type="file" accept=".pdf,application/pdf,image/jpeg,image/png,image/webp" (change)="paidProof.set($any($event.target).files?.[0])" />
+      <p class="muted small">Your bank’s proof of payment as a PDF, or a photo or screenshot of it. It helps us find your payment faster.</p>
+      @if (paidErrors()['file']) { <p class="field-error" role="alert">{{ paidErrors()['file'] }}</p> }
       <div class="actions">
         <button type="button" class="btn btn-primary btn-sm" (click)="sendPaid()">Send to managing agent</button>
         <button type="button" class="btn btn-ghost btn-sm" (click)="paidOpen.set(false)">Cancel</button>

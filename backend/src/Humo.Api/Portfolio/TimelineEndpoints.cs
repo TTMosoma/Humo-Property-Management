@@ -5,13 +5,16 @@ using Humo.Api.Platform;
 using Humo.Domain.Access;
 using Humo.Domain.Finance;
 using Humo.Infrastructure.Data;
+using Humo.Infrastructure.Files;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Humo.Api.Portfolio;
 
 /// <summary>As the frontend's <c>TimelineEvent</c> (pattern P4). <c>AllDay</c>: only the date is known, so no time is shown.</summary>
+/// <param name="FileId">A file with the entry (e.g. a proof of payment), opened through <c>GET /files/{id}/link</c>.</param>
 public sealed record TimelineEventDto(string Id, string At, string Kind, string Title, string? Detail = null, string? Actor = null, decimal? Amount = null, string? Link = null,
-    bool? AllDay = null);
+    bool? AllDay = null, string? FileId = null, string? FileName = null);
 public sealed record NewNoteRequest(string? UnitId, string? PersonId, string? Kind, string? Text);
 public sealed record PaymentReportRequest(string? Text);
 
@@ -52,8 +55,18 @@ public static class TimelineEndpoints
 
     private static string Short(DateTimeOffset t) => t.ToOffset(SouthAfrica).ToString("d MMM yyyy, HH:mm", CultureInfo.InvariantCulture);
 
-    private static TimelineEventDto FromNote(NoteRow n, string? prefix = null) =>
-        new(n.Id.ToString(), n.At.ToString("O"), n.Kind, prefix + (n.Kind == "call" ? "Call logged" : "Note"), n.Text, n.Author);
+    private static TimelineEventDto FromNote(NoteRow n, IReadOnlyDictionary<Guid, string> files, string? prefix = null) =>
+        new(n.Id.ToString(), n.At.ToString("O"), n.Kind, prefix + (n.Kind == "call" ? "Call logged" : "Note"), n.Text, n.Author,
+            FileId: n.FileId?.ToString(), FileName: n.FileId is { } f && files.TryGetValue(f, out var name) ? name : null);
+
+    /// <summary>The names of the files these notes carry.</summary>
+    private static async Task<List<TimelineEventDto>> NotesAsync(HumoDbContext db, IQueryable<NoteRow> query, string? prefix, CancellationToken ct)
+    {
+        var notes = await query.AsNoTracking().ToListAsync(ct);
+        var ids = notes.Where(n => n.FileId != null).Select(n => n.FileId!.Value).ToList();
+        var files = ids.Count == 0 ? new Dictionary<Guid, string>() : await db.UploadedFiles.AsNoTracking().Where(f => ids.Contains(f.Id)).ToDictionaryAsync(f => f.Id, f => f.Name, ct);
+        return [.. notes.Select(n => FromNote(n, files, prefix))];
+    }
 
     private static async Task<List<TimelineEventDto>> UnitEventsAsync(HumoDbContext db, Unit unit, string prefix, CancellationToken ct)
     {
@@ -93,7 +106,7 @@ public static class TimelineEndpoints
             if (r.Until is { } until)
                 events.Add(new($"ev-rel-end-{r.Id}", Day(until.AddDays(1)), "status", prefix + $"{who} is no longer the {r.Type}", r.EndReason, null, null, $"/people/{r.PersonId}", true));
         }
-        events.AddRange((await db.Notes.AsNoTracking().Where(n => n.UnitId == unit.Id).ToListAsync(ct)).Select(n => FromNote(n, prefix)));
+        events.AddRange(await NotesAsync(db, db.Notes.Where(n => n.UnitId == unit.Id), prefix, ct));
         return events;
     }
 
@@ -121,7 +134,7 @@ public static class TimelineEndpoints
         var events = new List<TimelineEventDto>();
         foreach (var unit in await db.Units.AsNoTracking().Where(u => unitIds.Contains(u.Id)).ToListAsync(ct))
             events.AddRange(await UnitEventsAsync(db, unit, $"{codes.GetValueOrDefault(unit.SchemeId)} {unit.Number} · ", ct));
-        events.AddRange((await db.Notes.AsNoTracking().Where(n => n.PersonId == id && n.UnitId == null).ToListAsync(ct)).Select(n => FromNote(n)));
+        events.AddRange(await NotesAsync(db, db.Notes.Where(n => n.PersonId == id && n.UnitId == null), null, ct));
         return Results.Ok(Newest(events));
     }
 
@@ -155,32 +168,81 @@ public static class TimelineEndpoints
         }, ct);
     }
 
-    /// <summary>"I've already paid": the account holder tells the agency. It lands on the unit as a note; finance and the administrators are told.</summary>
-    private static async Task<IResult> ReportPayment(Guid id, PaymentReportRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, Notices notices,
-        TimeProvider clock, CancellationToken ct)
+    /// <summary>
+    /// "I've already paid": the account holder tells the agency, with their proof of payment if they have it (a PDF or a
+    /// photo, checked like every upload and counted in the agency's storage). It lands on the unit as a note, with the
+    /// file; finance and the administrators are told. JSON (text only) or a form (text and an optional file).
+    /// </summary>
+    private static async Task<IResult> ReportPayment(Guid id, HttpRequest request, CurrentActor current, CommandRunner commands, HumoDbContext db, Notices notices,
+        TimeProvider clock, IFileStore store, IFileScanner scanner, IOptions<FilesOptions> options, Commercial.PackageLimits limits, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } me) return Results.Unauthorized();
         if (await AccountEndpoints.Readable(me, db, id, ct) is not { } account || me.User.PersonId != account.HolderPersonId?.ToString()) return Problems.NotFound();
         var unit = await db.Units.AsNoTracking().FirstAsync(u => u.Id == account.UnitId, ct);
         var scheme = await db.Schemes.AsNoTracking().FirstAsync(s => s.Id == account.SchemeId, ct);
-        var text = (body.Text ?? "").Trim();
+
+        string text;
+        (byte[] Bytes, string Name, string ContentType)? proof = null;
+        if (request.HasFormContentType)
+        {
+            var form = await request.ReadFormAsync(ct);
+            text = form["text"].ToString().Trim();
+            if (form.Files.FirstOrDefault() is { Length: > 0 } upload)
+            {
+                // A PDF (a bank's proof of payment) or a photo or screenshot of one.
+                var pdf = upload.ContentType == "application/pdf" || upload.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase);
+                if (pdf)
+                {
+                    var (doc, refused) = await Files.PdfIntake.CheckAsync(upload, options.Value.MaxBytes, scanner, ct);
+                    if (refused is not null) return refused;
+                    proof = (doc!.Bytes, doc.Name, "application/pdf");
+                }
+                else
+                {
+                    // Not a PDF and not a photo by its content: say what is accepted, rather than "only photos".
+                    var head = new byte[12];
+                    await using (var peek = upload.OpenReadStream()) _ = await peek.ReadAtLeastAsync(head, head.Length, throwOnEndOfStream: false, ct);
+                    var photo = head.AsSpan().StartsWith(new byte[] { 0xFF, 0xD8, 0xFF }) || head.AsSpan().StartsWith(new byte[] { 0x89, 0x50, 0x4E, 0x47 })
+                        || (head.AsSpan(0, 4).SequenceEqual("RIFF"u8) && head.AsSpan(8, 4).SequenceEqual("WEBP"u8));
+                    if (!photo) return Problems.Validation(new() { ["file"] = "Attach your proof of payment as a PDF, or a JPEG, PNG or WebP photo or screenshot." });
+                    var (image, refused) = await Maintenance.ImageIntake.CheckAsync(upload, options.Value.MaxBytes, scanner, ct);
+                    if (refused is not null) return refused;
+                    proof = (image!.Bytes, image.Name, image.ContentType);
+                }
+                if (await limits.RefuseNewFileAsync(scheme.OrganisationId, proof.Value.Bytes.Length, ct) is { } full) return Problems.Validation(new() { ["file"] = full });
+            }
+        }
+        else text = ((await request.ReadFromJsonAsync<PaymentReportRequest>(ct))?.Text ?? "").Trim();
         return await commands.RunAsync(new CommandSpec($"Reported a payment on {account.AccountNo}", "Account.ViewOwn")
         {
             Resource = "Account",
             ResourceId = id.ToString(),
             SchemeId = account.SchemeId,
             Validate = () => text.Length < 5 ? new() { ["text"] = "Say when, how much and from which account you paid." } : text.Length > MaxNote ? new() { ["text"] = $"At most {MaxNote} characters." } : [],
-        }, actor =>
+        }, async actor =>
         {
+            Guid? fileId = null;
+            if (proof is { } p)
+            {
+                fileId = Guid.CreateVersion7();
+                db.UploadedFiles.Add(new UploadedFile
+                {
+                    Id = fileId.Value, OrganisationId = scheme.OrganisationId, SchemeId = scheme.Id, Name = p.Name, ContentType = p.ContentType, SizeBytes = p.Bytes.Length,
+                    Sha256 = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(p.Bytes)), StorageKey = await store.SaveAsync(p.Bytes, ct), ScanResult = "clean",
+                    UploadedBy = actor.Human.Name, UploadedAt = clock.GetUtcNow(),
+                });
+            }
             db.Notes.Add(new NoteRow
             {
                 Id = Guid.CreateVersion7(), OrganisationId = scheme.OrganisationId, UnitId = unit.Id, PersonId = account.HolderPersonId, Kind = "note",
-                Text = $"Owner reports payment: {text}", Author = actor.Human.Name, AuthorId = actor.Human.Id, At = clock.GetUtcNow(),
+                Text = $"Owner reports payment: {text}", Author = actor.Human.Name, AuthorId = actor.Human.Id, At = clock.GetUtcNow(), FileId = fileId,
             });
             var link = $"/schemes/{scheme.Id}/units/{unit.Number}";
             foreach (var role in new[] { Roles.Finance, Roles.AgencyAdmin })
-                notices.ToRole(role, actor.Human.Id, $"{account.AccountNo}: owner says they’ve paid", text, link, scheme.OrganisationId, "finance");
-            return Task.FromResult(Results.NoContent());
+                notices.ToRole(role, actor.Human.Id, $"{account.AccountNo}: owner says they’ve paid{(proof is null ? "" : " (proof attached)")}", text, link, scheme.OrganisationId, "finance");
+            // The storage warning at 80% (D20), counted with this file.
+            if (proof is { } counted) await limits.NotifyAsync(scheme.OrganisationId, notices, actor.Human.Id, ct, extraBytes: counted.Bytes.Length);
+            return Results.NoContent();
         }, ct);
     }
 }

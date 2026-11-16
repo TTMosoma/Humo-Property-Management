@@ -626,6 +626,44 @@ public sealed class StatementTests : IDisposable
     }
 
     [Fact]
+    public async Task An_owner_attaches_proof_of_payment_and_staff_open_it_from_the_timeline()
+    {
+        var s = await Scheme();
+        await PostedRun(s);
+        var owner = await Owner(s);
+        var unit = await api.Db(db => db.LevyAccounts.Where(a => a.Id == s.Account42).Select(a => a.UnitId).SingleAsync());
+        var pdf = System.Text.Encoding.ASCII.GetBytes("%PDF-1.4\n1 0 obj << /Type /Catalog >> endobj\n%%EOF\n");
+        MultipartFormDataContent Report(string text, byte[]? file, string name = "proof.pdf", string type = "application/pdf")
+        {
+            var form = new MultipartFormDataContent { { new StringContent(text), "text" } };
+            if (file is not null)
+            {
+                var part = new ByteArrayContent(file);
+                part.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(type);
+                form.Add(part, "file", name);
+            }
+            return form;
+        }
+
+        // A file that's neither a PDF nor a photo is refused, and nothing is stored.
+        var refused = await owner.PostAsync($"/api/accounts/{s.Account42}/payment-report", Report("Paid R1 850 on 3 Nov", "hello"u8.ToArray(), "proof.txt", "text/plain"));
+        Assert.Contains("PDF", (await refused.FieldErrors()).GetProperty("file").GetString());
+        Assert.False(await api.Db(db => db.Notes.AnyAsync()));
+
+        await NoContent(await owner.PostAsync($"/api/accounts/{s.Account42}/payment-report", Report("Paid R1 850 on 3 Nov from Capitec, ref KC-042", pdf)));
+
+        // Finance hears there's proof; the note on the unit carries the file, and staff open it through a signed link.
+        Assert.True(await api.Db(db => db.Notices.AnyAsync(n => n.ToRole == Roles.Finance && n.Title.Contains("owner says they’ve paid (proof attached)"))));
+        var note = (await Ok(await s.Finance.GetAsync($"/api/units/{unit}/timeline"))).EnumerateArray()
+            .Single(e => e.GetProperty("title").GetString() == "Note" && e.GetProperty("detail").GetString()!.StartsWith("Owner reports payment"));
+        Assert.Equal("proof.pdf", note.GetProperty("fileName").GetString());
+        var link = (await Ok(await s.Finance.GetAsync($"/api/files/{note.GetProperty("fileId").GetString()}/link"))).GetProperty("url").GetString()!;
+        Assert.Equal(pdf, await (await s.Finance.GetAsync(link)).Content.ReadAsByteArrayAsync());
+        // It counts in the agency's storage, like any uploaded file.
+        Assert.Equal(pdf.Length, await api.Db(db => db.UploadedFiles.Select(f => f.SizeBytes).SingleAsync()));
+    }
+
+    [Fact]
     public async Task Timelines_show_a_units_history_and_notes_and_owners_report_payments()
     {
         var s = await Scheme();

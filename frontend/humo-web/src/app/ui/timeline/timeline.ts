@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Injector, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { TimelineEvent, TimelineKind } from '../../domain';
+import { TimelineDataSource, TimelineEvent, TimelineKind } from '../../domain';
+import { FeedbackService } from '../../core/feedback/feedback.service';
 import { RandPipe } from '../format/money';
 
 const ICON: Record<TimelineKind, string> = {
@@ -49,6 +50,11 @@ const TIME = new Intl.DateTimeFormat('en-ZA', { hour: '2-digit', minute: '2-digi
               @if (e.detail) {
                 <p class="detail">{{ e.detail }}</p>
               }
+              @if (e.fileId) {
+                <button type="button" class="file" (click)="openFile(e.fileId)">
+                  <ion-icon name="attach-outline" aria-hidden="true" /> Proof of payment: {{ e.fileName ?? 'file' }}
+                </button>
+              }
               @if (!e.allDay || e.actor) {
                 <div class="meta">
                   @if (!e.allDay) {
@@ -93,6 +99,8 @@ const TIME = new Intl.DateTimeFormat('en-ZA', { hour: '2-digit', minute: '2-digi
     .amount { flex: none; font-size: var(--fs-sm); color: var(--c-text-2); }
     .amount.credit { color: var(--c-success); }
     .detail { margin-top: 2px; font-size: var(--fs-sm); color: var(--c-text-2); white-space: pre-line; }
+    .file { display: inline-flex; align-items: center; gap: var(--s-1); margin-top: var(--s-1); padding: 0; font: inherit; font-size: var(--fs-sm); color: var(--c-primary-text); background: none; border: 0; cursor: pointer; }
+    .file:hover { text-decoration: underline; }
     .meta { margin-top: 2px; font-size: var(--fs-xs); color: var(--c-text-faint); }
     .empty { color: var(--c-text-muted); font-size: var(--fs-sm); }
     .more { margin-top: var(--s-2); }
@@ -102,7 +110,31 @@ export class Timeline {
   readonly events = input.required<TimelineEvent[]>();
   readonly initial = input(12);
 
+  private readonly timeline = inject(TimelineDataSource, { optional: true });
+  /** Loaded only when a file is opened: the timeline itself only shows. */
+  private readonly injector = inject(Injector);
+
   protected readonly icon = ICON;
+
+  /** Opens a file on an entry (e.g. a proof of payment) through a link signed for this person, asked for now because it's short-lived. */
+  protected openFile(fileId: string): void {
+    const feedback = this.injector.get(FeedbackService);
+    // Opened before the link arrives, so the browser treats it as the person's own click and doesn't block it.
+    const tab = window.open('', '_blank');
+    this.timeline?.fileLink(fileId).subscribe({
+      next: (url) => {
+        if (url && tab) tab.location.href = url;
+        else {
+          tab?.close();
+          feedback.error('The file can’t be opened here.');
+        }
+      },
+      error: () => {
+        tab?.close();
+        feedback.error('The file couldn’t be opened. Try again.');
+      },
+    });
+  }
   protected readonly shown = signal(0);
 
   protected readonly limit = computed(() => this.shown() || this.initial());

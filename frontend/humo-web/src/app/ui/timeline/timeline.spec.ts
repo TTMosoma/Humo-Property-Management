@@ -23,4 +23,15 @@ describe('Timeline', () => {
     ]);
     expect(metas).toEqual(['14:32', '', 'Priya Naidoo']);
   });
+  it('shows a file on an entry, such as a proof of payment, as a button to open it', () => {
+    TestBed.configureTestingModule({ imports: [Timeline], providers: [provideRouter([])] });
+    const fixture = TestBed.createComponent(Timeline);
+    fixture.componentRef.setInput('events', [
+      { id: 'n', at: '2026-11-16T09:00:00+02:00', kind: 'note', title: 'Note', detail: 'Owner reports payment: Paid R1 850', fileId: 'f-1', fileName: 'proof.pdf' },
+      { id: 'm', at: '2026-11-16T08:00:00+02:00', kind: 'note', title: 'Note', detail: 'Called the owner' },
+    ] satisfies TimelineEvent[]);
+    fixture.detectChanges();
+    const buttons = [...(fixture.nativeElement as HTMLElement).querySelectorAll('button.file')].map((b) => b.textContent?.replace(/\s+/g, ' ').trim());
+    expect(buttons).toEqual(['Proof of payment: proof.pdf']);
+  });
 });

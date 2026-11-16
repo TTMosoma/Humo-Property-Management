@@ -368,11 +368,15 @@ export class InMemoryAccountDataSource extends AccountDataSource {
     });
   }
 
-  reportPayment(accountId: string, text: string): Observable<void> {
+  /** The simulation keeps no files: the proof is noted by name only. */
+  reportPayment(accountId: string, text: string, proof?: File): Observable<void> {
     const d = this.db.accountDetail(accountId);
     return this.gateway
       .command({ action: `Reported a payment on ${d?.account.accountNo ?? accountId}`, resource: 'Account', resourceId: accountId, permission: 'Account.ViewOwn' }, () =>
-        this.db.addNote({ unitId: d?.unit.id, personId: d?.holder.id, kind: 'note', text: `Owner reports payment: ${text}` }, this.session.current.identity.name),
+        this.db.addNote(
+          { unitId: d?.unit.id, personId: d?.holder.id, kind: 'note', text: `Owner reports payment: ${text}${proof ? ` (proof attached: ${proof.name})` : ''}` },
+          this.session.current.identity.name,
+        ),
       )
       .pipe(map(() => undefined));
   }
