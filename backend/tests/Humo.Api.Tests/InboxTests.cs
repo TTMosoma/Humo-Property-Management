@@ -90,6 +90,28 @@ public sealed class InboxTests : IDisposable
         Assert.Equal("open", (await Ok(await s.Admin.GetAsync($"/api/inbox/{id}"))).GetProperty("conversation").GetProperty("status").GetString());
     }
 
+    private static async Task<List<string>> Bell(HttpClient c) =>
+        [.. (await Ok(await c.GetAsync("/api/notifications"))).EnumerateArray().Select(n => n.GetProperty("title").GetString()!)];
+
+    [Fact]
+    public async Task The_resident_hears_in_the_bell_when_they_are_answered_their_message_becomes_a_request_or_it_is_closed()
+    {
+        var s = await Scheme();
+        var id = await Id(await s.Owner.PostAsJsonAsync("/api/me/conversations", new { subject = "Parking bay", body = "Someone keeps parking in my bay, number 42." }));
+
+        Assert.Equal(HttpStatusCode.OK, (await Act(s.Admin, id, new { type = "reply", body = "We’ve asked security to check.", channel = "portal" }, 2)).StatusCode);
+        var job = await Ok(await Act(s.Admin, id, new { type = "to-job", title = "Repaint the bay number", location = "Parking" }, 3));
+        Assert.Equal(HttpStatusCode.OK, (await Act(s.Admin, id, new { type = "close" }, 4)).StatusCode);
+
+        var bell = await Bell(s.Owner);
+        Assert.Contains("Reply from Acacia: Parking bay", bell);
+        Assert.Contains($"Logged as request {job.GetProperty("id").GetString()}: Repaint the bay number", bell);
+        Assert.Contains("Closed: Parking bay", bell);
+        // The reply's words are in the notice, so the bell is enough to know what was said.
+        var reply = (await Ok(await s.Owner.GetAsync("/api/notifications"))).EnumerateArray().Single(n => n.GetProperty("title").GetString() == "Reply from Acacia: Parking bay");
+        Assert.Equal(("We’ve asked security to check.", "/my/messages"), (reply.GetProperty("detail").GetString(), reply.GetProperty("link").GetString()));
+    }
+
     [Fact]
     public async Task Staff_reply_by_email_close_reopen_assign_and_turn_a_conversation_into_a_Task()
     {

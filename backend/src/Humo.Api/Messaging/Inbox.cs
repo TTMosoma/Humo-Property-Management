@@ -155,7 +155,7 @@ public static class InboxEndpoints
     }
 
     private static async Task<IResult> Act(Guid id, ConversationActionRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, Inbox inbox, Communications comms,
-        DeliveryQueue queue, TimeProvider clock, Maintenance.MaintenanceService maintenance, CancellationToken ct)
+        DeliveryQueue queue, TimeProvider clock, Maintenance.MaintenanceService maintenance, Platform.Notices notices, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } me) return Results.Unauthorized();
         if (await VisibleAsync(me, db, ct) is not { } visible || await visible.FirstOrDefaultAsync(c => c.Id == id, ct) is not { } c) return Problems.NotFound();
@@ -264,9 +264,34 @@ public static class InboxEndpoints
                 }
             }
             c.Version++;
+            await TellResidentAsync(db, notices, c, a, result, actor.Human.Id, ct);
             return Results.Ok(new { id = result });
         }, ct);
     }
+
+    /// <summary>
+    /// The resident who wrote hears, in the bell, what became of it: a reply, their message made into a request, or the
+    /// conversation closed. In the app only: a reply itself already went the way they wrote (portal, email or SMS).
+    /// Assigning it or making an internal task is the agency's own business.
+    /// </summary>
+    private static async Task TellResidentAsync(HumoDbContext db, Platform.Notices notices, ConversationRow c, ConversationAction a, string result, Guid actorId, CancellationToken ct)
+    {
+        var agency = await db.Organisations.AsNoTracking().Where(o => o.Id == c.OrganisationId).Select(o => o.ShortName).FirstAsync(ct);
+        (string Title, string Detail, string Link, string Kind)? told = a.Type switch
+        {
+            "reply" => ($"Reply from {agency}: {c.Subject}", Preview(a.Body!.Trim()), "/my/messages", "communication"),
+            "close" => ($"Closed: {c.Subject}", $"{agency} closed this conversation. Write again in Messages if you need more help.", "/my/messages", "communication"),
+            "to-job" => ($"Logged as request {result}: {a.Title!.Trim()}", "Your message is now a maintenance request. Follow it in Maintenance.", "/my/requests", "maintenance"),
+            _ => null,
+        };
+        if (told is not { } t) return;
+        var people = await db.Users.AsNoTracking()
+            .Where(u => u.PersonId == c.PersonId.ToString() && u.Status == IdentityStatuses.Active).Select(u => u.Id).ToListAsync(ct);
+        foreach (var user in people) notices.ToPerson(user, actorId, t.Title, t.Detail, t.Link, sendEmail: false, kind: t.Kind);
+    }
+
+    /// <summary>The start of a reply, for the bell.</summary>
+    private static string Preview(string text) => text.Length <= 140 ? text : text[..137].TrimEnd() + "…";
 
     // ---------------------------------------------------------------- Residents
 

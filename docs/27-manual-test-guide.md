@@ -490,6 +490,16 @@ As Sipho (owner) and Johan (Portfolio Manager for Kingfisher Court). Check Sipho
 - [ ] As Thandeka, Settings › Notifications: switch *Request updated* off. Cancel another of Sipho's requests. **Expect:** it's in Sipho's bell, but no email.
 - [ ] On a job's history (as Johan). **Expect:** "Sipho Khumalo told: “Booked: …”" when he was told, instead of the old "notified of the booking" that was written even when nothing was sent.
 
+## 53. The resident hears about their conversations
+
+As Sipho (owner) and Johan. Sipho writes from *Messages*.
+
+- [ ] As Johan, reply in the Inbox. **Expect:** Sipho's bell: "Reply from Acacia: [subject]", with the start of the reply; it opens *Messages*.
+- [ ] As Johan, *Make a job* from the conversation. **Expect:** Sipho's bell: "Logged as request MR-…: [title]"; it opens *Maintenance*.
+- [ ] As Johan, close the conversation. **Expect:** Sipho's bell: "Closed: [subject]".
+- [ ] As Johan, assign it or make an internal task. **Expect:** nothing in Sipho's bell.
+- [ ] **Expect** no extra emails for these (Mailpit): a reply by email is still just the one reply email.
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.
