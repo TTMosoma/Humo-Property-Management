@@ -180,7 +180,8 @@
       }
     </div>
     @for (n of notifications(); track n.id) {
-      <button type="button" class="notif" [class.unread]="!n.read" cdkMenuItem (cdkMenuItemTriggered)="openNotification(n)">
+      <div class="notif-row" [class.unread]="!n.read">
+      <button #open type="button" class="notif" [class.unread]="!n.read" cdkMenuItem (cdkMenuItemTriggered)="openNotification(n)">
         <span class="notif-icon"><ion-icon [name]="kindIcon[n.kind]" aria-hidden="true" /></span>
         <span class="notif-body">
           <span class="notif-line">
@@ -193,6 +194,12 @@
           }
         </span>
       </button>
+      @if (!n.read) {
+        <button type="button" class="notif-mark" uiMenuItemKeepOpen [attr.aria-label]="'Mark ' + n.title + ' as read'" title="Mark as read" (cdkMenuItemTriggered)="markRead(n, open)">
+          <ion-icon name="checkmark-outline" aria-hidden="true" />
+        </button>
+      }
+      </div>
     } @empty {
       <div class="notif-empty">You’re all caught up.</div>
     }

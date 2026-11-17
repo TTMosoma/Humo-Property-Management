@@ -14,6 +14,7 @@ import { SignOutService } from '../../session/sign-out.service';
 import { visibleOrganisations } from '../../session/organisations';
 import { SessionService } from '../../session/session.service';
 import { APP_VERSION } from '../../version';
+import { MenuItemKeepOpen } from '../../../ui/menu/menu-item-keep-open';
 
 interface QuickAction {
   label: string;
@@ -45,7 +46,7 @@ const KIND_ICON: Record<NotificationKind, string> = {
 
 @Component({
   selector: 'app-topbar',
-  imports: [IonIcon, CdkMenu, CdkMenuItem, CdkMenuItemRadio, CdkMenuGroup, CdkMenuTrigger],
+  imports: [IonIcon, CdkMenu, CdkMenuItem, CdkMenuItemRadio, CdkMenuGroup, CdkMenuTrigger, MenuItemKeepOpen],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './topbar.html',
   styleUrl: './topbar.scss',
@@ -117,6 +118,12 @@ export class Topbar {
   protected openNotification(n: AppNotification): void {
     this.notificationSource.markRead([n.id]).subscribe();
     this.router.navigateByUrl(n.link);
+  }
+
+  /** One notification read without opening it; the panel stays open, and focus moves to the notification itself. */
+  protected markRead(n: AppNotification, row: HTMLElement): void {
+    row.focus();
+    this.notificationSource.markRead([n.id]).subscribe();
   }
 
   protected markAllRead(): void {
