@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, map, of, switchMap, throwError } from 'rxjs';
 import {
+  ResidentConversation,
   ApiError,
   BoardAction,
   BoardCandidate,
@@ -458,11 +459,25 @@ export class InMemoryInboxDataSource extends InboxDataSource {
   }
 
   /** Residents see their own conversations (the API filters by the caller's person). */
-  mine(): Observable<ConversationView[]> {
+  /** As the API gives it: only what's theirs (no assignee, internal Tasks or account). */
+  mine(): Observable<ResidentConversation[]> {
     return this.db.changes$.pipe(
       switchMap(() => {
         const personId = this.auth.current.identity.personId;
-        return this.respond(personId ? this.store.forPerson(personId) : []);
+        const views = personId ? this.store.forPerson(personId) : [];
+        return this.respond(
+          [...views]
+            .sort((a, b) => b.lastAt.localeCompare(a.lastAt))
+            .map(({ conversation: c, lastAt }) => ({
+              id: c.id,
+              ref: c.ref,
+              subject: c.subject,
+              status: c.status,
+              lastAt,
+              messages: c.messages.map(({ id, at, from, by, body }) => ({ id, at, from, by, body })),
+              requests: c.links.filter((l) => l.route.startsWith('/maintenance/')).map((l) => ({ ref: l.route.slice('/maintenance/'.length), label: `Request ${l.route.slice('/maintenance/'.length)}` })),
+            })),
+        );
       }),
     );
   }

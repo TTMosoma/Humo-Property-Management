@@ -21,6 +21,12 @@ Checkpoint 10 builds the remaining pages that showed the "Not built yet" card: C
 - **Reply** (with a template, optionally closing), **assign**, **close / reopen**, **turn into a job** (Maintenance) or **turn into a Task** (Follow-up).
 - **A reply** goes through Communications (Sent kind *reply*) and closes the conversation's work item.
 - **Residents write from the portal** (*Messages*). A new conversation opens a Task for the scheme's portfolio manager, or for whoever covers for them.
+- **The residents' *Messages* is an inbox (17 November 2026):**
+  - Their conversations are listed newest first. Each shows its subject, the start of the last message, the time, and where it stands in the agency's name: *Waiting for Acacia*, *Acacia replied* or *Closed*.
+  - The open conversation reads top to bottom by day, with the reply box under it. *New message* opens a form with a pointer to *Report a problem* for repairs.
+  - A conversation that became a maintenance request links to it in My requests. A closed one offers *Write a new message* about the same thing.
+  - On a phone, it's the list or one conversation at a time. Each conversation has its own address: `/my/messages/:id`, and `/my/messages/new` to write.
+  - `GET /me/conversations` sends residents only what's theirs: the subject, status, messages (who, when, what) and the requests made from it. It doesn't send the assignee, the account, other jobs, channels or the agency's internal Tasks.
 
 ## 3. Staff (`/staff`, `/staff/:id`)
 
