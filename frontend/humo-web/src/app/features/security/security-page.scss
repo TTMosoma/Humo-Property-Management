@@ -146,6 +146,21 @@
   }
 }
 
+.head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.pick {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--c-primary);
+  cursor: pointer;
+}
+
 .ico {
   display: grid;
   flex: none;

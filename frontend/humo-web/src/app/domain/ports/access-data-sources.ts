@@ -143,7 +143,8 @@ export abstract class SecurityDataSource {
   /** Fails with SignInError, as SessionDataSource.registerPasskey does. */
   abstract addPasskey(identityId: string, tool: PasskeyTool): Observable<void>;
   abstract removePasskey(identityId: string, passkeyId: string): Observable<void>;
-  abstract removeDevice(identityId: string, deviceId: string): Observable<void>;
+  /** Stops remembering the chosen computers, or every one. Each is asked again on its next sign-in. */
+  abstract removeDevices(identityId: string, deviceIds: string[] | 'all'): Observable<void>;
   abstract signOutSession(identityId: string, sessionId: string): Observable<void>;
   abstract signOutOtherSessions(identityId: string): Observable<void>;
   /** D26: the person's own mobile for SMS codes. */

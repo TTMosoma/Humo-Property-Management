@@ -87,10 +87,21 @@
             <h2>Computers</h2>
             <p class="muted small">Computers that have answered whether they’re yours. Trusted ones stay signed in longer. Remove one and it’s asked again on its next sign-in.</p>
           </div>
+          @if (p.devices.length > 1) {
+            <div class="head-actions">
+              <button type="button" class="btn btn-secondary btn-sm" (click)="removeChosen()" [disabled]="!chosen().size || session.isImpersonating()">
+                Remove selected{{ chosen().size ? ' (' + chosen().size + ')' : '' }}
+              </button>
+              <button type="button" class="btn btn-ghost btn-sm" (click)="removeAll()" [disabled]="session.isImpersonating()">Remove all</button>
+            </div>
+          }
         </header>
         <ul class="list">
           @for (d of p.devices; track d.id) {
             <li>
+              @if (p.devices.length > 1) {
+                <input type="checkbox" class="pick" [checked]="chosen().has(d.id)" (change)="choose(d.id, $any($event.target).checked)" [attr.aria-label]="'Select ' + d.name" [disabled]="session.isImpersonating()" />
+              }
               <span class="ico"><ion-icon [name]="d.kind === 'phone' ? 'phone-portrait-outline' : 'laptop-outline'" aria-hidden="true" /></span>
               <span class="li-text">
                 <span class="li-name">
@@ -104,6 +115,8 @@
               </span>
               <button type="button" class="btn btn-ghost btn-sm" (click)="removeDevice(d.id, d.name)" [disabled]="session.isImpersonating()">Remove</button>
             </li>
+          } @empty {
+            <li class="empty">No computers are remembered. You’re asked on each one’s next sign-in.</li>
           }
         </ul>
       </section>

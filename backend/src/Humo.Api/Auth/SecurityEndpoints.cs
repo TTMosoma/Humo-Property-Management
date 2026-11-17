@@ -13,6 +13,8 @@ public sealed record TrustedDeviceDto(string Id, string Name, string Kind, bool 
 public sealed record ActiveSessionDto(string Id, string Device, string Browser, string Location, string Ip, string StartedAt, string LastActiveAt, bool Current);
 public sealed record SecurityProfileDto(string IdentityId, IReadOnlyList<PasskeyDto> Passkeys, IReadOnlyList<TrustedDeviceDto> Devices, IReadOnlyList<ActiveSessionDto> Sessions);
 public sealed record BrowserTrustRequest(bool Trusted);
+/// <param name="Ids">The computers to remove; leave out, with <paramref name="All"/>, to remove every one.</param>
+public sealed record RemoveDevicesRequest(IReadOnlyList<string>? Ids, bool All = false);
 
 /// <summary>
 /// Settings › Security: the signed-in person's own passkeys, trusted browsers and sessions. Removing a passkey and
@@ -27,6 +29,7 @@ public static class SecurityEndpoints
         g.MapGet("", Profile);
         g.MapPost("/passkeys/{id}/remove", RemovePasskey);
         g.MapPost("/devices/{id}/remove", RemoveDevice);
+        g.MapPost("/devices/remove", RemoveDevices);
         g.MapPost("/browser", AnswerBrowserTrust);
         g.MapPost("/sessions/{id}/sign-out", SignOutSession);
         g.MapPost("/sign-out-others", SignOutOthers);
@@ -91,28 +94,40 @@ public static class SecurityEndpoints
     /// trusted on it end now; a session in this browser keeps going, with the limits of an untrusted sign-in. Its label
     /// is the only record of which browser a session came from.
     /// </summary>
-    private static async Task<IResult> RemoveDevice(string id, ClaimsPrincipal principal, CurrentActor current, CommandRunner commands, HumoDbContext db,
+    private static Task<IResult> RemoveDevice(string id, ClaimsPrincipal principal, CurrentActor current, CommandRunner commands, HumoDbContext db,
+        SignInSessions sessions, TimeProvider clock, CancellationToken ct) =>
+        RemoveDevices(new RemoveDevicesRequest([id]), principal, current, commands, db, sessions, clock, ct);
+
+    /// <summary>Several computers at once, or every one: each is removed as <see cref="RemoveDevice"/> removes one, in one step-up.</summary>
+    private static async Task<IResult> RemoveDevices(RemoveDevicesRequest body, ClaimsPrincipal principal, CurrentActor current, CommandRunner commands, HumoDbContext db,
         SignInSessions sessions, TimeProvider clock, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         var me = actor.Human;
-        if (!Guid.TryParse(id, out var deviceId)) return Problems.NotFound();
-        var device = await db.TrustedBrowsers.FirstOrDefaultAsync(t => t.Id == deviceId && t.UserId == me.Id && t.RevokedAt == null, ct);
-        if (device is null) return Problems.NotFound();
+        var ids = (body.Ids ?? []).Select(i => Guid.TryParse(i, out var g) ? g : (Guid?)null).ToList();
+        if (!body.All && (ids.Count == 0 || ids.Any(i => i is null))) return Problems.NotFound();
+        var wanted = ids.Select(i => i!.Value).ToHashSet();
+        var devices = await db.TrustedBrowsers.Where(t => t.UserId == me.Id && t.RevokedAt == null && (body.All || wanted.Contains(t.Id))).ToListAsync(ct);
+        // Each one asked for must be theirs and still remembered: nothing is removed if any isn't.
+        if (devices.Count == 0 || (!body.All && devices.Count != wanted.Count)) return Problems.NotFound();
 
         var now = clock.GetUtcNow();
         var here = await sessions.CurrentAsync(principal, ct);
         var hereId = here?.Id ?? Guid.Empty;
-        return await commands.RunAsync(new CommandSpec($"Removed a trusted browser ({device.Label})", "Security.ManageOwn")
+        var labels = devices.Select(d => d.Label).Distinct().Order(StringComparer.OrdinalIgnoreCase).ToList();
+        var action = devices.Count == 1 ? $"Removed a trusted browser ({devices[0].Label})"
+            : body.All ? $"Removed every trusted browser ({devices.Count}: {string.Join(", ", labels)})"
+            : $"Removed {devices.Count} trusted browsers ({string.Join(", ", labels)})";
+        return await commands.RunAsync(new CommandSpec(action, "Security.ManageOwn")
         {
             Resource = "Device",
             Category = "security",
         }, async _ =>
         {
-            device.RevokedAt = now;
-            await db.UserSessions.Where(s => s.UserId == me.Id && s.Trusted && s.Device == device.Label && s.RevokedAt == null && s.Id != hereId)
+            foreach (var device in devices) device.RevokedAt = now;
+            await db.UserSessions.Where(s => s.UserId == me.Id && s.Trusted && labels.Contains(s.Device) && s.RevokedAt == null && s.Id != hereId)
                 .ExecuteUpdateAsync(s => s.SetProperty(x => x.RevokedAt, now), ct);
-            if (here is { Trusted: true } && here.Device == device.Label) await sessions.ApplyTrustAsync(here.Id, me, false, ct);
+            if (here is { Trusted: true } && labels.Contains(here.Device)) await sessions.ApplyTrustAsync(here.Id, me, false, ct);
             return Results.NoContent();
         }, ct);
     }
