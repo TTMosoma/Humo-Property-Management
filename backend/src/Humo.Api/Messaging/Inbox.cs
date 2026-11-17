@@ -13,6 +13,14 @@ namespace Humo.Api.Messaging;
 // The shapes match inbox.ts in the app.
 public sealed record ConversationMessage(string Id, string At, string From, string By, string Body, string Channel, string? SentId);
 public sealed record ConversationLink(string Label, string Route);
+/// <summary>
+/// A resident's own conversation, as the portal shows it: the messages, and the requests made from it. Nothing the agency
+/// keeps for itself: who it's assigned to, internal Tasks, the account or other jobs.
+/// </summary>
+public sealed record ResidentConversationDto(string Id, string Ref, string Subject, string Status, string LastAt, List<ResidentConversationMessage> Messages, List<ResidentConversationRequest> Requests);
+public sealed record ResidentConversationMessage(string Id, string At, string From, string By, string Body);
+/// <summary>A maintenance request made from the conversation; it opens in My requests.</summary>
+public sealed record ResidentConversationRequest(string Ref, string Label);
 public sealed record ConversationDto(string Id, int Version, string Ref, string SchemeId, string PersonId, string? UnitId, string Subject, string Status, string? AssigneeId,
     string? WorkItemId, List<ConversationMessage> Messages, List<ConversationLink> Links);
 public sealed record ConversationViewDto(ConversationDto Conversation, PersonDto Person, SchemeDto Scheme, UnitDto? Unit, AccountDto? Account, List<object> OpenJobs, string AssigneeName,
@@ -282,14 +290,23 @@ public static class InboxEndpoints
         return schemeId == Guid.Empty ? null : (person, schemeId, unitId);
     }
 
-    private static async Task<IResult> Mine(CurrentActor current, HumoDbContext db, Inbox inbox, SentRecords sent, CancellationToken ct)
+    private static async Task<IResult> Mine(CurrentActor current, HumoDbContext db, SentRecords sent, CancellationToken ct)
     {
         if (await current.GetAsync(ct) is not { } actor) return Results.Unauthorized();
         if (await ResidentAsync(actor, db, ct) is not { } me) return Results.Ok(Array.Empty<ConversationViewDto>());
         var rows = await db.Conversations.Where(c => c.PersonId == me.Person.Id).ToListAsync(ct);
         // Opening their conversations in the portal is reading our replies there.
         await sent.MarkReadAsync(rows.SelectMany(Inbox.Messages).Where(m => m.From == "us" && m.Channel == "portal" && m.SentId != null).Select(m => Guid.Parse(m.SentId!)), me.Person.Id, ct);
-        return Results.Ok(await inbox.ViewsAsync(rows, ct));
+        return Results.Ok(rows.OrderByDescending(r => r.LastAt).Select(ForResident).ToList());
+    }
+
+    internal static ResidentConversationDto ForResident(ConversationRow c)
+    {
+        var links = JsonSerializer.Deserialize<List<ConversationLink>>(c.Links, Json.Options) ?? [];
+        var requests = links.Where(l => l.Route.StartsWith("/maintenance/", StringComparison.Ordinal))
+            .Select(l => l.Route["/maintenance/".Length..]).Select(r => new ResidentConversationRequest(r, $"Request {r}")).ToList();
+        return new ResidentConversationDto(c.Id.ToString(), c.Ref, c.Subject, c.Status, c.LastAt.ToString("O"),
+            [.. Inbox.Messages(c).Select(m => new ResidentConversationMessage(m.Id, m.At, m.From, m.By, m.Body))], requests);
     }
 
     private static async Task<IResult> Write(ResidentMessageRequest body, CurrentActor current, CommandRunner commands, HumoDbContext db, Inbox inbox, CancellationToken ct)

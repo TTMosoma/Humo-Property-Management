@@ -4,7 +4,7 @@ import { DocumentAction, LibraryDocument, NewDocument, RecordKind } from '../mod
 import { NewNotice, NoticeView } from '../models/notice';
 import { Audience, ComposeInput, ComposePreview, MessageTemplate, SentView, TemplateInput } from '../models/messaging';
 import { Channel } from '../models/settings';
-import { ConversationAction, ConversationView, ResidentMessage } from '../models/inbox';
+import { ConversationAction, ConversationView, ResidentConversation, ResidentMessage } from '../models/inbox';
 import { NewCover, StaffDetail, StaffSummary } from '../models/staff';
 import { BudgetAction, BudgetView, NewBudget } from '../models/budget';
 
@@ -106,7 +106,8 @@ export abstract class InboxDataSource {
   abstract get(id: string): Observable<ConversationView | undefined>;
   /** Returns the job ref or Task id for "to-job" / "to-task"; the conversation id otherwise. */
   abstract act(id: string, action: ConversationAction, expectedVersion?: number): Observable<string>;
-  abstract mine(): Observable<ConversationView[]>;
+  /** Residents: their own conversations, newest first. */
+  abstract mine(): Observable<ResidentConversation[]>;
   abstract write(message: ResidentMessage): Observable<string>;
 }
 

@@ -728,6 +728,18 @@ export const routes: Routes = [
             loadComponent: () => import('./features/my/my-messages-page').then((m) => m.MyMessagesPage),
           },
           {
+            path: 'messages/new',
+            title: 'New message',
+            data: { permission: 'Resident.Portal' },
+            loadComponent: () => import('./features/my/my-messages-page').then((m) => m.MyMessagesPage),
+          },
+          {
+            path: 'messages/:id',
+            title: 'Messages',
+            data: { permission: 'Resident.Portal' },
+            loadComponent: () => import('./features/my/my-messages-page').then((m) => m.MyMessagesPage),
+          },
+          {
             path: 'notices',
             title: 'Notices',
             data: { permission: 'Resident.Portal' },

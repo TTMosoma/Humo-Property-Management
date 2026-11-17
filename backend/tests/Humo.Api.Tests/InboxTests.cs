@@ -81,7 +81,11 @@ public sealed class InboxTests : IDisposable
 
         // Sipho opens his messages in the portal: the reply is read.
         var mine = await Ok(await s.Owner.GetAsync("/api/me/conversations"));
-        Assert.Equal("Thanks, Sipho: the plumber is on the way.", mine[0].GetProperty("conversation").GetProperty("messages")[1].GetProperty("body").GetString());
+        Assert.Equal("Thanks, Sipho: the plumber is on the way.", mine[0].GetProperty("messages")[1].GetProperty("body").GetString());
+        Assert.Equal(("CV-1001", "waiting"), (mine[0].GetProperty("ref").GetString(), mine[0].GetProperty("status").GetString()));
+        // Only what's his: no assignee, account, channels or the agency's own records of it.
+        Assert.Equal(["id", "ref", "subject", "status", "lastAt", "messages", "requests"], mine[0].EnumerateObject().Select(p => p.Name));
+        Assert.Equal(["id", "at", "from", "by", "body"], mine[0].GetProperty("messages")[1].EnumerateObject().Select(p => p.Name));
         var sent = await Ok(await s.Admin.GetAsync($"/api/communications/sent/{sentId}"));
         Assert.Equal(1, sent.GetProperty("counts").GetProperty("read").GetInt32());
 
@@ -119,6 +123,9 @@ public sealed class InboxTests : IDisposable
         var links = (await Ok(await s.Admin.GetAsync($"/api/inbox/{id}"))).GetProperty("conversation").GetProperty("links");
         Assert.Equal(["Job MR-1001", "Task: Paint the bay numbers"], links.EnumerateArray().Select(l => l.GetProperty("label").GetString()));
         Assert.Equal(HttpStatusCode.Conflict, (await Act(s.Admin, id, new { type = "close" }, 6)).StatusCode);
+        // Sipho sees the request made from his message, to open in My requests; the agency's internal Task stays with the agency.
+        var his = (await Ok(await s.Owner.GetAsync("/api/me/conversations")))[0].GetProperty("requests");
+        Assert.Equal([("MR-1001", "Request MR-1001")], his.EnumerateArray().Select(r => (r.GetProperty("ref").GetString(), r.GetProperty("label").GetString())));
         // Residents see only their own.
         Assert.Equal(HttpStatusCode.NotFound, (await s.Owner.GetAsync($"/api/inbox/{id}")).StatusCode);
     }

@@ -500,6 +500,19 @@ Two windows: Thandeka in window 1, Johan in window 2. Restart `npm run start:api
 - [ ] Sipho on *Maintenance* (his requests). As Johan, move his request on (triage, or cancel with a reason). **Expect:** Sipho's page shows the new status without reloading.
 - [ ] Lindiwe (another unit) on her *Maintenance* page while Johan moves Sipho's request on. **Expect:** nothing changes on her page.
 
+## 49. The residents' Messages
+
+As Sipho (owner), on a computer and on a phone (or a narrow window). Johan replies from the Inbox.
+
+- [ ] *Messages*. **Expect:** his conversations on the left, newest first, each with its subject, the start of the last message, the time and a status naming the agency (*Waiting for …*, *… replied*, *Closed*). The newest is open on the right.
+- [ ] Open another conversation. **Expect:** its messages by day (*Today*, *Yesterday*, a date), his on the right, the agency's on the left with who wrote them, and the reply box under them. The address ends in the conversation's id.
+- [ ] Type a reply and *Send* (or Ctrl+Enter). **Expect:** it appears at the bottom straight away; the list shows "You: …" for that conversation.
+- [ ] As Johan, reply. **Expect:** Sipho's conversation shows the reply and *… replied*.
+- [ ] *New message*: write a subject and message, *Send*. **Expect:** the new conversation opens, at the top of the list. The form points to *Report a problem* for repairs.
+- [ ] As Johan, *Make a job* from one of Sipho's conversations. **Expect:** Sipho's conversation says the agency logged it as request MR-…, linking to it in My requests. No Task made from a conversation shows to Sipho.
+- [ ] As Johan, close a conversation. **Expect:** Sipho sees *Closed* and *Write a new message*, which opens the form with "Re: [subject]".
+- [ ] On a phone. **Expect:** the list alone; tapping one opens it with *All messages* to go back.
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.

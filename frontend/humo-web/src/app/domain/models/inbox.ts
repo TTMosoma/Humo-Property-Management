@@ -70,6 +70,22 @@ export type ConversationAction =
   | { type: 'to-job'; title: string; location: string }
   | { type: 'to-task'; title: string; dueAt: string };
 
+/**
+ * A resident's own conversation in the portal: their messages and the agency's replies, and the requests made from it.
+ * Nothing the agency keeps for itself (who it's assigned to, internal Tasks, the account).
+ */
+export interface ResidentConversation {
+  id: string;
+  /** "CV-1001" */
+  ref: string;
+  subject: string;
+  status: ConversationStatus;
+  lastAt: string;
+  messages: { id: string; at: string; from: 'them' | 'us'; by: string; body: string }[];
+  /** Maintenance requests made from it, opened in My requests. */
+  requests: { ref: string; label: string }[];
+}
+
 /** A resident writing to the managing agent from the portal. */
 export interface ResidentMessage {
   subject: string;

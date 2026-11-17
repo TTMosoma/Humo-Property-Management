@@ -8,6 +8,7 @@ import {
   ComposePreview,
   ConversationAction,
   ConversationView,
+  ResidentConversation,
   InboxDataSource,
   MessageTemplate,
   NewNotice,
@@ -116,8 +117,8 @@ export class HttpInboxDataSource extends HttpPort implements InboxDataSource {
     return this.command<{ id: string }>('POST', `/inbox/${id}/actions`, { action, expectedVersion }, ['inbox', 'work-items', 'communications']).pipe(map((r) => r.id));
   }
 
-  mine(): Observable<ConversationView[]> {
-    return this.live<ConversationView[]>('/me/conversations', ['inbox', 'session']);
+  mine(): Observable<ResidentConversation[]> {
+    return this.live<ResidentConversation[]>('/me/conversations', ['inbox', 'session']);
   }
 
   write(message: ResidentMessage): Observable<string> {
