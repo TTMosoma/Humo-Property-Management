@@ -500,6 +500,16 @@ Two windows: Thandeka in window 1, Johan in window 2. Restart `npm run start:api
 - [ ] Sipho on *Maintenance* (his requests). As Johan, move his request on (triage, or cancel with a reason). **Expect:** Sipho's page shows the new status without reloading.
 - [ ] Lindiwe (another unit) on her *Maintenance* page while Johan moves Sipho's request on. **Expect:** nothing changes on her page.
 
+## 49. Mark one notification read
+
+Anyone with a few unread notifications.
+
+- [ ] Open the bell. **Expect:** each unread notification has a tick on the right; read ones don't.
+- [ ] Click the tick on one. **Expect:** it shows as read, the count on the bell goes down by one, and the bell stays open. Its page doesn't open.
+- [ ] Tick another two. **Expect:** the same, without the bell closing.
+- [ ] Keyboard: open the bell, arrow down to a tick, press Enter. **Expect:** the same; focus moves to the notification itself.
+- [ ] Click a notification itself. **Expect:** as before: it opens its page and counts as read. *Mark all read* still clears them all.
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.

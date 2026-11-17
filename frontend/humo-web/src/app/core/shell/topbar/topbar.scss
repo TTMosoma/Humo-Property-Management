@@ -349,20 +349,59 @@
   cursor: pointer;
 }
 
+.notif-row {
+  display: flex;
+  align-items: flex-start;
+  border-bottom: 1px solid var(--c-border);
+
+  &:last-of-type {
+    border-bottom: 0;
+  }
+}
+
+/* Mark one notification read without opening it. Quiet until the row is hovered or it has focus. */
+.notif-mark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin: var(--s-3) var(--s-3) 0 0;
+  font-size: 16px;
+  color: var(--c-text-faint);
+  cursor: pointer;
+  background: none;
+  border: 0;
+  border-radius: var(--r);
+  opacity: 0.55;
+
+  &:hover,
+  &:focus {
+    color: var(--c-primary);
+    background: var(--c-surface-hover);
+    outline: none;
+    opacity: 1;
+  }
+
+  &:focus-visible {
+    box-shadow: 0 0 0 2px var(--c-primary);
+  }
+}
+
+.notif-row:hover .notif-mark {
+  opacity: 1;
+}
+
 .notif {
   display: flex;
+  flex: 1;
   gap: var(--s-3);
-  width: 100%;
+  min-width: 0;
   padding: var(--s-3) var(--s-4);
   text-align: left;
   background: none;
   border: 0;
-  border-bottom: 1px solid var(--c-border);
   cursor: pointer;
-
-  &:last-child {
-    border-bottom: 0;
-  }
 
   &:hover,
   &:focus {
