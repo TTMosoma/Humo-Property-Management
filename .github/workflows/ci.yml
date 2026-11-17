@@ -17,9 +17,9 @@ jobs:
       run:
         working-directory: frontend/humo-web
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: frontend/humo-web/.nvmrc
           cache: npm
@@ -91,9 +91,9 @@ jobs:
           --health-interval 5s
           --health-retries 12
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: backend/global.json
 
@@ -170,13 +170,13 @@ jobs:
       ASPNETCORE_URLS: http://localhost:5080
       ConnectionStrings__Humo: Host=localhost;Port=5432;Database=humo;Username=humo;Password=humo-ci-only
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: backend/global.json
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: frontend/humo-web/.nvmrc
           cache: npm
@@ -220,7 +220,7 @@ jobs:
           tail -n 200 backend/api.log || true
           tail -n 100 frontend/humo-web/web.log || true
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: screen-check
