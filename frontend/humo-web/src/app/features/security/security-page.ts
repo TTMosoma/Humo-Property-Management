@@ -118,8 +118,38 @@ export class SecurityPage {
     this.run(`Remove the passkey “${name}”`, () => this.data.removePasskey(this.identityId(), passkeyId), `Removed “${name}”.`);
   }
 
+  /** Computers ticked for removal. */
+  protected readonly chosen = signal<ReadonlySet<string>>(new Set());
+
+  protected choose(deviceId: string, on: boolean): void {
+    this.chosen.update((s) => {
+      const next = new Set(s);
+      if (on) next.add(deviceId);
+      else next.delete(deviceId);
+      return next;
+    });
+  }
+
   protected removeDevice(deviceId: string, name: string): void {
-    this.run(`Remove ${name}`, () => this.data.removeDevice(this.identityId(), deviceId), `${name} is no longer remembered. It’s asked about again on its next sign-in.`);
+    this.removeDevices([deviceId], `Remove ${name}`, `${name} is no longer remembered. It’s asked about again on its next sign-in.`);
+  }
+
+  protected removeChosen(): void {
+    const ids = (this.profile()?.devices ?? []).filter((d) => this.chosen().has(d.id)).map((d) => d.id);
+    if (ids.length === 0) return;
+    if (ids.length === 1) {
+      this.removeDevice(ids[0], this.profile()!.devices.find((d) => d.id === ids[0])!.name);
+      return;
+    }
+    this.removeDevices(ids, `Remove ${ids.length} computers`, `${ids.length} computers are no longer remembered. Each is asked about again on its next sign-in.`);
+  }
+
+  protected removeAll(): void {
+    this.removeDevices('all', 'Remove every computer, this one included', 'No computers are remembered now, this one included. Each is asked about again on its next sign-in.');
+  }
+
+  private removeDevices(ids: string[] | 'all', detail: string, done: string): void {
+    this.run(detail, () => this.data.removeDevices(this.identityId(), ids), done, () => this.chosen.set(new Set()));
   }
 
   protected signOut(sessionId: string, device: string): void {
@@ -130,10 +160,13 @@ export class SecurityPage {
     this.run('Sign out every other session', () => this.data.signOutOtherSessions(this.identityId()), 'Signed out of every other device. This one stays signed in.');
   }
 
-  private run(detail: string, action: () => Observable<void>, done: string): void {
+  private run(detail: string, action: () => Observable<void>, done: string, after?: () => void): void {
     this.problem.set(null);
     this.stepUp.guard({ action: 'change-security', detail }, action).subscribe({
-      next: () => this.feedback.success(done),
+      next: () => {
+        after?.();
+        void this.feedback.success(done);
+      },
       error: (e: unknown) => this.fail(describeFailure(e, 'That change didn’t save')),
     });
   }

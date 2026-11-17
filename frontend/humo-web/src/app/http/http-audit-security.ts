@@ -88,9 +88,9 @@ export class HttpSecurityDataSource extends HttpPort implements SecurityDataSour
     return this.command('POST', `/me/security/passkeys/${encodeURIComponent(passkeyId)}/remove`, null, ['session']);
   }
 
-  /** Stops trusting a computer. The question comes back on its next sign-in. */
-  removeDevice(_identityId: string, deviceId: string): Observable<void> {
-    return this.command('POST', `/me/security/devices/${encodeURIComponent(deviceId)}/remove`, null, ['session']);
+  /** Stops trusting the chosen computers, or every one. The question comes back on their next sign-in. */
+  removeDevices(_identityId: string, deviceIds: string[] | 'all'): Observable<void> {
+    return this.command('POST', '/me/security/devices/remove', deviceIds === 'all' ? { all: true } : { ids: deviceIds }, ['session']);
   }
 
   /** Ends one of the person's other sessions (step-up). This session is ended with Sign out instead. */

@@ -500,6 +500,16 @@ Two windows: Thandeka in window 1, Johan in window 2. Restart `npm run start:api
 - [ ] Sipho on *Maintenance* (his requests). As Johan, move his request on (triage, or cancel with a reason). **Expect:** Sipho's page shows the new status without reloading.
 - [ ] Lindiwe (another unit) on her *Maintenance* page while Johan moves Sipho's request on. **Expect:** nothing changes on her page.
 
+## 49. Removing several computers at once
+
+Anyone who has signed in on two or more browsers and answered *Is this your own computer?* on each (e.g. Chrome and Edge, or a normal and a private window).
+
+- [ ] Settings › Security › *Computers*. **Expect:** a tick box on each computer, and *Remove selected* (greyed out) and *Remove all* above the list.
+- [ ] Tick two. **Expect:** the button reads *Remove selected (2)*.
+- [ ] *Remove selected (2)*. **Expect:** one passkey check, "Remove 2 computers"; then both are gone from the list, and each asks *Is this your own computer?* on its next sign-in. The audit log says "Removed 2 trusted browsers (…)".
+- [ ] *Remove all*. **Expect:** one passkey check; every computer is gone, this one included, and this browser asks again on its next sign-in. This session stays signed in.
+- [ ] With only one computer listed. **Expect:** no tick boxes or *Remove all*; its own *Remove* works as before.
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.

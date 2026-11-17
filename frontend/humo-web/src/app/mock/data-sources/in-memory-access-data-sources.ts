@@ -467,9 +467,13 @@ export class InMemorySecurityDataSource extends SecurityDataSource {
     return this.change(identityId, 'Removed a passkey', (p) => ({ ...p, passkeys: p.passkeys.filter((k) => k.id !== passkeyId) }));
   }
 
-  removeDevice(identityId: string, deviceId: string): Observable<void> {
-    if (deviceId === THIS_BROWSER) this.auth.forgetBrowser(identityId);
-    return this.change(identityId, 'Removed a trusted device', (p) => ({ ...p, devices: p.devices.filter((d) => d.id !== deviceId) }));
+  removeDevices(identityId: string, deviceIds: string[] | 'all'): Observable<void> {
+    const gone = (id: string) => deviceIds === 'all' || deviceIds.includes(id);
+    if (gone(THIS_BROWSER)) this.auth.forgetBrowser(identityId);
+    return this.change(identityId, deviceIds === 'all' ? 'Removed every trusted device' : deviceIds.length === 1 ? 'Removed a trusted device' : `Removed ${deviceIds.length} trusted devices`, (p) => ({
+      ...p,
+      devices: p.devices.filter((d) => !gone(d.id)),
+    }));
   }
 
   signOutSession(identityId: string, sessionId: string): Observable<void> {

@@ -235,6 +235,50 @@ public sealed partial class SessionTests : IDisposable
         Assert.True((await asked.Json()).GetProperty("askBrowserTrust").GetBoolean());
     }
 
+    /// <summary>Two more computers remembered for the signed-in person, as earlier sign-ins on them would leave.</summary>
+    private Task<List<Guid>> TwoMoreComputers(Guid userId) => api.Db(async db =>
+    {
+        var now = api.Clock.GetUtcNow();
+        var made = new[] { "Windows · Edge", "iPhone · Safari" }.Select(label => new Humo.Infrastructure.Data.TrustedBrowser
+        {
+            Id = Guid.CreateVersion7(), UserId = userId, TokenHash = Guid.NewGuid().ToString("N"), Trusted = true, Label = label, CreatedAt = now, ExpiresAt = now.AddDays(90),
+        }).ToList();
+        db.TrustedBrowsers.AddRange(made);
+        await db.SaveChangesAsync();
+        return made.Select(m => m.Id).ToList();
+    });
+
+    private async Task<List<string>> Computers() =>
+        [.. (await (await client.GetAsync("/api/me/security")).Json()).GetProperty("devices").EnumerateArray().Select(d => d.GetProperty("id").GetString()!).Order()];
+
+    [Fact]
+    public async Task Chosen_computers_or_every_one_are_removed_in_one_go()
+    {
+        api.Clock.Set(DateTimeOffset.UtcNow);
+        await Complete(await RequestLink(HumoApiFactory.AdminEmail));
+        await client.PostAsJsonAsync("/api/me/security/browser", new { trusted = true });
+        var me = await api.Db(db => db.Users.Where(u => u.Email == HumoApiFactory.AdminEmail).Select(u => u.Id).SingleAsync());
+        var others = await TwoMoreComputers(me);
+        Assert.Equal(3, (await Computers()).Count);
+        await client.StepUp();
+
+        // Someone else's computer, or one that isn't remembered, among those chosen: nothing is removed.
+        Assert.Equal(HttpStatusCode.NotFound, (await client.PostAsJsonAsync("/api/me/security/devices/remove", new { ids = new[] { others[0].ToString(), Guid.NewGuid().ToString() } })).StatusCode);
+        Assert.Equal(3, (await Computers()).Count);
+
+        // The two chosen go; this one stays.
+        Assert.Equal(HttpStatusCode.NoContent, (await client.PostAsJsonAsync("/api/me/security/devices/remove", new { ids = others.Select(o => o.ToString()) })).StatusCode);
+        var left = Assert.Single(await Computers());
+        Assert.DoesNotContain(left, others.Select(o => o.ToString()));
+        Assert.Contains("Removed 2 trusted browsers (iPhone · Safari, Windows · Edge)", await api.Db(db => db.Audit.Select(e => e.Action).ToListAsync()));
+
+        // Every one, this browser included: the question comes back here too.
+        await TwoMoreComputers(me);
+        Assert.Equal(HttpStatusCode.NoContent, (await client.PostAsJsonAsync("/api/me/security/devices/remove", new { all = true })).StatusCode);
+        Assert.Empty(await Computers());
+        Assert.True((await (await Complete(await RequestLink(HumoApiFactory.AdminEmail))).Json()).GetProperty("askBrowserTrust").GetBoolean());
+    }
+
     [Fact]
     public async Task A_trusted_browser_is_listed_and_removing_it_brings_the_question_back()
     {
