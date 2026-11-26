@@ -6,7 +6,7 @@ What changed in Humo Property Management, release by release, in plain language.
 
 ## Unreleased
 
-- Commercial review against WeconnectU (docs/29): D47 records the product owner's rules on data export, inactive accounts, fees and fair terms; D48 proposes new packages, prices and unit add-ons; the roadmap adds migration with opening balances, the legal pack and archive access to version 1 [#PR]
+- Commercial review against WeconnectU (docs/29): D47 records the product owner's rules on data export, inactive accounts, fees and fair terms; D48 proposes new packages, prices and unit add-ons; the roadmap adds migration with opening balances, the legal pack and archive access to version 1 [#139]
 - Jobs and the Inbox update by themselves too: when someone else moves a job on, every open page shows it at once, so nobody is offered a step that's already been taken. Residents hear only about their own requests and messages [#124]
 - A resident hears about their own request as it moves on (being arranged, booked, done, cancelled or closed), by email for the booking, the finish and the end; each request opens on its own page, and the API no longer sends residents the quotes, prices or staff notes [#123]
 - Removing someone's passkeys signs them out at once on every device, and their open app leaves for the signed-out page. Signing out a session, signing out everywhere else, and suspending someone do the same [#122]
