@@ -2,7 +2,7 @@
 
 **Purpose:** what's next, in order, and what the product owner has asked for in later versions. Approved decisions stay in [docs/17](17-decisions.md); items here become decisions when they're scheduled.
 
-**Last updated:** 13 November 2026.
+**Last updated:** 26 November 2026.
 
 ## 1. Version 1: the live system as complete as the prototype
 
@@ -19,6 +19,17 @@ The prototype (`npm start`) runs every screen on simulated data. The live system
 2. **A development seed on the API** (done 28 October 2026). The live system starts empty, so it looks broken next to the prototype's full demo agencies. `dotnet run --project backend/src/Humo.Api -- seed-demo` loads demo agencies (Acacia, Fynbos) through the API's own services, with the sign-ins listed in the backend README. Development only: it refuses anywhere else.
 3. **A screen check in CI** (done 28 October 2026). The `screens` job runs the API with the development seed and the frontend against it; a browser (Playwright, `frontend/humo-web/e2e`) signs in as each seeded role and the System Administrator and opens every page in the menu. A page that shows an error, or any API 5xx, fails the build. Locally: with the API (seeded), Mailpit and `npm run start:api` running, `npm --prefix frontend/humo-web run e2e:screens`.
 4. **One slice at a time** in the order of the table, each removing its data source from the "not on the API" list and its tags (docs/18).
+
+**Added to version 1 by the commercial review** (26 November 2026, [docs/29](29-commercial-review.md), D47 and D48):
+- **Free migration with opening balances.** Import the levy roll, owners, tenants, the trial balance, and debtor and supplier age analyses, with a reconciliation check before go-live. Without it, no agency can move to us mid-year.
+- **Full data export, and archive access once an account is inactive** (D47): the administrator, or a portfolio manager with the administrator's approval or after a cooling-off, at a charge.
+- **The legal pack:** the subscription agreement with the fair terms (D47), the POPIA operator agreement, the Information Officer registration, the PAIA manual, the breach procedure and the subprocessor list.
+- **The new packages and prices** (D48, once approved):
+  - levies and billing in Essentials;
+  - Meetings & AGMs in Professional;
+  - owners, tenants and trustees never counted against a limit;
+  - unit add-ons.
+- **Verified agencies:** the firm's and principal's Fidelity Fund Certificates checked at onboarding, with renewals tracked.
 
 **Compliance moves after version 1** (product owner, 13 November 2026). The Compliance screen stays out of the live menu (`NOT_CONNECTED`) until it's built; the financial year end it holds is already on the API. See §4.
 
@@ -84,3 +95,7 @@ Agreed with the product owner on 13 November 2026. Everything still open that is
 | Bank layouts for the payment file, and posting payments to the scheme's cashbook | R-15's later part. | The standard file works for the first clients. |
 | Generated files in the storage count | Statements and letters counted against storage (R-13). | Agreed to stay out of the count for now. |
 | *Waiting on others* view | One view of everything waiting on someone else. | Comes after the review of where work waits (version 1 makes each item a task first). |
+| **Monthly reports** | In the app, and as a PDF emailed to the agency's administrator (D47). The same pack for trustees as their community report. | Version 2. WeconnectU's strongest trustee feature. |
+| **Scheme handover** | When a body corporate moves between two agencies on Humo, its history moves with it, with the trustees' consent. When it leaves Humo, a complete handover pack. | Version 2 (docs/29 §8). |
+| **Levy debit orders** | Owners pay levies by debit order through a licensed provider. | Within six months of launch (docs/29 §8). |
+| **Phone install for owners and trustees** | Humo PM installed from the browser, as a web app, until Humo Mobile. | Within six months of launch. |
