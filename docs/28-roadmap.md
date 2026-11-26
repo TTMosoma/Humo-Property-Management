@@ -22,7 +22,10 @@ The prototype (`npm start`) runs every screen on simulated data. The live system
 
 **Added to version 1 by the commercial review** (26 November 2026, [docs/29](29-commercial-review.md), D47 and D48):
 - **Free migration with opening balances.** Import the levy roll, owners, tenants, the trial balance, and debtor and supplier age analyses, with a reconciliation check before go-live. Without it, no agency can move to us mid-year.
-- **Full data export, and archive access once an account is inactive** (D47): the administrator, or a portfolio manager with the administrator's approval or after a cooling-off, at a charge.
+- **Full data export, and leaving** (D47):
+  - 30 days read-only after an agency leaves;
+  - then the data goes to the account owner's archive, at R500 a month;
+  - a portfolio manager can open it with the account owner's approval, or after 7 days without an answer.
 - **The legal pack:** the subscription agreement with the fair terms (D47), the POPIA operator agreement, the Information Officer registration, the PAIA manual, the breach procedure and the subprocessor list.
 - **The new packages and prices** (D48, once approved):
   - levies and billing in Essentials;

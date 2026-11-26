@@ -89,8 +89,8 @@ Humo is the software, not the managing agent.
 | **SARS** | Tax | Humo's own tax only | **VAT:** Humo isn't VAT-registered. Registration becomes compulsory once taxable sales pass the threshold, currently R1 million in 12 months; check the current figure ⚖. At the proposed prices that's roughly 25–30 Professional customers. Prices should be set now so they still work as VAT-inclusive prices (§6) |
 | **Payment rules** (PASA, the National Payment System Act) | Who may collect payments for others | No, while Payfast collects | Levy debit orders would go through a licensed provider, never Humo itself |
 | **Consumer Protection Act** | Protects consumers, including small companies | May cover our smallest customers ⚖ | Fair cancellation terms (D47) |
-| **NAMA** | National Association of Managing Agents: industry body, voluntary | No, but worth joining | A sales and trust channel: supplier membership, events, aligning onboarding with its *Nuts & Bolts* course |
-| **ARC** | Association of Residential Communities: estates and HOAs | No | The same, for estates |
+| **NAMA** | National Association of Managing Agents: industry body, voluntary | No, but worth joining | **Join when we're preparing version 2,** which is for agencies we don't yet have a relationship with (product owner, 26 November 2026). A sales and trust channel: supplier membership, events, aligning onboarding with its *Nuts & Bolts* course |
+| **ARC** | Association of Residential Communities: estates and HOAs | No | The same, for estates, also from version 2 |
 
 ## 5. Where Humo is weak today
 
@@ -117,22 +117,32 @@ Not yet checked: whether our ledger produces an auditor-ready trial balance and 
 
 Proposed in [D48](17-decisions.md#d48--packages-prices-and-unit-add-ons-proposed-26-november-2026).
 
-**Against WeconnectU** (their prices exclude VAT; Humo charges none):
+**Against WeconnectU** (their prices exclude VAT; Humo charges none). These are the revised prices, to the product owner's targets of 20–30% cheaper, and 1.5 times cheaper at 300 units:
 
 | Units | WeconnectU | Humo today | Proposed | Package | Cheaper by |
 |---|---|---|---|---|---|
-| 50 | R2 950 | R600 | **R399** | Essentials | 86% (7.4×) |
-| 150 | R2 950 | R2 400 | **R798** | Essentials + 100 units | 73% |
-| 300 | R2 950 | R9 600 | **R899** | Professional | 70% (3.3×) |
-| 500 | R3 625 | R9 600 | **R1 697** | Professional + 200 units | 53% |
-| 1 000 | R7 250 | R9 600 | **R3 546** | Professional + 700 units | 51% |
-| 2 000 | R14 500 | not sold | **R7 045** | Professional + 1 700 units | 51% |
-| 4 000 | R27 990 | not sold | **R14 043** | Professional + 3 700 units | 50% |
-| 5 000 | R33 220 | not sold | **R14 999** | Enterprise | 55% |
-| 10 000 | R59 370 | not sold | **R24 998** | Enterprise + 5 000 units | 58% |
-| 20 000 | R98 970 | not sold | **R44 996** | Enterprise + 15 000 units | 55% |
+| 50 | R2 950 | R600 | **R699** | Essentials | 76% |
+| 200 | R2 950 | R2 400 | **R1 248** | Essentials + 100 units | 58% |
+| 300 | R2 950 | R9 600 | **R1 949** | Professional | 34% (1.5×) |
+| 500 | R3 625 | R9 600 | **R2 498** | Professional + 100 units | 31% |
+| 1 000 | R7 250 | R9 600 | **R5 097** | Professional + 600 units | 30% |
+| 2 000 | R14 500 | not sold | **R10 096** | Professional + 1 600 units | 30% |
+| 4 000 | R27 990 | not sold | **R20 094** | Professional + 3 600 units | 28% |
+| 5 000 | R33 220 | not sold | **R22 999** | Enterprise | 31% |
+| 10 000 | R59 370 | not sold | **R40 998** | Enterprise + 5 000 units | 31% |
+| 20 000 | R98 970 | not sold | **R76 996** | Enterprise + 15 000 units | 22% |
 
-Before approving, we need a cost model: hosting, SMS and email, Payfast fees on our own invoices, support time. The prices above are set against the market, not yet against our costs.
+Below 400 units WeconnectU charges a flat R2 950, so a small agency saves more than 30% with us whatever we do.
+
+**Covering our costs.** Our costs come in two kinds:
+- **Fixed costs** are paid whether we have one customer or a hundred: the server, the domain and email, backups, accounting, our own time.
+- **Variable costs** grow with each customer: included SMS, storage, Payfast's fee on our invoice, support time.
+
+A price can only make sure each customer pays well above their *own* variable cost. That's the margin. Covering the fixed costs takes enough customers: **break-even = fixed costs ÷ margin per customer.**
+
+No price covers the fixed costs with one customer. WeconnectU's R2 950 minimum wouldn't either. With one customer for a year we run at a loss at any price, which is why the launch offer and the first agencies matter.
+
+For example, if fixed costs were R15 000 a month (an example only, not our figure), we'd break even at about 25 Essentials customers, or 9 on Professional. **We need the real figures:** fixed monthly costs, and the price of an SMS. The included SMS allowances (50, 300 and 3 000 a month) are kept modest because each SMS costs us money.
 
 ## 7. Fair terms
 
@@ -144,11 +154,11 @@ These are our answers to WeconnectU's terms. Decided in [D47](17-decisions.md#d4
 | 9.7: they may share non-personal data you upload | We never sell or share customer data, personal or not. Anonymised benchmarks only with the agency's opt-in | Terms; operator agreement |
 | 10.8: personal information stored outside South Africa | Data is hosted in South Africa. Our subprocessors (Payfast, the SMS and email providers) are listed, with where they process data. Changes are notified 30 days ahead | Privacy notice; subprocessor page |
 | 12: one-sided indemnities | Balanced liability: each side answers for its own breaches | Agreement |
-| 6: data only during notice; paid retrieval after | Export everything at any time while the account is active. After that, read-only access on request (D47) | Product: export; archive access |
+| 6: data only during notice; paid retrieval after | Export everything at any time while active, and for 30 days after leaving, at no charge. After that, the agency's account owner keeps the archive for R500 a month (D47) | Product: export; exit; archive |
 | 9.3 and Schedule 1: prices and terms change at their sole discretion | Prices change at most once a year, with 60 days' notice, and the customer may leave without penalty (proposed) | Agreement; billing |
 | 5.1.2 and 8.1.3: paying to fix your own mistakes | Corrections in the app are free and audited. Custom work is R450 an hour, quoted in writing first | Terms; support process |
 | 10.7: breach notification | We tell the agency as soon as we know, within 24 hours (proposed), and help it notify the Regulator and the people affected | Breach procedure (docs/26) |
-| 3.3: instructions only from named administrators | Humo staff act on a customer's data only at an administrator's request. Support access is audited (already built) | Support process |
+| 3.3: instructions only from named administrators | Humo's System Administrators act on a customer's data only at an Agency Administrator's request, or the account owner's once the account has closed. Support access is audited (already built) | Support process |
 
 ## 8. The plan: 10 times stronger
 
@@ -174,16 +184,17 @@ These are our answers to WeconnectU's terms. Decided in [D47](17-decisions.md#d4
 8. **Levy debit orders** through a licensed provider.
 9. **Support you can see:** a knowledge base, weekly online onboarding sessions, published support hours and a status page.
 10. **Growth channels:**
-    - NAMA and ARC membership;
     - auditors of bodies corporate, who recommend software;
-    - a referral month: one month free for each agency referred.
+    - a referral month: one month free for each agency referred;
+    - the launch offer: Professional free for 1 to 3 months for Essentials customers (D48).
 
-### Version 2
-11. **Monthly reports** in the app, and as a PDF emailed to the agency's administrator (D47). The same pack for trustees, as their "Community Report".
-12. **Compliance planner** and CSOS returns; AI-drafted meeting minutes.
-13. **Scheme handover:** when a body corporate moves between two agencies on Humo, its history moves with it, with the trustees' consent. When it leaves Humo, a complete handover pack.
-14. **Agency branding** in the app; Enterprise's own domain (#138).
-15. **Membership register confirmation** by owners (#138).
+### Version 2 (for agencies we don't yet have a relationship with)
+11. **Join NAMA and ARC** while preparing version 2.
+12. **Monthly reports** in the app, and as a PDF emailed to the Agency Administrator (D47). The same pack for trustees, as their "Community Report".
+13. **Compliance planner** and CSOS returns; AI-drafted meeting minutes.
+14. **Scheme handover:** when a body corporate moves between two agencies on Humo, its history moves with it, with the trustees' consent. When it leaves Humo, a complete handover pack.
+15. **Agency branding** in the app; Enterprise's own domain (#138).
+16. **Membership register confirmation** by owners (#138).
 
 ### Bigger bets (each needs its own decision)
 - **Trustee pull:** trustees who've seen Humo ask their agency for it. The scheme-handover flow makes Humo the place a scheme's history lives.
@@ -191,9 +202,13 @@ These are our answers to WeconnectU's terms. Decided in [D47](17-decisions.md#d4
 - **Self-managed schemes:** a plan for bodies corporate without a managing agent, routed to verified agencies when they want one. This needs care so we don't compete with our own customers.
 
 ## 9. Open questions
-1. The amounts in D48, once we have the cost model.
-2. The annual fee per package (D47, open item 1).
-3. The cooling-off period and the archive-access fee (D47, open items 2 and 3).
-4. Whether data migration with opening balances goes into version 1 (recommended: yes).
-5. Joining NAMA as a supplier.
-6. A free 30-day export window after cancelling (recommended; D47, open item 4).
+1. **The cost model:** fixed monthly costs and the price of an SMS, to confirm D48's margins and our break-even.
+2. **Approving D48's prices.**
+3. **The launch offer's length,** 1 to 3 months.
+4. **D47's remaining open items:** archiving on day 30 if no one has, how long an unpaid archive is kept, and the proof needed to set the account owner.
+5. **Settled on 26 November 2026:**
+   - data migration with opening balances is in version 1;
+   - NAMA from version 2;
+   - archive access at R500 a month;
+   - annual fees of R499, R2 400 and R12 000;
+   - in-person training quoted separately.
