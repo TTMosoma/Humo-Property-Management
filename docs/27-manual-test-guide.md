@@ -500,6 +500,17 @@ Two windows: Thandeka in window 1, Johan in window 2. Restart `npm run start:api
 - [ ] Sipho on *Maintenance* (his requests). As Johan, move his request on (triage, or cancel with a reason). **Expect:** Sipho's page shows the new status without reloading.
 - [ ] Lindiwe (another unit) on her *Maintenance* page while Johan moves Sipho's request on. **Expect:** nothing changes on her page.
 
+## 49. Collection ends when the arrears are paid (D43)
+
+As Priya (Finance). Restart the API first: as it starts, and every 15 minutes after, it ends cases already paid up.
+
+- [ ] Grace Mokoena (Kingfisher Court, unit 44) was paid up on 9 November. Once the API has started: open Finance › Credit control. **Expect:** unit 44 isn't listed, and the task "send a final demand" for her is gone from Tasks (done by Humo credit control).
+- [ ] Choose an account in arrears and send a reminder. Capture and allocate a payment that clears only part of what's overdue. **Expect:** the case stays at *Reminder sent*.
+- [ ] Allocate a payment for the rest. **Expect:** the case's history says "Paid up: nothing is overdue, so collection has ended"; its follow-up task is closed; Priya's bell says "Paid up: Unit …" (no email); the account drops off the Credit control list.
+- [ ] Reverse that payment (*Returned unpaid by the bank*). **Expect:** the case reopens at *Reminder sent*, with "Reopened: a payment that cleared it was reversed …", and a new follow-up task.
+- [ ] Take a case to *Handed over* (reminder, final demand, the trustees approve, letter of demand, hand over), then pay it off. **Expect:** it stays listed, with "Paid up while with the attorneys", a task "… is paid up: tell [attorney], then close the case", and a *Close case* button. *Close case* needs a reason; after it, the case is *Not started* and the task is closed.
+- [ ] On a case with something still overdue. **Expect:** no *Close case* button.
+
 ## Reporting back
 
 For each box that didn't match **Expect**, note the section, what you did, what happened, and a screenshot if it helps. Claude fixes them on a branch, with a test for each.

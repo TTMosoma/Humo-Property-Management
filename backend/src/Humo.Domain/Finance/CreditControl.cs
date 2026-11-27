@@ -40,6 +40,12 @@ public sealed class CollectionCase
     public CaseResolving? Resolving { get; set; }
     public DemandApproval? DemandApproval { get; set; }
     public string? FollowUpWorkItemId { get; set; }
+    /// <summary>D43: when collection ended because nothing was overdue any more. A reversal within 30 days reopens it.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? ClosedPaidUpAt { get; set; }
+    /// <summary>D43: paid up while with the attorneys; the agency has been asked to tell them before closing the case.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public bool? PaidUpWithAttorneys { get; set; }
 }
 
 /// <summary>What someone does to a case. Which fields matter depends on <see cref="Type"/>.</summary>
@@ -144,6 +150,13 @@ public static class CreditControlRules
                 break;
             case "note":
                 if (string.IsNullOrWhiteSpace(action.Text)) e["text"] = "Write a note.";
+                break;
+            // D43: collection ends by itself once nothing is overdue, except with the attorneys, where the agency closes it.
+            case "close":
+                if (c.Stage == CollectionStages.NotStarted) e["stage"] = "There’s no collection to close on this account.";
+                else if (overdue > 0) e["stage"] = $"{BillingRules.Rand(overdue)} is still overdue: collection carries on until it’s paid.";
+                else if (c.Resolving is not null) e["stage"] = "A reversal or write-off for this account is waiting for approval: it closes once that’s decided.";
+                if ((action.Reason ?? "").Trim().Length < 5) e["reason"] = "Say why it’s closed, e.g. “Attorneys told on 16 Nov; their costs settled”.";
                 break;
             default:
                 e["type"] = "That isn’t something credit control does.";

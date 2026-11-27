@@ -40,7 +40,8 @@ public sealed class CommandRefused(string code, string message) : Exception(mess
 /// gateway (doc 24 §1): permission → entitlement → scope → version → validation → step-up → apply → audit.
 /// Nobody verifies a passkey for a request that was going to fail.
 /// </summary>
-public sealed class CommandRunner(CurrentActor current, HumoDbContext db, AuditLog audit, Notices notices, Commercial.CommercialRecords commercial, TimeProvider clock)
+public sealed class CommandRunner(CurrentActor current, HumoDbContext db, AuditLog audit, Notices notices, Commercial.CommercialRecords commercial, TimeProvider clock,
+    IServiceProvider services)
 {
     /// <summary>A fresh step-up proof lasts 5 minutes (STEP_UP_FRESH_MS in the frontend).</summary>
     public static readonly TimeSpan StepUpFresh = TimeSpan.FromMinutes(5);
@@ -90,6 +91,10 @@ public sealed class CommandRunner(CurrentActor current, HumoDbContext db, AuditL
             return await Deny(actor, spec, refused.Code, refused.Message, ct);
         }
 
+        // D43: a levy account this command changed may have nothing overdue any more (its collection ends), or be overdue
+        // again after a reversal (it reopens). Credit control is loaded only when an account changed.
+        if (db.ChangeTracker.Entries<LevyAccount>().Any(e => e.State == EntityState.Modified))
+            await services.GetRequiredService<Finance.CreditControl>().SettleChangedAsync(ct);
         // D39: anything this command sent to the board, its trustees on Humo hear about now.
         await Work.BoardApprovals.AskForAddedAsync(db, notices, actor.Human.Id, ct);
         // Every task or approval that lands on someone is in their bell too.

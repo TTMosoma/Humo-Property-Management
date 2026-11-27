@@ -218,6 +218,11 @@ export class CollectionsStore {
       case 'note':
         if (!action.text.trim()) e['text'] = 'Write a note.';
         break;
+      case 'close':
+        if (c.stage === 'not-started') e['stage'] = 'There’s no collection to close on this account.';
+        else if (overdueOf(a.ageing) > 0) e['stage'] = `${formatRand(overdueOf(a.ageing))} is still overdue: collection carries on until it’s paid.`;
+        if (action.reason.trim().length < 5) e['reason'] = 'Say why it’s closed, e.g. “Attorneys told on 16 Nov; their costs settled”.';
+        break;
     }
     return Object.keys(e).length ? e : null;
   }
@@ -303,6 +308,17 @@ export class CollectionsStore {
         break;
       case 'note':
         this.step(c, c.stage, action.text.trim(), by);
+        break;
+      case 'close':
+        c.previousStage = c.stage;
+        c.stage = 'not-started';
+        c.arrangement = undefined;
+        c.dispute = undefined;
+        c.demandApproval = undefined;
+        c.paidUpWithAttorneys = undefined;
+        c.closedPaidUpAt = new Date().toISOString();
+        a.status = 'up-to-date';
+        this.step(c, 'not-started', `Closed: ${action.reason.trim()}`, by);
         break;
     }
     c.version++;

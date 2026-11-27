@@ -65,6 +65,7 @@ Both are in `docs/02-ux-review.md`. Letters are template-driven A4 documents (`d
 | **Hand-over** | Only after a letter of demand. Needs the attorney's name. |
 | **Arrangement** | Instalment × months must clear what's overdue; day 1–28; up to 24 months. A missed instalment returns the case to where it was. |
 | **Dispute** | Pauses collection until resolved (D40). Resolving means choosing what happened: the charge stands; the owner paid (a payment on the account, from a receipt); it was charged in error (a reversal of that charge, approved by a second person); or the board waives it (a write-off, approved by the board as D39). A reversal or write-off keeps the dispute open, *Resolving*, until it's decided; rejected, it's disputed again. |
+| **Paid up (D43)** | Once nothing is overdue, the case ends by itself: back to *Not started*, its task closed, an arrangement, dispute or pending letter of demand ended, Finance told in the app. With the attorneys, the agency is asked to tell them and closes the case with *Close case*. A payment reversed within 30 days reopens it where it was. |
 | **Bulk reminders** | Select accounts on the pipeline → *Send reminders* by email or SMS. Only accounts not yet started get one. The others are skipped, and the count sent is reported. |
 
 Everything is behind `Collections.Manage` (Agency Administrator, Portfolio Manager, Finance) and the `credit-control` entitlement.
