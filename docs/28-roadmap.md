@@ -27,7 +27,7 @@ The prototype (`npm start`) runs every screen on simulated data. The live system
   - then the data goes to the account owner's archive, at R500 a month;
   - a portfolio manager can open it with the account owner's approval, or after 7 days without an answer.
 - **The legal pack:** the subscription agreement with the fair terms (D47), the POPIA operator agreement, the Information Officer registration, the PAIA manual, the breach procedure and the subprocessor list.
-- **The new packages and prices** (D48, once approved):
+- **The new packages and prices** (D48):
   - levies and billing in Essentials;
   - Meetings & AGMs in Professional;
   - owners, tenants and trustees never counted against a limit;
