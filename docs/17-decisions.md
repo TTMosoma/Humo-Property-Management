@@ -51,6 +51,9 @@ Each entry records:
 | D35 | When a unit is sold: each month's statement belongs to whoever owned it that month; the buyer sees the account from their start date; the seller keeps every month they owned; nothing changes until the transfer date | Finance, owner portal |
 | D36 | A unit always has an owner: ending the only owner is refused (record the sale by adding the buyer), and gaps already on record are flagged for staff to correct | Portfolio |
 | D37 | Maintenance photos are uploaded and stored, and count against the agency's storage like any uploaded file; documents Humo PM generates (statements, letters) don't count | Maintenance, commercial |
+| D47 | Customer data, fees and fair terms: export at any time while active; 30 days to export after leaving, then only the agency's account owner keeps paid access (R500 a month); no onboarding, migration or exit fees; annual fees R499 / R1 499 / R12 000; every fee calculated by the system; custom work R450 an hour; monthly reports from version 2; fair terms | Commercial, data |
+| D48 | Packages, prices and units: Essentials R699 with 100 units, Professional R2 500 with 500, Enterprise R23 255 with 5 000; Essentials storage 1 GB; extra units priced by the system at 30% under WeconnectU from 1 000 units; owners and trustees never counted; launch terms in D49 | Commercial |
+| D49 | Launch terms: prices held for 24 months for every agency that joins during the launch, applied by the system; Essentials gets Professional free for 3 months; Professional gets its first month free and no annual fee in year one; Enterprise gets no annual fee in year one and one free day of in-person training once it books the programme | Commercial |
 
 ---
 
@@ -1039,6 +1042,211 @@ Photos on a maintenance request were kept by name only on the live system, so th
   - Users & access: *Remove passkeys*.
   - Sign-in after an email link, with no passkey to hand: *Get back in*.
 - **Not simulated:** everything is real on the API, with no stand-ins (no register entries).
+
+## D47 — Customer data, fees and fair terms (26 November 2026)
+
+**Decided by:** Terry Mosoma (product owner), after the WeconnectU review ([docs/29](29-commercial-review.md)). The amounts were confirmed the same day; the Professional annual fee, system-calculated fees, the account owner's powers and the open items on 27 November 2026.
+
+**Who's who:**
+- **System Administrator:** Humo's own staff role on the platform. Never a customer.
+- **Agency Administrator:** the customer's administrator, who manages the agency's people and settings.
+- **Account owner** (new): the person who holds the agency's subscription. That's normally whoever accepted the agreement for the agency, for example its principal. The role outlives the account.
+  - **Exactly one per agency.**
+  - **Everything an Agency Administrator can do, without switching roles,** plus what only the owner can do: the subscription and its payments; appointing and removing Agency Administrators; the agency overview (units, schemes, arrears and collection rate, open jobs, users, what the agency spends with us); closing the account; handing ownership on; and the archive after exit.
+  - **Only the account owner appoints or removes Agency Administrators.** Agency Administrators add every other agency role, but not other administrators.
+  - **Humo's staff set up the account owner** when they onboard an agency, instead of a first Agency Administrator. The owner then appoints any administrators.
+  - **Setting or changing the account owner needs the paperwork and a passkey.** The paperwork shows the person may act for the agency: a company resolution or letter of authority, with the company's registration. The new owner then confirms with their passkey. On a hand-over, the outgoing owner confirms with theirs too; if they can't (they've left, or died), Humo's staff decide on the paperwork alone, and the change is audited.
+
+**Decision:**
+1. **Export at any time.** While the account is active, the agency can export all its data, every record and document, whenever it likes, at no charge.
+2. **Leaving** (the account is cancelled or lapses):
+   - **For 30 days**, the agency's people can still sign in, read-only, and export everything at no charge.
+   - **During those 30 days**, a portfolio manager extracts the agency's data to the **account owner's archive**.
+   - **After 30 days**, every agency user loses access, Agency Administrators included.
+   - **The account owner keeps read-only access** to the archive for **R500 a month**.
+   - **A portfolio manager can open the archive only with the account owner's approval.** If the account owner doesn't answer within **7 days**, access opens by itself, in case they're out of action. The account owner is told when it's asked for, and can refuse during those 7 days.
+   - **Humo's System Administrators** open an archive only at the account owner's request, and that access is audited.
+3. **No onboarding, migration or exit fees,** and no fee to retrieve data. Instead there's an **annual fee per package: Essentials R499, Professional R1 499, Enterprise R12 000.** Each is below the package's monthly price. It covers setting up, moving in (including opening balances), online training and renewal, and replaces the R250 renewal fee (D15).
+4. **Changing package during the year:**
+   - **Upgrading** charges the difference between the two annual fees, pro rata for the days left to the anniversary.
+   - **Downgrading** refunds nothing.
+   - Monthly prices are already pro rata by day (D15).
+5. **Every fee is calculated by the system, never by hand:** the monthly price, unit add-ons, pro rata days, the annual-fee difference on an upgrade, archive access, SMS bundles and custom work (hours × R450). They come from the catalogue, through the same code for the public price calculator, the agency's quote, its invoice and its subscription page. Staff can't type an amount; a discount goes through the existing approval (`Platform.Discounts.Approve`).
+6. **Extra work is R450 an hour.** It's for custom work the customer asks for, quoted in writing before it starts, and never for support, corrections or migration. **In-person training is quoted separately.**
+7. **Monthly reports from version 2:** in the app, and as a PDF emailed to the Agency Administrator.
+8. **Fair terms,** written into our literature and built into our processes, even where the product support comes in version 2 ([docs/29 §7](29-commercial-review.md#7-fair-terms)):
+   - no hidden third-party income: anything we earn from others is disclosed and labelled;
+   - we never sell or share customer data, personal or not; anonymised benchmarks only with the agency's opt-in;
+   - data is hosted in South Africa, our subprocessors are listed, and changes are notified 30 days ahead;
+   - balanced liability: each side answers for its own breaches;
+   - Humo staff act on a customer's data only at an Agency Administrator's request, or the account owner's once the account has closed; support access is audited;
+   - no cut of the arrears or collection fees charged to owners;
+   - prices change at most once a year, with 60 days' notice, and the customer may leave without penalty;
+   - if there's a breach, we tell the agency within 24 hours of knowing, and help it notify the Information Regulator and the people affected.
+
+**Consequences:**
+- **Before launch (version 1):**
+  - a full export of every record and document;
+  - the account owner role on both sides of `contracts/role-permissions.json`: one per agency, set by Humo's staff at onboarding, with the agency overview; `Users.ManageAdmins` moves from Agency Administrator to the account owner;
+  - the exit state: 30 days read-only for the agency's people, then access ends for all of them;
+  - extracting the data to the account owner's archive;
+  - archive access at R500 a month, with the portfolio manager's request, the account owner's approval and the 7-day cooling-off;
+  - annual fees in the catalogue, charged pro rata on an upgrade;
+  - one price calculation in the API, used by the price calculator, quotes, invoices and the subscription page;
+  - the terms, privacy notice and subprocessor list.
+- **Version 2:** the monthly report (in the app, and as a PDF by email).
+- **Processes:** the support policy, the custom-work and in-person-training quotes, and the breach procedure in docs/26.
+
+**Settled on 27 November 2026** (the product owner agreed the recommendations):
+1. **If no one extracts the data in 30 days,** it's archived automatically on day 30, so nothing is lost.
+2. **An unpaid archive is kept for 12 months** after the last paid month, with warnings, then deleted. Records a scheme must keep by law are the agency's duty, so it's warned in good time.
+3. **Setting or changing the account owner** needs the paperwork and a passkey (above).
+
+---
+
+## D48 — Packages, prices and units (27 November 2026)
+
+**Decided by:** Terry Mosoma (product owner), after the WeconnectU review ([docs/29 §6](29-commercial-review.md#6-packages-and-prices)). Proposed on 26 November and revised to the owner's targets until approved on 27 November 2026. It supersedes the limits and prices in D15–D17, D21–D22 and D29's packaging.
+
+**Aim:**
+- **About 30% cheaper than WeconnectU.** From 1 000 units every price is 70% of theirs, rounded to the nearest R5. Below that, Professional's round R2 500 saves 15–31%.
+- Each package earns well above what it costs us to run.
+- **Essentials** for side hustles and one- to three-person operations, and nothing bigger.
+- **Professional** as the package most agencies use.
+- **Enterprise** for big portfolios: one Enterprise agency at 10 000 units (R41 560) is worth 8 Professional agencies of 1 000 units, or 59 on Essentials.
+- Every fee is calculated by the system (D47).
+
+**Packages** (monthly; paying a year up front is 11 months, as now):
+
+| | **Essentials** | **Professional** | **Enterprise** |
+|---|---|---|---|
+| Price | **R699** | **R2 500** | **R23 255** |
+| Units included | 100 (200 at most) | 500 | 5 000 |
+| Staff with a sign-in | 3 (5 at most) | Unlimited | Unlimited |
+| Owners, tenants and trustees with a sign-in | Unlimited | Unlimited | Unlimited |
+| Schemes | Unlimited | Unlimited | Unlimited |
+| SMS a month | 50 | 300 | 3 000 |
+| Storage | 1 GB | 25 GB | 250 GB |
+| Annual fee (D47) | R499 | R1 499 | R12 000 |
+
+- **Essentials:** R699, confirmed by the product owner. WeconnectU has nothing this small: their minimum is R2 950.
+- **Professional:** a round R2 500 for up to 500 units (the product owner, 27 November 2026): 15% under WeconnectU's R2 950 minimum, and 31% under their R3 625 for 500 units.
+- **Essentials' storage is 1 GB** (the product owner, 27 November 2026): enough for a side hustle's documents and photos, with the storage add-ons for more. Photos must be shrunk on upload for this to hold (see Consequences).
+- **Enterprise:** 70% of WeconnectU's price for 5 000 units (R33 220).
+
+**What each includes** (each package includes the one before):
+- **Essentials:**
+  - schemes, units, owners and tenants, and the owner portal;
+  - levy schedules, billing runs and statements;
+  - receipts captured by hand, and owners paying online (D25);
+  - maintenance requests and suppliers;
+  - documents, notices and email;
+  - the trustee register and the audit log;
+  - passkeys and step-up.
+- **Professional:**
+  - bank-statement import with automatic allocation;
+  - debtors and credit control;
+  - supplier invoices and payments, with trustee approvals (D39);
+  - quotes and work orders;
+  - budgets and financial reports;
+  - scheme rules and warnings;
+  - team and cover;
+  - **Meetings & AGMs**: notices, quorum, proxies, voting and minutes;
+  - your logo on documents;
+  - Compliance, when it's built;
+  - monthly reports, from version 2.
+- **Enterprise:**
+  - advanced reporting and analytics;
+  - integrations and API;
+  - automation;
+  - one custom document template (D23);
+  - your branding in the app, and your own domain (version 2);
+  - a named account manager;
+  - priority support;
+  - a training environment.
+
+**Units above the package's allowance.** The system counts the agency's units in steps of 100, works out the price and rounds the monthly total to the nearest R5. The agency sees the new price before it confirms. Nobody works it out by hand.
+
+| Package | Units | Price for each further 100 units | Why |
+|---|---|---|---|
+| Essentials | 101–200 | R510, once | 70% of WeconnectU's R7.25 a unit |
+| Professional | 501–1 000 | R515 | Rises from R2 500 at 500 units to R5 075 at 1 000, exactly 30% under WeconnectU |
+| Professional | above 1 000 | R507.50 | 70% of WeconnectU's R7.25 a unit |
+| Enterprise | 5 001–10 000 | R366.10 | 70% of WeconnectU's R5.23 a unit |
+| Enterprise | above 10 000 | R277.20 | 70% of WeconnectU's R3.96 a unit |
+
+For example: Professional at 1 000 units is R5 075, at 2 000 units R10 150; Enterprise at 10 000 units is R41 560.
+
+**Other add-ons** (monthly; WeconnectU has no equivalent, so they're unchanged):
+
+| Add-on | Price | For |
+|---|---|---|
+| Meetings & AGMs | R199 | Essentials |
+| Advanced finance (bank import, allocation, credit control, supplier payments) | R400 (D22) | Essentials |
+| Extra staff sign-in | R99 each, two at most | Essentials |
+| SMS bundle, 1 000 a month | R500 (D15) | All |
+| WhatsApp | R100 (D15) | All |
+| Storage 10 / 50 / 100 GB | R150 / R600 / R1 000 (D15) | All |
+| Branding in the app (version 2) | R299 | Professional |
+
+**Kept as they are, below the 30% target** (the product owner chose to keep them rather than lower them):
+- **SMS:** 50c each in the bundle against WeconnectU's 61c, 18% cheaper.
+- **Custom work:** R450 an hour against WeconnectU's R590, 24% cheaper.
+
+**Where the packages meet:**
+- **Essentials stops at 200 units and 5 staff.** Essentials with everything added (200 units, Advanced finance, Meetings & AGMs and two extra staff) costs R2 006, still below Professional's R2 500, so the limits on units and staff, not the price, are what move a growing agency up.
+- **Professional to Enterprise:** Professional costs more than Enterprise from about 4 600 units. That's the "I'm a big player now" point.
+
+**Launch terms:** see D49.
+
+**Counting units:** a unit is a section or erf with its own levy account. A parking bay or storeroom with the same owner as the home doesn't count as another unit.
+
+**Costs:** the product owner keeps the fixed costs low and is satisfied the included SMS are covered.
+
+**VAT:** if Humo registers for VAT, these prices become VAT-inclusive (docs/29 §4).
+
+**Consequences** (the code PR that follows):
+- the catalogue and `contracts/entitlements.json` on both sides, with their contract tests: levies and billing move into Essentials, and Meetings & AGMs into Professional;
+- `PackageLimits` counts staff only; owners, tenants and trustees are never counted;
+- unit counting and the unit prices above, in the one price calculation (D47);
+- the launch terms (D49);
+- photos shrunk on upload (for example to 1 600 pixels on the long side), so Essentials' 1 GB holds a few thousand photos rather than a few hundred. Today an upload is stored at full size.
+
+---
+
+## D49 — Launch terms (27 November 2026)
+
+**Decided by:** Terry Mosoma (product owner). It sits alongside D48's prices, and replaces D17's once-only 30-day trial for agencies that join during the launch.
+
+**Decision:**
+1. **Prices held for 24 months.** Every agency that joins during the launch pays the price list it joined on for 24 months, whatever the package, add-ons or units, and even if it changes package. If our prices fall, it pays the lower price.
+2. **Essentials: Professional free for 3 months.**
+   - It starts when the agency joins and the system ends it on the day.
+   - Essentials' limits still apply: 200 units, 5 staff, and Essentials' SMS and storage.
+   - Reminders 30, 14, 7 and 1 days before the end say what stops and what Professional would cost; upgrading keeps everything.
+   - When it ends, D17's rules apply: everything created stays visible, and automated features stop.
+   - Once per agency, checked against its company registration when the account owner is verified (D47).
+3. **Professional:** the first month free, and no annual fee in the first year (R1 499).
+4. **Enterprise:** no annual fee in the first year (R12 000), and **one free day of in-person training once the agency books the programme below.** No free months.
+
+**Applied by the system, never by memory:**
+- **The launch period** is a record in the platform with a start and end date and the terms above. When an agency's subscription starts inside it, the system applies the terms to the subscription: the price hold and its end date, the price list it's held to, the free months, the waived annual fee and the free training day.
+- **Billing reads the subscription,** not a person: every invoice uses the held price list until the hold ends, and the waived fee and free months show on the invoice at R0 with the reason.
+- **On the System Administrator's subscription screen** a ticked box reads, for example, *Launch customer: prices held until 27 November 2028*. The system ticks it. A person can change it only with a **reason, which is then required**, and approval under `Platform.Discounts.Approve`; the change is audited.
+- **The agency sees it too,** on its subscription page: what's held and until when. 60 days before the hold ends, the system gives notice of the new price (D47's fair terms).
+
+**In-person training for Enterprise** (quoted separately, D47; the first day is free under this launch offer). A typical Enterprise agency needs **four days**, at its offices, for up to 12 people a day:
+
+| Day | For | What's covered |
+|---|---|---|
+| 1. Getting started (free at launch) | Account owner, Agency Administrators, team leads | The organisation and its settings; users, roles and passkeys; schemes and units; checking the migrated opening balances; the agency overview; security and the audit log |
+| 2. Finance | Finance team, portfolio managers | Levy schedules, billing runs and statements; bank-statement import and allocation; receipts; credit control; supplier invoices and payments with trustee approvals; budgets, reports and month-end |
+| 3. Operations | Portfolio managers, operations staff | Maintenance requests, quotes and work orders; suppliers; documents and notices; email, SMS and WhatsApp; the Inbox and residents' messages; the owner and tenant portal |
+| 4. Governance and trustees | Portfolio managers, invited trustees | The trustee register; approvals; Meetings & AGMs (notices, quorum, proxies, voting, minutes); scheme rules; compliance; what trustees see |
+
+An optional fifth day covers advanced reporting, integrations and automation, and training the agency's own trainers in the training environment. Online training stays free for every package (covered by the annual fee, D47).
+
+**The launch period** runs for 6 months from go-live (the product owner, 27 November 2026). Go-live is planned for **1 March 2027**, so agencies that sign up from 1 March to 31 August 2027 get these terms. If go-live moves, the period moves with it; the dates live in the platform's launch record, not in code.
 
 ---
 
