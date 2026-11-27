@@ -117,14 +117,14 @@ Not yet checked: whether our ledger produces an auditor-ready trial balance and 
 
 Decided in [D48](17-decisions.md#d48--packages-prices-and-units-27-november-2026).
 
-**Against WeconnectU** (their prices exclude VAT; Humo charges none). These are the approved prices (27 November 2026): from 1 000 units every price is 70% of WeconnectU's, rounded to the nearest R5, and Professional starts at a round R2 000.
+**Against WeconnectU** (their prices exclude VAT; Humo charges none). These are the approved prices (27 November 2026): from 1 000 units every price is 70% of WeconnectU's, rounded to the nearest R5, and Professional starts at a round R2 500.
 
 | Units | WeconnectU | Humo today | Proposed | Package | Cheaper by |
 |---|---|---|---|---|---|
 | 50 | R2 950 | R600 | **R699** | Essentials | 76% |
 | 200 | R2 950 | R2 400 | **R1 209** | Essentials + 100 units | 59% |
-| 300 | R2 950 | R9 600 | **R2 000** | Professional | 32% |
-| 500 | R3 625 | R9 600 | **R2 000** | Professional | 45% |
+| 300 | R2 950 | R9 600 | **R2 500** | Professional | 15% |
+| 500 | R3 625 | R9 600 | **R2 500** | Professional | 31% |
 | 1 000 | R7 250 | R9 600 | **R5 075** | Professional + 500 units | 30% |
 | 2 000 | R14 500 | not sold | **R10 150** | Professional + 1 500 units | 30% |
 | 4 000 | R27 990 | not sold | **R20 300** | Professional + 3 500 units | 27% |
@@ -132,8 +132,8 @@ Decided in [D48](17-decisions.md#d48--packages-prices-and-units-27-november-2026
 | 10 000 | R59 370 | not sold | **R41 560** | Enterprise + 5 000 units | 30% |
 | 20 000 | R98 970 | not sold | **R69 280** | Enterprise + 15 000 units | 30% |
 
-- **Up to 400 units** WeconnectU charges a flat R2 950. Essentials has no WeconnectU equivalent, so its gap is wider; Professional saves 32%.
-- **From 500 to 1 000 units** Professional saves 45% falling to 30%, because its R2 000 includes 500 units. From 1 000 to 3 500 units it's 30%.
+- **Up to 400 units** WeconnectU charges a flat R2 950. Essentials has no WeconnectU equivalent, so its gap is wider; Professional saves 15%.
+- **From 500 to 3 500 units** Professional saves 30–31%.
 - **Between 3 500 and 5 000 units** WeconnectU's rate drops to R5.23 a unit, so Professional is 25–27% cheaper there until Enterprise takes over at about 4 600 units.
 - **SMS and custom work** are 18% and 24% cheaper. The product owner chose to keep them rather than lower them (D48).
 
@@ -189,7 +189,7 @@ These are our answers to WeconnectU's terms. Decided in [D47](17-decisions.md#d4
 10. **Growth channels:**
     - auditors of bodies corporate, who recommend software;
     - a referral month: one month free for each agency referred;
-    - the launch offer: Professional free for 1 to 3 months for Essentials customers (D48).
+    - the launch terms (D49): prices held for 24 months, and Professional free for 3 months for Essentials customers.
 
 ### Version 2 (for agencies we don't yet have a relationship with)
 11. **Join NAMA and ARC** while preparing version 2.
@@ -205,7 +205,7 @@ These are our answers to WeconnectU's terms. Decided in [D47](17-decisions.md#d4
 - **Self-managed schemes:** a plan for bodies corporate without a managing agent, routed to verified agencies when they want one. This needs care so we don't compete with our own customers.
 
 ## 9. Open questions
-1. **Launch terms for agencies joining on Professional or Enterprise.**
+1. **When the launch period ends** (D49). Recommended: 6 months after go-live.
 2. **Settled on 26 and 27 November 2026:**
    - data migration with opening balances is in version 1;
    - NAMA from version 2;
@@ -214,8 +214,8 @@ These are our answers to WeconnectU's terms. Decided in [D47](17-decisions.md#d4
    - in-person training quoted separately;
    - every fee calculated by the system;
    - Professional includes 500 units;
-   - D48 approved: Essentials R699, Professional R2 000, Enterprise R23 255, and 30% under WeconnectU from 1 000 units;
-   - the launch offer: Professional free for up to 3 months for Essentials customers;
+   - D48 approved: Essentials R699 with 1 GB, Professional R2 500, Enterprise R23 255, and 30% under WeconnectU from 1 000 units;
+   - D49, the launch terms: prices held for 24 months; Professional free for 3 months for Essentials; Professional's first month free; no annual fee in year one for Professional and Enterprise; Enterprise's first day of in-person training free;
    - D47's exit details: archiving on day 30, keeping an unpaid archive for 12 months, and the paperwork and a passkey to set the account owner;
    - one account owner per agency, set up by Humo's staff, who alone appoints Agency Administrators;
    - the cost model: fixed costs kept low, and the SMS covered.
