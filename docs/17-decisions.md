@@ -52,7 +52,7 @@ Each entry records:
 | D36 | A unit always has an owner: ending the only owner is refused (record the sale by adding the buyer), and gaps already on record are flagged for staff to correct | Portfolio |
 | D37 | Maintenance photos are uploaded and stored, and count against the agency's storage like any uploaded file; documents Humo PM generates (statements, letters) don't count | Maintenance, commercial |
 | D47 | Customer data, fees and fair terms: export at any time while active; 30 days to export after leaving, then only the agency's account owner keeps paid access (R500 a month); no onboarding, migration or exit fees; annual fees R499 / R1 499 / R12 000; every fee calculated by the system; custom work R450 an hour; monthly reports from version 2; fair terms | Commercial, data |
-| D48 | Packages, prices and units: Essentials R699 with 100 units, Professional R2 500 with 500, Enterprise R23 255 with 5 000; Essentials storage 1 GB; extra units priced by the system at 30% under WeconnectU from 1 000 units; owners and trustees never counted; launch terms in D49 | Commercial |
+| D48 | Packages, prices and units: Essentials R699 with 100 units, Professional R2 500 with 500, Enterprise R23 255 with 5 000; Essentials storage 2.5 GB; extra units priced by the system at 30% under WeconnectU from 1 000 units; owners and trustees never counted; launch terms in D49 | Commercial |
 | D49 | Launch terms: prices held for 24 months for every agency that joins during the launch, applied by the system; Essentials gets Professional free for 3 months; Professional gets its first month free and no annual fee in year one; Enterprise gets no annual fee in year one and one free day of in-person training once it books the programme | Commercial |
 
 ---
@@ -1126,12 +1126,12 @@ Photos on a maintenance request were kept by name only on the live system, so th
 | Owners, tenants and trustees with a sign-in | Unlimited | Unlimited | Unlimited |
 | Schemes | Unlimited | Unlimited | Unlimited |
 | SMS a month | 50 | 300 | 3 000 |
-| Storage | 1 GB | 25 GB | 250 GB |
+| Storage | 2.5 GB | 25 GB | 250 GB |
 | Annual fee (D47) | R499 | R1 499 | R12 000 |
 
 - **Essentials:** R699, confirmed by the product owner. WeconnectU has nothing this small: their minimum is R2 950.
 - **Professional:** a round R2 500 for up to 500 units (the product owner, 27 November 2026): 15% under WeconnectU's R2 950 minimum, and 31% under their R3 625 for 500 units.
-- **Essentials' storage is 1 GB** (the product owner, 27 November 2026): enough for a side hustle's documents and photos, with the storage add-ons for more. Photos must be shrunk on upload for this to hold (see Consequences).
+- **Essentials' storage is 2.5 GB** (the product owner, 27 November 2026, raised from 1 GB): several years of a side hustle's documents and photos, so a small agency isn't told it's full in its second year. The storage add-ons cover more.
 - **Enterprise:** 70% of WeconnectU's price for 5 000 units (R33 220).
 
 **What each includes** (each package includes the one before):
@@ -1210,7 +1210,7 @@ For example: Professional at 1 000 units is R5 075, at 2 000 units R10 150; Ente
 - `PackageLimits` counts staff only; owners, tenants and trustees are never counted;
 - unit counting and the unit prices above, in the one price calculation (D47);
 - the launch terms (D49);
-- photos shrunk on upload (for example to 1 600 pixels on the long side), so Essentials' 1 GB holds a few thousand photos rather than a few hundred. Today an upload is stored at full size.
+- photos shrunk on upload (for example to 1 600 pixels on the long side), so an agency’s storage holds about ten times as many photos. Today an upload is stored at full size.
 
 ---
 

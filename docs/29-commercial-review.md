@@ -213,7 +213,7 @@ These are our answers to WeconnectU's terms. Decided in [D47](17-decisions.md#d4
    - in-person training quoted separately;
    - every fee calculated by the system;
    - Professional includes 500 units;
-   - D48 approved: Essentials R699 with 1 GB, Professional R2 500, Enterprise R23 255, and 30% under WeconnectU from 1 000 units;
+   - D48 approved: Essentials R699 with 2.5 GB, Professional R2 500, Enterprise R23 255, and 30% under WeconnectU from 1 000 units;
    - D49, the launch terms, for agencies joining in the 6 months after go-live (planned for 1 March 2027): prices held for 24 months; Professional free for 3 months for Essentials; Professional's first month free; no annual fee in year one for Professional and Enterprise; Enterprise's first day of in-person training free;
    - D47's exit details: archiving on day 30, keeping an unpaid archive for 12 months, and the paperwork and a passkey to set the account owner;
    - one account owner per agency, set up by Humo's staff, who alone appoints Agency Administrators;
