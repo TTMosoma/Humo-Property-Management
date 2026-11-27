@@ -52,7 +52,7 @@ Each entry records:
 | D36 | A unit always has an owner: ending the only owner is refused (record the sale by adding the buyer), and gaps already on record are flagged for staff to correct | Portfolio |
 | D37 | Maintenance photos are uploaded and stored, and count against the agency's storage like any uploaded file; documents Humo PM generates (statements, letters) don't count | Maintenance, commercial |
 | D47 | Customer data, fees and fair terms: export at any time while active; 30 days to export after leaving, then only the agency's account owner keeps paid access (R500 a month); no onboarding, migration or exit fees; annual fees R499 / R1 499 / R12 000; every fee calculated by the system; custom work R450 an hour; monthly reports from version 2; fair terms | Commercial, data |
-| D48 | Packages, prices and unit add-ons (proposed): Essentials R699 with 100 units, Professional R2 540 with 500, Enterprise R23 255 with 5 000; unit add-ons; owners and trustees never counted; 30% under WeconnectU from 500 units | Commercial |
+| D48 | Packages, prices and unit add-ons (proposed): Essentials R699 with 100 units, Professional R2 000 with 500, Enterprise R23 255 with 5 000; unit add-ons; owners and trustees never counted; about 30% under WeconnectU | Commercial |
 
 ---
 
@@ -1044,12 +1044,16 @@ Photos on a maintenance request were kept by name only on the live system, so th
 
 ## D47 — Customer data, fees and fair terms (26 November 2026)
 
-**Decided by:** Terry Mosoma (product owner), after the WeconnectU review ([docs/29](29-commercial-review.md)). The amounts were confirmed the same day; the Professional annual fee and system-calculated fees on 27 November 2026.
+**Decided by:** Terry Mosoma (product owner), after the WeconnectU review ([docs/29](29-commercial-review.md)). The amounts were confirmed the same day; the Professional annual fee, system-calculated fees and the account owner's powers on 27 November 2026.
 
 **Who's who:**
 - **System Administrator:** Humo's own staff role on the platform. Never a customer.
 - **Agency Administrator:** the customer's administrator, who manages the agency's people and settings.
-- **Account owner** (new): the person who holds the agency's subscription. That's normally whoever accepted the agreement for the agency, for example its principal. They can also be an Agency Administrator, but the role is separate, and it outlives the account.
+- **Account owner** (new): the person who holds the agency's subscription. That's normally whoever accepted the agreement for the agency, for example its principal. The role outlives the account.
+  - **Exactly one per agency.**
+  - **Everything an Agency Administrator can do, without switching roles,** plus what only the owner can do: the subscription and its payments; appointing and removing Agency Administrators; the agency overview (units, schemes, arrears and collection rate, open jobs, users, what the agency spends with us); closing the account; handing ownership on; and the archive after exit.
+  - **Only the account owner appoints or removes Agency Administrators.** Agency Administrators add every other agency role, but not other administrators.
+  - **Humo's staff set up the account owner** when they onboard an agency, instead of a first Agency Administrator. The owner then appoints any administrators.
 
 **Decision:**
 1. **Export at any time.** While the account is active, the agency can export all its data, every record and document, whenever it likes, at no charge.
@@ -1081,7 +1085,7 @@ Photos on a maintenance request were kept by name only on the live system, so th
 **Consequences:**
 - **Before launch (version 1):**
   - a full export of every record and document;
-  - the account owner on every customer, set at onboarding;
+  - the account owner role on both sides of `contracts/role-permissions.json`: one per agency, set by Humo's staff at onboarding, with the agency overview; `Users.ManageAdmins` moves from Agency Administrator to the account owner;
   - the exit state: 30 days read-only for the agency's people, then access ends for all of them;
   - extracting the data to the account owner's archive;
   - archive access at R500 a month, with the portfolio manager's request, the account owner's approval and the 7-day cooling-off;
@@ -1095,7 +1099,6 @@ Photos on a maintenance request were kept by name only on the live system, so th
 1. **If no one extracts the data in 30 days,** recommended: it's archived automatically on day 30, so nothing is lost.
 2. **How long an archive is kept once the R500 stops.** Recommended: 12 months after the last paid month, with warnings, then deleted. Records a scheme must keep by law are the agency's duty, so it's warned in good time.
 3. **Setting or changing the account owner needs proof,** such as a company resolution. This is part of verifying customers at onboarding (docs/29 §8).
-4. **The account owner and the Agency Administrator overlap** (under discussion, 27 November 2026). Proposed: the account owner holds every Agency Administrator permission, plus the owner's own: the subscription and its payments, appointing and removing Agency Administrators, the agency overview, closing the account, handing ownership on, and the archive. They never switch roles to do admin work.
 
 ---
 
@@ -1104,18 +1107,18 @@ Photos on a maintenance request were kept by name only on the live system, so th
 **Status:** proposed for the product owner's approval; revised on 26 and 27 November 2026 to the owner's targets. The analysis is in [docs/29 §6](29-commercial-review.md#6-packages-and-prices). When approved, it supersedes the limits and prices in D15–D17, D21–D22 and D29's packaging.
 
 **Aim** (the product owner's targets):
-- **30% cheaper than WeconnectU, and no more.** Every price with a WeconnectU equivalent is 70% of theirs, rounded up to the next R5 (R94 becomes R95).
+- **About 30% cheaper than WeconnectU.** Unit add-ons and Enterprise are 70% of WeconnectU's price, rounded up to the next R5 (R94 becomes R95). Professional is a round R2 000, against 70% of their R2 950 minimum (R2 065).
 - Each package earns well above what it costs us to run.
 - Essentials for one- to three-person operations, built to lead them to Professional.
 - Professional as the package most agencies use.
-- Enterprise for big portfolios: one Enterprise agency at 10 000 units (R41 560) is worth 8 Professional agencies of 1 000 units, or 59 on Essentials.
+- Enterprise for big portfolios: one Enterprise agency at 10 000 units (R41 560) is worth 9 Professional agencies of 1 000 units, or 59 on Essentials.
 - Every fee is calculated by the system (D47).
 
 **Packages** (monthly; paying a year up front is 11 months, as now):
 
 | | **Essentials** | **Professional** | **Enterprise** |
 |---|---|---|---|
-| Price | **R699** | **R2 540** | **R23 255** |
+| Price | **R699** | **R2 000** | **R23 255** |
 | Units included | 100 (200 at most, with one add-on) | 500 | 5 000 |
 | Staff with a sign-in | 3 | Unlimited | Unlimited |
 | Owners, tenants and trustees with a sign-in | Unlimited | Unlimited | Unlimited |
@@ -1125,7 +1128,7 @@ Photos on a maintenance request were kept by name only on the live system, so th
 | Annual fee (D47) | R499 | R1 499 | R12 000 |
 
 How the prices are worked out:
-- **Professional** is 70% of WeconnectU's price for 500 units (R3 625).
+- **Professional** is a round R2 000 (set by the product owner, 27 November 2026), just under 70% of WeconnectU's R2 950 minimum, so agencies of 201 to 400 units save 32%.
 - **Enterprise** is 70% of their price for 5 000 units (R33 220).
 - **Essentials** has no WeconnectU equivalent: their smallest price is R2 950 a month, and 70% of that (R2 065) would shut out the side hustles Essentials is for. Its price stays R699 for the product owner to confirm.
 
@@ -1192,8 +1195,8 @@ The system picks the blocks: it counts the agency's units and shows the price of
 
 **The gaps close by themselves:**
 - **Essentials stops at 200 units** (R1 209 with its one add-on). A growing agency moves to Professional, which includes 500.
-- **From 201 to 499 units** an agency pays Professional's R2 540 against WeconnectU's flat R2 950, so it's 14% cheaper there rather than 30%.
-- **Professional to Enterprise:** Professional with add-ons costs more than Enterprise from about 4 600 units. That's the "I'm a big player now" point.
+- **From 201 to about 3 500 units** Professional saves 32–45%: the most at 500 units, where WeconnectU has moved to R7.25 a unit and Professional still costs R2 000. The unit add-ons themselves are priced at 30% under.
+- **Professional to Enterprise:** Professional with add-ons costs more than Enterprise from about 4 700 units. That's the "I'm a big player now" point.
 
 **Launch offer** (the product owner's promotion): during the launch period, every Essentials customer gets Professional free for **1 to 3 months**; the product owner sets the length.
 - It replaces D17's once-only 30-day trial while the offer runs.
