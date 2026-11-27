@@ -205,8 +205,7 @@ These are our answers to WeconnectU's terms. Decided in [D47](17-decisions.md#d4
 - **Self-managed schemes:** a plan for bodies corporate without a managing agent, routed to verified agencies when they want one. This needs care so we don't compete with our own customers.
 
 ## 9. Open questions
-1. **When the launch period ends** (D49). Recommended: 6 months after go-live.
-2. **Settled on 26 and 27 November 2026:**
+1. **Settled on 26 and 27 November 2026:**
    - data migration with opening balances is in version 1;
    - NAMA from version 2;
    - archive access at R500 a month;
@@ -215,7 +214,7 @@ These are our answers to WeconnectU's terms. Decided in [D47](17-decisions.md#d4
    - every fee calculated by the system;
    - Professional includes 500 units;
    - D48 approved: Essentials R699 with 1 GB, Professional R2 500, Enterprise R23 255, and 30% under WeconnectU from 1 000 units;
-   - D49, the launch terms: prices held for 24 months; Professional free for 3 months for Essentials; Professional's first month free; no annual fee in year one for Professional and Enterprise; Enterprise's first day of in-person training free;
+   - D49, the launch terms, for agencies joining in the 6 months after go-live (planned for 1 March 2027): prices held for 24 months; Professional free for 3 months for Essentials; Professional's first month free; no annual fee in year one for Professional and Enterprise; Enterprise's first day of in-person training free;
    - D47's exit details: archiving on day 30, keeping an unpaid archive for 12 months, and the paperwork and a passkey to set the account owner;
    - one account owner per agency, set up by Humo's staff, who alone appoints Agency Administrators;
    - the cost model: fixed costs kept low, and the SMS covered.

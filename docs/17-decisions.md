@@ -1246,7 +1246,7 @@ For example: Professional at 1 000 units is R5 075, at 2 000 units R10 150; Ente
 
 An optional fifth day covers advanced reporting, integrations and automation, and training the agency's own trainers in the training environment. Online training stays free for every package (covered by the annual fee, D47).
 
-**Open:** when the launch period ends. Recommended: 6 months after go-live, so the offer creates urgency and its cost is bounded.
+**The launch period** runs for 6 months from go-live (the product owner, 27 November 2026). Go-live is planned for **1 March 2027**, so agencies that sign up from 1 March to 31 August 2027 get these terms. If go-live moves, the period moves with it; the dates live in the platform's launch record, not in code.
 
 ---
 
