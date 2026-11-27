@@ -1042,6 +1042,75 @@ Photos on a maintenance request were kept by name only on the live system, so th
 
 ---
 
+## D44 — When a supplier can't finish the work (16 November 2026)
+
+**Status:** proposed, waiting for the product owner's approval.
+
+**The problem:**
+- A booked job has one way forward: the supplier finishes and it's marked done.
+- In practice, work stops part-way:
+  - parts are on order;
+  - more is wrong than was quoted (the pipe behind the wall is rotten);
+  - it needs another trade;
+  - the supplier can't or won't carry on;
+  - nobody was home to let them in.
+- Today staff can only leave the job *Booked* on a date that has passed, or cancel it and lose its history.
+- Above all, extra work could go ahead without anyone approving the extra money.
+
+**The principle:** the job keeps one record from report to payment. Every stop has a reason. No money beyond what was approved is spent without the same approval a quote needs (D39, D41).
+
+**Decision:**
+1. **"Can't finish yet"** on a booked or started job records why, with notes. There are four reasons, each with its own route:
+
+   | Reason | Route |
+   |---|---|
+   | **Waiting for parts or materials** (or weather) | *On hold* |
+   | **More work found** | *Variation* |
+   | **Needs another trade / the supplier can't continue** | *Stop the work order* |
+   | **No access** (nobody home, no keys, refused entry) | *Failed visit* |
+
+   Staff record it on the supplier's behalf. The supplier recording it themselves through their link comes with D38's follow-ons.
+2. **On hold.** The job shows *On hold: waiting for parts*, with the date the supplier expects to return.
+   - A task for whoever handles the job is due on that date: confirm the return or book a new one.
+   - The resident is told: "Waiting for parts; the supplier expects to be back on 20 November".
+   - The same supplier, quote and approval stand.
+3. **Variation (extra work).** The supplier prices the extra work (amount, what it is, and their PDF if they have one).
+   - It's approved like a quote, against the **job's total**: the approved quote plus every variation. Within the scheme's limit, an agency approver who didn't record it approves. Above the limit, the board decides (D39). Splitting work into small variations can't get round the limit.
+   - The emergency route (D39) applies to an urgent job.
+   - Nothing extra goes ahead until it's approved. The original work may carry on.
+   - Rejected: the job carries on as quoted, or the work order is stopped (point 4).
+   - The invoice is checked against the approved total, and the resident is told "Extra work needed; waiting for approval".
+4. **Stop the work order.** With a reason, the supplier's work order ends and their link closes.
+   - **Paying for what was done:** the supplier may invoice for work done and materials used. It's never more than their approved quote, and it's approved like any invoice (D27 for payment).
+   - **Who does the rest:** the job goes back to quotes, with its history, to appoint another supplier. The resident is told "We're arranging another supplier".
+   - It counts on the supplier's record as *Stopped*.
+5. **Failed visit (no access).** It's recorded with who it was down to: the resident, the agency or the supplier. The job is rebooked (Book return visit).
+   - A call-out fee the supplier charges is captured with the invoice, with the reason, and approved as usual. In version 1 it's paid by the scheme.
+   - Charging it on to an owner is left for a later decision under the scheme's rules (a correction under D40).
+   - A visit failed by the supplier counts on their record.
+6. **Call-backs** (resident says it isn't fixed) stay as built (*Book return visit*, at the supplier's cost under their guarantee).
+7. **The supplier's record** shows, beside *Fixed first time* and *Call-backs*: *Stopped*, *Failed visits (theirs)* and *Variations*, as counts and against their jobs.
+8. **Visible everywhere:** every stop, hold, variation and its decision is in the job's history and the audit log, with who and why. The resident always gets a plain line, never prices or staff notes.
+
+**For the product owner to confirm:**
+- **Variations count against the job's total** for the limit (recommended), or each variation on its own.
+- **A failed visit's call-out fee** is paid by the scheme in version 1 (recommended), or charged to the owner straight away.
+- **On hold has no maximum.** The task on the expected date keeps it honest (recommended). Or a hold over 30 days needs the board.
+
+**Consequences (when built):**
+- **Jobs** gain:
+  - an *On hold* stage, with its reason and expected date;
+  - variations (amount, description, file, status, versions as D41);
+  - a stop record;
+  - failed visits.
+- **New job actions:** `cant-finish` (reason, notes, expected date), `record-variation`, the variation's approval (a new `variation-approval` work item, decided like `quote-approval`), `stop-work-order`, and `failed-visit`. A partial invoice is the existing `capture-invoice`, capped at the quote.
+- **Tasks:** `maintenance-on-hold` (due on the expected date), and the variation approval. Both close by their own step.
+- **Resident updates** (#123): new lines for on hold, extra work waiting for approval, and another supplier being arranged.
+- **Supplier record:** *Stopped*, *Failed visits* and *Variations*.
+- Tests for each route, and for the limit being tested against the job's total.
+
+---
+
 ## Still open (needs domain expertise before slice 2)
 
 - **Levies and participation quotas:** decided per scheme in **D13**. Still open: interest rules, special levies, VAT.
