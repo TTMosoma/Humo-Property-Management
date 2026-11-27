@@ -51,8 +51,8 @@ Each entry records:
 | D35 | When a unit is sold: each month's statement belongs to whoever owned it that month; the buyer sees the account from their start date; the seller keeps every month they owned; nothing changes until the transfer date | Finance, owner portal |
 | D36 | A unit always has an owner: ending the only owner is refused (record the sale by adding the buyer), and gaps already on record are flagged for staff to correct | Portfolio |
 | D37 | Maintenance photos are uploaded and stored, and count against the agency's storage like any uploaded file; documents Humo PM generates (statements, letters) don't count | Maintenance, commercial |
-| D47 | Customer data, fees and fair terms: export at any time while active; 30 days to export after leaving, then only the agency's account owner keeps paid access (R500 a month); no onboarding, migration or exit fees; annual fees R499 / R2 400 / R12 000; custom work R450 an hour; monthly reports from version 2; fair terms | Commercial, data |
-| D48 | Packages, prices and unit add-ons (proposed): Essentials R699 with 100 units, Professional R1 949 with 400, Enterprise R22 999 with 5 000; unit add-ons; owners and trustees never counted; 20–30% under WeconnectU | Commercial |
+| D47 | Customer data, fees and fair terms: export at any time while active; 30 days to export after leaving, then only the agency's account owner keeps paid access (R500 a month); no onboarding, migration or exit fees; annual fees R499 / R1 499 / R12 000; every fee calculated by the system; custom work R450 an hour; monthly reports from version 2; fair terms | Commercial, data |
+| D48 | Packages, prices and unit add-ons (proposed): Essentials R699 with 100 units, Professional R2 540 with 500, Enterprise R23 255 with 5 000; unit add-ons; owners and trustees never counted; 30% under WeconnectU from 500 units | Commercial |
 
 ---
 
@@ -1044,7 +1044,7 @@ Photos on a maintenance request were kept by name only on the live system, so th
 
 ## D47 — Customer data, fees and fair terms (26 November 2026)
 
-**Decided by:** Terry Mosoma (product owner), after the WeconnectU review ([docs/29](29-commercial-review.md)). The amounts were confirmed the same day.
+**Decided by:** Terry Mosoma (product owner), after the WeconnectU review ([docs/29](29-commercial-review.md)). The amounts were confirmed the same day; the Professional annual fee and system-calculated fees on 27 November 2026.
 
 **Who's who:**
 - **System Administrator:** Humo's own staff role on the platform. Never a customer.
@@ -1060,14 +1060,15 @@ Photos on a maintenance request were kept by name only on the live system, so th
    - **The account owner keeps read-only access** to the archive for **R500 a month**.
    - **A portfolio manager can open the archive only with the account owner's approval.** If the account owner doesn't answer within **7 days**, access opens by itself, in case they're out of action. The account owner is told when it's asked for, and can refuse during those 7 days.
    - **Humo's System Administrators** open an archive only at the account owner's request, and that access is audited.
-3. **No onboarding, migration or exit fees,** and no fee to retrieve data. Instead there's an **annual fee per package: Essentials R499, Professional R2 400, Enterprise R12 000.** It covers setting up, moving in (including opening balances), online training and renewal, and replaces the R250 renewal fee (D15).
+3. **No onboarding, migration or exit fees,** and no fee to retrieve data. Instead there's an **annual fee per package: Essentials R499, Professional R1 499, Enterprise R12 000.** Each is below the package's monthly price. It covers setting up, moving in (including opening balances), online training and renewal, and replaces the R250 renewal fee (D15).
 4. **Changing package during the year:**
    - **Upgrading** charges the difference between the two annual fees, pro rata for the days left to the anniversary.
    - **Downgrading** refunds nothing.
    - Monthly prices are already pro rata by day (D15).
-5. **Extra work is R450 an hour.** It's for custom work the customer asks for, quoted in writing before it starts, and never for support, corrections or migration. **In-person training is quoted separately.**
-6. **Monthly reports from version 2:** in the app, and as a PDF emailed to the Agency Administrator.
-7. **Fair terms,** written into our literature and built into our processes, even where the product support comes in version 2 ([docs/29 §7](29-commercial-review.md#7-fair-terms)):
+5. **Every fee is calculated by the system, never by hand:** the monthly price, unit add-ons, pro rata days, the annual-fee difference on an upgrade, archive access, SMS bundles and custom work (hours × R450). They come from the catalogue, through the same code for the public price calculator, the agency's quote, its invoice and its subscription page. Staff can't type an amount; a discount goes through the existing approval (`Platform.Discounts.Approve`).
+6. **Extra work is R450 an hour.** It's for custom work the customer asks for, quoted in writing before it starts, and never for support, corrections or migration. **In-person training is quoted separately.**
+7. **Monthly reports from version 2:** in the app, and as a PDF emailed to the Agency Administrator.
+8. **Fair terms,** written into our literature and built into our processes, even where the product support comes in version 2 ([docs/29 §7](29-commercial-review.md#7-fair-terms)):
    - no hidden third-party income: anything we earn from others is disclosed and labelled;
    - we never sell or share customer data, personal or not; anonymised benchmarks only with the agency's opt-in;
    - data is hosted in South Africa, our subprocessors are listed, and changes are notified 30 days ahead;
@@ -1085,6 +1086,7 @@ Photos on a maintenance request were kept by name only on the live system, so th
   - extracting the data to the account owner's archive;
   - archive access at R500 a month, with the portfolio manager's request, the account owner's approval and the 7-day cooling-off;
   - annual fees in the catalogue, charged pro rata on an upgrade;
+  - one price calculation in the API, used by the price calculator, quotes, invoices and the subscription page;
   - the terms, privacy notice and subprocessor list.
 - **Version 2:** the monthly report (in the app, and as a PDF by email).
 - **Processes:** the support policy, the custom-work and in-person-training quotes, and the breach procedure in docs/26.
@@ -1093,32 +1095,39 @@ Photos on a maintenance request were kept by name only on the live system, so th
 1. **If no one extracts the data in 30 days,** recommended: it's archived automatically on day 30, so nothing is lost.
 2. **How long an archive is kept once the R500 stops.** Recommended: 12 months after the last paid month, with warnings, then deleted. Records a scheme must keep by law are the agency's duty, so it's warned in good time.
 3. **Setting or changing the account owner needs proof,** such as a company resolution. This is part of verifying customers at onboarding (docs/29 §8).
+4. **The account owner and the Agency Administrator overlap** (under discussion, 27 November 2026). Proposed: the account owner holds every Agency Administrator permission, plus the owner's own: the subscription and its payments, appointing and removing Agency Administrators, the agency overview, closing the account, handing ownership on, and the archive. They never switch roles to do admin work.
 
 ---
 
 ## D48 — Packages, prices and unit add-ons (proposed, 26 November 2026)
 
-**Status:** proposed for the product owner's approval; revised the same day to the owner's targets. The analysis is in [docs/29 §6](29-commercial-review.md#6-packages-and-prices). When approved, it supersedes the limits and prices in D15–D17, D21–D22 and D29's packaging.
+**Status:** proposed for the product owner's approval; revised on 26 and 27 November 2026 to the owner's targets. The analysis is in [docs/29 §6](29-commercial-review.md#6-packages-and-prices). When approved, it supersedes the limits and prices in D15–D17, D21–D22 and D29's packaging.
 
 **Aim** (the product owner's targets):
-- 20–30% cheaper than WeconnectU, and 1.5 times cheaper at 300 units.
+- **30% cheaper than WeconnectU, and no more.** Every price with a WeconnectU equivalent is 70% of theirs, rounded up to the next R5 (R94 becomes R95).
 - Each package earns well above what it costs us to run.
 - Essentials for one- to three-person operations, built to lead them to Professional.
 - Professional as the package most agencies use.
-- Enterprise for big portfolios: one Enterprise agency at 10 000 units (R40 998) is worth 8 Professional agencies of 1 000 units, or 59 on Essentials.
+- Enterprise for big portfolios: one Enterprise agency at 10 000 units (R41 560) is worth 8 Professional agencies of 1 000 units, or 59 on Essentials.
+- Every fee is calculated by the system (D47).
 
 **Packages** (monthly; paying a year up front is 11 months, as now):
 
 | | **Essentials** | **Professional** | **Enterprise** |
 |---|---|---|---|
-| Price | **R699** | **R1 949** | **R22 999** |
-| Units included | 100 (200 at most, with one add-on) | 400 | 5 000 |
+| Price | **R699** | **R2 540** | **R23 255** |
+| Units included | 100 (200 at most, with one add-on) | 500 | 5 000 |
 | Staff with a sign-in | 3 | Unlimited | Unlimited |
 | Owners, tenants and trustees with a sign-in | Unlimited | Unlimited | Unlimited |
 | Schemes | Unlimited | Unlimited | Unlimited |
 | SMS a month | 50 | 300 | 3 000 |
 | Storage | 5 GB | 25 GB | 250 GB |
-| Annual fee (D47) | R499 | R2 400 | R12 000 |
+| Annual fee (D47) | R499 | R1 499 | R12 000 |
+
+How the prices are worked out:
+- **Professional** is 70% of WeconnectU's price for 500 units (R3 625).
+- **Enterprise** is 70% of their price for 5 000 units (R33 220).
+- **Essentials** has no WeconnectU equivalent: their smallest price is R2 950 a month, and 70% of that (R2 065) would shut out the side hustles Essentials is for. Its price stays R699 for the product owner to confirm.
 
 **What each includes** (each package includes the one before):
 - **Essentials:**
@@ -1151,15 +1160,24 @@ Photos on a maintenance request were kept by name only on the live system, so th
   - priority support;
   - a training environment.
 
-**Add-ons** (monthly):
+**Unit add-ons** (monthly), each 70% of WeconnectU's rate for the same units, rounded up to R5:
+
+| Add-on | Price | For | WeconnectU's rate |
+|---|---|---|---|
+| +100 units | R510 | Professional; Essentials (one only) | R7.25 a unit |
+| +500 units | R2 540 | Professional | R7.25 a unit |
+| +1 000 units | R5 075 | Professional | R7.25 a unit |
+| +1 000 units, up to 10 000 in all | R3 665 | Enterprise | R5.23 a unit |
+| +5 000 units, up to 10 000 in all | R18 305 | Enterprise | R5.23 a unit |
+| +1 000 units, above 10 000 | R2 775 | Enterprise | R3.96 a unit |
+| +5 000 units, above 10 000 | R13 860 | Enterprise | R3.96 a unit |
+
+The system picks the blocks: it counts the agency's units and shows the price of the next block before the agency confirms it. Nobody works it out by hand.
+
+**Other add-ons** (monthly; WeconnectU has no equivalent, so they're unchanged):
 
 | Add-on | Price | For |
 |---|---|---|
-| +100 units | R549 | Professional; Essentials (one only) |
-| +500 units | R2 599 | Professional |
-| +1 000 units | R4 999 | Professional |
-| +1 000 units | R3 999 | Enterprise |
-| +5 000 units | R17 999 | Enterprise |
 | Meetings & AGMs | R199 | Essentials |
 | Advanced finance (bank import, allocation, credit control, supplier payments) | R400 (D22) | Essentials |
 | Extra staff sign-in | R99 each | Essentials |
@@ -1168,9 +1186,14 @@ Photos on a maintenance request were kept by name only on the live system, so th
 | Storage 10 / 50 / 100 GB | R150 / R600 / R1 000 (D15) | All |
 | Branding in the app (version 2) | R299 | Professional |
 
+**Kept as they are, below the 30% target** (the product owner said to leave them rather than lower them, and to be told):
+- **SMS:** 50c each in the bundle against WeconnectU's 61c, 18% cheaper. 30% cheaper would be 43c.
+- **Custom work:** R450 an hour against WeconnectU's R590, 24% cheaper. 30% cheaper would be R415.
+
 **The gaps close by themselves:**
-- **Essentials stops at 200 units** (R1 248 with its one add-on). A growing agency moves to Professional, which includes 400.
-- **Professional to Enterprise:** Professional with add-ons costs about the same as Enterprise at roughly 4 600 units, and more beyond that. That's the "I'm a big player now" point.
+- **Essentials stops at 200 units** (R1 209 with its one add-on). A growing agency moves to Professional, which includes 500.
+- **From 201 to 499 units** an agency pays Professional's R2 540 against WeconnectU's flat R2 950, so it's 14% cheaper there rather than 30%.
+- **Professional to Enterprise:** Professional with add-ons costs more than Enterprise from about 4 600 units. That's the "I'm a big player now" point.
 
 **Launch offer** (the product owner's promotion): during the launch period, every Essentials customer gets Professional free for **1 to 3 months**; the product owner sets the length.
 - It replaces D17's once-only 30-day trial while the offer runs.
@@ -1180,10 +1203,12 @@ Photos on a maintenance request were kept by name only on the live system, so th
 
 **Counting units:** a unit is a section or erf with its own levy account. A parking bay or storeroom with the same owner as the home doesn't count as another unit.
 
+**Costs:** the product owner keeps the fixed costs low and is satisfied the included SMS are covered (27 November 2026).
+
 **VAT:** if Humo registers for VAT, these prices become VAT-inclusive (docs/29 §4).
 
 **Open:**
-- **The cost model** with real figures: fixed monthly costs, and the price of an SMS. With those, the number of customers we need to break even (docs/29 §6).
+- **Essentials' price,** which has no WeconnectU equivalent (above).
 - **Removing the people limit for owners, tenants and trustees** changes `PackageLimits` (it counts every active membership today).
 - **Moving levies and billing into Essentials, and AGMs into Professional,** changes `contracts/entitlements.json` and its contract tests on both sides.
 
