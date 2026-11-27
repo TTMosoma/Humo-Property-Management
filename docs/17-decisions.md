@@ -53,7 +53,7 @@ Each entry records:
 | D37 | Maintenance photos are uploaded and stored, and count against the agency's storage like any uploaded file; documents Humo PM generates (statements, letters) don't count | Maintenance, commercial |
 | D47 | Customer data, fees and fair terms: export at any time while active; 30 days to export after leaving, then only the agency's account owner keeps paid access (R500 a month); no onboarding, migration or exit fees; annual fees R499 / R1 499 / R12 000; every fee calculated by the system; custom work R450 an hour; monthly reports from version 2; fair terms | Commercial, data |
 | D48 | Packages, prices and units: Essentials R699 with 100 units, Professional R2 500 with 500, Enterprise R23 255 with 5 000; Essentials storage 2.5 GB; extra units priced by the system at 30% under WeconnectU from 1 000 units; owners and trustees never counted; launch terms in D49 | Commercial |
-| D49 | Launch terms: prices held for 24 months for every agency that joins during the launch, applied by the system; Essentials gets Professional free for 3 months; Professional gets its first month free and no annual fee in year one; Enterprise gets no annual fee in year one and one free day of in-person training once it books the programme | Commercial |
+| D49 | Launch terms: prices held for 24 months for every agency that joins during the launch, applied by the system; Essentials gets Professional free for 3 months, or 6 if it pays a year up front; Professional gets its first month free and no annual fee in year one; Enterprise gets no annual fee in year one and one free day of in-person training once it books the programme | Commercial |
 
 ---
 
@@ -1220,8 +1220,9 @@ For example: Professional at 1 000 units is R5 075, at 2 000 units R10 150; Ente
 
 **Decision:**
 1. **Prices held for 24 months.** Every agency that joins during the launch pays the price list it joined on for 24 months, whatever the package, add-ons or units, and even if it changes package. If our prices fall, it pays the lower price.
-2. **Essentials: Professional free for 3 months.**
+2. **Essentials: Professional free for 3 months, or 6 months if the agency pays a year up front** (the product owner, 27 November 2026).
    - It starts when the agency joins and the system ends it on the day.
+   - **Paying a year up front** (11 months' price, as for any annual payer) extends it to 6 months. The system extends it when the annual payment clears, never on an agent's say-so, and the offer is the same for every agency throughout the launch period: no "today only" pressure.
    - Essentials' limits still apply: 200 units, 5 staff, and Essentials' SMS and storage.
    - Reminders 30, 14, 7 and 1 days before the end say what stops and what Professional would cost; upgrading keeps everything.
    - When it ends, D17's rules apply: everything created stays visible, and automated features stop.
